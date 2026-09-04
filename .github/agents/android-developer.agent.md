@@ -30,13 +30,12 @@ work, or delegate to the **Android Planner** for **Complex** work — then obtai
 
 ## Tech-stack confirmation status (app stack)
 
-> **Status: ❌ Not yet confirmed** — the app tech-stack decisions in
-> [copilot-instructions.md](../copilot-instructions.md) §5 (language, UI, architecture, DI, persistence,
-> testing, lint, SDK levels) are **tentative proposed defaults** and have **not** been confirmed by the
-> Android developer.
->
-> _When confirmed, replace the line above with, e.g.:_
-> `Status: ✅ Confirmed on YYYY-MM-DD by <developer> — deviations from §5 defaults: <none / list>.`
+> **Status: ✅ Confirmed on 2026-09-04 by developer via orchestrator** — deviations from §5 defaults:
+> Koin instead of Hilt (DI), Mockito instead of MockK (testing), targetSdk 35 (compileSdk 36, minSdk 26).
+> Stack: Kotlin + Jetpack Compose, Material 3 light-only GOV.UK theme, MVVM + Clean Architecture,
+> Navigation Compose, Room (Stage-1 stub only), androidx.biometric + security-crypto (Stage-1
+> interfaces/fakes only), JUnit4 + Mockito + mockito-kotlin + coroutines-test + Compose UI Test +
+> Espresso, Kover coverage, system-font fallback (GDS Transport not licensed for non-gov.uk products).
 
 **You own the tech-stack confirmation gate for the app stack (copilot-instructions §5.1).** Before you make
 **any** app code change — including the first scaffold, and even if the user did not raise the tech stack —

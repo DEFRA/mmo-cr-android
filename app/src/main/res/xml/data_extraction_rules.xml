@@ -9,6 +9,12 @@
         <include .../>
         <exclude .../>
         -->
+        <!--
+        Forward-safety: exclude the planned Jetpack DataStore-backed session/biometric-preference store
+        (see core/security/SessionStore, BiometricPreferenceStore) from cloud backup — security-relevant
+        state must never leave the device via backup. See security.instructions.md "Data at rest".
+        -->
+        <exclude domain="file" path="datastore/" />
     </cloud-backup>
     <!--
     <device-transfer>

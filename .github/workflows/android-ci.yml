@@ -1,0 +1,121 @@
+name: Android CI (PR validation)
+
+# Lightweight PR-validation workflow ONLY: lint, unit tests, debug assemble, coverage, and instrumented
+# (incl. accessibility) tests on an emulator. This does NOT perform release signing or Google Play
+# publishing — that is a separate release-engineering / DevOps responsibility (see README "CI" section),
+# owned by a different pipeline/agent, and is intentionally out of scope here.
+#
+# SonarCloud analysis is intentionally NOT wired up yet: the project has no backend/SonarCloud
+# integration at this stage (still building out screens, offline functionality and base project
+# structure). The Kover coverage report is generated and uploaded as a CI artifact now so it is ready to
+# point a SonarCloud step at once that integration begins — see docs/adr and the
+# android-release-pipeline skill for the follow-up.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Lint, test, assemble
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up JDK 17 (Temurin)
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      - name: ktlint
+        run: ./gradlew ktlintCheck --console=plain
+
+      - name: detekt
+        run: ./gradlew detekt --console=plain
+
+      - name: Android Lint
+        run: ./gradlew lint --console=plain
+
+      - name: Unit tests
+        run: ./gradlew testDebugUnitTest --console=plain
+
+      - name: Assemble debug
+        run: ./gradlew assembleDebug --console=plain
+
+      - name: Coverage report (Kover)
+        run: ./gradlew koverXmlReport --console=plain
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: kover-report
+          path: app/build/reports/kover/report.xml
+          retention-days: 14
+
+      - name: Upload lint/ktlint/detekt reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: static-analysis-reports
+          path: |
+            app/build/reports/lint-results-debug.html
+            app/build/reports/ktlint
+            app/build/reports/detekt
+          retention-days: 14
+
+  instrumented-tests:
+    name: Instrumented tests (incl. accessibility)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up JDK 17 (Temurin)
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      - name: Enable KVM (hardware acceleration for the emulator)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run instrumented tests (Compose UI + WCAG 2.2 AA semantics)
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 29
+          target: default
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: ./gradlew connectedDebugAndroidTest --console=plain
+
+      - name: Upload instrumented test report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: instrumented-test-report
+          path: app/build/reports/androidTests/connected
+          retention-days: 14
+

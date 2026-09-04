@@ -10,4 +10,12 @@
    <include domain="sharedpref" path="."/>
    <exclude domain="sharedpref" path="device.xml"/>
 -->
+    <!--
+   Forward-safety: Stage 1 has no persisted session/preference data (in-memory fakes only), but the
+   planned real implementation (core/security/SessionStore, BiometricPreferenceStore) will persist via
+   Jetpack DataStore under files/datastore/. Exclude it up front so security-relevant session/biometric
+   state can never be included in a legacy (pre-API 31) full backup — see security.instructions.md
+   "Data at rest".
+-->
+    <exclude domain="file" path="datastore/" />
 </full-backup-content>
