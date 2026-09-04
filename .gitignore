@@ -1,0 +1,37 @@
+# Android / IntelliJ
+*.iml
+.gradle/
+.idea/
+.vscode/
+local.properties
+*.apk
+*.ap_
+*.aab
+*.aar
+*.jks
+*.keystore
+
+# Gradle / build outputs
+/build/
+**/build/
+/captures/
+.externalNativeBuild/
+.cxx/
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+*.log
+
+# Kotlin / Java
+*.class
+
+# Android Studio generated files
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+/.idea/gradle.xml
+/.idea/runConfigurations.xml
