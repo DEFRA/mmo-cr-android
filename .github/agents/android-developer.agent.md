@@ -30,12 +30,13 @@ work, or delegate to the **Android Planner** for **Complex** work — then obtai
 
 ## Tech-stack confirmation status (app stack)
 
-> **Status: ✅ Confirmed on 2026-09-04 by developer via orchestrator** — deviations from §5 defaults:
-> Koin instead of Hilt (DI), Mockito instead of MockK (testing), targetSdk 35 (compileSdk 36, minSdk 26).
-> Stack: Kotlin + Jetpack Compose, Material 3 light-only GOV.UK theme, MVVM + Clean Architecture,
-> Navigation Compose, Room (Stage-1 stub only), androidx.biometric + security-crypto (Stage-1
-> interfaces/fakes only), JUnit4 + Mockito + mockito-kotlin + coroutines-test + Compose UI Test +
-> Espresso, Kover coverage, system-font fallback (GDS Transport not licensed for non-gov.uk products).
+> **Status: ✅ Confirmed on 2026-09-04 by developer via orchestrator, DI reverted to Hilt on 2026-09-07** —
+> remaining deviations from §5 defaults: Mockito instead of MockK (testing), targetSdk 35 (compileSdk 36,
+> minSdk 26). Stack: Kotlin + Jetpack Compose, Material 3 light-only GOV.UK theme, MVVM + Clean
+> Architecture, Hilt (DI, §5 default — reverts the earlier Koin deviation, see ADR 0005), Navigation
+> Compose, Room (Stage-1 stub only), androidx.biometric + security-crypto (Stage-1 interfaces/fakes only),
+> JUnit4 + Mockito + mockito-kotlin + coroutines-test + Compose UI Test + Espresso, Kover coverage,
+> system-font fallback (GDS Transport not licensed for non-gov.uk products).
 
 **You own the tech-stack confirmation gate for the app stack (copilot-instructions §5.1).** Before you make
 **any** app code change — including the first scaffold, and even if the user did not raise the tech stack —

@@ -1,5 +1,6 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation
 
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import uk.gov.defra.mmocatchrecord.core.architecture.BaseViewModel
@@ -7,14 +8,18 @@ import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.GetCatchRecordsUseCase
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.SaveCatchRecordUseCase
 import java.util.UUID
+import javax.inject.Inject
 
 /** ViewModel for the catch record feature: capture a new catch and list previous entries. */
-class CatchRecordViewModel(
-    private val saveCatchRecordUseCase: SaveCatchRecordUseCase,
-    private val getCatchRecordsUseCase: GetCatchRecordsUseCase,
-    private val idFactory: () -> String = { UUID.randomUUID().toString() },
-    defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
-) : BaseViewModel<CatchRecordViewState, CatchRecordEvent>(
+@HiltViewModel
+class CatchRecordViewModel
+    @Inject
+    constructor(
+        private val saveCatchRecordUseCase: SaveCatchRecordUseCase,
+        private val getCatchRecordsUseCase: GetCatchRecordsUseCase,
+        private val idFactory: () -> String = { UUID.randomUUID().toString() },
+        defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
+    ) : BaseViewModel<CatchRecordViewState, CatchRecordEvent>(
         initialState = CatchRecordViewState(),
         defaultDispatcher = defaultDispatcher,
     ) {

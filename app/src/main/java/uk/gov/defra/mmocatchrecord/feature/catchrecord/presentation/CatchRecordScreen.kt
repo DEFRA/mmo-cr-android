@@ -23,7 +23,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
-import org.koin.androidx.compose.koinViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.CatchRecord
@@ -41,7 +41,7 @@ object CatchRecordScreenTestTags {
 @Composable
 fun CatchRecordScreen(
     modifier: Modifier = Modifier,
-    viewModel: CatchRecordViewModel = koinViewModel(),
+    viewModel: CatchRecordViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
 

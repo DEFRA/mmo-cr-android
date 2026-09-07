@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.ksp)
     alias(libs.plugins.androidx.room)
+    alias(libs.plugins.hilt.android)
     alias(libs.plugins.kover)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.detekt)
@@ -11,10 +12,9 @@ plugins {
 android {
     namespace = "uk.gov.defra.mmocatchrecord"
     // NOTE: compileSdk pinned to 37, one above the planned 36, because several pinned library
-    // versions (androidx.core 1.19.0, lifecycle 2.11.0 transitively pulled in via Koin's Compose
-    // multiplatform lifecycle artifacts, androidx.navigation:navigation-compose 2.10.0) declare an
-    // AAR metadata requirement of compileSdk >= 37. compileSdk is compile-time only and does not
-    // change runtime behaviour; targetSdk remains pinned at 35 as planned. See README governance
+    // versions (androidx.core 1.19.0, lifecycle 2.11.0, androidx.navigation:navigation-compose 2.10.0)
+    // declare an AAR metadata requirement of compileSdk >= 37. compileSdk is compile-time only and does
+    // not change runtime behaviour; targetSdk remains pinned at 35 as planned. See README governance
     // notes / implementation summary for detail.
     compileSdk = 37
 
@@ -81,9 +81,9 @@ dependencies {
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.security.crypto)
 
-    implementation(platform(libs.koin.bom))
-    implementation(libs.koin.android)
-    implementation(libs.koin.androidx.compose)
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.android.compiler)
+    implementation(libs.androidx.hilt.navigation.compose)
 
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)

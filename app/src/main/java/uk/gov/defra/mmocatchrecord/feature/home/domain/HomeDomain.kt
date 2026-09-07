@@ -1,5 +1,7 @@
 package uk.gov.defra.mmocatchrecord.feature.home.domain
 
+import javax.inject.Inject
+
 /** Domain summary shown on the Home screen. */
 data class HomeSummary(
     val signedInUserId: String,
@@ -17,8 +19,10 @@ interface HomeRepository {
 }
 
 /** Use-case wrapping [HomeRepository.getSummary]. */
-class GetHomeSummaryUseCase(
-    private val repository: HomeRepository,
-) {
+class GetHomeSummaryUseCase
+    @Inject
+    constructor(
+        private val repository: HomeRepository,
+    ) {
     suspend operator fun invoke(): Result<HomeSummary> = repository.getSummary()
 }

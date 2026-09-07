@@ -1,16 +1,21 @@
 package uk.gov.defra.mmocatchrecord.feature.home.presentation
 
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import uk.gov.defra.mmocatchrecord.core.architecture.BaseViewModel
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.home.domain.GetHomeSummaryUseCase
+import javax.inject.Inject
 
 /** ViewModel for the Home feature. Loads the summary on construction. */
-class HomeViewModel(
-    private val getHomeSummaryUseCase: GetHomeSummaryUseCase,
-    defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
-) : BaseViewModel<HomeViewState, HomeEvent>(
+@HiltViewModel
+class HomeViewModel
+    @Inject
+    constructor(
+        private val getHomeSummaryUseCase: GetHomeSummaryUseCase,
+        defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
+    ) : BaseViewModel<HomeViewState, HomeEvent>(
         initialState = HomeViewState(),
         defaultDispatcher = defaultDispatcher,
     ) {

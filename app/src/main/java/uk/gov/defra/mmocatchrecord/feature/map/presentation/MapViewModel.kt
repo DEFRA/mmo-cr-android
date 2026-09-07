@@ -1,16 +1,21 @@
 package uk.gov.defra.mmocatchrecord.feature.map.presentation
 
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import uk.gov.defra.mmocatchrecord.core.architecture.BaseViewModel
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.map.domain.GetCatchLocationsUseCase
+import javax.inject.Inject
 
 /** ViewModel for the Map feature. Loads catch locations on construction. */
-class MapViewModel(
-    private val getCatchLocationsUseCase: GetCatchLocationsUseCase,
-    defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
-) : BaseViewModel<MapViewState, MapEvent>(
+@HiltViewModel
+class MapViewModel
+    @Inject
+    constructor(
+        private val getCatchLocationsUseCase: GetCatchLocationsUseCase,
+        defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
+    ) : BaseViewModel<MapViewState, MapEvent>(
         initialState = MapViewState(),
         defaultDispatcher = defaultDispatcher,
     ) {

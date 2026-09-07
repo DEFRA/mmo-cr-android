@@ -1,19 +1,24 @@
 package uk.gov.defra.mmocatchrecord.feature.signin.presentation
 
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import uk.gov.defra.mmocatchrecord.core.architecture.BaseViewModel
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInUseCase
+import javax.inject.Inject
 
 /**
  * ViewModel for the sign-in feature. Delegates validation + authentication to [SignInUseCase]; never
  * calls a repository directly.
  */
-class SignInViewModel(
-    private val signInUseCase: SignInUseCase,
-    defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
-) : BaseViewModel<SignInViewState, SignInEvent>(
+@HiltViewModel
+class SignInViewModel
+    @Inject
+    constructor(
+        private val signInUseCase: SignInUseCase,
+        defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
+    ) : BaseViewModel<SignInViewState, SignInEvent>(
         initialState = SignInViewState(),
         defaultDispatcher = defaultDispatcher,
     ) {

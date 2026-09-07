@@ -1,5 +1,6 @@
 package uk.gov.defra.mmocatchrecord.core.root
 
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import uk.gov.defra.mmocatchrecord.core.architecture.BaseViewModel
@@ -9,6 +10,7 @@ import uk.gov.defra.mmocatchrecord.core.security.BiometricReentryPolicy
 import uk.gov.defra.mmocatchrecord.core.security.BiometricRepository
 import uk.gov.defra.mmocatchrecord.core.security.ReentryDecision
 import uk.gov.defra.mmocatchrecord.core.security.SessionStore
+import javax.inject.Inject
 
 /** Root navigation state — currently just the derived [RootPhase]. */
 data class RootUiState(
@@ -41,14 +43,17 @@ sealed interface RootEvent {
  * Derives [RootPhase] from [SessionStore] + [BiometricPreferenceStore] + [BiometricReentryPolicy], and
  * is the unit-test target for the app's sign-in / app-lock / home routing decision.
  */
-class SessionCoordinator(
-    private val sessionStore: SessionStore,
-    private val biometricPreferenceStore: BiometricPreferenceStore,
-    private val reentryPolicy: BiometricReentryPolicy,
-    private val biometricRepository: BiometricRepository,
-    private val clock: () -> Long = System::currentTimeMillis,
-    dispatcher: CoroutineDispatcher = Dispatchers.Default,
-) : BaseViewModel<RootUiState, RootEvent>(
+@HiltViewModel
+class SessionCoordinator
+    @Inject
+    constructor(
+        private val sessionStore: SessionStore,
+        private val biometricPreferenceStore: BiometricPreferenceStore,
+        private val reentryPolicy: BiometricReentryPolicy,
+        private val biometricRepository: BiometricRepository,
+        private val clock: () -> Long = System::currentTimeMillis,
+        dispatcher: CoroutineDispatcher = Dispatchers.Default,
+    ) : BaseViewModel<RootUiState, RootEvent>(
         initialState = RootUiState(phase = RootPhase.SIGN_IN),
         defaultDispatcher = dispatcher,
     ) {

@@ -2,6 +2,7 @@ package uk.gov.defra.mmocatchrecord.feature.signin.domain
 
 import uk.gov.defra.mmocatchrecord.core.architecture.ValidationHelper
 import uk.gov.defra.mmocatchrecord.core.architecture.ValidationResult
+import javax.inject.Inject
 
 /**
  * Repository abstraction over authenticating a user against MMO identity.
@@ -21,9 +22,11 @@ interface SignInRepository {
  * Use-case wrapping [SignInRepository.signIn] with pure input validation via [ValidationHelper], so the
  * ViewModel never has to duplicate validation rules.
  */
-class SignInUseCase(
-    private val repository: SignInRepository,
-) {
+class SignInUseCase
+    @Inject
+    constructor(
+        private val repository: SignInRepository,
+    ) {
     suspend operator fun invoke(
         username: String,
         password: String,

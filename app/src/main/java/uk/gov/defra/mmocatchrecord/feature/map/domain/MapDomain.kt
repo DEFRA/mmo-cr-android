@@ -1,5 +1,7 @@
 package uk.gov.defra.mmocatchrecord.feature.map.domain
 
+import javax.inject.Inject
+
 /** Domain model for a single mapped catch location. */
 data class CatchLocation(
     val id: String,
@@ -21,8 +23,10 @@ interface MapRepository {
 }
 
 /** Use-case wrapping [MapRepository.getCatchLocations]. */
-class GetCatchLocationsUseCase(
-    private val repository: MapRepository,
-) {
+class GetCatchLocationsUseCase
+    @Inject
+    constructor(
+        private val repository: MapRepository,
+    ) {
     suspend operator fun invoke(): Result<List<CatchLocation>> = repository.getCatchLocations()
 }

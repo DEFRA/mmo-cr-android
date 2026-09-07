@@ -21,7 +21,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import org.koin.androidx.compose.koinViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 
@@ -43,7 +43,7 @@ object SignInScreenTestTags {
 fun SignInScreen(
     onSignedIn: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: SignInViewModel = koinViewModel(),
+    viewModel: SignInViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
 

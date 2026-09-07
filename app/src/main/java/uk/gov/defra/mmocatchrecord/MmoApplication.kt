@@ -1,17 +1,8 @@
 package uk.gov.defra.mmocatchrecord
 
 import android.app.Application
-import org.koin.android.ext.koin.androidContext
-import org.koin.core.context.startKoin
-import uk.gov.defra.mmocatchrecord.di.appModule
+import dagger.hilt.android.HiltAndroidApp
 
-/** Application entry point — starts the Koin dependency graph. */
-class MmoApplication : Application() {
-    override fun onCreate() {
-        super.onCreate()
-        startKoin {
-            androidContext(this@MmoApplication)
-            modules(appModule)
-        }
-    }
-}
+/** Application entry point — root of the Hilt dependency graph (see [uk.gov.defra.mmocatchrecord.di.AppModule]). */
+@HiltAndroidApp
+class MmoApplication : Application()

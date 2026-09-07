@@ -41,8 +41,8 @@ app/src/main/java/uk/gov/defra/mmocatchrecord/
 │   ├── architecture/   # BaseViewModel, ViewState/UiStatus, ValidationHelper (MVVM + Clean Architecture)
 │   ├── security/       # Biometric/session interfaces + Stage-1 fakes (real Keystore impl is a later stage)
 │   └── root/           # RootPhase, SessionCoordinator, RootNavigation, MainActivity
-├── di/                 # Koin modules
-└── MmoApplication.kt   # Application class, starts Koin
+├── di/                 # Hilt modules
+└── MmoApplication.kt   # Application class, @HiltAndroidApp entry point
 ```
 
 Feature work (once past this foundational stage) should follow the same `domain` / `data` / `presentation`
@@ -53,8 +53,8 @@ split per feature package, per
 
 - **MVVM + Clean Architecture** — see ADR 0002.
 - **Room** for offline-first local persistence (Stage 1: compile-time stub only) — see ADR 0003.
-- **Koin** for dependency injection (a recorded deviation from the copilot-instructions §5 Hilt default)
-  — see ADR 0004.
+- **Hilt** for dependency injection (the copilot-instructions §5 default) — see ADR 0005 (supersedes ADR
+  0004, which recorded a since-reverted Koin deviation).
 - **Navigation Compose** (stable) for in-app navigation.
 - **Material 3, light-only GOV.UK theme** — no dark mode, no dynamic colour, system-font fallback (GDS
   Transport is not licensed for non-gov.uk products, so it is not bundled; the font is swapped in one
@@ -91,7 +91,8 @@ split per feature package, per
 | [0001](docs/adr/0001-native-android-app-exception.md) | Native Android app as a governed exception |
 | [0002](docs/adr/0002-mvvm-clean-architecture.md) | MVVM + Clean Architecture |
 | [0003](docs/adr/0003-room-offline-persistence.md) | Room for offline-first persistence |
-| [0004](docs/adr/0004-koin-dependency-injection.md) | Koin for dependency injection |
+| [0004](docs/adr/0004-koin-dependency-injection.md) | Koin for dependency injection (superseded) |
+| [0005](docs/adr/0005-hilt-dependency-injection.md) | Hilt for dependency injection |
 | [0000](docs/adr/0000-ios-adr-references-TBC.md) | iOS ADR references — TBC |
 
 ## CI

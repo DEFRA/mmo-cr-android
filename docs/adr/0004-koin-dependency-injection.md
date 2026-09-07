@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted (deviation from the copilot-instructions §5 proposed default — see below)
+Superseded by [0005 - Hilt for dependency injection](0005-hilt-dependency-injection.md). This decision was
+reverted before public beta; the app now uses Hilt (the copilot-instructions §5 default) and no longer
+carries this deviation.
 
 ## Context
 

@@ -1,9 +1,11 @@
 package uk.gov.defra.mmocatchrecord.di
 
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
-import org.koin.core.module.dsl.viewModelOf
-import org.koin.dsl.module
-import uk.gov.defra.mmocatchrecord.core.root.SessionCoordinator
 import uk.gov.defra.mmocatchrecord.core.security.BiometricPreferenceStore
 import uk.gov.defra.mmocatchrecord.core.security.BiometricReentryPolicy
 import uk.gov.defra.mmocatchrecord.core.security.BiometricRepository
@@ -13,56 +15,67 @@ import uk.gov.defra.mmocatchrecord.core.security.InMemorySessionStore
 import uk.gov.defra.mmocatchrecord.core.security.SessionStore
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.FakeCatchRecordRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.CatchRecordRepository
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.GetCatchRecordsUseCase
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.SaveCatchRecordUseCase
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.CatchRecordViewModel
 import uk.gov.defra.mmocatchrecord.feature.home.data.FakeHomeRepository
-import uk.gov.defra.mmocatchrecord.feature.home.domain.GetHomeSummaryUseCase
 import uk.gov.defra.mmocatchrecord.feature.home.domain.HomeRepository
-import uk.gov.defra.mmocatchrecord.feature.home.presentation.HomeViewModel
 import uk.gov.defra.mmocatchrecord.feature.map.data.FakeMapRepository
-import uk.gov.defra.mmocatchrecord.feature.map.domain.GetCatchLocationsUseCase
 import uk.gov.defra.mmocatchrecord.feature.map.domain.MapRepository
-import uk.gov.defra.mmocatchrecord.feature.map.presentation.MapViewModel
 import uk.gov.defra.mmocatchrecord.feature.signin.data.FakeSignInRepository
 import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInRepository
-import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInUseCase
-import uk.gov.defra.mmocatchrecord.feature.signin.presentation.SignInViewModel
+import java.util.UUID
+import javax.inject.Singleton
 
 /**
- * Stage-1 Koin module. Binds Stage-1 fakes to their interfaces; real Keystore/DataStore/Room/Retrofit
+ * Stage-1 Hilt module. Binds Stage-1 fakes to their interfaces; real Keystore/DataStore/Room/Retrofit
  * -backed implementations replace these fakes in later stages without changing consumer code.
  */
-val appModule =
-    module {
-        single<BiometricRepository> { FakeBiometricRepository() }
-        single<SessionStore> { InMemorySessionStore() }
-        single<BiometricPreferenceStore> { InMemoryBiometricPreferenceStore() }
-        single { BiometricReentryPolicy() }
+@Module
+@InstallIn(SingletonComponent::class)
+object AppModule {
+    @Provides
+    @Singleton
+    fun provideDispatcher(): CoroutineDispatcher = Dispatchers.Default
 
-        single { Dispatchers.Default }
-        single<() -> Long> { { System.currentTimeMillis() } }
+    @Provides
+    @Singleton
+    fun provideClock(): () -> Long = { System.currentTimeMillis() }
 
-        viewModelOf(::SessionCoordinator)
+    @Provides
+    @Singleton
+    fun provideCatchRecordIdFactory(): () -> String = { UUID.randomUUID().toString() }
 
-        // feature.signin
-        single<SignInRepository> { FakeSignInRepository() }
-        single { SignInUseCase(get()) }
-        viewModelOf(::SignInViewModel)
+    @Provides
+    @Singleton
+    fun provideBiometricReentryPolicy(): BiometricReentryPolicy = BiometricReentryPolicy()
 
-        // feature.home
-        single<HomeRepository> { FakeHomeRepository() }
-        single { GetHomeSummaryUseCase(get()) }
-        viewModelOf(::HomeViewModel)
+    @Provides
+    @Singleton
+    fun provideBiometricRepository(): BiometricRepository = FakeBiometricRepository()
 
-        // feature.catchrecord
-        single<CatchRecordRepository> { FakeCatchRecordRepository() }
-        single { SaveCatchRecordUseCase(get()) }
-        single { GetCatchRecordsUseCase(get()) }
-        viewModelOf(::CatchRecordViewModel)
+    @Provides
+    @Singleton
+    fun provideSessionStore(): SessionStore = InMemorySessionStore()
 
-        // feature.map
-        single<MapRepository> { FakeMapRepository() }
-        single { GetCatchLocationsUseCase(get()) }
-        viewModelOf(::MapViewModel)
-    }
+    @Provides
+    @Singleton
+    fun provideBiometricPreferenceStore(): BiometricPreferenceStore = InMemoryBiometricPreferenceStore()
+
+    // feature.signin
+    @Provides
+    @Singleton
+    fun provideSignInRepository(): SignInRepository = FakeSignInRepository()
+
+    // feature.home
+    @Provides
+    @Singleton
+    fun provideHomeRepository(): HomeRepository = FakeHomeRepository()
+
+    // feature.catchrecord
+    @Provides
+    @Singleton
+    fun provideCatchRecordRepository(): CatchRecordRepository = FakeCatchRecordRepository()
+
+    // feature.map
+    @Provides
+    @Singleton
+    fun provideMapRepository(): MapRepository = FakeMapRepository()
+}
