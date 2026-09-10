@@ -28,5 +28,5 @@ class GetCatchLocationsUseCase
     constructor(
         private val repository: MapRepository,
     ) {
-    suspend operator fun invoke(): Result<List<CatchLocation>> = repository.getCatchLocations()
-}
+        suspend operator fun invoke(): Result<List<CatchLocation>> = repository.getCatchLocations()
+    }

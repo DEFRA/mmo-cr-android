@@ -6,9 +6,9 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import uk.gov.defra.mmocatchrecord.core.root.AppLockScreen
-import uk.gov.defra.mmocatchrecord.core.root.HomeScreen
 import uk.gov.defra.mmocatchrecord.core.root.RootEvent
 import uk.gov.defra.mmocatchrecord.core.root.SignInScreen
+import uk.gov.defra.mmocatchrecord.feature.home.presentation.HomeScreen
 
 /**
  * App-wide [NavHost] wiring the Stage-1 placeholder destinations. Real feature graphs are added in

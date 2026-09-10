@@ -54,65 +54,65 @@ class SessionCoordinator
         private val clock: () -> Long = System::currentTimeMillis,
         dispatcher: CoroutineDispatcher = Dispatchers.Default,
     ) : BaseViewModel<RootUiState, RootEvent>(
-        initialState = RootUiState(phase = RootPhase.SIGN_IN),
-        defaultDispatcher = dispatcher,
-    ) {
-    init {
-        refreshPhase()
-    }
+            initialState = RootUiState(phase = RootPhase.SIGN_IN),
+            defaultDispatcher = dispatcher,
+        ) {
+        init {
+            refreshPhase()
+        }
 
-    override fun dispatch(event: RootEvent) {
-        when (event) {
-            RootEvent.SignedIn ->
-                launchInViewModelScope {
-                    sessionStore.recordAuthenticatedNow(clock())
-                    refreshPhaseNow()
-                }
-
-            RootEvent.BiometricUnlockRequested ->
-                launchInViewModelScope {
-                    // Only treat the app as re-entered if the biometric prompt actually succeeds.
-                    // A cancelled/failed attempt must leave the state (and therefore RootPhase.APP_LOCK)
-                    // unchanged — never optimistically unlock on user intent alone.
-                    if (biometricRepository.authenticate().isSuccess) {
+        override fun dispatch(event: RootEvent) {
+            when (event) {
+                RootEvent.SignedIn ->
+                    launchInViewModelScope {
                         sessionStore.recordAuthenticatedNow(clock())
+                        refreshPhaseNow()
                     }
-                    refreshPhaseNow()
-                }
 
-            RootEvent.SignedOut ->
-                launchInViewModelScope {
-                    sessionStore.clear()
-                    updateState { it.copy(phase = RootPhase.SIGN_IN) }
-                }
+                RootEvent.BiometricUnlockRequested ->
+                    launchInViewModelScope {
+                        // Only treat the app as re-entered if the biometric prompt actually succeeds.
+                        // A cancelled/failed attempt must leave the state (and therefore RootPhase.APP_LOCK)
+                        // unchanged — never optimistically unlock on user intent alone.
+                        if (biometricRepository.authenticate().isSuccess) {
+                            sessionStore.recordAuthenticatedNow(clock())
+                        }
+                        refreshPhaseNow()
+                    }
 
-            RootEvent.AppResumed ->
-                launchInViewModelScope { refreshPhaseNow() }
+                RootEvent.SignedOut ->
+                    launchInViewModelScope {
+                        sessionStore.clear()
+                        updateState { it.copy(phase = RootPhase.SIGN_IN) }
+                    }
+
+                RootEvent.AppResumed ->
+                    launchInViewModelScope { refreshPhaseNow() }
+            }
+        }
+
+        private fun refreshPhase() {
+            launchInViewModelScope { refreshPhaseNow() }
+        }
+
+        private suspend fun refreshPhaseNow() {
+            val lastAuthenticatedAtMillis = sessionStore.getLastAuthenticatedAtMillis()
+            val phase =
+                if (lastAuthenticatedAtMillis == null) {
+                    RootPhase.SIGN_IN
+                } else {
+                    val biometricEnabled = biometricPreferenceStore.isBiometricReentryEnabled()
+                    when (
+                        reentryPolicy.evaluate(
+                            isBiometricEnabled = biometricEnabled,
+                            lastAuthenticatedAtMillis = lastAuthenticatedAtMillis,
+                            nowMillis = clock(),
+                        )
+                    ) {
+                        ReentryDecision.APP_LOCK -> RootPhase.APP_LOCK
+                        ReentryDecision.PASS_THROUGH -> RootPhase.HOME
+                    }
+                }
+            updateState { it.copy(phase = phase) }
         }
     }
-
-    private fun refreshPhase() {
-        launchInViewModelScope { refreshPhaseNow() }
-    }
-
-    private suspend fun refreshPhaseNow() {
-        val lastAuthenticatedAtMillis = sessionStore.getLastAuthenticatedAtMillis()
-        val phase =
-            if (lastAuthenticatedAtMillis == null) {
-                RootPhase.SIGN_IN
-            } else {
-                val biometricEnabled = biometricPreferenceStore.isBiometricReentryEnabled()
-                when (
-                    reentryPolicy.evaluate(
-                        isBiometricEnabled = biometricEnabled,
-                        lastAuthenticatedAtMillis = lastAuthenticatedAtMillis,
-                        nowMillis = clock(),
-                    )
-                ) {
-                    ReentryDecision.APP_LOCK -> RootPhase.APP_LOCK
-                    ReentryDecision.PASS_THROUGH -> RootPhase.HOME
-                }
-            }
-        updateState { it.copy(phase = phase) }
-    }
-}

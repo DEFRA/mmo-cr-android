@@ -6,7 +6,26 @@ import javax.inject.Inject
 data class HomeSummary(
     val signedInUserId: String,
     val pendingCatchRecordCount: Int,
+    val catchRecords: List<CatchRecordSummary> = emptyList(),
+    val totalCount: Int = 0,
+    val pageStart: Int = 1,
+    val pageEnd: Int = 4,
 )
+
+data class CatchRecordSummary(
+    val id: String,
+    val tripEndDate: String,
+    val vesselName: String,
+    val status: CatchRecordStatus,
+    val createdBy: String,
+)
+
+enum class CatchRecordStatus {
+    SUBMITTED,
+    AMENDED,
+    UNSENT,
+    LATE,
+}
 
 /**
  * Repository abstraction over Home-screen summary data (pending offline records, sync status, etc).
@@ -24,5 +43,5 @@ class GetHomeSummaryUseCase
     constructor(
         private val repository: HomeRepository,
     ) {
-    suspend operator fun invoke(): Result<HomeSummary> = repository.getSummary()
-}
+        suspend operator fun invoke(): Result<HomeSummary> = repository.getSummary()
+    }

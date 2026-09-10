@@ -52,7 +52,7 @@ calling agent to read.
 
 ## Setup (human, one-time)
 
-1. Copy [assets/.env.example](assets/.env.example) to `.env` in this skill folder.
+1. Copy [assets/.env.example](.env.example) to `.env` in this skill folder.
 2. Create a Figma **Personal Access Token** (Figma → Settings → Security →
    Personal access tokens) with scope **File content: Read-only** (least
    privilege).

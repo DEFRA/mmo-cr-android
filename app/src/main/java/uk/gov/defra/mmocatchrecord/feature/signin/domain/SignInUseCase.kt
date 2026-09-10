@@ -27,22 +27,22 @@ class SignInUseCase
     constructor(
         private val repository: SignInRepository,
     ) {
-    suspend operator fun invoke(
-        username: String,
-        password: String,
-    ): Result<SignInSession> {
-        val usernameValidation = ValidationHelper.requireNotBlank(username, "Username")
-        val passwordValidation = ValidationHelper.requireNotBlank(password, "Password")
+        suspend operator fun invoke(
+            username: String,
+            password: String,
+        ): Result<SignInSession> {
+            val usernameValidation = ValidationHelper.requireNotBlank(username, "Username")
+            val passwordValidation = ValidationHelper.requireNotBlank(password, "Password")
 
-        val firstInvalid =
-            listOf(usernameValidation, passwordValidation)
-                .filterIsInstance<ValidationResult.Invalid>()
-                .firstOrNull()
+            val firstInvalid =
+                listOf(usernameValidation, passwordValidation)
+                    .filterIsInstance<ValidationResult.Invalid>()
+                    .firstOrNull()
 
-        if (firstInvalid != null) {
-            return Result.failure(IllegalArgumentException(firstInvalid.reason))
+            if (firstInvalid != null) {
+                return Result.failure(IllegalArgumentException(firstInvalid.reason))
+            }
+
+            return repository.signIn(username, password)
         }
-
-        return repository.signIn(username, password)
     }
-}

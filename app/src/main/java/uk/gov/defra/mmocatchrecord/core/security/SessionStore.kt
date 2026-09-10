@@ -23,9 +23,11 @@ interface SessionStore {
 }
 
 /** In-memory [SessionStore] fake for tests and Stage-1 wiring — not persisted across process death. */
-class InMemorySessionStore : SessionStore {
+class InMemorySessionStore(
+    initialLastAuthenticatedAtMillis: Long? = null
+) : SessionStore {
     @Volatile
-    private var lastAuthenticatedAtMillis: Long? = null
+    private var lastAuthenticatedAtMillis: Long? = initialLastAuthenticatedAtMillis
 
     override suspend fun getLastAuthenticatedAtMillis(): Long? = lastAuthenticatedAtMillis
 
