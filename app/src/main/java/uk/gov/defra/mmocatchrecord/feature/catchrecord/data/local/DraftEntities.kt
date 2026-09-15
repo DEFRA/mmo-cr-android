@@ -55,7 +55,7 @@ data class GearUseEntity(
     @PrimaryKey val id: String,
     val draftId: String,
     val gearTypeId: String,
-    val statRectangleId: String?,
+    val statisticalSubRectangleCode: String?,
     val orderIndex: Int,
     val numberOfShots: Int?,
     val confirmedUsedOnTrip: Boolean,

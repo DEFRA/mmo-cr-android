@@ -2,6 +2,7 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard
 
 import uk.gov.defra.mmocatchrecord.common.navigation.Destination
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
 
 /**
  * A step in the "Create a Catch Record" wizard. Confirmed Stage-1 steps are modelled fully; steps for
@@ -41,7 +42,18 @@ sealed interface WizardStep {
     /** Checklist of every gear added so far, with confirm/remove/add-another actions. */
     data object GearSummary : WizardStep
 
-    /** TODO(Phase 4): statistical sub-rectangle selection, fields TBD, screenshots pending. */
+    /**
+     * Per-confirmed-gear "Where was the majority of your catch caught using {gear}?" statistical
+     * sub-rectangle selection (Phase 4) — looped once for each
+     * [uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse] with `confirmedUsedOnTrip ==
+     * true`, in `draft.gearUses` order, until every confirmed gear has recorded a
+     * `statisticalSubRectangleCode`. A single step (not one per gear or per sub-screen): which gear is
+     * "current" and whether the grid/radio-list/autocomplete sub-screen is shown is derived from the draft
+     * and local screen state respectively — see `GearStatRectangleScreen` and [nextWizardStepForDraft].
+     */
+    data object GearStatRectangle : WizardStep
+
+    /** TODO(Phase 6): landing/storage entry, fields TBD, screenshots pending. */
     data object LandingStorage : WizardStep
 
     /** TODO(Phase 6+): review and submit screen. */
@@ -60,9 +72,17 @@ fun routeFor(step: WizardStep): String =
         WizardStep.GearSearch -> Destination.CatchRecordFlow.GEAR_SEARCH_ROUTE
         WizardStep.GearMeasurement -> Destination.CatchRecordFlow.GEAR_MEASUREMENT_ROUTE
         WizardStep.GearSummary -> Destination.CatchRecordFlow.GEAR_SUMMARY_ROUTE
+        WizardStep.GearStatRectangle -> Destination.CatchRecordFlow.GEAR_STAT_RECTANGLE_ROUTE
         WizardStep.LandingStorage -> Destination.CatchRecordFlow.PHASE_THREE_COMPLETE_ROUTE
         WizardStep.ReviewAndSubmit -> Destination.CatchRecordFlow.PHASE_THREE_COMPLETE_ROUTE
     }
+
+/**
+ * The next confirmed gear use (in `draft.gearUses` order) still awaiting a statistical sub-rectangle, or
+ * `null` once every confirmed gear has one recorded — see [WizardStep.GearStatRectangle].
+ */
+fun nextGearUsePendingStatRectangle(draft: CatchRecordDraft): GearUse? =
+    draft.gearUses.firstOrNull { it.confirmedUsedOnTrip && it.statisticalSubRectangleCode == null }
 
 fun nextWizardStepForDraft(draft: CatchRecordDraft): WizardStep =
     when {
@@ -72,5 +92,7 @@ fun nextWizardStepForDraft(draft: CatchRecordDraft): WizardStep =
         draft.departurePort == null -> WizardStep.DeparturePort
         draft.returnPort == null -> WizardStep.ReturnPort
         draft.gearUses.isEmpty() -> WizardStep.GearSearch
+        nextGearUsePendingStatRectangle(draft) != null -> WizardStep.GearStatRectangle
+        draft.gearUses.any { it.confirmedUsedOnTrip } -> WizardStep.LandingStorage
         else -> WizardStep.GearSummary
     }

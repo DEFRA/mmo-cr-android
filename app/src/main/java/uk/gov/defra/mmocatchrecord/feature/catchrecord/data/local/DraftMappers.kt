@@ -67,7 +67,7 @@ private object DraftToEntityMapper {
             id = gearUse.id,
             draftId = draftId,
             gearTypeId = gearUse.gearTypeId,
-            statRectangleId = gearUse.statRectangleId,
+            statisticalSubRectangleCode = gearUse.statisticalSubRectangleCode,
             orderIndex = orderIndex,
             numberOfShots = gearUse.numberOfShots,
             confirmedUsedOnTrip = gearUse.confirmedUsedOnTrip,
@@ -159,7 +159,7 @@ private object EntityToDraftMapper {
         return GearUse(
             id = withChildren.gearUse.id,
             gearTypeId = withChildren.gearUse.gearTypeId,
-            statRectangleId = withChildren.gearUse.statRectangleId,
+            statisticalSubRectangleCode = withChildren.gearUse.statisticalSubRectangleCode,
             measurements = measurements,
             speciesWeights =
                 withChildren.speciesWeights.map { sw ->

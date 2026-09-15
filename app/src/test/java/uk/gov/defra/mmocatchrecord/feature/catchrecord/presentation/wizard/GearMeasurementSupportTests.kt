@@ -56,7 +56,7 @@ class GearMeasurementSupportTests {
             GearUse(
                 id = "gear-use-1",
                 gearTypeId = "gear-seine-nets",
-                statRectangleId = null,
+                statisticalSubRectangleCode = null,
                 measurements = mapOf(GearMeasurementFieldKeys.MESH_SIZE_MM to MeasurementValue.Numeric(100.0, "mm")),
             )
         assertEquals("100mm mesh", GearMeasurementSupport.measurementSummaryFor(gearUse))
@@ -68,7 +68,7 @@ class GearMeasurementSupportTests {
             GearUse(
                 id = "gear-use-1",
                 gearTypeId = "gear-seine-nets",
-                statRectangleId = null,
+                statisticalSubRectangleCode = null,
                 measurements = mapOf(GearMeasurementFieldKeys.MESH_SIZE_MM to MeasurementValue.Numeric(12.5, "mm")),
             )
         assertEquals("12.5mm mesh", GearMeasurementSupport.measurementSummaryFor(gearUse))
@@ -80,7 +80,7 @@ class GearMeasurementSupportTests {
             GearUse(
                 id = "gear-use-1",
                 gearTypeId = "gear-bottom-pair-trawls-ptb",
-                statRectangleId = null,
+                statisticalSubRectangleCode = null,
             )
         assertNull(GearMeasurementSupport.measurementSummaryFor(gearUse))
     }

@@ -169,6 +169,16 @@ class StubReferenceDataRepositoryTests {
         }
 
     @Test
+    fun `hastings statistical sub-rectangles match the confirmed Phase 4 screenshot codes`() =
+        runTest {
+            val hastingsPort = repository.getPorts().getOrThrow().first { it.name == "Hastings" }
+            val rectangles = repository.getStatisticalSubRectanglesForPort(hastingsPort.id).getOrThrow()
+            val expectedCodes =
+                setOf("38E95", "38E98", "38F02", "38E96", "38E99", "38F03", "37E97", "37F01", "37F02")
+            assertEquals(expectedCodes, rectangles.map { it.code }.toSet())
+        }
+
+    @Test
     fun `statistical sub-rectangles for an unknown port fails`() =
         runTest {
             val result = repository.getStatisticalSubRectanglesForPort("unknown-port")

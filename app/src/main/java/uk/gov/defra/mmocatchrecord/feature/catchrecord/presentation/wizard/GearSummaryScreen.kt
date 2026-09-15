@@ -76,8 +76,17 @@ fun GearSummaryScreen(
         onRemoveGear = { updatedDraft -> viewModel.dispatch(CatchRecordFlowEvent.GearRemoved(updatedDraft)) },
         onAddAnotherGear = { onNavigate(WizardStep.GearSearch) },
         onSubmit = { updatedDraft ->
-            viewModel.dispatch(CatchRecordFlowEvent.SaveAndContinue(updatedDraft, WizardStep.LandingStorage))
-            onNavigate(WizardStep.LandingStorage)
+            // At least one confirmed gear still needing a statistical sub-rectangle (Phase 4) routes into
+            // that per-gear loop first; only an updated draft with zero confirmed gear (edge case: every
+            // gear left unticked) skips straight past it, since there is nothing to loop over.
+            val nextStep =
+                if (updatedDraft.gearUses.any { it.confirmedUsedOnTrip }) {
+                    WizardStep.GearStatRectangle
+                } else {
+                    WizardStep.LandingStorage
+                }
+            viewModel.dispatch(CatchRecordFlowEvent.SaveAndContinue(updatedDraft, nextStep))
+            onNavigate(nextStep)
         },
         onBack = onBack,
         modifier = modifier,
@@ -245,7 +254,7 @@ fun GearSummaryScreen_Preview() {
             GearUse(
                 id = "gear-use-1",
                 gearTypeId = "gear-seine-nets",
-                statRectangleId = null,
+                statisticalSubRectangleCode = null,
                 measurements = mapOf(GearMeasurementFieldKeys.MESH_SIZE_MM to MeasurementValue.Numeric(100.0, "mm")),
                 confirmedUsedOnTrip = true,
                 numberOfShots = 3,
@@ -253,7 +262,7 @@ fun GearSummaryScreen_Preview() {
             GearUse(
                 id = "gear-use-2",
                 gearTypeId = "gear-bottom-otter-trawls-tb",
-                statRectangleId = null,
+                statisticalSubRectangleCode = null,
                 measurements = mapOf(GearMeasurementFieldKeys.MESH_SIZE_MM to MeasurementValue.Numeric(80.0, "mm")),
             ),
         )

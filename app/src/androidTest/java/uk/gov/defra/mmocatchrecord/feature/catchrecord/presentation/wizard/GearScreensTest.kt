@@ -457,14 +457,14 @@ class GearScreensTest {
         GearUse(
             id = "gear-use-1",
             gearTypeId = "gear-seine-nets",
-            statRectangleId = null,
+            statisticalSubRectangleCode = null,
             measurements = mapOf(GearMeasurementFieldKeys.MESH_SIZE_MM to MeasurementValue.Numeric(100.0, "mm")),
         )
     private val gearUseBottomOtterTrawls =
         GearUse(
             id = "gear-use-2",
             gearTypeId = "gear-bottom-otter-trawls-tb",
-            statRectangleId = null,
+            statisticalSubRectangleCode = null,
             measurements = mapOf(GearMeasurementFieldKeys.MESH_SIZE_MM to MeasurementValue.Numeric(80.0, "mm")),
         )
 

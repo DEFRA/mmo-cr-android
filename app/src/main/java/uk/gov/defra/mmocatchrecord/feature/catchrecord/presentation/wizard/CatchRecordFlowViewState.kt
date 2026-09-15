@@ -6,6 +6,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordD
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementValue
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.StatisticalSubRectangle
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Vessel
 
 enum class DeparturePortEntryMode {
@@ -26,6 +27,14 @@ data class CatchRecordFlowViewState(
     val departurePortEntryMode: DeparturePortEntryMode = DeparturePortEntryMode.Search,
     val samePortCandidate: Port? = null,
     val gearTypes: List<GearType> = emptyList(),
+    /**
+     * The full, global set of statistical sub-rectangles (Phase 4), loaded once alongside ports/gear
+     * types. "Nearby" rectangles for the grid/radio-list screens are derived client-side by filtering this
+     * list on the departure port's [uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port.statisticalAreaId]
+     * (see [GearStatRectangleSupport.nearbyRectanglesFor]); the unfiltered list backs the "Other" free-text
+     * autocomplete search across every known code.
+     */
+    val statisticalSubRectangles: List<StatisticalSubRectangle> = emptyList(),
     /**
      * The gear type chosen on the gear-search screen, held only transiently until the measurement screen
      * submits (at which point a real [uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse]

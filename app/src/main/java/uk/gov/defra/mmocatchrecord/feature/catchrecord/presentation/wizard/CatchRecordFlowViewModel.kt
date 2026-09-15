@@ -59,6 +59,7 @@ class CatchRecordFlowViewModel
                     val vessels = referenceDataRepository.getVessels().getOrThrow()
                     val ports = referenceDataRepository.getPorts().getOrThrow()
                     val gearTypes = referenceDataRepository.getGearTypes().getOrThrow()
+                    val statisticalSubRectangles = referenceDataRepository.getStatisticalSubRectangles().getOrThrow()
                     val existingDraft = draftRepository.getAnyActiveDraft().getOrThrow()
                     val previouslyUsedPorts =
                         existingDraft
@@ -82,6 +83,7 @@ class CatchRecordFlowViewModel
                             vessels = vessels,
                             ports = ports,
                             gearTypes = gearTypes,
+                            statisticalSubRectangles = statisticalSubRectangles,
                             previouslyUsedPorts = previouslyUsedPorts,
                             departurePortEntryMode = deriveDeparturePortEntryMode(previouslyUsedPorts),
                             samePortCandidate = previouslyUsedPorts.firstOrNull(),
@@ -198,7 +200,7 @@ class CatchRecordFlowViewModel
                 GearUse(
                     id = idFactory(),
                     gearTypeId = gearTypeId,
-                    statRectangleId = null,
+                    statisticalSubRectangleCode = null,
                     measurements = measurements,
                 )
             val updatedDraft = draft.copy(gearUses = draft.gearUses + newGearUse)

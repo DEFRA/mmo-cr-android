@@ -21,6 +21,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.Depar
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.DraftResumeScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.GearMeasurementScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.GearSearchScreen
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.GearStatRectangleScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.GearSummaryScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.PhaseThreeCompleteScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.ReturnDateScreen
@@ -139,6 +140,13 @@ fun MmoNavHost(
             }
             composable(Destination.CatchRecordFlow.GEAR_SUMMARY_ROUTE) { backStackEntry ->
                 GearSummaryScreen(
+                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                    onNavigate = { navController.navigate(routeFor(it)) },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(Destination.CatchRecordFlow.GEAR_STAT_RECTANGLE_ROUTE) { backStackEntry ->
+                GearStatRectangleScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
                     onNavigate = { navController.navigate(routeFor(it)) },
                     onBack = { navController.popBackStack() },

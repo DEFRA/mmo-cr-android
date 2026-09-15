@@ -31,6 +31,7 @@ sealed class Destination(
         const val GEAR_SEARCH_ROUTE = "$GRAPH_ROUTE/gear_search"
         const val GEAR_MEASUREMENT_ROUTE = "$GRAPH_ROUTE/gear_measurement"
         const val GEAR_SUMMARY_ROUTE = "$GRAPH_ROUTE/gear_summary"
+        const val GEAR_STAT_RECTANGLE_ROUTE = "$GRAPH_ROUTE/gear_stat_rectangle"
 
         /**
          * Placeholder landing spot after the gear-summary checklist's "Save and continue", until the

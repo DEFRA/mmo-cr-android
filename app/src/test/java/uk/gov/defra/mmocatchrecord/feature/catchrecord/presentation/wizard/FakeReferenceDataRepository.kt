@@ -23,6 +23,13 @@ class FakeReferenceDataRepository(
                 listOf(Port("port-hastings", "Hastings", "AREA-HASTINGS"), Port("port-dover", "Dover", "AREA-DOVER")),
             "vessel-hercules" to emptyList(),
         ),
+    private val statisticalSubRectangles: List<StatisticalSubRectangle> =
+        listOf(
+            StatisticalSubRectangle("rect-38e95", "38E95", "AREA-HASTINGS"),
+            StatisticalSubRectangle("rect-38e98", "38E98", "AREA-HASTINGS"),
+            StatisticalSubRectangle("rect-38f02", "38F02", "AREA-HASTINGS"),
+            StatisticalSubRectangle("rect-30f10", "30F10", "AREA-DOVER"),
+        ),
     private val gearTypes: List<GearType> =
         listOf(
             GearType(
@@ -152,8 +159,10 @@ class FakeReferenceDataRepository(
     override suspend fun getSpecies(): Result<List<Species>> = Result.success(emptyList())
 
     override suspend fun getStatisticalSubRectangles(): Result<List<StatisticalSubRectangle>> =
-        Result.success(emptyList())
+        Result.success(statisticalSubRectangles)
 
-    override suspend fun getStatisticalSubRectanglesForPort(portId: String): Result<List<StatisticalSubRectangle>> =
-        Result.success(emptyList())
+    override suspend fun getStatisticalSubRectanglesForPort(portId: String): Result<List<StatisticalSubRectangle>> {
+        val port = ports.firstOrNull { it.id == portId } ?: return Result.success(emptyList())
+        return Result.success(statisticalSubRectangles.filter { it.statisticalAreaId == port.statisticalAreaId })
+    }
 }

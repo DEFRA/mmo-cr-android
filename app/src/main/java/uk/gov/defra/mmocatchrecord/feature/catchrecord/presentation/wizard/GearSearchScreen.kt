@@ -197,7 +197,7 @@ fun GearSearchScreen_AddAnotherGearPreview() {
                     GearUse(
                         id = "gear-use-1",
                         gearTypeId = "gear-seine-nets",
-                        statRectangleId = null,
+                        statisticalSubRectangleCode = null,
                     ),
                 ),
             modifiedAtEpochMillis = 1605830400000L,

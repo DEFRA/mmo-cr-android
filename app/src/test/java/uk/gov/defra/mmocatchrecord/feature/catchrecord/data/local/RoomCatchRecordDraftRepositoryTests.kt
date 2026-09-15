@@ -108,7 +108,7 @@ class RoomCatchRecordDraftRepositoryTests {
                             GearUse(
                                 id = "gear-1",
                                 gearTypeId = "gear-trawl",
-                                statRectangleId = "rect-hastings-1",
+                                statisticalSubRectangleCode = "rect-hastings-1",
                                 measurements =
                                     mapOf(
                                         "mesh_size" to MeasurementValue.Numeric(80.0, "mm"),
@@ -162,7 +162,7 @@ class RoomCatchRecordDraftRepositoryTests {
                             GearUse(
                                 id = "gear-1",
                                 gearTypeId = "gear-seine-nets",
-                                statRectangleId = null,
+                                statisticalSubRectangleCode = null,
                                 measurements = mapOf("mesh_size_mm" to MeasurementValue.Numeric(100.0, "mm")),
                                 numberOfShots = 4,
                                 confirmedUsedOnTrip = true,
@@ -182,13 +182,60 @@ class RoomCatchRecordDraftRepositoryTests {
             val started = repository.startDraft("vessel-hercules").getOrThrow()
             val fullDraft =
                 started.copy(
-                    gearUses = listOf(GearUse(id = "gear-1", gearTypeId = "gear-seine-nets", statRectangleId = null)),
+                    gearUses =
+                        listOf(
+                            GearUse(id = "gear-1", gearTypeId = "gear-seine-nets", statisticalSubRectangleCode = null),
+                        ),
                 )
             repository.saveDraft(fullDraft).getOrThrow()
             val reloaded = repository.getActiveDraft("vessel-hercules").getOrThrow()
             val gearUse = reloaded!!.gearUses.single()
             assertNull(gearUse.numberOfShots)
             assertTrue(!gearUse.confirmedUsedOnTrip)
+        }
+
+    /**
+     * Phase 4: [GearUse.statisticalSubRectangleCode] (renamed from `statRectangleId`, DB v2->v3) must
+     * round-trip a real-format code string (not a reference-data foreign-key id) — including a code
+     * entered via the "Other" free-text search that is not present in the local reference-data stub, since
+     * the full geographic grid is not locally enumerable.
+     */
+    @Test
+    fun `statistical sub-rectangle code round-trips including codes absent from the reference-data stub`() =
+        runTest {
+            val started = repository.startDraft("vessel-hercules").getOrThrow()
+            val fullDraft =
+                started.copy(
+                    gearUses =
+                        listOf(
+                            GearUse(
+                                id = "gear-1",
+                                gearTypeId = "gear-seine-nets",
+                                statisticalSubRectangleCode = "38E95",
+                                confirmedUsedOnTrip = true,
+                            ),
+                            GearUse(
+                                id = "gear-2",
+                                gearTypeId = "gear-drifting-longlines",
+                                // A validly-formatted but not locally-stubbed code, as entered via the "Other"
+                                // free-text autocomplete search screen.
+                                statisticalSubRectangleCode = "99Z99",
+                                confirmedUsedOnTrip = true,
+                            ),
+                            GearUse(
+                                id = "gear-3",
+                                gearTypeId = "gear-handlines",
+                                statisticalSubRectangleCode = null,
+                                confirmedUsedOnTrip = true,
+                            ),
+                        ),
+                )
+            repository.saveDraft(fullDraft).getOrThrow()
+            val reloaded = repository.getActiveDraft("vessel-hercules").getOrThrow()
+            assertEquals(3, reloaded!!.gearUses.size)
+            assertEquals("38E95", reloaded.gearUses.first { it.id == "gear-1" }.statisticalSubRectangleCode)
+            assertEquals("99Z99", reloaded.gearUses.first { it.id == "gear-2" }.statisticalSubRectangleCode)
+            assertNull(reloaded.gearUses.first { it.id == "gear-3" }.statisticalSubRectangleCode)
         }
 
     @Test
@@ -202,7 +249,7 @@ class RoomCatchRecordDraftRepositoryTests {
                             GearUse(
                                 id = "gear-1",
                                 gearTypeId = "gear-seine-nets",
-                                statRectangleId = null,
+                                statisticalSubRectangleCode = null,
                                 measurements = mapOf("mesh_size_mm" to MeasurementValue.Numeric(100.0, "mm")),
                                 numberOfShots = 3,
                                 confirmedUsedOnTrip = true,
@@ -210,7 +257,7 @@ class RoomCatchRecordDraftRepositoryTests {
                             GearUse(
                                 id = "gear-2",
                                 gearTypeId = "gear-bottom-otter-trawls-tb",
-                                statRectangleId = null,
+                                statisticalSubRectangleCode = null,
                                 measurements =
                                     mapOf(
                                         "number_of_trawl_nets" to MeasurementValue.Numeric(2.0, ""),
@@ -248,7 +295,7 @@ class RoomCatchRecordDraftRepositoryTests {
                             GearUse(
                                 id = "gear-1",
                                 gearTypeId = "gear-pots",
-                                statRectangleId = null,
+                                statisticalSubRectangleCode = null,
                                 measurements =
                                     mapOf(
                                         "total_pots_or_traps_hauled" to MeasurementValue.Numeric(20.0, ""),
@@ -260,7 +307,7 @@ class RoomCatchRecordDraftRepositoryTests {
                             GearUse(
                                 id = "gear-2",
                                 gearTypeId = "gear-gillnets-circling",
-                                statRectangleId = null,
+                                statisticalSubRectangleCode = null,
                                 measurements =
                                     mapOf(
                                         "mesh_size_mm" to MeasurementValue.Numeric(60.0, "mm"),
@@ -301,7 +348,10 @@ class RoomCatchRecordDraftRepositoryTests {
             val started = repository.startDraft("vessel-hercules").getOrThrow()
             val withOneGear =
                 started.copy(
-                    gearUses = listOf(GearUse(id = "gear-1", gearTypeId = "gear-trawl", statRectangleId = null)),
+                    gearUses =
+                        listOf(
+                            GearUse(id = "gear-1", gearTypeId = "gear-trawl", statisticalSubRectangleCode = null),
+                        ),
                 )
             repository.saveDraft(withOneGear).getOrThrow()
             val withNoGear = withOneGear.copy(gearUses = emptyList())
@@ -316,7 +366,10 @@ class RoomCatchRecordDraftRepositoryTests {
             val started = repository.startDraft("vessel-achilles").getOrThrow()
             val withGear =
                 started.copy(
-                    gearUses = listOf(GearUse(id = "gear-1", gearTypeId = "gear-trawl", statRectangleId = null)),
+                    gearUses =
+                        listOf(
+                            GearUse(id = "gear-1", gearTypeId = "gear-trawl", statisticalSubRectangleCode = null),
+                        ),
                 )
             repository.saveDraft(withGear).getOrThrow()
             val deleteResult = repository.deleteDraft(withGear.id)

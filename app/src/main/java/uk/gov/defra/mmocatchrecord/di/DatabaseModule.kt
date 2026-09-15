@@ -41,8 +41,9 @@ object DatabaseModule {
             .databaseBuilder(context, CatchRecordDatabase::class.java, DATABASE_NAME)
             .openHelperFactory(supportFactory)
             // Pre-release app, no production data to preserve yet: destructively recreate on schema
-            // bump (see Phase 3 GearUse.numberOfShots/confirmedUsedOnTrip columns) rather than writing a
-            // real Migration. Revisit once the app has real users with drafts worth preserving.
+            // bump (Phase 3: GearUse.numberOfShots/confirmedUsedOnTrip columns; Phase 4: GearUseEntity's
+            // statRectangleId column renamed to statisticalSubRectangleCode) rather than writing a real
+            // Migration. Revisit once the app has real users with drafts worth preserving.
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
     }

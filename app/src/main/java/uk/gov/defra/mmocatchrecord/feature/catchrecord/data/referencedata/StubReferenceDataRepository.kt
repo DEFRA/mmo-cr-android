@@ -12,8 +12,10 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Vess
 
 /**
  * Bundled, local, read-only reference-data stub — see ADR 0008. Includes the confirmed Stage-1 screenshot
- * data points (vessels ACHILLES/HERCULES; ports Hastings/Dover) plus placeholder gear/species/stat-area
- * rows (clearly marked TBC) to unblock later-phase unit tests before real data/screenshots are available.
+ * data points (vessels ACHILLES/HERCULES; ports Hastings/Dover) plus placeholder gear/species rows (clearly
+ * marked TBC) to unblock later-phase unit tests before real data/screenshots are available. The Hastings
+ * statistical sub-rectangles are confirmed Phase 4 screenshot data; Dover's are TBC placeholders (see
+ * [statisticalSubRectangles]).
  *
  * All confirmed gear-type "Mesh size (mm)" fields — Seine nets, Bottom otter trawls, and Gillnets
  * (circling) — are [GearMeasurementFieldType.Integer], consistent with the universal "All gear
@@ -195,11 +197,25 @@ class StubReferenceDataRepository : ReferenceDataRepository {
             Species(id = "species-crab", name = "Brown crab (TBC)", faoCode = "CRE"),
         )
 
-    // TBC: placeholder statistical sub-rectangles only, pending confirmed reference data.
+    // Confirmed Phase-4 screenshot data: the statistical sub-rectangles shown nearest Hastings (the
+    // confirmed departure port in the Phase 4 screenshots). Dover's set is not screenshotted — kept as a
+    // small placeholder (TBC) set in the same confirmed code format so Dover-departing drafts still have
+    // a plausible nearby list to exercise the same UI paths.
     private val statisticalSubRectangles =
         listOf(
-            StatisticalSubRectangle(id = "rect-hastings-1", code = "29E7 (TBC)", statisticalAreaId = statAreaHastings),
-            StatisticalSubRectangle(id = "rect-dover-1", code = "31F1 (TBC)", statisticalAreaId = statAreaDover),
+            StatisticalSubRectangle(id = "rect-38e95", code = "38E95", statisticalAreaId = statAreaHastings),
+            StatisticalSubRectangle(id = "rect-38e98", code = "38E98", statisticalAreaId = statAreaHastings),
+            StatisticalSubRectangle(id = "rect-38f02", code = "38F02", statisticalAreaId = statAreaHastings),
+            StatisticalSubRectangle(id = "rect-38e96", code = "38E96", statisticalAreaId = statAreaHastings),
+            StatisticalSubRectangle(id = "rect-38e99", code = "38E99", statisticalAreaId = statAreaHastings),
+            StatisticalSubRectangle(id = "rect-38f03", code = "38F03", statisticalAreaId = statAreaHastings),
+            StatisticalSubRectangle(id = "rect-37e97", code = "37E97", statisticalAreaId = statAreaHastings),
+            StatisticalSubRectangle(id = "rect-37f01", code = "37F01", statisticalAreaId = statAreaHastings),
+            StatisticalSubRectangle(id = "rect-37f02", code = "37F02", statisticalAreaId = statAreaHastings),
+            // TBC: placeholder-only, pending a confirmed Dover screenshot.
+            StatisticalSubRectangle(id = "rect-30f10", code = "30F10", statisticalAreaId = statAreaDover),
+            StatisticalSubRectangle(id = "rect-30f11", code = "30F11", statisticalAreaId = statAreaDover),
+            StatisticalSubRectangle(id = "rect-30f09", code = "30F09", statisticalAreaId = statAreaDover),
         )
 
     override suspend fun getVessels(): Result<List<Vessel>> = Result.success(vessels)

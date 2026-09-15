@@ -6,6 +6,7 @@ import app.cash.turbine.test
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -48,6 +49,48 @@ class CatchRecordFlowViewModelTests {
     private fun gearIdSequenceFactory(): () -> String {
         var counter = 0
         return { "gear-use-${counter++}" }
+    }
+
+    /**
+     * Shared setup for the Phase 4 per-gear stat-rectangle loop test: a resumed draft with two confirmed
+     * (but no stat-rectangle yet) gear uses, sat on [WizardStep.GearStatRectangle] awaiting the first gear's
+     * rectangle. Extracted purely to keep the test body under detekt's [LongMethod] limit.
+     */
+    private suspend fun TestScope.setUpTwoConfirmedGearsAwaitingStatRectangle():
+        Triple<CatchRecordFlowViewModel, GearUse, GearUse> {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+        val started = repository.startDraft("vessel-achilles").getOrThrow()
+        val gearOne =
+            GearUse(
+                id = "gear-use-1",
+                gearTypeId = "gear-seine-nets",
+                statisticalSubRectangleCode = null,
+                confirmedUsedOnTrip = true,
+            )
+        val gearTwo =
+            GearUse(
+                id = "gear-use-2",
+                gearTypeId = "gear-seine-nets",
+                statisticalSubRectangleCode = null,
+                confirmedUsedOnTrip = true,
+            )
+        repository
+            .saveDraft(
+                started.copy(
+                    isTripToday = true,
+                    departurePort = PortSelection("port-hastings", PortSelectionMode.Favourite),
+                    returnPort = PortSelection("port-hastings", PortSelectionMode.Favourite),
+                    gearUses = listOf(gearOne, gearTwo),
+                ),
+            ).getOrThrow()
+
+        val viewModel = buildViewModel(repository = repository, dispatcher = dispatcher)
+        viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+        testScheduler.advanceUntilIdle()
+        viewModel.dispatch(CatchRecordFlowEvent.ResumeDraft)
+        testScheduler.advanceUntilIdle()
+        return Triple(viewModel, gearOne, gearTwo)
     }
 
     @Test
@@ -348,9 +391,9 @@ class CatchRecordFlowViewModelTests {
             val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
             val started = repository.startDraft("vessel-achilles").getOrThrow()
             val gearUseToKeep =
-                GearUse(id = "gear-use-keep", gearTypeId = "gear-seine-nets", statRectangleId = null)
+                GearUse(id = "gear-use-keep", gearTypeId = "gear-seine-nets", statisticalSubRectangleCode = null)
             val gearUseToRemove =
-                GearUse(id = "gear-use-remove", gearTypeId = "gear-seine-nets", statRectangleId = null)
+                GearUse(id = "gear-use-remove", gearTypeId = "gear-seine-nets", statisticalSubRectangleCode = null)
             repository
                 .saveDraft(
                     started.copy(
@@ -377,6 +420,59 @@ class CatchRecordFlowViewModelTests {
                 assertEquals(WizardStep.GearSummary, afterRemoval.currentStep)
                 val draft = (afterRemoval.status as UiStatus.Content<CatchRecordDraft>).value
                 assertEquals(listOf("gear-use-keep"), draft.gearUses.map { it.id })
+            }
+        }
+
+    /**
+     * Phase 4 per-gear stat-rectangle loop: with two confirmed gears, saving the first gear's rectangle
+     * (via the same generic [CatchRecordFlowEvent.SaveAndContinue] every screen uses) must re-land on
+     * [WizardStep.GearStatRectangle] — not advance past it — since a second confirmed gear is still
+     * pending; only saving the second (last) gear's rectangle advances to [WizardStep.LandingStorage].
+     */
+    @Test
+    fun `saving each confirmed gear's stat rectangle loops until the last, then advances to landing storage`() =
+        runTest {
+            val (viewModel, gearOne, gearTwo) = setUpTwoConfirmedGearsAwaitingStatRectangle()
+
+            viewModel.state.test {
+                val current = awaitItem()
+                val currentDraft = (current.status as UiStatus.Content<CatchRecordDraft>).value
+                assertEquals(WizardStep.GearStatRectangle, current.currentStep)
+                assertEquals(gearOne.id, nextGearUsePendingStatRectangle(currentDraft)?.id)
+
+                // Save gear one's rectangle: gear two is still pending, so the step re-lands on itself.
+                val afterGearOne =
+                    currentDraft.copy(
+                        gearUses =
+                            currentDraft.gearUses.map {
+                                if (it.id == gearOne.id) it.copy(statisticalSubRectangleCode = "38E95") else it
+                            },
+                    )
+                viewModel.dispatch(
+                    CatchRecordFlowEvent.SaveAndContinue(afterGearOne, WizardStep.GearStatRectangle),
+                )
+                assertEquals(UiStatus.Loading, awaitItem().status)
+                val afterFirstSave = awaitItem()
+                assertEquals(WizardStep.GearStatRectangle, afterFirstSave.currentStep)
+                val draftAfterFirstSave = (afterFirstSave.status as UiStatus.Content<CatchRecordDraft>).value
+                assertEquals(gearTwo.id, nextGearUsePendingStatRectangle(draftAfterFirstSave)?.id)
+
+                // Save gear two's (the last confirmed gear's) rectangle: advances to landing storage.
+                val afterGearTwo =
+                    draftAfterFirstSave.copy(
+                        gearUses =
+                            draftAfterFirstSave.gearUses.map {
+                                if (it.id == gearTwo.id) it.copy(statisticalSubRectangleCode = "38E98") else it
+                            },
+                    )
+                viewModel.dispatch(
+                    CatchRecordFlowEvent.SaveAndContinue(afterGearTwo, WizardStep.LandingStorage),
+                )
+                assertEquals(UiStatus.Loading, awaitItem().status)
+                val afterSecondSave = awaitItem()
+                assertEquals(WizardStep.LandingStorage, afterSecondSave.currentStep)
+                val finalDraft = (afterSecondSave.status as UiStatus.Content<CatchRecordDraft>).value
+                assertNull(nextGearUsePendingStatRectangle(finalDraft))
             }
         }
 }
