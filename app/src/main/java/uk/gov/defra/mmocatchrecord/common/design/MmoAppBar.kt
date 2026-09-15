@@ -1,6 +1,7 @@
 package uk.gov.defra.mmocatchrecord.common.design
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -24,11 +25,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import uk.gov.defra.mmocatchrecord.R
 
 /** GOV.UK Header Top App Bar */
@@ -38,6 +39,7 @@ fun GdsTopAppBar(
     onLanguageToggle: () -> Unit,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
+    showBackButton: Boolean = true,
 ) {
     Surface(
         color = MmoColors.GovBlue,
@@ -53,7 +55,11 @@ fun GdsTopAppBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            GdsAppBarBackButton(onBackClick)
+            if (showBackButton) {
+                GdsAppBarBackButton(onBackClick)
+            } else {
+                Spacer(modifier = Modifier.widthIn(min = Spacing.minTouchTarget))
+            }
             GdsAppBarTitle()
             GdsAppBarLangToggle(currentLanguage, onLanguageToggle)
         }
@@ -94,16 +100,10 @@ private fun GdsAppBarTitle() {
         horizontalArrangement = Arrangement.Center,
         modifier = Modifier.heightIn(min = Spacing.minTouchTarget),
     ) {
-        GdsCrownIcon()
-        Spacer(modifier = Modifier.width(Spacing.xxs))
-        Text(
-            text = "GOV.UK",
-            style =
-                MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    letterSpacing = (-0.5).sp,
-                ),
+        Image(
+            painter = painterResource(id = R.drawable.ic_govuk_logo),
+            contentDescription = stringResource(R.string.gov_uk),
+            modifier = Modifier.heightIn(max = Spacing.xxl),
         )
     }
 }

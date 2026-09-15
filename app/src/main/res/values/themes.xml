@@ -1,5 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.MMOCatchRecord" parent="android:Theme.Material.Light.NoActionBar" />
+    <!--
+        windowBackground is set to govuk_blue (not the Theme.Material.Light default, which is white/light)
+        because installSplashScreen() switches the Activity to THIS theme immediately on cold start — the
+        branded splash the user sees is an overlay drawn on top while Compose composes underneath, and it
+        is removed (via its exit animation) as soon as the OS considers the window "drawn", which can
+        happen a frame or two before the SplashScreen composable's own blue background has actually
+        painted. Leaving this theme's window background at its inherited white/light default meant that
+        gap revealed a flash of blank white screen between the coloured system splash and the coloured
+        in-app content. Matching it to govuk_blue (the same colour used everywhere before real content
+        appears — the system splash and the in-app SplashScreen/RootPhase.SPLASH) makes that gap
+        invisible; later in-app Compose navigation never re-exposes the window background.
+    -->
+    <style name="Theme.MMOCatchRecord" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/govuk_blue</item>
+    </style>
+
+    <!--
+        Cold-start splash theme (AndroidX SplashScreen API). Shown by the OS while the app process
+        starts, then handed over to Theme.MMOCatchRecord via postSplashScreenTheme.
+
+        windowSplashScreenAnimatedIcon is set to the GOV.UK wordmark (splash_govuk_logo, NOT the app's
+        launcher icon @mipmap/ic_launcher) so the Android 12+ system splash shows GOV.UK branding rather
+        than falling back to the launcher icon (today the default Android-robot icon — see the
+        launcher-icon follow-up). The system splash's icon slot is masked to a circle and sized like an
+        app icon (see https://developer.android.com/develop/ui/views/launch/splash-screen), so the
+        wordmark renders smaller/simpler here than in the full design. Immediately after this dismisses,
+        the in-app `SplashScreen` composable (core.root.SplashScreen) takes over and renders the full-size
+        wordmark + crown lock-up with full layout control (no masking). The crown branding image is added
+        on API 31+ (see values-v31/themes.xml), the only level where the platform supports it.
+    -->
+    <style name="Theme.MMOCatchRecord.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/govuk_blue</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_govuk_logo</item>
+        <item name="postSplashScreenTheme">@style/Theme.MMOCatchRecord</item>
+    </style>
 </resources>

@@ -9,9 +9,25 @@ package uk.gov.defra.mmocatchrecord.common.navigation
 sealed class Destination(
     val route: String,
 ) {
+    data object Splash : Destination("splash")
+
     data object SignIn : Destination("sign_in")
 
     data object AppLock : Destination("app_lock")
 
     data object Home : Destination("home")
+
+    /** Route constants for the nested catch-record wizard graph (see ADR 0007). */
+    data object CatchRecordFlow {
+        const val GRAPH_ROUTE = "catch_record_flow"
+        const val ENTRY_ROUTE = "$GRAPH_ROUTE/entry"
+        const val DRAFT_RESUME_ROUTE = "$GRAPH_ROUTE/draft_resume"
+        const val VESSEL_SELECTION_ROUTE = "$GRAPH_ROUTE/vessel_selection"
+        const val TRIP_TODAY_ROUTE = "$GRAPH_ROUTE/trip_today"
+        const val DEPARTURE_DATE_ROUTE = "$GRAPH_ROUTE/departure_date"
+        const val RETURN_DATE_ROUTE = "$GRAPH_ROUTE/return_date"
+        const val DEPARTURE_PORT_ROUTE = "$GRAPH_ROUTE/departure_port"
+        const val RETURN_PORT_ROUTE = "$GRAPH_ROUTE/return_port"
+        const val GEAR_LOOP_ROUTE = "$GRAPH_ROUTE/gear_loop"
+    }
 }

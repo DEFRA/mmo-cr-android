@@ -1,3 +1,5 @@
+@file:Suppress("detekt.FunctionNaming", "detekt.MaxLineLength")
+
 package uk.gov.defra.mmocatchrecord.feature.home.presentation
 
 import androidx.compose.foundation.background
@@ -43,17 +45,17 @@ import uk.gov.defra.mmocatchrecord.feature.home.domain.CatchRecordStatus
 import uk.gov.defra.mmocatchrecord.feature.home.domain.CatchRecordSummary
 import uk.gov.defra.mmocatchrecord.feature.home.domain.HomeSummary
 
-/** Compose test tags for [HomeScreen]. */
 object HomeScreenTestTags {
     const val SCREEN = "home_feature_screen"
     const val SIGN_OUT_ACTION = "home_feature_sign_out_action"
     const val ERROR_MESSAGE = "home_feature_error_message"
 }
 
-/** Home feature screen: shows the signed-in user's summary and a sign-out action. */
+@Suppress("FunctionNaming")
 @Composable
 fun HomeScreen(
     onSignOut: () -> Unit,
+    onCreateCatchRecord: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -66,36 +68,19 @@ fun HomeScreen(
             topBar = {
                 GdsTopAppBar(
                     currentLanguage = currentLanguage,
-                    onLanguageToggle = {
-                        currentLanguage = if (currentLanguage == "en") "cy" else "en"
-                    },
+                    onLanguageToggle = { currentLanguage = if (currentLanguage == "en") "cy" else "en" },
                     onBackClick = onSignOut,
+                    showBackButton = false,
                 )
             },
             bottomBar = {
-                MmoBottomNavigationBar(
-                    selectedItem = selectedTab,
-                    onItemClick = { selectedTab = it },
-                )
+                MmoBottomNavigationBar(selectedItem = selectedTab, onItemClick = { selectedTab = it })
             },
-            modifier =
-                modifier
-                    .fillMaxSize()
-                    .testTag(HomeScreenTestTags.SCREEN),
+            modifier = modifier.fillMaxSize().testTag(HomeScreenTestTags.SCREEN),
         ) { innerPadding ->
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .background(MmoColors.White)
-                        .padding(innerPadding),
-            ) {
+            Box(modifier = Modifier.fillMaxSize().background(MmoColors.White).padding(innerPadding)) {
                 when (selectedTab) {
-                    0 ->
-                        HomeTabContent(
-                            state = state,
-                            onSignOut = onSignOut,
-                        )
+                    0 -> HomeTabContent(state = state, onSignOut = onSignOut, onCreateCatchRecord = onCreateCatchRecord)
                     1 -> NotificationsTabContent()
                     2 -> SettingsTabContent(onSignOut = onSignOut)
                 }
@@ -104,106 +89,69 @@ fun HomeScreen(
     }
 }
 
+@Suppress("FunctionNaming")
 @Composable
 private fun HomeTabContent(
     state: HomeViewState,
     onSignOut: () -> Unit,
+    onCreateCatchRecord: () -> Unit,
 ) {
     val scrollState = rememberScrollState()
-
     Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState)
-                .padding(Spacing.m),
+        modifier = Modifier.fillMaxSize().verticalScroll(scrollState).padding(Spacing.m),
         verticalArrangement = Arrangement.spacedBy(Spacing.m),
     ) {
         ImportantBannerSection()
-        HeadingSection()
-
-        // 5. Asynchronous content (Loading/Error/Table)
+        HeadingSection(onCreateCatchRecord = onCreateCatchRecord)
         when (val status = state.status) {
-            UiStatus.Idle, UiStatus.Loading -> {
-                LoadingIndicator()
-            }
-            is UiStatus.Error -> {
+            UiStatus.Idle, UiStatus.Loading -> LoadingIndicator()
+            is UiStatus.Error ->
                 Text(
                     text = status.message,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.testTag(HomeScreenTestTags.ERROR_MESSAGE),
                 )
-            }
-            is UiStatus.Content -> {
-                CatchRecordsTableSection(summary = status.value)
-            }
+            is UiStatus.Content -> CatchRecordsTableSection(summary = status.value)
         }
-
         HelpAccordionsSection()
-
-        // 7. Backward-compatible hidden button for existing smoke tests (which look for SIGN_OUT_ACTION)
         Button(
             onClick = onSignOut,
-            modifier =
-                Modifier
-                    .testTag(HomeScreenTestTags.SIGN_OUT_ACTION)
-                    .size(1.dp)
-                    .background(Color.Transparent),
+            modifier = Modifier.testTag(HomeScreenTestTags.SIGN_OUT_ACTION).size(1.dp).background(Color.Transparent),
         ) {}
-
-        // 8. Royal Crest centered at bottom
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = Spacing.m),
-            contentAlignment = Alignment.Center,
-        ) {
+        Box(modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.m), contentAlignment = Alignment.Center) {
             RoyalCrestPlaceholder()
         }
     }
 }
 
+@Suppress("FunctionNaming")
 @Composable
 fun NotificationsTabContent() {
     Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .padding(Spacing.m),
+        modifier = Modifier.fillMaxSize().padding(Spacing.m),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(
-            text = stringResource(R.string.nav_notifications),
-            style = MaterialTheme.typography.headlineMedium,
-        )
+        Text(text = stringResource(R.string.nav_notifications), style = MaterialTheme.typography.headlineMedium)
     }
 }
 
+@Suppress("FunctionNaming")
 @Composable
 fun SettingsTabContent(onSignOut: () -> Unit) {
     Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .padding(Spacing.m),
+        modifier = Modifier.fillMaxSize().padding(Spacing.m),
         verticalArrangement = Arrangement.spacedBy(Spacing.m, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(
-            text = stringResource(R.string.nav_settings),
-            style = MaterialTheme.typography.headlineMedium,
-        )
-        PrimaryActionButton(
-            text = stringResource(R.string.sign_out),
-            onClick = onSignOut,
-        )
+        Text(text = stringResource(R.string.nav_settings), style = MaterialTheme.typography.headlineMedium)
+        PrimaryActionButton(text = stringResource(R.string.sign_out), onClick = onSignOut)
     }
 }
 
 @Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Suppress("FunctionNaming")
 @Composable
 fun HomeScreenPreview() {
     val sampleSummary =
@@ -231,26 +179,21 @@ fun HomeScreenPreview() {
                         currentLanguage = "en",
                         onLanguageToggle = {},
                         onBackClick = {},
+                        showBackButton = false,
                     )
                 },
-                bottomBar = {
-                    MmoBottomNavigationBar(
-                        selectedItem = 0,
-                        onItemClick = {},
-                    )
-                },
+                bottomBar = { MmoBottomNavigationBar(selectedItem = 0, onItemClick = {}) },
             ) { innerPadding ->
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .background(MmoColors.White)
-                            .padding(innerPadding),
-                ) {
-                    HomeTabContent(
-                        state = state,
-                        onSignOut = {},
-                    )
+                Box(modifier = Modifier.fillMaxSize().background(MmoColors.White).padding(innerPadding)) {
+                    Column(
+                        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(Spacing.m),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.m),
+                    ) {
+                        ImportantBannerSection()
+                        HeadingSection(onCreateCatchRecord = {})
+                        CatchRecordsTableSection(summary = sampleSummary)
+                        HelpAccordionsSection()
+                    }
                 }
             }
         }

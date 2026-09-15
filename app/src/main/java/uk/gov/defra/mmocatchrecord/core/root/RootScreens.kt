@@ -18,40 +18,31 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.tooling.preview.Preview
+import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
 
-/** Compose test tags for instrumented/UI tests. Kept in one place so tests don't hard-code strings. */
+/**
+ * Compose test tags for instrumented/UI tests. Kept in one place so tests don't hard-code strings.
+ *
+ * [APP_LOCK_SCREEN]/[APP_LOCK_ACTION] back a real, wired-in composable ([AppLockScreen]) and
+ * [SPLASH_SCREEN] backs [SplashScreen] — the real sign-in and home screens now live in
+ * `feature.signin.presentation.SignInScreen`
+ * ([uk.gov.defra.mmocatchrecord.feature.signin.presentation.SignInScreenTestTags]) and
+ * `feature.home.presentation.HomeScreen` respectively; their Stage-1 placeholder equivalents (and
+ * matching test tags) were removed from here once superseded, so nothing in this object refers to
+ * dead composables.
+ */
 object RootScreenTestTags {
-    const val SIGN_IN_SCREEN = "sign_in_screen"
     const val APP_LOCK_SCREEN = "app_lock_screen"
-    const val HOME_SCREEN = "home_screen"
 
     // Stable, per-screen tags for the primary action button. Tests must drive/assert elements by tag
     // per testing.instructions ("stable testTags/semantics, not display text alone") — several
     // placeholder screens share the same action label text (e.g. "Sign in"), so text alone is ambiguous.
-    const val SIGN_IN_ACTION = "sign_in_screen_action"
     const val APP_LOCK_ACTION = "app_lock_screen_action"
-    const val HOME_ACTION = "home_screen_action"
-}
 
-/**
- * Stage-1 placeholder sign-in screen. Accessible: heading semantics on the title, a button meeting the
- * WCAG 2.2 AA 48x48dp minimum touch target.
- */
-@Composable
-fun SignInScreen(
-    onSignIn: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    PlaceholderScreen(
-        testTag = RootScreenTestTags.SIGN_IN_SCREEN,
-        actionTestTag = RootScreenTestTags.SIGN_IN_ACTION,
-        title = "Sign in",
-        body = "Sign in to record and view your catches.",
-        actionLabel = "Sign in",
-        onAction = onSignIn,
-        modifier = modifier,
-    )
+    /** Root container of [SplashScreen], the initial [RootPhase.SPLASH] destination. */
+    const val SPLASH_SCREEN = "splash_screen"
 }
 
 /** Stage-1 placeholder app-lock (biometric re-entry) screen. */
@@ -67,23 +58,6 @@ fun AppLockScreen(
         body = "Unlock the app to continue.",
         actionLabel = "Unlock",
         onAction = onUnlock,
-        modifier = modifier,
-    )
-}
-
-/** Stage-1 placeholder home screen. */
-@Composable
-fun HomeScreen(
-    onSignOut: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    PlaceholderScreen(
-        testTag = RootScreenTestTags.HOME_SCREEN,
-        actionTestTag = RootScreenTestTags.HOME_ACTION,
-        title = "Home",
-        body = "You are signed in.",
-        actionLabel = "Sign out",
-        onAction = onSignOut,
         modifier = modifier,
     )
 }
@@ -129,5 +103,13 @@ private fun PlaceholderScreen(
                 Text(actionLabel)
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun AppLockScreenPreview() {
+    MmoTheme {
+        AppLockScreen(onUnlock = {})
     }
 }

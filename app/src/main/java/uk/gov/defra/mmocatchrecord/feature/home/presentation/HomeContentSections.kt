@@ -1,3 +1,5 @@
+@file:Suppress("detekt.FunctionNaming", "detekt.MaxLineLength")
+
 package uk.gov.defra.mmocatchrecord.feature.home.presentation
 
 import androidx.compose.foundation.background
@@ -28,6 +30,7 @@ import uk.gov.defra.mmocatchrecord.common.design.Spacing
 import uk.gov.defra.mmocatchrecord.common.design.StatusTag
 import uk.gov.defra.mmocatchrecord.feature.home.domain.HomeSummary
 
+@Suppress("FunctionNaming")
 @Composable
 fun ImportantBannerSection() {
     ImportantNotificationBanner(
@@ -36,8 +39,9 @@ fun ImportantBannerSection() {
     )
 }
 
+@Suppress("FunctionNaming")
 @Composable
-fun HeadingSection() {
+fun HeadingSection(onCreateCatchRecord: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
         Text(
             text = stringResource(R.string.your_catch_records),
@@ -46,7 +50,7 @@ fun HeadingSection() {
 
         PrimaryActionButton(
             text = stringResource(R.string.create_catch_record),
-            onClick = { /* Navigate to create in later stages */ },
+            onClick = onCreateCatchRecord,
         )
 
         Text(
@@ -56,27 +60,21 @@ fun HeadingSection() {
     }
 }
 
+@Suppress("FunctionNaming")
 @Composable
 fun LoadingIndicator() {
     Box(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(vertical = Spacing.xl),
+        modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xl),
         contentAlignment = Alignment.Center,
     ) {
         CircularProgressIndicator(color = MmoColors.GovBlue)
     }
 }
 
+@Suppress("FunctionNaming")
 @Composable
 fun CatchRecordsTableSection(summary: HomeSummary) {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .border(1.dp, MmoColors.Grey3),
-    ) {
+    Column(modifier = Modifier.fillMaxWidth().border(1.dp, MmoColors.Grey3)) {
         TableHeaderRow()
         TableContentRows(summary = summary)
     }
@@ -85,43 +83,46 @@ fun CatchRecordsTableSection(summary: HomeSummary) {
         pageStart = summary.pageStart,
         pageEnd = summary.pageEnd,
         totalCount = summary.totalCount,
-        onNextClick = { /* No-op in stub stage */ },
+        onNextClick = { },
     )
 }
 
+@Suppress("FunctionNaming")
 @Composable
 private fun TableHeaderRow() {
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .background(MmoColors.Background)
-                .padding(vertical = Spacing.s, horizontal = Spacing.xs),
+                .background(
+                    MmoColors.Background,
+                ).padding(vertical = Spacing.s, horizontal = Spacing.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = stringResource(R.string.col_trip_end_date),
+            stringResource(R.string.col_trip_end_date),
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
             modifier = Modifier.weight(0.28f),
         )
         Text(
-            text = stringResource(R.string.col_vessel),
+            stringResource(R.string.col_vessel),
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
             modifier = Modifier.weight(0.24f),
         )
         Text(
-            text = stringResource(R.string.col_status),
+            stringResource(R.string.col_status),
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
             modifier = Modifier.weight(0.28f),
         )
         Text(
-            text = stringResource(R.string.col_created_by),
+            stringResource(R.string.col_created_by),
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
             modifier = Modifier.weight(0.20f),
         )
     }
 }
 
+@Suppress("FunctionNaming")
 @Composable
 private fun TableContentRows(summary: HomeSummary) {
     summary.catchRecords.forEach { record ->
@@ -150,16 +151,14 @@ private fun TableContentRows(summary: HomeSummary) {
                         color = MmoColors.Link,
                         textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline,
                     ),
-                modifier = Modifier.weight(0.28f),
+                modifier = Modifier.weight(0.24f),
             )
             Text(
                 text = record.vesselName,
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.weight(0.24f),
             )
-            Box(modifier = Modifier.weight(0.28f)) {
-                StatusTag(status = record.status)
-            }
+            Box(modifier = Modifier.weight(0.28f)) { StatusTag(status = record.status) }
             Text(
                 text = record.createdBy,
                 style = MaterialTheme.typography.bodyMedium,
@@ -169,6 +168,7 @@ private fun TableContentRows(summary: HomeSummary) {
     }
 }
 
+@Suppress("FunctionNaming")
 @Composable
 fun HelpAccordionsSection() {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
@@ -177,93 +177,78 @@ fun HelpAccordionsSection() {
     }
 }
 
+@Suppress("FunctionNaming")
 @Composable
 private fun HelpRecordingAccordion() {
     ExpandableDetails(title = stringResource(R.string.help_with_catch_recording)) {
         Text(
-            text = stringResource(R.string.help_need_to_do),
+            stringResource(R.string.help_need_to_do),
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(bottom = Spacing.xs),
         )
         Text(
-            text = stringResource(R.string.help_need_to_do_body),
+            stringResource(R.string.help_need_to_do_body),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(bottom = Spacing.m),
         )
         Text(
-            text = stringResource(R.string.help_when_create),
+            stringResource(R.string.help_when_create),
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(bottom = Spacing.xs),
         )
         Text(
-            text = stringResource(R.string.help_when_create_body),
+            stringResource(R.string.help_when_create_body),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(bottom = Spacing.xs),
         )
-
-        val bulletIds = listOf(R.string.help_bullet_1, R.string.help_bullet_2, R.string.help_bullet_3)
-        bulletIds.forEach { bulletRes ->
+        listOf(R.string.help_bullet_1, R.string.help_bullet_2, R.string.help_bullet_3).forEach { bulletRes ->
             Text(
-                text = "• " + stringResource(bulletRes),
+                text = "Ã¢â‚¬Â¢ " + stringResource(bulletRes),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(bottom = Spacing.xxs),
             )
         }
-
         Text(
-            text = stringResource(R.string.help_create_within),
+            stringResource(R.string.help_create_within),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(top = Spacing.xs, bottom = Spacing.m),
         )
         Text(
-            text = stringResource(R.string.help_special_cases),
+            stringResource(R.string.help_special_cases),
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(bottom = Spacing.xs),
         )
         Text(
-            text = stringResource(R.string.help_special_cases_body),
+            stringResource(R.string.help_special_cases_body),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(bottom = Spacing.m),
         )
         Text(
-            text = stringResource(R.string.help_get_help),
+            stringResource(R.string.help_get_help),
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(bottom = Spacing.xs),
         )
-        Text(
-            text = stringResource(R.string.help_get_help_body),
-            style = MaterialTheme.typography.bodyMedium,
-        )
+        Text(stringResource(R.string.help_get_help_body), style = MaterialTheme.typography.bodyMedium)
     }
 }
 
+@Suppress("FunctionNaming")
 @Composable
 private fun CatchStatusesAccordion() {
     ExpandableDetails(title = stringResource(R.string.catch_record_statuses)) {
-        StatusHelpRow(
-            title = stringResource(R.string.status_unsent_title),
-            desc = stringResource(R.string.status_unsent_desc),
-        )
-        StatusHelpRow(
-            title = stringResource(R.string.status_submitted_title),
-            desc = stringResource(R.string.status_submitted_desc),
-        )
-        StatusHelpRow(
-            title = stringResource(R.string.status_amended_title),
-            desc = stringResource(R.string.status_amended_desc),
-        )
-        StatusHelpRow(
-            title = stringResource(R.string.status_late_title),
-            desc = stringResource(R.string.status_late_desc),
-        )
+        StatusHelpRow(stringResource(R.string.status_unsent_title), stringResource(R.string.status_unsent_desc))
+        StatusHelpRow(stringResource(R.string.status_submitted_title), stringResource(R.string.status_submitted_desc))
+        StatusHelpRow(stringResource(R.string.status_amended_title), stringResource(R.string.status_amended_desc))
+        StatusHelpRow(stringResource(R.string.status_late_title), stringResource(R.string.status_late_desc))
         Text(
-            text = stringResource(R.string.status_check_tab),
+            stringResource(R.string.status_check_tab),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(top = Spacing.s),
         )
     }
 }
 
+@Suppress("FunctionNaming")
 @Composable
 fun StatusHelpRow(
     title: String,

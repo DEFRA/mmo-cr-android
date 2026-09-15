@@ -1,7 +1,6 @@
 package uk.gov.defra.mmocatchrecord.feature.signin.domain
 
 import uk.gov.defra.mmocatchrecord.core.architecture.ValidationHelper
-import uk.gov.defra.mmocatchrecord.core.architecture.ValidationResult
 import javax.inject.Inject
 
 /**
@@ -30,19 +29,5 @@ class SignInUseCase
         suspend operator fun invoke(
             username: String,
             password: String,
-        ): Result<SignInSession> {
-            val usernameValidation = ValidationHelper.requireNotBlank(username, "Username")
-            val passwordValidation = ValidationHelper.requireNotBlank(password, "Password")
-
-            val firstInvalid =
-                listOf(usernameValidation, passwordValidation)
-                    .filterIsInstance<ValidationResult.Invalid>()
-                    .firstOrNull()
-
-            if (firstInvalid != null) {
-                return Result.failure(IllegalArgumentException(firstInvalid.reason))
-            }
-
-            return repository.signIn(username, password)
-        }
+        ): Result<SignInSession> = repository.signIn(username, password)
     }

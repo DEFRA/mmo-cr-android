@@ -53,12 +53,13 @@ class SessionCoordinatorTests {
     )
 
     @Test
-    fun `no prior session starts in SIGN_IN`() =
+    fun `no prior session starts in SPLASH then resolves to SIGN_IN`() =
         runTest {
             val dispatcher = StandardTestDispatcher(testScheduler)
             val coordinator = buildCoordinator(dispatcher = dispatcher)
 
             coordinator.state.test {
+                assertEquals(RootPhase.SPLASH, awaitItem().phase)
                 assertEquals(RootPhase.SIGN_IN, awaitItem().phase)
             }
         }
@@ -70,6 +71,7 @@ class SessionCoordinatorTests {
             val coordinator = buildCoordinator(dispatcher = dispatcher)
 
             coordinator.state.test {
+                assertEquals(RootPhase.SPLASH, awaitItem().phase)
                 assertEquals(RootPhase.SIGN_IN, awaitItem().phase)
 
                 coordinator.dispatch(RootEvent.SignedIn)
@@ -94,6 +96,7 @@ class SessionCoordinatorTests {
                 )
 
             coordinator.state.test {
+                assertEquals(RootPhase.SPLASH, awaitItem().phase)
                 assertEquals(RootPhase.SIGN_IN, awaitItem().phase)
 
                 now = 1_000L
@@ -121,7 +124,7 @@ class SessionCoordinatorTests {
                 )
 
             coordinator.state.test {
-                assertEquals(RootPhase.SIGN_IN, awaitItem().phase)
+                assertEquals(RootPhase.SPLASH, awaitItem().phase)
                 assertEquals(RootPhase.APP_LOCK, awaitItem().phase)
             }
         }
@@ -144,7 +147,7 @@ class SessionCoordinatorTests {
                 )
 
             coordinator.state.test {
-                assertEquals(RootPhase.SIGN_IN, awaitItem().phase)
+                assertEquals(RootPhase.SPLASH, awaitItem().phase)
                 assertEquals(RootPhase.APP_LOCK, awaitItem().phase)
 
                 coordinator.dispatch(RootEvent.BiometricUnlockRequested)
@@ -176,7 +179,7 @@ class SessionCoordinatorTests {
                 )
 
             coordinator.state.test {
-                assertEquals(RootPhase.SIGN_IN, awaitItem().phase)
+                assertEquals(RootPhase.SPLASH, awaitItem().phase)
                 assertEquals(RootPhase.APP_LOCK, awaitItem().phase)
 
                 coordinator.dispatch(RootEvent.BiometricUnlockRequested)
@@ -204,6 +207,7 @@ class SessionCoordinatorTests {
                 )
 
             coordinator.state.test {
+                assertEquals(RootPhase.SPLASH, awaitItem().phase)
                 assertEquals(RootPhase.SIGN_IN, awaitItem().phase)
 
                 coordinator.dispatch(RootEvent.SignedIn)
@@ -226,6 +230,7 @@ class SessionCoordinatorTests {
             val coordinator = buildCoordinator(sessionStore = sessionStore, dispatcher = dispatcher)
 
             coordinator.state.test {
+                assertEquals(RootPhase.SPLASH, awaitItem().phase)
                 assertEquals(RootPhase.SIGN_IN, awaitItem().phase)
 
                 coordinator.dispatch(RootEvent.SignedIn)

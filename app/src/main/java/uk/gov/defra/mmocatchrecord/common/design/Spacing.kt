@@ -20,4 +20,7 @@ object Spacing {
 
     /** Minimum touch target size per WCAG 2.2 AA (2.5.8 Target Size, Level AA) and Material guidance. */
     val minTouchTarget: Dp = 48.dp
+
+    /** Standard square size for brand logo imagery (e.g. crown logo) on auth/entry screens. */
+    val logo: Dp = xxl + xl
 }

@@ -45,8 +45,7 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideSessionStore(): SessionStore =
-        InMemorySessionStore(initialLastAuthenticatedAtMillis = System.currentTimeMillis())
+    fun provideSessionStore(): SessionStore = InMemorySessionStore()
 
     @Provides
     @Singleton

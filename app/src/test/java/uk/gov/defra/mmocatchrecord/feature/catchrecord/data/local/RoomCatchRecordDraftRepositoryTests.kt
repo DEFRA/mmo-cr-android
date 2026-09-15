@@ -1,0 +1,199 @@
+@file:Suppress("detekt.MaxLineLength")
+
+package uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local
+
+import androidx.room.Room
+import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DmyDate
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.LandingStorageEntry
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementValue
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelection
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectionMode
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
+
+@RunWith(RobolectricTestRunner::class)
+class RoomCatchRecordDraftRepositoryTests {
+    private lateinit var database: CatchRecordDatabase
+    private lateinit var dao: CatchRecordDraftDao
+    private lateinit var repository: RoomCatchRecordDraftRepository
+    private var idCounter = 0
+    private var clockMillis = 1_000L
+
+    @Before
+    fun setUp() {
+        database =
+            Room
+                .inMemoryDatabaseBuilder(
+                    ApplicationProvider.getApplicationContext(),
+                    CatchRecordDatabase::class.java,
+                ).allowMainThreadQueries()
+                .build()
+        dao = database.catchRecordDraftDao()
+        repository =
+            RoomCatchRecordDraftRepository(dao = dao, idFactory = { "id-${idCounter++}" }, clock = { clockMillis })
+    }
+
+    @Test
+    fun `starting a draft for a vessel with no active draft creates a new one`() =
+        runTest {
+            val result = repository.startDraft("vessel-achilles")
+            assertTrue(result.isSuccess)
+            val draft = result.getOrThrow()
+            assertEquals("vessel-achilles", draft.vesselId)
+            assertEquals(DraftStatus.Draft, draft.status)
+        }
+
+    @Test
+    fun `starting a draft twice for the same vessel returns the existing active draft, not a duplicate`() =
+        runTest {
+            val first = repository.startDraft("vessel-achilles").getOrThrow()
+            val second = repository.startDraft("vessel-achilles").getOrThrow()
+            assertEquals(first.id, second.id)
+        }
+
+    @Test
+    fun `most recently modified active draft is returned across vessels`() =
+        runTest {
+            val first = repository.startDraft("vessel-achilles").getOrThrow()
+            clockMillis = 2_000L
+            val second = repository.startDraft("vessel-hercules").getOrThrow()
+            clockMillis = 3_000L
+            repository.saveDraft(first.copy(isTripToday = true)).getOrThrow()
+            val latest = repository.getAnyActiveDraft().getOrThrow()
+            assertEquals(first.id, latest?.id)
+            assertTrue(second.id != latest?.id)
+        }
+
+    @Test
+    fun `a submitted draft does not block starting a new active draft for the same vessel`() =
+        runTest {
+            val first = repository.startDraft("vessel-achilles").getOrThrow()
+            repository.saveDraft(first.copy(status = DraftStatus.Submitted)).getOrThrow()
+            val second = repository.startDraft("vessel-achilles").getOrThrow()
+            assertTrue(second.id != first.id)
+        }
+
+    @Test
+    fun `getActiveDraft returns null when the vessel has no active draft`() =
+        runTest {
+            val result = repository.getActiveDraft("vessel-with-no-draft")
+            assertTrue(result.isSuccess)
+            assertNull(result.getOrThrow())
+        }
+
+    @Test
+    fun `saving a draft persists the full aggregate and round-trips correctly`() =
+        runTest {
+            val started = repository.startDraft("vessel-hercules").getOrThrow()
+            val fullDraft =
+                started.copy(
+                    isTripToday = true,
+                    departureDate = DmyDate(1, 6, 2026),
+                    returnDate = DmyDate(3, 6, 2026),
+                    departurePort = PortSelection("port-hastings", PortSelectionMode.Favourite),
+                    returnPort = PortSelection("port-dover", PortSelectionMode.FirstTime),
+                    gearUses =
+                        listOf(
+                            GearUse(
+                                id = "gear-1",
+                                gearTypeId = "gear-trawl",
+                                statRectangleId = "rect-hastings-1",
+                                measurements =
+                                    mapOf(
+                                        "mesh_size" to MeasurementValue.Numeric(80.0, "mm"),
+                                        "notes" to MeasurementValue.Text("Standard set"),
+                                    ),
+                                speciesWeights =
+                                    listOf(
+                                        SpeciesWeightEntry(
+                                            id = "sw-1",
+                                            speciesId = "species-cod",
+                                            retainedAboveMcrsKg = 12.0,
+                                            retainedBelowMcrsKg = 0.0,
+                                            discardedKg = 0.0,
+                                        ),
+                                    ),
+                            ),
+                        ),
+                    landingStorageEntries =
+                        listOf(
+                            LandingStorageEntry(id = "storage-1", fields = mapOf("box_count" to "4")),
+                        ),
+                )
+            val saved = repository.saveDraft(fullDraft).getOrThrow()
+            val reloaded = repository.getActiveDraft("vessel-hercules").getOrThrow()
+            assertNotNull(reloaded)
+            assertEquals(saved.id, reloaded!!.id)
+            assertEquals(true, reloaded.isTripToday)
+            assertEquals(DmyDate(1, 6, 2026), reloaded.departureDate)
+            assertEquals(DmyDate(3, 6, 2026), reloaded.returnDate)
+            assertEquals(PortSelection("port-hastings", PortSelectionMode.Favourite), reloaded.departurePort)
+            assertEquals(PortSelection("port-dover", PortSelectionMode.FirstTime), reloaded.returnPort)
+            assertEquals(1, reloaded.gearUses.size)
+            val gearUse = reloaded.gearUses.first()
+            assertEquals("gear-trawl", gearUse.gearTypeId)
+            assertEquals(MeasurementValue.Numeric(80.0, "mm"), gearUse.measurements["mesh_size"])
+            assertEquals(MeasurementValue.Text("Standard set"), gearUse.measurements["notes"])
+            assertEquals(1, gearUse.speciesWeights.size)
+            assertEquals(12.0, gearUse.speciesWeights.first().retainedAboveMcrsKg, 0.0)
+            assertEquals(1, reloaded.landingStorageEntries.size)
+            assertEquals("4", reloaded.landingStorageEntries.first().fields["box_count"])
+        }
+
+    @Test
+    fun `re-saving a draft replaces its previous children rather than accumulating them`() =
+        runTest {
+            val started = repository.startDraft("vessel-hercules").getOrThrow()
+            val withOneGear =
+                started.copy(
+                    gearUses = listOf(GearUse(id = "gear-1", gearTypeId = "gear-trawl", statRectangleId = null)),
+                )
+            repository.saveDraft(withOneGear).getOrThrow()
+            val withNoGear = withOneGear.copy(gearUses = emptyList())
+            repository.saveDraft(withNoGear).getOrThrow()
+            val reloaded = repository.getActiveDraft("vessel-hercules").getOrThrow()
+            assertTrue(reloaded!!.gearUses.isEmpty())
+        }
+
+    @Test
+    fun `deleting a draft removes it and its children via cascade`() =
+        runTest {
+            val started = repository.startDraft("vessel-achilles").getOrThrow()
+            val withGear =
+                started.copy(
+                    gearUses = listOf(GearUse(id = "gear-1", gearTypeId = "gear-trawl", statRectangleId = null)),
+                )
+            repository.saveDraft(withGear).getOrThrow()
+            val deleteResult = repository.deleteDraft(withGear.id)
+            assertTrue(deleteResult.isSuccess)
+            assertNull(dao.findDraftEntity(withGear.id))
+            assertNull(repository.getActiveDraft("vessel-achilles").getOrThrow())
+        }
+
+    @Test
+    fun `marking a draft ready to submit transitions its status`() =
+        runTest {
+            val started = repository.startDraft("vessel-achilles").getOrThrow()
+            val result = repository.markReadyToSubmit(started.id)
+            assertTrue(result.isSuccess)
+            assertEquals(DraftStatus.ReadyToSubmit, result.getOrThrow().status)
+        }
+
+    @Test
+    fun `marking an unknown draft ready to submit fails`() =
+        runTest {
+            val result = repository.markReadyToSubmit("unknown-draft-id")
+            assertTrue(result.isFailure)
+        }
+}

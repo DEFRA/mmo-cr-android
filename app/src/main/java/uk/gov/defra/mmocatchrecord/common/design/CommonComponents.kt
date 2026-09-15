@@ -1,3 +1,5 @@
+@file:Suppress("detekt.FunctionNaming", "detekt.MagicNumber")
+
 package uk.gov.defra.mmocatchrecord.common.design
 
 import androidx.compose.animation.core.animateFloatAsState
@@ -23,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -46,6 +49,7 @@ import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.feature.home.domain.CatchRecordStatus
 
 /** GOV.UK Important Notification Banner */
+@Suppress("FunctionNaming")
 @Composable
 fun ImportantNotificationBanner(
     title: String,
@@ -53,10 +57,7 @@ fun ImportantNotificationBanner(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .border(width = 1.dp, color = MmoColors.GovBlue),
+        modifier = modifier.fillMaxWidth(),
     ) {
         // Banner header
         Box(
@@ -64,32 +65,25 @@ fun ImportantNotificationBanner(
                 Modifier
                     .fillMaxWidth()
                     .background(MmoColors.GovBlue)
-                    .padding(horizontal = Spacing.s, vertical = Spacing.xxs),
+                    .padding(horizontal = Spacing.s, vertical = Spacing.xs),
         ) {
             Text(
                 text = title,
                 style =
-                    MaterialTheme.typography.bodyMedium.copy(
+                    MaterialTheme.typography.titleMedium.copy(
                         color = MmoColors.White,
                         fontWeight = FontWeight.Bold,
                     ),
             )
         }
-        // Banner content box
+        // Banner content box: white with a blue border on all sides, full width
         Box(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    .border(width = Spacing.xxs, color = MmoColors.GovBlue)
                     .background(MmoColors.White)
-                    .drawBehind {
-                        // Thick blue left border on inside content
-                        drawLine(
-                            color = MmoColors.GovBlue,
-                            start = Offset(0f, 0f),
-                            end = Offset(0f, size.height),
-                            strokeWidth = 12f,
-                        )
-                    }.padding(start = Spacing.m, top = Spacing.s, end = Spacing.s, bottom = Spacing.s),
+                    .padding(horizontal = Spacing.s, vertical = Spacing.s),
         ) {
             Text(
                 text = message,
@@ -97,13 +91,16 @@ fun ImportantNotificationBanner(
                     MaterialTheme.typography.bodyLarge.copy(
                         fontWeight = FontWeight.Bold,
                         color = MmoColors.Text,
+                        lineHeight = 22.sp,
                     ),
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }
 }
 
 /** Reusable GOV.UK green primary action button */
+@Suppress("FunctionNaming")
 @Composable
 fun PrimaryActionButton(
     text: String,
@@ -149,7 +146,42 @@ fun PrimaryActionButton(
     }
 }
 
+/** Reusable GOV.UK outline secondary action button */
+@Suppress("FunctionNaming")
+@Composable
+fun SecondaryActionButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    OutlinedButton(
+        onClick = onClick,
+        enabled = enabled,
+        shape = RoundedCornerShape(0.dp),
+        border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp),
+        colors =
+            ButtonDefaults.outlinedButtonColors(
+                containerColor = MmoColors.White,
+                contentColor = MmoColors.Text,
+                disabledContainerColor = MmoColors.White,
+                disabledContentColor = MmoColors.Grey1,
+            ),
+        contentPadding = PaddingValues(horizontal = Spacing.m, vertical = Spacing.s),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .heightIn(min = Spacing.minTouchTarget),
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+        )
+    }
+}
+
 /** GOV.UK table row status tag */
+@Suppress("FunctionNaming")
 @Composable
 fun StatusTag(
     status: CatchRecordStatus,
@@ -173,7 +205,7 @@ fun StatusTag(
             style =
                 MaterialTheme.typography.labelLarge.copy(
                     color = textCol,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.Normal,
                     fontSize = 13.sp,
                 ),
             modifier = Modifier.padding(horizontal = Spacing.xxs, vertical = 2.dp),
@@ -182,6 +214,7 @@ fun StatusTag(
 }
 
 /** GOV.UK style Pagination Bar */
+@Suppress("FunctionNaming")
 @Composable
 fun PaginationBar(
     pageStart: Int,
@@ -247,6 +280,7 @@ fun PaginationBar(
 }
 
 /** GOV.UK Expandable details disclosure widget (accordions) */
+@Suppress("FunctionNaming")
 @Composable
 fun ExpandableDetails(
     title: String,
@@ -294,7 +328,7 @@ fun ExpandableDetails(
                     Modifier
                         .fillMaxWidth()
                         .drawBehind {
-                            // Vertical grey border on the left inside the expanded section
+                            // Vertical gray border on the left inside the expanded section
                             drawLine(
                                 color = MmoColors.Grey2,
                                 start = Offset(0f, 0f),
@@ -310,6 +344,7 @@ fun ExpandableDetails(
 }
 
 /** App bottom navigation bar matching the iOS Design */
+@Suppress("FunctionNaming")
 @Composable
 fun MmoBottomNavigationBar(
     selectedItem: Int,
@@ -367,6 +402,7 @@ fun MmoBottomNavigationBar(
     }
 }
 
+@Suppress("FunctionNaming")
 @Composable
 private fun BottomNavItem(
     onClick: () -> Unit,

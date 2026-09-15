@@ -61,7 +61,7 @@ val MmoTypography =
             TextStyle(
                 fontFamily = MmoFontFamily,
                 fontWeight = FontWeight.Normal,
-                fontSize = 19.sp,
+                fontSize = 16.sp,
                 lineHeight = 28.sp,
                 letterSpacing = 0.15.sp,
             ),
@@ -69,8 +69,8 @@ val MmoTypography =
             TextStyle(
                 fontFamily = MmoFontFamily,
                 fontWeight = FontWeight.Normal,
-                fontSize = 16.sp,
-                lineHeight = 24.sp,
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
                 letterSpacing = 0.15.sp,
             ),
         labelLarge =

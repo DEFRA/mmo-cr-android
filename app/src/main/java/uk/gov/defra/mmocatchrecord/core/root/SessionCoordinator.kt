@@ -54,7 +54,7 @@ class SessionCoordinator
         private val clock: () -> Long = System::currentTimeMillis,
         dispatcher: CoroutineDispatcher = Dispatchers.Default,
     ) : BaseViewModel<RootUiState, RootEvent>(
-            initialState = RootUiState(phase = RootPhase.SIGN_IN),
+            initialState = RootUiState(phase = RootPhase.SPLASH),
             defaultDispatcher = dispatcher,
         ) {
         init {

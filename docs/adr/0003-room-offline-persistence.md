@@ -17,6 +17,14 @@ background sync (to be introduced when real sync logic is implemented in a later
 the Room Gradle plugin, KSP annotation processing and a schema-export directory (`app/schemas`) as a
 compile-time stub — no real entities, DAOs or migrations are introduced yet.
 
+## Update (2026-09-11)
+
+The "no real entities yet" statement above is now superseded for the catch-record draft feature: **Room is
+real** for that feature as of [ADR 0006](0006-catch-record-draft-persistence-and-encryption.md), which also
+adds SQLCipher-based at-rest encryption of the database file. This ADR's choice of Room as the persistence
+layer stands unchanged; only the "stub" scope note is updated. Other features may still be Room stubs until
+their own persistence needs are designed.
+
 ## Consequences
 
 - Room's compile-time verified SQL and schema export give safer migrations than a hand-rolled SQLite

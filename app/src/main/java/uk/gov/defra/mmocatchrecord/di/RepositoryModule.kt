@@ -4,8 +4,11 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.FakeCatchRecordRepository
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.CatchRecordRepository
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.CatchRecordDraftDao
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.RoomCatchRecordDraftRepository
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.StubReferenceDataRepository
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftRepository
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.ReferenceDataRepository
 import uk.gov.defra.mmocatchrecord.feature.home.data.FakeHomeRepository
 import uk.gov.defra.mmocatchrecord.feature.home.domain.HomeRepository
 import uk.gov.defra.mmocatchrecord.feature.map.data.FakeMapRepository
@@ -30,9 +33,22 @@ object RepositoryModule {
 
     @Provides
     @Singleton
-    fun provideCatchRecordRepository(): CatchRecordRepository = FakeCatchRecordRepository()
+    fun provideMapRepository(): MapRepository = FakeMapRepository()
 
     @Provides
     @Singleton
-    fun provideMapRepository(): MapRepository = FakeMapRepository()
+    fun provideCatchRecordDraftRepository(
+        dao: CatchRecordDraftDao,
+        idFactory: () -> String,
+        clock: () -> Long,
+    ): CatchRecordDraftRepository =
+        RoomCatchRecordDraftRepository(
+            dao = dao,
+            idFactory = idFactory,
+            clock = clock,
+        )
+
+    @Provides
+    @Singleton
+    fun provideReferenceDataRepository(): ReferenceDataRepository = StubReferenceDataRepository()
 }

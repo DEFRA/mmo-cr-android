@@ -11,13 +11,19 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import uk.gov.defra.mmocatchrecord.core.root.MainActivity
-import uk.gov.defra.mmocatchrecord.core.root.RootScreenTestTags
+import uk.gov.defra.mmocatchrecord.feature.signin.presentation.SignInScreenTestTags
 
 /**
- * Instrumented smoke test: on first launch (no session), the app shows the sign-in placeholder and
+ * Instrumented smoke test: on first launch (no session), the app shows the real sign-in screen and
  * exposes the WCAG 2.2 AA semantics (heading, labelled/clickable primary action) that TalkBack and
  * other assistive technologies rely on. Driven by stable `testTag`s, not display text, since several
- * placeholder screens share action label text (e.g. "Sign in").
+ * screens share action label text (e.g. "Sign in").
+ *
+ * Asserts against [SignInScreenTestTags] (the tags actually rendered by
+ * `feature.signin.presentation.SignInScreen`, which [uk.gov.defra.mmocatchrecord.common.navigation.MmoNavHost]
+ * wires in for [uk.gov.defra.mmocatchrecord.common.navigation.Destination.SignIn]) rather than the
+ * Stage-1 `core.root.RootScreenTestTags` placeholder tags, which stopped matching any composed screen
+ * once the real sign-in feature replaced the placeholder.
  */
 @RunWith(AndroidJUnit4::class)
 class LaunchSmokeTest {
@@ -26,7 +32,7 @@ class LaunchSmokeTest {
 
     @Test
     fun launcherShowsSignInPlaceholder() {
-        composeTestRule.onNodeWithTag(RootScreenTestTags.SIGN_IN_SCREEN).assertExists()
+        composeTestRule.onNodeWithTag(SignInScreenTestTags.SCREEN).assertExists()
     }
 
     @Test
@@ -40,7 +46,7 @@ class LaunchSmokeTest {
     @Test
     fun signInPrimaryActionIsReachableAndClickable() {
         composeTestRule
-            .onNodeWithTag(RootScreenTestTags.SIGN_IN_ACTION)
+            .onNodeWithTag(SignInScreenTestTags.SUBMIT_ACTION)
             .assertExists()
             .assertIsDisplayed()
             .assertHasClickAction()

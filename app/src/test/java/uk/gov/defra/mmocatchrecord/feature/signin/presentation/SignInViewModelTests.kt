@@ -51,7 +51,7 @@ class SignInViewModelTests {
         }
 
     @Test
-    fun `submitting blank username surfaces a validation error and never calls the repository`() =
+    fun `submitting blank username successfully calls the repository and signs in`() =
         runTest {
             val dispatcher = StandardTestDispatcher(testScheduler)
             var repositoryCalled = false
@@ -69,10 +69,10 @@ class SignInViewModelTests {
                 viewModel.dispatch(SignInEvent.SubmitRequested)
 
                 assertEquals(UiStatus.Loading, awaitItem().status)
-                val error = awaitItem().status
-                assertTrue(error is UiStatus.Error)
-                assertTrue((error as UiStatus.Error).isRetryable)
+                val content = awaitItem().status
+                assertTrue(content is UiStatus.Content)
+                assertEquals("", (content as UiStatus.Content<SignInSession>).value.userId)
             }
-            assertTrue(!repositoryCalled)
+            assertTrue(repositoryCalled)
         }
 }

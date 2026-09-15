@@ -15,6 +15,7 @@ import uk.gov.defra.mmocatchrecord.common.navigation.MmoNavHost
 
 private fun RootPhase.toDestination(): Destination =
     when (this) {
+        RootPhase.SPLASH -> Destination.Splash
         RootPhase.SIGN_IN -> Destination.SignIn
         RootPhase.APP_LOCK -> Destination.AppLock
         RootPhase.HOME -> Destination.Home
@@ -51,7 +52,14 @@ fun RootNavigation(
     LaunchedEffect(uiState.phase) {
         val destination = uiState.phase.toDestination()
         navController.navigate(destination.route) {
-            popUpTo(0) { inclusive = true }
+            // popUpTo(0) is a fragile idiom: id 0 never matches a real (hash-based) destination id, so
+            // NavController silently pops nothing — every phase change (now SPLASH, SIGN_IN, APP_LOCK,
+            // HOME) just pushes a new entry, and the back stack grows unbounded across the app's
+            // lifetime. popUpTo(navController.graph.id) is the documented way to clear the entire back
+            // stack: the graph's own id is always valid, so this reliably removes every prior phase
+            // destination (including SPLASH, which must never be reachable via back navigation once the
+            // real phase resolves).
+            popUpTo(navController.graph.id) { inclusive = true }
             launchSingleTop = true
         }
     }
