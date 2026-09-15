@@ -4,6 +4,8 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,6 +39,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Gear
 object GearMeasurementScreenTestTags {
     const val SCREEN = "gear_measurement_screen"
     const val ERROR_SUMMARY = "gear_measurement_error_summary"
+    const val INSTRUCTION = "gear_measurement_instruction"
     const val FIELD_PREFIX = "gear_measurement_field"
     const val SAVE_ACTION = "gear_measurement_save_action"
     const val ERROR_MESSAGE = "gear_measurement_error_message"
@@ -149,6 +152,11 @@ fun GearMeasurementScreenContent(
                 testTag = GearMeasurementScreenTestTags.ERROR_SUMMARY,
             )
         }
+        Text(
+            text = stringResource(R.string.gear_measurement_whole_number_instruction),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.testTag(GearMeasurementScreenTestTags.INSTRUCTION),
+        )
         gearType.measurementFields.forEachIndexed { index, field ->
             GdsNumericField(
                 label = gearMeasurementFieldLabel(field),
@@ -196,6 +204,20 @@ private fun gearMeasurementFieldLabel(field: GearMeasurementField): String =
             stringResource(
                 R.string.gear_measurement_field_number_of_trawl_nets,
             )
+        GearMeasurementFieldKeys.TOTAL_POTS_OR_TRAPS_HAULED ->
+            stringResource(R.string.gear_measurement_field_total_pots_or_traps_hauled)
+        GearMeasurementFieldKeys.TOTAL_POTS_OR_TRAPS_LEFT_IN_WATER ->
+            stringResource(R.string.gear_measurement_field_total_pots_or_traps_left_in_water)
+        GearMeasurementFieldKeys.NUMBER_OF_RODS_AND_LINES ->
+            stringResource(R.string.gear_measurement_field_number_of_rods_and_lines)
+        GearMeasurementFieldKeys.TOTAL_HOOKS_HAULED ->
+            stringResource(R.string.gear_measurement_field_total_hooks_hauled)
+        GearMeasurementFieldKeys.TOTAL_HOOKS_LEFT_IN_WATER ->
+            stringResource(R.string.gear_measurement_field_total_hooks_left_in_water)
+        GearMeasurementFieldKeys.TOTAL_LENGTH_OF_NETS_HAULED_M ->
+            stringResource(R.string.gear_measurement_field_total_length_of_nets_hauled_m)
+        GearMeasurementFieldKeys.TOTAL_LENGTH_OF_NETS_LEFT_IN_WATER_M ->
+            stringResource(R.string.gear_measurement_field_total_length_of_nets_left_in_water_m)
         // Defensive fallback for any future schema field added before its own string resource is wired up.
         else -> field.label
     }
@@ -226,7 +248,7 @@ fun GearMeasurementScreen_SeineNetsPreview() {
                     GearMeasurementField(
                         key = GearMeasurementFieldKeys.MESH_SIZE_MM,
                         label = "Mesh size (mm)",
-                        type = GearMeasurementFieldType.Decimal,
+                        type = GearMeasurementFieldType.Integer,
                         unit = "mm",
                     ),
                 ),

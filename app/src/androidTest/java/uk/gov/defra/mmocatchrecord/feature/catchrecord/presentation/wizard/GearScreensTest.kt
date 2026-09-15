@@ -11,6 +11,7 @@ import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import org.junit.Assert.assertEquals
@@ -19,6 +20,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
+import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
@@ -47,7 +49,7 @@ class GearScreensTest {
                     GearMeasurementField(
                         key = GearMeasurementFieldKeys.MESH_SIZE_MM,
                         label = "Mesh size (mm)",
-                        type = GearMeasurementFieldType.Decimal,
+                        type = GearMeasurementFieldType.Integer,
                         unit = "mm",
                     ),
                 ),
@@ -59,12 +61,86 @@ class GearScreensTest {
                     GearMeasurementField(
                         key = GearMeasurementFieldKeys.MESH_SIZE_MM,
                         label = "Mesh size (mm)",
-                        type = GearMeasurementFieldType.Decimal,
+                        type = GearMeasurementFieldType.Integer,
                         unit = "mm",
                     ),
                 ),
         )
     private val gearTypes = listOf(seineNetsWithSchema, bottomOtterTrawls)
+
+    private val potsOrTrapsMeasurementFields =
+        listOf(
+            GearMeasurementField(
+                key = GearMeasurementFieldKeys.TOTAL_POTS_OR_TRAPS_HAULED,
+                label = "Total pots or traps hauled",
+                type = GearMeasurementFieldType.Integer,
+            ),
+            GearMeasurementField(
+                key = GearMeasurementFieldKeys.TOTAL_POTS_OR_TRAPS_LEFT_IN_WATER,
+                label = "Total pots or traps left in water",
+                type = GearMeasurementFieldType.Integer,
+            ),
+        )
+    private val pots = GearType(id = "gear-pots", name = "Pots", measurementFields = potsOrTrapsMeasurementFields)
+    private val traps = GearType(id = "gear-traps", name = "Traps", measurementFields = potsOrTrapsMeasurementFields)
+    private val handlines =
+        GearType(
+            id = "gear-handlines",
+            name = "Handlines and pole lines (hand operated)",
+            measurementFields =
+                listOf(
+                    GearMeasurementField(
+                        key = GearMeasurementFieldKeys.NUMBER_OF_RODS_AND_LINES,
+                        label = "Number of rods and lines",
+                        type = GearMeasurementFieldType.Integer,
+                    ),
+                ),
+            measurementTitleOverride = "handlines",
+        )
+    private val driftingLonglines =
+        GearType(
+            id = "gear-drifting-longlines",
+            name = "Drifting longlines",
+            measurementFields =
+                listOf(
+                    GearMeasurementField(
+                        key = GearMeasurementFieldKeys.TOTAL_HOOKS_HAULED,
+                        label = "Total hooks hauled",
+                        type = GearMeasurementFieldType.Integer,
+                    ),
+                    GearMeasurementField(
+                        key = GearMeasurementFieldKeys.TOTAL_HOOKS_LEFT_IN_WATER,
+                        label = "Total hooks left in water",
+                        type = GearMeasurementFieldType.Integer,
+                    ),
+                ),
+        )
+    private val gillnetsCircling =
+        GearType(
+            id = "gear-gillnets-circling",
+            name = "Gillnets (circling)",
+            measurementFields =
+                listOf(
+                    GearMeasurementField(
+                        key = GearMeasurementFieldKeys.MESH_SIZE_MM,
+                        label = "Mesh size (mm)",
+                        type = GearMeasurementFieldType.Integer,
+                        unit = "mm",
+                    ),
+                    GearMeasurementField(
+                        key = GearMeasurementFieldKeys.TOTAL_LENGTH_OF_NETS_HAULED_M,
+                        label = "Total length of nets hauled (m)",
+                        type = GearMeasurementFieldType.Integer,
+                        unit = "m",
+                    ),
+                    GearMeasurementField(
+                        key = GearMeasurementFieldKeys.TOTAL_LENGTH_OF_NETS_LEFT_IN_WATER_M,
+                        label = "Total length of nets left in water (m)",
+                        type = GearMeasurementFieldType.Integer,
+                        unit = "m",
+                    ),
+                ),
+        )
 
     // --- Gear search --------------------------------------------------------------------------------
 
@@ -83,6 +159,32 @@ class GearScreensTest {
         composeTestRule.onNodeWithTag("${GearSearchScreenTestTags.SUGGESTION_PREFIX}_0").performClick()
         composeTestRule.onNodeWithTag(GearSearchScreenTestTags.SAVE_ACTION).performClick()
         assertEquals("gear-seine-nets", submittedId)
+    }
+
+    @Test
+    fun gearSearchScreenShowsWhatGearDidYouUseHeadingWhenDraftHasNoGearYet() {
+        val draft = sampleDraft(emptyList())
+        val state = CatchRecordFlowViewState(status = UiStatus.Content(draft), gearTypes = gearTypes)
+        composeTestRule.setContent {
+            MmoTheme {
+                GearSearchScreen(state = state, onSubmit = {}, onBack = {})
+            }
+        }
+
+        composeTestRule.onNodeWithText("What gear did you use?").assertIsDisplayed()
+    }
+
+    @Test
+    fun gearSearchScreenShowsAddGearToYourListHeadingWhenAddingAnotherGear() {
+        val draft = sampleDraft(listOf(gearUseSeineNets))
+        val state = CatchRecordFlowViewState(status = UiStatus.Content(draft), gearTypes = gearTypes)
+        composeTestRule.setContent {
+            MmoTheme {
+                GearSearchScreen(state = state, onSubmit = {}, onBack = {})
+            }
+        }
+
+        composeTestRule.onNodeWithText("Add gear to your list").assertIsDisplayed()
     }
 
     @Test
@@ -142,6 +244,133 @@ class GearScreensTest {
     }
 
     @Test
+    fun measurementScreenShowsTheWholeNumberInstructionForEveryGearIncludingSeineNetsRetrofit() {
+        composeTestRule.setContent {
+            MmoTheme {
+                GearMeasurementScreenContent(gearType = seineNetsWithSchema, onSubmit = {})
+            }
+        }
+
+        composeTestRule.onNodeWithTag(GearMeasurementScreenTestTags.INSTRUCTION).assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText("All gear measurements must be whole numbers.")
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun potsMeasurementScreenSubmitsBothWholeNumberFields() {
+        var submitted: Map<String, MeasurementValue>? = null
+        composeTestRule.setContent {
+            MmoTheme {
+                GearMeasurementScreenContent(gearType = pots, onSubmit = { submitted = it })
+            }
+        }
+
+        composeTestRule.onNodeWithTag("${GearMeasurementScreenTestTags.FIELD_PREFIX}_0").performTextInput("20")
+        composeTestRule.onNodeWithTag("${GearMeasurementScreenTestTags.FIELD_PREFIX}_1").performTextInput("5")
+        composeTestRule.onNodeWithTag(GearMeasurementScreenTestTags.SAVE_ACTION).performClick()
+        assertEquals(
+            MeasurementValue.Numeric(20.0, ""),
+            submitted?.get(GearMeasurementFieldKeys.TOTAL_POTS_OR_TRAPS_HAULED),
+        )
+        assertEquals(
+            MeasurementValue.Numeric(5.0, ""),
+            submitted?.get(GearMeasurementFieldKeys.TOTAL_POTS_OR_TRAPS_LEFT_IN_WATER),
+        )
+    }
+
+    @Test
+    fun trapsMeasurementScreenUsesTheSameTwoFieldSchemaAsPotsButIsADistinctGearType() {
+        var submitted: Map<String, MeasurementValue>? = null
+        composeTestRule.setContent {
+            MmoTheme {
+                GearMeasurementScreenContent(gearType = traps, onSubmit = { submitted = it })
+            }
+        }
+
+        composeTestRule.onNodeWithTag("${GearMeasurementScreenTestTags.FIELD_PREFIX}_0").performTextInput("8")
+        composeTestRule.onNodeWithTag("${GearMeasurementScreenTestTags.FIELD_PREFIX}_1").performTextInput("2")
+        composeTestRule.onNodeWithTag(GearMeasurementScreenTestTags.SAVE_ACTION).performClick()
+        assertEquals(
+            MeasurementValue.Numeric(8.0, ""),
+            submitted?.get(GearMeasurementFieldKeys.TOTAL_POTS_OR_TRAPS_HAULED),
+        )
+        assertEquals(
+            MeasurementValue.Numeric(2.0, ""),
+            submitted?.get(GearMeasurementFieldKeys.TOTAL_POTS_OR_TRAPS_LEFT_IN_WATER),
+        )
+        assertTrue(pots.id != traps.id)
+    }
+
+    @Test
+    fun handlinesMeasurementScreenSubmitsSingleRodsAndLinesField() {
+        var submitted: Map<String, MeasurementValue>? = null
+        composeTestRule.setContent {
+            MmoTheme {
+                GearMeasurementScreenContent(gearType = handlines, onSubmit = { submitted = it })
+            }
+        }
+
+        composeTestRule.onNodeWithTag("${GearMeasurementScreenTestTags.FIELD_PREFIX}_0").performTextInput("4")
+        composeTestRule.onNodeWithTag(GearMeasurementScreenTestTags.SAVE_ACTION).performClick()
+        assertEquals(
+            MeasurementValue.Numeric(4.0, ""),
+            submitted?.get(GearMeasurementFieldKeys.NUMBER_OF_RODS_AND_LINES),
+        )
+        assertEquals(1, submitted?.size)
+    }
+
+    @Test
+    fun driftingLonglinesMeasurementScreenSubmitsBothHookFields() {
+        var submitted: Map<String, MeasurementValue>? = null
+        composeTestRule.setContent {
+            MmoTheme {
+                GearMeasurementScreenContent(gearType = driftingLonglines, onSubmit = { submitted = it })
+            }
+        }
+
+        composeTestRule.onNodeWithTag("${GearMeasurementScreenTestTags.FIELD_PREFIX}_0").performTextInput("500")
+        composeTestRule.onNodeWithTag("${GearMeasurementScreenTestTags.FIELD_PREFIX}_1").performTextInput("10")
+        composeTestRule.onNodeWithTag(GearMeasurementScreenTestTags.SAVE_ACTION).performClick()
+        assertEquals(
+            MeasurementValue.Numeric(500.0, ""),
+            submitted?.get(GearMeasurementFieldKeys.TOTAL_HOOKS_HAULED),
+        )
+        assertEquals(
+            MeasurementValue.Numeric(10.0, ""),
+            submitted?.get(GearMeasurementFieldKeys.TOTAL_HOOKS_LEFT_IN_WATER),
+        )
+    }
+
+    @Test
+    fun gillnetsMeasurementScreenSubmitsAllThreeWholeNumberFields() {
+        var submitted: Map<String, MeasurementValue>? = null
+        composeTestRule.setContent {
+            MmoTheme {
+                GearMeasurementScreenContent(gearType = gillnetsCircling, onSubmit = { submitted = it })
+            }
+        }
+
+        composeTestRule.onNodeWithTag("${GearMeasurementScreenTestTags.FIELD_PREFIX}_0").performTextInput("60")
+        composeTestRule.onNodeWithTag("${GearMeasurementScreenTestTags.FIELD_PREFIX}_1").performTextInput("500")
+        composeTestRule.onNodeWithTag("${GearMeasurementScreenTestTags.FIELD_PREFIX}_2").performTextInput("50")
+        composeTestRule.onNodeWithTag(GearMeasurementScreenTestTags.SAVE_ACTION).performClick()
+        assertEquals(
+            MeasurementValue.Numeric(60.0, "mm"),
+            submitted?.get(GearMeasurementFieldKeys.MESH_SIZE_MM),
+        )
+        assertEquals(
+            MeasurementValue.Numeric(500.0, "m"),
+            submitted?.get(GearMeasurementFieldKeys.TOTAL_LENGTH_OF_NETS_HAULED_M),
+        )
+        assertEquals(
+            MeasurementValue.Numeric(50.0, "m"),
+            submitted?.get(GearMeasurementFieldKeys.TOTAL_LENGTH_OF_NETS_LEFT_IN_WATER_M),
+        )
+        assertEquals(3, submitted?.size)
+    }
+
+    @Test
     fun measurementScreenWithMissingRequiredValueShowsErrorSummaryAndDoesNotSubmit() {
         var submitted: Map<String, MeasurementValue>? = null
         composeTestRule.setContent {
@@ -186,16 +415,33 @@ class GearScreensTest {
 
     /**
      * A lone decimal point is the one value [GdsNumericField]'s character-level filtering still lets
-     * through (it permits a single '.' so the user can keep typing a decimal), but it does not parse as a
-     * valid number — this reaches the validator's "Numeric" error path via real UI input, rather than the
-     * "Required" path exercised above.
+     * through for a [GearMeasurementFieldType.Decimal] field (it permits a single '.' so the user can keep
+     * typing a decimal), but it does not parse as a valid number — this reaches the validator's "Numeric"
+     * error path via real UI input, rather than the "Required" path exercised above. No currently-confirmed
+     * gear type uses a Decimal field any more (Seine nets/Bottom otter trawls' mesh size was retrofitted to
+     * Integer once Gillnets confirmed every gear type's mesh size is whole-number — see
+     * StubReferenceDataRepository), so this test uses a synthetic Decimal-typed gear type purely to keep
+     * this UI-reachable "Numeric" error path covered for the schema type the validator still supports.
      */
     @Test
     fun measurementScreenWithALoneDecimalPointShowsErrorSummaryAndDoesNotSubmit() {
+        val syntheticDecimalGearType =
+            GearType(
+                id = "gear-synthetic-decimal",
+                name = "Synthetic decimal test gear",
+                measurementFields =
+                    listOf(
+                        GearMeasurementField(
+                            key = "generic_decimal_field",
+                            label = "Generic decimal field",
+                            type = GearMeasurementFieldType.Decimal,
+                        ),
+                    ),
+            )
         var submitted: Map<String, MeasurementValue>? = null
         composeTestRule.setContent {
             MmoTheme {
-                GearMeasurementScreenContent(gearType = seineNetsWithSchema, onSubmit = { submitted = it })
+                GearMeasurementScreenContent(gearType = syntheticDecimalGearType, onSubmit = { submitted = it })
             }
         }
 

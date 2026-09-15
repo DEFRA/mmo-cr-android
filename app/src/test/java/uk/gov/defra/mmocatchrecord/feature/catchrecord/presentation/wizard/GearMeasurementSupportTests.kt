@@ -34,6 +34,23 @@ class GearMeasurementSupportTests {
     }
 
     @Test
+    fun `title gear name uses the measurement title override when present`() {
+        val gearType =
+            GearType(
+                id = "gear-handlines",
+                name = "Handlines and pole lines (hand operated)",
+                measurementTitleOverride = "handlines",
+            )
+        assertEquals("handlines", GearMeasurementSupport.titleGearNameFor(gearType))
+    }
+
+    @Test
+    fun `title gear name falls back to the derived display name when no override is set`() {
+        val gearType = GearType(id = "gear-drifting-longlines", name = "Drifting longlines")
+        assertEquals("drifting longlines", GearMeasurementSupport.titleGearNameFor(gearType))
+    }
+
+    @Test
     fun `measurement summary derives mesh size mm text`() {
         val gearUse =
             GearUse(

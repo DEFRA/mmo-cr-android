@@ -28,6 +28,7 @@ import uk.gov.defra.mmocatchrecord.common.design.Spacing
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 
 object GearSearchScreenTestTags {
@@ -40,7 +41,15 @@ object GearSearchScreenTestTags {
     const val ERROR_MESSAGE = "gear_search_error_message"
 }
 
-/** "What gear did you use?" — reuses the exact same accessible autocomplete pattern as port search. */
+/**
+ * "What gear did you use?" — reuses the exact same accessible autocomplete pattern as port search. The
+ * heading varies by entry context (mirroring the ports first-time-vs-repeat pattern): the first gear added
+ * to a trip sees "What gear did you use?", while every subsequent "Add another gear" loop back into this
+ * same screen sees "Add gear to your list" (confirmed screenshot) — derived from whether the draft already
+ * has any [uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse]s, not from separate
+ * ViewModel state, since re-entering this screen is a pure navigation loop (see [GearSummaryScreen]'s
+ * "Add another gear" action).
+ */
 @Suppress("FunctionNaming")
 @Composable
 fun GearSearchScreen(
@@ -63,15 +72,22 @@ fun GearSearchScreen(
 
 @Suppress("FunctionNaming")
 @Composable
-private fun GearSearchScreen(
+internal fun GearSearchScreen(
     state: CatchRecordFlowViewState,
     onSubmit: (String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val isFirstGear =
+        (state.status as? UiStatus.Content<CatchRecordDraft>)?.value?.gearUses?.isEmpty() ?: true
     CatchRecordWizardScaffold(
         screenTestTag = GearSearchScreenTestTags.SCREEN,
-        title = stringResource(R.string.gear_search_title),
+        title =
+            if (isFirstGear) {
+                stringResource(R.string.gear_search_title)
+            } else {
+                stringResource(R.string.gear_search_title_add_another)
+            },
         onBack = onBack,
         modifier = modifier,
     ) {
@@ -153,6 +169,37 @@ fun GearSearchScreen_Preview() {
         CatchRecordDraft(
             id = "draft-1",
             vesselId = "vessel-1",
+            modifiedAtEpochMillis = 1605830400000L,
+            status = DraftStatus.Draft,
+        )
+    val state = CatchRecordFlowViewState(status = UiStatus.Content(sampleDraft), gearTypes = sampleGearTypes)
+    MmoTheme {
+        AppLanguageProvider(language = "en") {
+            GearSearchScreen(state = state, onSubmit = {}, onBack = {})
+        }
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Suppress("FunctionNaming")
+@Composable
+fun GearSearchScreen_AddAnotherGearPreview() {
+    val sampleGearTypes =
+        listOf(
+            GearType(id = "gear-drifting-longlines", name = "Drifting longlines"),
+        )
+    val sampleDraft =
+        CatchRecordDraft(
+            id = "draft-1",
+            vesselId = "vessel-1",
+            gearUses =
+                listOf(
+                    GearUse(
+                        id = "gear-use-1",
+                        gearTypeId = "gear-seine-nets",
+                        statRectangleId = null,
+                    ),
+                ),
             modifiedAtEpochMillis = 1605830400000L,
             status = DraftStatus.Draft,
         )

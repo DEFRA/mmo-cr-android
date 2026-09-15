@@ -5,6 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldKeys
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldType
 
 class StubReferenceDataRepositoryTests {
     private val repository = StubReferenceDataRepository()
@@ -68,10 +69,82 @@ class StubReferenceDataRepositoryTests {
     fun `gear types confirmed by name only have no measurement fields yet`() =
         runTest {
             val gearTypes = repository.getGearTypes().getOrThrow()
-            val namesConfirmedFieldsPending = listOf("gear-beam-trawls-tbb", "gear-bottom-pair-trawls-ptb")
+            val namesConfirmedFieldsPending =
+                listOf(
+                    "gear-beam-trawls-tbb",
+                    "gear-bottom-pair-trawls-ptb",
+                    "gear-diving",
+                    "gear-dredge",
+                    "gear-nets-gillnets-trammels",
+                    "gear-trawls-not-specified",
+                )
             namesConfirmedFieldsPending.forEach { id ->
                 assertTrue(gearTypes.first { it.id == id }.measurementFields.isEmpty())
             }
+        }
+
+    @Test
+    fun `pots and traps gear types share the same two-field whole-number schema`() =
+        runTest {
+            val gearTypes = repository.getGearTypes().getOrThrow()
+            val pots = gearTypes.first { it.id == "gear-pots" }
+            val traps = gearTypes.first { it.id == "gear-traps" }
+            assertEquals("Pots", pots.name)
+            assertEquals("Traps", traps.name)
+            val expectedKeys =
+                listOf(
+                    GearMeasurementFieldKeys.TOTAL_POTS_OR_TRAPS_HAULED,
+                    GearMeasurementFieldKeys.TOTAL_POTS_OR_TRAPS_LEFT_IN_WATER,
+                )
+            assertEquals(expectedKeys, pots.measurementFields.map { it.key })
+            assertEquals(expectedKeys, traps.measurementFields.map { it.key })
+            assertTrue(pots.measurementFields.all { it.type == GearMeasurementFieldType.Integer })
+            assertTrue(traps.measurementFields.all { it.type == GearMeasurementFieldType.Integer })
+            // Pots and Traps are distinct, separately selectable gear types, not merged into one entry.
+            assertTrue(pots.id != traps.id)
+        }
+
+    @Test
+    fun `handlines gear type has a single rods and lines field and a shorter title override`() =
+        runTest {
+            val gearTypes = repository.getGearTypes().getOrThrow()
+            val handlines = gearTypes.first { it.id == "gear-handlines" }
+            assertEquals("Handlines and pole lines (hand operated)", handlines.name)
+            assertEquals(
+                listOf(GearMeasurementFieldKeys.NUMBER_OF_RODS_AND_LINES),
+                handlines.measurementFields.map { it.key },
+            )
+            assertEquals("handlines", handlines.measurementTitleOverride)
+        }
+
+    @Test
+    fun `drifting longlines gear type has hooks hauled then hooks left in water fields`() =
+        runTest {
+            val gearTypes = repository.getGearTypes().getOrThrow()
+            val driftingLonglines = gearTypes.first { it.id == "gear-drifting-longlines" }
+            assertEquals("Drifting longlines", driftingLonglines.name)
+            assertEquals(
+                listOf(GearMeasurementFieldKeys.TOTAL_HOOKS_HAULED, GearMeasurementFieldKeys.TOTAL_HOOKS_LEFT_IN_WATER),
+                driftingLonglines.measurementFields.map { it.key },
+            )
+            assertTrue(driftingLonglines.measurementFields.all { it.type == GearMeasurementFieldType.Integer })
+        }
+
+    @Test
+    fun `gillnets circling gear type has mesh size then net length fields, all whole numbers`() =
+        runTest {
+            val gearTypes = repository.getGearTypes().getOrThrow()
+            val gillnets = gearTypes.first { it.id == "gear-gillnets-circling" }
+            assertEquals("Gillnets (circling)", gillnets.name)
+            assertEquals(
+                listOf(
+                    GearMeasurementFieldKeys.MESH_SIZE_MM,
+                    GearMeasurementFieldKeys.TOTAL_LENGTH_OF_NETS_HAULED_M,
+                    GearMeasurementFieldKeys.TOTAL_LENGTH_OF_NETS_LEFT_IN_WATER_M,
+                ),
+                gillnets.measurementFields.map { it.key },
+            )
+            assertTrue(gillnets.measurementFields.all { it.type == GearMeasurementFieldType.Integer })
         }
 
     @Test

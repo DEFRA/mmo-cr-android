@@ -44,6 +44,13 @@ data class GearMeasurementField(
 object GearMeasurementFieldKeys {
     const val MESH_SIZE_MM = "mesh_size_mm"
     const val NUMBER_OF_TRAWL_NETS = "number_of_trawl_nets"
+    const val TOTAL_POTS_OR_TRAPS_HAULED = "total_pots_or_traps_hauled"
+    const val TOTAL_POTS_OR_TRAPS_LEFT_IN_WATER = "total_pots_or_traps_left_in_water"
+    const val NUMBER_OF_RODS_AND_LINES = "number_of_rods_and_lines"
+    const val TOTAL_HOOKS_HAULED = "total_hooks_hauled"
+    const val TOTAL_HOOKS_LEFT_IN_WATER = "total_hooks_left_in_water"
+    const val TOTAL_LENGTH_OF_NETS_HAULED_M = "total_length_of_nets_hauled_m"
+    const val TOTAL_LENGTH_OF_NETS_LEFT_IN_WATER_M = "total_length_of_nets_left_in_water_m"
 }
 
 /** A gear type selectable for a [uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse]. */
@@ -57,6 +64,14 @@ data class GearType(
      * [uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.StubReferenceDataRepository].
      */
     val measurementFields: List<GearMeasurementField> = emptyList(),
+    /**
+     * Overrides the gear name shown in "Enter the measurements for {gear}" when it must differ from the
+     * lowercased [name]/reference-data display name — confirmed so far only for "Handlines and pole lines
+     * (hand operated)", whose measurement-screen title is the shorter "handlines". `null` (the default)
+     * means [uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.GearMeasurementSupport]
+     * falls back to its usual lowercased-display-name derivation.
+     */
+    val measurementTitleOverride: String? = null,
 )
 
 /** A species selectable for a species/weight entry. */

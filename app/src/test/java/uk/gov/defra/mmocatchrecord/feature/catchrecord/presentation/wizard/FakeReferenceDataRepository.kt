@@ -33,7 +33,7 @@ class FakeReferenceDataRepository(
                         GearMeasurementField(
                             key = GearMeasurementFieldKeys.MESH_SIZE_MM,
                             label = "Mesh size (mm)",
-                            type = GearMeasurementFieldType.Decimal,
+                            type = GearMeasurementFieldType.Integer,
                             unit = "mm",
                         ),
                     ),
@@ -51,13 +51,95 @@ class FakeReferenceDataRepository(
                         GearMeasurementField(
                             key = GearMeasurementFieldKeys.MESH_SIZE_MM,
                             label = "Mesh size (mm)",
-                            type = GearMeasurementFieldType.Decimal,
+                            type = GearMeasurementFieldType.Integer,
                             unit = "mm",
+                        ),
+                    ),
+            ),
+            GearType(
+                id = "gear-pots",
+                name = "Pots",
+                measurementFields = potsOrTrapsFields,
+            ),
+            GearType(
+                id = "gear-traps",
+                name = "Traps",
+                measurementFields = potsOrTrapsFields,
+            ),
+            GearType(
+                id = "gear-handlines",
+                name = "Handlines and pole lines (hand operated)",
+                measurementFields =
+                    listOf(
+                        GearMeasurementField(
+                            key = GearMeasurementFieldKeys.NUMBER_OF_RODS_AND_LINES,
+                            label = "Number of rods and lines",
+                            type = GearMeasurementFieldType.Integer,
+                        ),
+                    ),
+                measurementTitleOverride = "handlines",
+            ),
+            GearType(
+                id = "gear-drifting-longlines",
+                name = "Drifting longlines",
+                measurementFields =
+                    listOf(
+                        GearMeasurementField(
+                            key = GearMeasurementFieldKeys.TOTAL_HOOKS_HAULED,
+                            label = "Total hooks hauled",
+                            type = GearMeasurementFieldType.Integer,
+                        ),
+                        GearMeasurementField(
+                            key = GearMeasurementFieldKeys.TOTAL_HOOKS_LEFT_IN_WATER,
+                            label = "Total hooks left in water",
+                            type = GearMeasurementFieldType.Integer,
+                        ),
+                    ),
+            ),
+            GearType(
+                id = "gear-gillnets-circling",
+                name = "Gillnets (circling)",
+                measurementFields =
+                    listOf(
+                        GearMeasurementField(
+                            key = GearMeasurementFieldKeys.MESH_SIZE_MM,
+                            label = "Mesh size (mm)",
+                            type = GearMeasurementFieldType.Integer,
+                            unit = "mm",
+                        ),
+                        GearMeasurementField(
+                            key = GearMeasurementFieldKeys.TOTAL_LENGTH_OF_NETS_HAULED_M,
+                            label = "Total length of nets hauled (m)",
+                            type = GearMeasurementFieldType.Integer,
+                            unit = "m",
+                        ),
+                        GearMeasurementField(
+                            key = GearMeasurementFieldKeys.TOTAL_LENGTH_OF_NETS_LEFT_IN_WATER_M,
+                            label = "Total length of nets left in water (m)",
+                            type = GearMeasurementFieldType.Integer,
+                            unit = "m",
                         ),
                     ),
             ),
         ),
 ) : ReferenceDataRepository {
+    companion object {
+        // Shared by the "Pots" and "Traps" default gear types above — mirrors StubReferenceDataRepository.
+        private val potsOrTrapsFields =
+            listOf(
+                GearMeasurementField(
+                    key = GearMeasurementFieldKeys.TOTAL_POTS_OR_TRAPS_HAULED,
+                    label = "Total pots or traps hauled",
+                    type = GearMeasurementFieldType.Integer,
+                ),
+                GearMeasurementField(
+                    key = GearMeasurementFieldKeys.TOTAL_POTS_OR_TRAPS_LEFT_IN_WATER,
+                    label = "Total pots or traps left in water",
+                    type = GearMeasurementFieldType.Integer,
+                ),
+            )
+    }
+
     override suspend fun getVessels(): Result<List<Vessel>> = Result.success(vessels)
 
     override suspend fun getPorts(): Result<List<Port>> = Result.success(ports)

@@ -238,6 +238,64 @@ class RoomCatchRecordDraftRepositoryTests {
         }
 
     @Test
+    fun `newly confirmed gear types round-trip their whole-number measurement schemas`() =
+        runTest {
+            val started = repository.startDraft("vessel-hercules").getOrThrow()
+            val fullDraft =
+                started.copy(
+                    gearUses =
+                        listOf(
+                            GearUse(
+                                id = "gear-1",
+                                gearTypeId = "gear-pots",
+                                statRectangleId = null,
+                                measurements =
+                                    mapOf(
+                                        "total_pots_or_traps_hauled" to MeasurementValue.Numeric(20.0, ""),
+                                        "total_pots_or_traps_left_in_water" to MeasurementValue.Numeric(5.0, ""),
+                                    ),
+                                numberOfShots = 4,
+                                confirmedUsedOnTrip = true,
+                            ),
+                            GearUse(
+                                id = "gear-2",
+                                gearTypeId = "gear-gillnets-circling",
+                                statRectangleId = null,
+                                measurements =
+                                    mapOf(
+                                        "mesh_size_mm" to MeasurementValue.Numeric(60.0, "mm"),
+                                        "total_length_of_nets_hauled_m" to MeasurementValue.Numeric(500.0, "m"),
+                                        "total_length_of_nets_left_in_water_m" to MeasurementValue.Numeric(50.0, "m"),
+                                    ),
+                                confirmedUsedOnTrip = false,
+                            ),
+                        ),
+                )
+            repository.saveDraft(fullDraft).getOrThrow()
+            val reloaded = repository.getActiveDraft("vessel-hercules").getOrThrow()
+            assertEquals(2, reloaded!!.gearUses.size)
+            val pots = reloaded.gearUses.first { it.id == "gear-1" }
+            assertEquals("gear-pots", pots.gearTypeId)
+            assertTrue(pots.confirmedUsedOnTrip)
+            assertEquals(4, pots.numberOfShots)
+            assertEquals(MeasurementValue.Numeric(20.0, ""), pots.measurements["total_pots_or_traps_hauled"])
+            assertEquals(MeasurementValue.Numeric(5.0, ""), pots.measurements["total_pots_or_traps_left_in_water"])
+            val gillnets = reloaded.gearUses.first { it.id == "gear-2" }
+            assertEquals("gear-gillnets-circling", gillnets.gearTypeId)
+            assertTrue(!gillnets.confirmedUsedOnTrip)
+            assertNull(gillnets.numberOfShots)
+            assertEquals(MeasurementValue.Numeric(60.0, "mm"), gillnets.measurements["mesh_size_mm"])
+            assertEquals(
+                MeasurementValue.Numeric(500.0, "m"),
+                gillnets.measurements["total_length_of_nets_hauled_m"],
+            )
+            assertEquals(
+                MeasurementValue.Numeric(50.0, "m"),
+                gillnets.measurements["total_length_of_nets_left_in_water_m"],
+            )
+        }
+
+    @Test
     fun `re-saving a draft replaces its previous children rather than accumulating them`() =
         runTest {
             val started = repository.startDraft("vessel-hercules").getOrThrow()

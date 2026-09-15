@@ -19,15 +19,21 @@ object GearMeasurementSupport {
 
     /**
      * The gear-name portion of "Enter the measurements for {gear}", lowercased per the confirmed
-     * screenshots (e.g. "seine nets", "bottom otter trawls").
+     * screenshots (e.g. "seine nets", "bottom otter trawls", "pots", "traps", "drifting longlines",
+     * "gillnets").
      *
      * Known, accepted deviation: the confirmed screenshots use a singular form for some gear types (e.g.
      * "bottom otter trawl") where the underlying reference-data name is plural ("Bottom otter trawls
      * (TB)"), and no separate singular/short-name field has been confirmed — so this always yields the
      * plural reference-data name as typed. Minor, non-blocking; revisit if a singular display name is
      * confirmed in a later phase.
+     *
+     * "Handlines and pole lines (hand operated)" is the one gear type confirmed so far whose measurement
+     * screen title is *shorter* than its stripped display name ("handlines", not "handlines and pole
+     * lines") — that case is handled via [GearType.measurementTitleOverride] rather than a derivation rule.
      */
-    fun titleGearNameFor(gearType: GearType): String = displayNameFor(gearType).lowercase()
+    fun titleGearNameFor(gearType: GearType): String =
+        gearType.measurementTitleOverride ?: displayNameFor(gearType).lowercase()
 
     /**
      * The gear-summary checklist's secondary/greyed measurement-summary line for one gear use (e.g.
