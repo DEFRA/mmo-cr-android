@@ -58,10 +58,10 @@ fun ReturnPortScreen(
                         viewModel.dispatch(
                             CatchRecordFlowEvent.SaveAndContinue(
                                 status.value.copy(returnPort = selection),
-                                WizardStep.GearLoop,
+                                WizardStep.GearSearch,
                             ),
                         )
-                        onNavigate(WizardStep.GearLoop)
+                        onNavigate(WizardStep.GearSearch)
                     },
                 )
         }

@@ -15,10 +15,48 @@ data class Port(
     val statisticalAreaId: String,
 )
 
+/** The kind of numeric input a gear-type measurement field requires (see [GearMeasurementField]). */
+enum class GearMeasurementFieldType {
+    Integer,
+    Decimal,
+}
+
+/**
+ * One measurement field in a [GearType]'s schema, e.g. "Mesh size (mm)". [key] is the stable identifier
+ * persisted against [uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse.measurements];
+ * [label] is the display text shown on the gear-measurement screen (deliberately plain, unlocalized
+ * content, consistent with [GearType.name]/[Species.name]/[Port.name] elsewhere in this file); [unit] (if
+ * any) is stored alongside the captured value — see
+ * [uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementValue.Numeric.unit].
+ */
+data class GearMeasurementField(
+    val key: String,
+    val label: String,
+    val type: GearMeasurementFieldType,
+    val unit: String? = null,
+)
+
+/**
+ * Stable [GearMeasurementField.key] constants, shared between the reference-data schema (below) and any
+ * presentation-layer code that needs to look a specific field's captured value up by key — e.g. deriving
+ * the gear-summary-checklist's "100mm mesh" secondary text from a gear use's captured measurements.
+ */
+object GearMeasurementFieldKeys {
+    const val MESH_SIZE_MM = "mesh_size_mm"
+    const val NUMBER_OF_TRAWL_NETS = "number_of_trawl_nets"
+}
+
 /** A gear type selectable for a [uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse]. */
 data class GearType(
     val id: String,
     val name: String,
+    /**
+     * The gear-specific measurement fields shown on the gear-measurement screen for this gear type, in
+     * display order. Empty for gear types whose fields are not yet confirmed (blocked on later-phase
+     * screenshots) — see
+     * [uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.StubReferenceDataRepository].
+     */
+    val measurementFields: List<GearMeasurementField> = emptyList(),
 )
 
 /** A species selectable for a species/weight entry. */

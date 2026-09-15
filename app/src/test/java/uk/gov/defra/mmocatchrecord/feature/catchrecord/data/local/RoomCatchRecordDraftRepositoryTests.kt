@@ -152,6 +152,92 @@ class RoomCatchRecordDraftRepositoryTests {
         }
 
     @Test
+    fun `gear uses round-trip their shots count and confirmed-used-on-trip flag`() =
+        runTest {
+            val started = repository.startDraft("vessel-hercules").getOrThrow()
+            val fullDraft =
+                started.copy(
+                    gearUses =
+                        listOf(
+                            GearUse(
+                                id = "gear-1",
+                                gearTypeId = "gear-seine-nets",
+                                statRectangleId = null,
+                                measurements = mapOf("mesh_size_mm" to MeasurementValue.Numeric(100.0, "mm")),
+                                numberOfShots = 4,
+                                confirmedUsedOnTrip = true,
+                            ),
+                        ),
+                )
+            repository.saveDraft(fullDraft).getOrThrow()
+            val reloaded = repository.getActiveDraft("vessel-hercules").getOrThrow()
+            val gearUse = reloaded!!.gearUses.single()
+            assertEquals(4, gearUse.numberOfShots)
+            assertTrue(gearUse.confirmedUsedOnTrip)
+        }
+
+    @Test
+    fun `gear uses default to unconfirmed with no shots when not set`() =
+        runTest {
+            val started = repository.startDraft("vessel-hercules").getOrThrow()
+            val fullDraft =
+                started.copy(
+                    gearUses = listOf(GearUse(id = "gear-1", gearTypeId = "gear-seine-nets", statRectangleId = null)),
+                )
+            repository.saveDraft(fullDraft).getOrThrow()
+            val reloaded = repository.getActiveDraft("vessel-hercules").getOrThrow()
+            val gearUse = reloaded!!.gearUses.single()
+            assertNull(gearUse.numberOfShots)
+            assertTrue(!gearUse.confirmedUsedOnTrip)
+        }
+
+    @Test
+    fun `a full multi-gear list round-trips with mixed checked, unchecked and shots values`() =
+        runTest {
+            val started = repository.startDraft("vessel-hercules").getOrThrow()
+            val fullDraft =
+                started.copy(
+                    gearUses =
+                        listOf(
+                            GearUse(
+                                id = "gear-1",
+                                gearTypeId = "gear-seine-nets",
+                                statRectangleId = null,
+                                measurements = mapOf("mesh_size_mm" to MeasurementValue.Numeric(100.0, "mm")),
+                                numberOfShots = 3,
+                                confirmedUsedOnTrip = true,
+                            ),
+                            GearUse(
+                                id = "gear-2",
+                                gearTypeId = "gear-bottom-otter-trawls-tb",
+                                statRectangleId = null,
+                                measurements =
+                                    mapOf(
+                                        "number_of_trawl_nets" to MeasurementValue.Numeric(2.0, ""),
+                                        "mesh_size_mm" to MeasurementValue.Numeric(80.0, "mm"),
+                                    ),
+                                confirmedUsedOnTrip = false,
+                            ),
+                        ),
+                )
+            repository.saveDraft(fullDraft).getOrThrow()
+            val reloaded = repository.getActiveDraft("vessel-hercules").getOrThrow()
+            assertEquals(2, reloaded!!.gearUses.size)
+            val gearUseIds = reloaded.gearUses.map { it.id }
+            assertTrue(gearUseIds.containsAll(listOf("gear-1", "gear-2")))
+            val confirmedGear = reloaded.gearUses.first { it.id == "gear-1" }
+            assertTrue(confirmedGear.confirmedUsedOnTrip)
+            assertEquals(3, confirmedGear.numberOfShots)
+            val unconfirmedGear = reloaded.gearUses.first { it.id == "gear-2" }
+            assertTrue(!unconfirmedGear.confirmedUsedOnTrip)
+            assertNull(unconfirmedGear.numberOfShots)
+            assertEquals(
+                MeasurementValue.Numeric(2.0, ""),
+                unconfirmedGear.measurements["number_of_trawl_nets"],
+            )
+        }
+
+    @Test
     fun `re-saving a draft replaces its previous children rather than accumulating them`() =
         runTest {
             val started = repository.startDraft("vessel-hercules").getOrThrow()

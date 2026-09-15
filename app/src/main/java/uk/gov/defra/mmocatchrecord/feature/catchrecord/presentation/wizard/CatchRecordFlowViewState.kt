@@ -3,6 +3,8 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.core.architecture.ViewState
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementValue
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Vessel
 
@@ -23,6 +25,14 @@ data class CatchRecordFlowViewState(
     val previouslyUsedPorts: List<Port> = emptyList(),
     val departurePortEntryMode: DeparturePortEntryMode = DeparturePortEntryMode.Search,
     val samePortCandidate: Port? = null,
+    val gearTypes: List<GearType> = emptyList(),
+    /**
+     * The gear type chosen on the gear-search screen, held only transiently until the measurement screen
+     * submits (at which point a real [uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse]
+     * is created and this is cleared). Not itself persisted to Room — if the process dies mid-measurement
+     * entry the user simply re-picks the gear type; no captured data is lost since nothing was saved yet.
+     */
+    val pendingGearTypeId: String? = null,
 ) : ViewState
 
 /** UI-originated events for the catch-record wizard flow, dispatched by whichever step screen is shown. */
@@ -48,7 +58,7 @@ sealed interface CatchRecordFlowEvent {
     /** The user declined the same-port shortcut, so the departure-port step should show favourites/search. */
     data object SamePortShortcutDeclined : CatchRecordFlowEvent
 
-    /** Persist the same-port shortcut choice and skip directly to the later-phase placeholder. */
+    /** Persist the same-port shortcut choice and skip directly to the gear-search step. */
     data object SamePortShortcutAccepted : CatchRecordFlowEvent
 
     /**
@@ -59,6 +69,28 @@ sealed interface CatchRecordFlowEvent {
     data class SaveAndContinue(
         val updatedDraft: CatchRecordDraft,
         val nextStep: WizardStep,
+    ) : CatchRecordFlowEvent
+
+    /** Records the gear type chosen on the gear-search screen, ready for the measurement step. */
+    data class GearTypeSelected(
+        val gearTypeId: String,
+    ) : CatchRecordFlowEvent
+
+    /**
+     * Builds and appends a new [uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse] for
+     * the pending gear type (see [CatchRecordFlowViewState.pendingGearTypeId]) with the entered
+     * [measurements], persists it, and advances to the gear-summary checklist.
+     */
+    data class GearMeasurementsSubmitted(
+        val measurements: Map<String, MeasurementValue>,
+    ) : CatchRecordFlowEvent
+
+    /**
+     * Bulk-removes the checked gear(s) from the draft (see gear-summary checklist "Remove gear" action)
+     * and persists immediately; does not advance [WizardStep] since the user stays on the checklist.
+     */
+    data class GearRemoved(
+        val updatedDraft: CatchRecordDraft,
     ) : CatchRecordFlowEvent
 
     data object MarkReadyToSubmit : CatchRecordFlowEvent

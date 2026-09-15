@@ -75,6 +75,22 @@ data class GearUse(
     val statRectangleId: String?,
     val measurements: Map<String, MeasurementValue> = emptyMap(),
     val speciesWeights: List<SpeciesWeightEntry> = emptyList(),
+    /**
+     * How many times this gear was shot/deployed on this specific trip. Currently modelled as universal
+     * across every gear type — shown on the gear-summary checklist whenever [confirmedUsedOnTrip] is
+     * ticked — because only Seine nets is confirmed by screenshot at this phase. This is a deliberate
+     * placeholder assumption: a future phase may need to make it gear-type-conditional if some gear types
+     * (e.g. static gear such as pots/traps) turn out not to have a "shots" concept.
+     */
+    val numberOfShots: Int? = null,
+    /**
+     * Whether the user has confirmed (via the gear-summary checklist's checkbox) that this gear was
+     * actually used on **this** trip. A gear use can exist with its measurements already captured but
+     * remain unconfirmed — e.g. added then left unticked — in which case it is excluded from the per-gear
+     * FR7/FR8 downstream loop (stat-rectangle + species/weights, built in a later phase) while still being
+     * retained here so its captured measurements are not lost.
+     */
+    val confirmedUsedOnTrip: Boolean = false,
 )
 
 /**

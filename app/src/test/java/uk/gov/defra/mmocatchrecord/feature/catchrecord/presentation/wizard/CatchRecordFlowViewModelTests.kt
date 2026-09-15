@@ -18,6 +18,11 @@ import org.junit.Test
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DmyDate
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementValue
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelection
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectionMode
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldKeys
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CatchRecordFlowViewModelTests {
@@ -35,8 +40,15 @@ class CatchRecordFlowViewModelTests {
         repository: FakeCatchRecordDraftRepository,
         referenceDataRepository: FakeReferenceDataRepository = FakeReferenceDataRepository(),
         clock: () -> Long = { 0L },
+        idFactory: () -> String = gearIdSequenceFactory(),
         dispatcher: kotlinx.coroutines.CoroutineDispatcher,
-    ) = CatchRecordFlowViewModel(repository, referenceDataRepository, clock, dispatcher)
+    ) = CatchRecordFlowViewModel(repository, referenceDataRepository, clock, idFactory, dispatcher)
+
+    /** Deterministic, unique-per-call id generator for gear uses created during a single test. */
+    private fun gearIdSequenceFactory(): () -> String {
+        var counter = 0
+        return { "gear-use-${counter++}" }
+    }
 
     @Test
     fun `enter flow with no active draft loads vessels and goes to vessel selection idle state`() =
@@ -197,7 +209,7 @@ class CatchRecordFlowViewModelTests {
         }
 
     @Test
-    fun `same port shortcut yes sets both ports and skips to gear loop`() =
+    fun `same port shortcut yes sets both ports and skips to gear search`() =
         runTest {
             val dispatcher = StandardTestDispatcher(testScheduler)
             val repository = FakeCatchRecordDraftRepository()
@@ -211,7 +223,7 @@ class CatchRecordFlowViewModelTests {
                 assertEquals(UiStatus.Loading, awaitItem().status)
                 val updated = awaitItem()
                 val draft = (updated.status as UiStatus.Content<CatchRecordDraft>).value
-                assertEquals(WizardStep.GearLoop, updated.currentStep)
+                assertEquals(WizardStep.GearSearch, updated.currentStep)
                 assertEquals("port-hastings", draft.departurePort?.portId)
                 assertEquals("port-hastings", draft.returnPort?.portId)
             }
@@ -269,6 +281,102 @@ class CatchRecordFlowViewModelTests {
                 val errored = awaitItem()
                 assertTrue(errored.status is UiStatus.Error)
                 assertTrue((errored.status as UiStatus.Error).isRetryable)
+            }
+        }
+
+    @Test
+    fun `gear type selected records pending gear type without persisting`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            val viewModel = buildViewModel(repository = repository, dispatcher = dispatcher)
+            viewModel.dispatch(CatchRecordFlowEvent.VesselSelected("vessel-achilles"))
+            testScheduler.advanceUntilIdle()
+
+            viewModel.state.test {
+                skipItems(1)
+                viewModel.dispatch(CatchRecordFlowEvent.GearTypeSelected("gear-seine-nets"))
+                val updated = awaitItem()
+                assertEquals("gear-seine-nets", updated.pendingGearTypeId)
+            }
+            // Not yet persisted: the draft in the repository has no gear uses until measurements submit.
+            val activeDraft = repository.getActiveDraft("vessel-achilles").getOrThrow()
+            assertTrue(activeDraft?.gearUses.orEmpty().isEmpty())
+        }
+
+    @Test
+    fun `gear measurements submitted appends a new gear use and advances to gear summary`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            val viewModel =
+                buildViewModel(repository = repository, idFactory = { "gear-use-1" }, dispatcher = dispatcher)
+            viewModel.dispatch(CatchRecordFlowEvent.VesselSelected("vessel-achilles"))
+            testScheduler.advanceUntilIdle()
+            viewModel.dispatch(CatchRecordFlowEvent.GearTypeSelected("gear-seine-nets"))
+            testScheduler.advanceUntilIdle()
+
+            viewModel.state.test {
+                skipItems(1)
+                viewModel.dispatch(
+                    CatchRecordFlowEvent.GearMeasurementsSubmitted(
+                        mapOf(GearMeasurementFieldKeys.MESH_SIZE_MM to MeasurementValue.Numeric(100.0, "mm")),
+                    ),
+                )
+                assertEquals(UiStatus.Loading, awaitItem().status)
+                val updated = awaitItem()
+                assertEquals(WizardStep.GearSummary, updated.currentStep)
+                assertNull(updated.pendingGearTypeId)
+                val draft = (updated.status as UiStatus.Content<CatchRecordDraft>).value
+                assertEquals(1, draft.gearUses.size)
+                val gearUse = draft.gearUses.single()
+                assertEquals("gear-use-1", gearUse.id)
+                assertEquals("gear-seine-nets", gearUse.gearTypeId)
+                assertEquals(
+                    MeasurementValue.Numeric(100.0, "mm"),
+                    gearUse.measurements[GearMeasurementFieldKeys.MESH_SIZE_MM],
+                )
+                assertTrue(!gearUse.confirmedUsedOnTrip)
+                assertNull(gearUse.numberOfShots)
+            }
+        }
+
+    @Test
+    fun `gear removed persists filtered gear list without changing step`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            val started = repository.startDraft("vessel-achilles").getOrThrow()
+            val gearUseToKeep =
+                GearUse(id = "gear-use-keep", gearTypeId = "gear-seine-nets", statRectangleId = null)
+            val gearUseToRemove =
+                GearUse(id = "gear-use-remove", gearTypeId = "gear-seine-nets", statRectangleId = null)
+            repository
+                .saveDraft(
+                    started.copy(
+                        isTripToday = true,
+                        departurePort = PortSelection("port-hastings", PortSelectionMode.Favourite),
+                        returnPort = PortSelection("port-hastings", PortSelectionMode.Favourite),
+                        gearUses = listOf(gearUseToKeep, gearUseToRemove),
+                    ),
+                ).getOrThrow()
+
+            val viewModel = buildViewModel(repository = repository, dispatcher = dispatcher)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            testScheduler.advanceUntilIdle()
+            viewModel.dispatch(CatchRecordFlowEvent.ResumeDraft)
+            testScheduler.advanceUntilIdle()
+
+            viewModel.state.test {
+                val current = awaitItem()
+                val currentDraft = (current.status as UiStatus.Content<CatchRecordDraft>).value
+                val updatedDraft = currentDraft.copy(gearUses = listOf(gearUseToKeep))
+                viewModel.dispatch(CatchRecordFlowEvent.GearRemoved(updatedDraft))
+                assertEquals(UiStatus.Loading, awaitItem().status)
+                val afterRemoval = awaitItem()
+                assertEquals(WizardStep.GearSummary, afterRemoval.currentStep)
+                val draft = (afterRemoval.status as UiStatus.Content<CatchRecordDraft>).value
+                assertEquals(listOf("gear-use-keep"), draft.gearUses.map { it.id })
             }
         }
 }

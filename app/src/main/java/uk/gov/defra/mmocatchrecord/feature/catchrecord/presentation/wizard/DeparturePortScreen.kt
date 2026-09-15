@@ -60,7 +60,7 @@ fun DeparturePortScreen(
         state = state,
         onSamePortAccepted = {
             viewModel.dispatch(CatchRecordFlowEvent.SamePortShortcutAccepted)
-            onNavigate(WizardStep.GearLoop)
+            onNavigate(WizardStep.GearSearch)
         },
         onSamePortDeclined = { viewModel.dispatch(CatchRecordFlowEvent.SamePortShortcutDeclined) },
         onSubmit = { updatedDraft ->

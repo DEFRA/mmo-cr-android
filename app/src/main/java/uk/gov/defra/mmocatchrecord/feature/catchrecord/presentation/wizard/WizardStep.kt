@@ -26,16 +26,25 @@ sealed interface WizardStep {
     data object ReturnPort : WizardStep
 
     /**
-     * The per-gear loop: add one or more gear uses, each with its own measurements, stat-rectangle
-     * selection and species/weight entries. TODO(Phase 3/4): replace with the real per-step screens once
-     * gear/measurement/species/stat-area screenshots are confirmed.
+     * "What gear did you use?" — autocomplete search over
+     * [uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType].
      */
-    data object GearLoop : WizardStep
+    data object GearSearch : WizardStep
 
-    /** TODO(Phase 5): landing/storage entry screen, fields TBD. */
+    /**
+     * Generic, schema-driven "Enter the measurements for {gear}" screen: fields shown are resolved from
+     * the selected gear type's `measurementFields` schema (see ADR 0007 update / Phase 3), not hardcoded
+     * per gear type.
+     */
+    data object GearMeasurement : WizardStep
+
+    /** Checklist of every gear added so far, with confirm/remove/add-another actions. */
+    data object GearSummary : WizardStep
+
+    /** TODO(Phase 4): statistical sub-rectangle selection, fields TBD, screenshots pending. */
     data object LandingStorage : WizardStep
 
-    /** TODO(Phase 6): review and submit screen. */
+    /** TODO(Phase 6+): review and submit screen. */
     data object ReviewAndSubmit : WizardStep
 }
 
@@ -48,9 +57,11 @@ fun routeFor(step: WizardStep): String =
         WizardStep.ReturnDate -> Destination.CatchRecordFlow.RETURN_DATE_ROUTE
         WizardStep.DeparturePort -> Destination.CatchRecordFlow.DEPARTURE_PORT_ROUTE
         WizardStep.ReturnPort -> Destination.CatchRecordFlow.RETURN_PORT_ROUTE
-        WizardStep.GearLoop -> Destination.CatchRecordFlow.GEAR_LOOP_ROUTE
-        WizardStep.LandingStorage -> Destination.CatchRecordFlow.GEAR_LOOP_ROUTE
-        WizardStep.ReviewAndSubmit -> Destination.CatchRecordFlow.GEAR_LOOP_ROUTE
+        WizardStep.GearSearch -> Destination.CatchRecordFlow.GEAR_SEARCH_ROUTE
+        WizardStep.GearMeasurement -> Destination.CatchRecordFlow.GEAR_MEASUREMENT_ROUTE
+        WizardStep.GearSummary -> Destination.CatchRecordFlow.GEAR_SUMMARY_ROUTE
+        WizardStep.LandingStorage -> Destination.CatchRecordFlow.PHASE_THREE_COMPLETE_ROUTE
+        WizardStep.ReviewAndSubmit -> Destination.CatchRecordFlow.PHASE_THREE_COMPLETE_ROUTE
     }
 
 fun nextWizardStepForDraft(draft: CatchRecordDraft): WizardStep =
@@ -60,5 +71,6 @@ fun nextWizardStepForDraft(draft: CatchRecordDraft): WizardStep =
         draft.isTripToday == false && draft.returnDate == null -> WizardStep.ReturnDate
         draft.departurePort == null -> WizardStep.DeparturePort
         draft.returnPort == null -> WizardStep.ReturnPort
-        else -> WizardStep.GearLoop
+        draft.gearUses.isEmpty() -> WizardStep.GearSearch
+        else -> WizardStep.GearSummary
     }

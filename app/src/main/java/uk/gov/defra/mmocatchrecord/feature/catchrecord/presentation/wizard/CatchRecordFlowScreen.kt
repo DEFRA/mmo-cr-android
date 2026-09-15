@@ -23,8 +23,8 @@ object CatchRecordFlowEntryScreenTestTags {
     const val ERROR_MESSAGE = "catch_record_flow_entry_error"
 }
 
-object PhaseOneTwoCompleteScreenTestTags {
-    const val SCREEN = "catch_record_phase_one_two_complete_screen"
+object PhaseThreeCompleteScreenTestTags {
+    const val SCREEN = "catch_record_phase_three_complete_screen"
 }
 
 @Suppress("FunctionNaming")
@@ -63,14 +63,14 @@ fun CatchRecordFlowEntryScreen(
 
 @Suppress("FunctionNaming")
 @Composable
-fun PhaseOneTwoCompleteScreen(
+fun PhaseThreeCompleteScreen(
     viewModel: CatchRecordFlowViewModel,
     onBack: () -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     CatchRecordWizardScaffold(
-        screenTestTag = PhaseOneTwoCompleteScreenTestTags.SCREEN,
-        title = stringResource(R.string.phase_one_two_complete_title),
+        screenTestTag = PhaseThreeCompleteScreenTestTags.SCREEN,
+        title = stringResource(R.string.phase_three_complete_title),
         onBack = onBack,
     ) {
         when (val status = state.status) {
@@ -79,7 +79,7 @@ fun PhaseOneTwoCompleteScreen(
             UiStatus.Idle, is UiStatus.Content -> {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
                     Text(
-                        text = stringResource(R.string.phase_one_two_complete_body),
+                        text = stringResource(R.string.phase_three_complete_body),
                         style = MaterialTheme.typography.bodyLarge,
                     )
                 }

@@ -57,6 +57,8 @@ data class GearUseEntity(
     val gearTypeId: String,
     val statRectangleId: String?,
     val orderIndex: Int,
+    val numberOfShots: Int?,
+    val confirmedUsedOnTrip: Boolean,
 )
 
 /**

@@ -108,7 +108,7 @@ private fun PlaceholderScreen(
 
 @Preview(showBackground = true)
 @Composable
-private fun AppLockScreenPreview() {
+fun AppLockScreenPreview() {
     MmoTheme {
         AppLockScreen(onUnlock = {})
     }

@@ -4,6 +4,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldKeys
 
 class StubReferenceDataRepositoryTests {
     private val repository = StubReferenceDataRepository()
@@ -37,6 +38,40 @@ class StubReferenceDataRepositoryTests {
     fun `gear types are non-empty`() =
         runTest {
             assertTrue(repository.getGearTypes().getOrThrow().isNotEmpty())
+        }
+
+    @Test
+    fun `seine nets gear type has a single mesh size measurement field`() =
+        runTest {
+            val gearTypes = repository.getGearTypes().getOrThrow()
+            val seineNets = gearTypes.first { it.id == "gear-seine-nets" }
+            assertEquals("Seine nets (not specified)", seineNets.name)
+            assertEquals(
+                listOf(GearMeasurementFieldKeys.MESH_SIZE_MM),
+                seineNets.measurementFields.map { it.key },
+            )
+        }
+
+    @Test
+    fun `bottom otter trawls gear type has trawl net count then mesh size measurement fields`() =
+        runTest {
+            val gearTypes = repository.getGearTypes().getOrThrow()
+            val bottomOtterTrawls = gearTypes.first { it.id == "gear-bottom-otter-trawls-tb" }
+            assertEquals("Bottom otter trawls (TB)", bottomOtterTrawls.name)
+            assertEquals(
+                listOf(GearMeasurementFieldKeys.NUMBER_OF_TRAWL_NETS, GearMeasurementFieldKeys.MESH_SIZE_MM),
+                bottomOtterTrawls.measurementFields.map { it.key },
+            )
+        }
+
+    @Test
+    fun `gear types confirmed by name only have no measurement fields yet`() =
+        runTest {
+            val gearTypes = repository.getGearTypes().getOrThrow()
+            val namesConfirmedFieldsPending = listOf("gear-beam-trawls-tbb", "gear-bottom-pair-trawls-ptb")
+            namesConfirmedFieldsPending.forEach { id ->
+                assertTrue(gearTypes.first { it.id == id }.measurementFields.isEmpty())
+            }
         }
 
     @Test

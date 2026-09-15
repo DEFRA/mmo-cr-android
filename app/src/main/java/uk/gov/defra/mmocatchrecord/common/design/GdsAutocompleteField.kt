@@ -57,10 +57,15 @@ fun GdsAutocompleteField(
     noMatchesTestTag: String,
     modifier: Modifier = Modifier,
     errorText: String? = null,
+    // Both default to the existing port-search behaviour so every current call site (port screens,
+    // GdsAutocompleteFieldTest) is unaffected; gear search overrides only [noMatchesText] since the
+    // "type more characters"/"N suggestions available" wording is already generic.
+    minQueryLength: Int = PortSearch.MIN_QUERY_LENGTH,
+    noMatchesText: String = stringResource(R.string.port_search_no_matches_found),
 ) {
     var dismissedQuery by remember { mutableStateOf<String?>(null) }
     val trimmedQuery = value.trim()
-    val isQueryLongEnough = trimmedQuery.length >= PortSearch.MIN_QUERY_LENGTH
+    val isQueryLongEnough = trimmedQuery.length >= minQueryLength
     val showSuggestions = isQueryLongEnough && dismissedQuery != value && options.isNotEmpty()
     val showNoMatches = isQueryLongEnough && dismissedQuery != value && options.isEmpty()
     val announcement =
@@ -68,7 +73,7 @@ fun GdsAutocompleteField(
             !isQueryLongEnough ->
                 stringResource(
                     R.string.port_search_type_more_characters,
-                    PortSearch.MIN_QUERY_LENGTH,
+                    minQueryLength,
                 )
             showSuggestions ->
                 pluralStringResource(
@@ -76,7 +81,7 @@ fun GdsAutocompleteField(
                     options.size,
                     options.size,
                 )
-            else -> stringResource(R.string.port_search_no_matches_found)
+            else -> noMatchesText
         }
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
@@ -148,7 +153,7 @@ fun GdsAutocompleteField(
         }
         if (showNoMatches) {
             Text(
-                text = stringResource(R.string.port_search_no_matches_found),
+                text = noMatchesText,
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.testTag(noMatchesTestTag),
             )

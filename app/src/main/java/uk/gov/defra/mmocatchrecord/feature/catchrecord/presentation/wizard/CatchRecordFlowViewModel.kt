@@ -10,6 +10,8 @@ import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DmyDate
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementValue
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelection
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectionMode
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
@@ -27,6 +29,7 @@ class CatchRecordFlowViewModel
         private val draftRepository: CatchRecordDraftRepository,
         private val referenceDataRepository: ReferenceDataRepository,
         private val clock: () -> Long,
+        private val idFactory: () -> String,
         defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
     ) : BaseViewModel<CatchRecordFlowViewState, CatchRecordFlowEvent>(
             initialState = CatchRecordFlowViewState(),
@@ -42,6 +45,9 @@ class CatchRecordFlowViewModel
                 CatchRecordFlowEvent.SamePortShortcutDeclined -> declineSamePortShortcut()
                 CatchRecordFlowEvent.SamePortShortcutAccepted -> acceptSamePortShortcut()
                 is CatchRecordFlowEvent.SaveAndContinue -> saveAndContinue(event.updatedDraft, event.nextStep)
+                is CatchRecordFlowEvent.GearTypeSelected -> gearTypeSelected(event.gearTypeId)
+                is CatchRecordFlowEvent.GearMeasurementsSubmitted -> gearMeasurementsSubmitted(event.measurements)
+                is CatchRecordFlowEvent.GearRemoved -> removeGear(event.updatedDraft)
                 CatchRecordFlowEvent.MarkReadyToSubmit -> markReadyToSubmit()
             }
         }
@@ -52,6 +58,7 @@ class CatchRecordFlowViewModel
                 runCatching {
                     val vessels = referenceDataRepository.getVessels().getOrThrow()
                     val ports = referenceDataRepository.getPorts().getOrThrow()
+                    val gearTypes = referenceDataRepository.getGearTypes().getOrThrow()
                     val existingDraft = draftRepository.getAnyActiveDraft().getOrThrow()
                     val previouslyUsedPorts =
                         existingDraft
@@ -74,6 +81,7 @@ class CatchRecordFlowViewModel
                                 },
                             vessels = vessels,
                             ports = ports,
+                            gearTypes = gearTypes,
                             previouslyUsedPorts = previouslyUsedPorts,
                             departurePortEntryMode = deriveDeparturePortEntryMode(previouslyUsedPorts),
                             samePortCandidate = previouslyUsedPorts.firstOrNull(),
@@ -153,7 +161,7 @@ class CatchRecordFlowViewModel
                     departurePort = PortSelection(selectedPort.id, PortSelectionMode.Favourite),
                     returnPort = PortSelection(selectedPort.id, PortSelectionMode.Favourite),
                 )
-            saveAndContinue(updatedDraft, WizardStep.GearLoop)
+            saveAndContinue(updatedDraft, WizardStep.GearSearch)
         }
 
         private fun saveAndContinue(
@@ -164,8 +172,44 @@ class CatchRecordFlowViewModel
             launchInViewModelScope {
                 draftRepository.saveDraft(updatedDraft).fold(
                     onSuccess = { saved ->
-                        updateState { it.copy(status = UiStatus.Content(saved), currentStep = nextStep) }
+                        updateState {
+                            it.copy(
+                                status = UiStatus.Content(saved),
+                                currentStep = nextStep,
+                                // Only ever meaningful transiently between the gear-search and
+                                // gear-measurement steps; harmless to clear unconditionally elsewhere.
+                                pendingGearTypeId = null,
+                            )
+                        }
                     },
+                    onFailure = ::emitLoadError,
+                )
+            }
+        }
+
+        private fun gearTypeSelected(gearTypeId: String) {
+            updateState { it.copy(pendingGearTypeId = gearTypeId) }
+        }
+
+        private fun gearMeasurementsSubmitted(measurements: Map<String, MeasurementValue>) {
+            val draft = currentDraftOrNull() ?: return
+            val gearTypeId = currentState.pendingGearTypeId ?: return
+            val newGearUse =
+                GearUse(
+                    id = idFactory(),
+                    gearTypeId = gearTypeId,
+                    statRectangleId = null,
+                    measurements = measurements,
+                )
+            val updatedDraft = draft.copy(gearUses = draft.gearUses + newGearUse)
+            saveAndContinue(updatedDraft, WizardStep.GearSummary)
+        }
+
+        private fun removeGear(updatedDraft: CatchRecordDraft) {
+            updateState { it.copy(status = UiStatus.Loading) }
+            launchInViewModelScope {
+                draftRepository.saveDraft(updatedDraft).fold(
+                    onSuccess = { saved -> updateState { it.copy(status = UiStatus.Content(saved)) } },
                     onFailure = ::emitLoadError,
                 )
             }

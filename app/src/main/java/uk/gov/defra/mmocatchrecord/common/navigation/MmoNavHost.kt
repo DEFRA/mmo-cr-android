@@ -19,7 +19,10 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.Catch
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.DepartureDateScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.DeparturePortScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.DraftResumeScreen
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.PhaseOneTwoCompleteScreen
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.GearMeasurementScreen
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.GearSearchScreen
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.GearSummaryScreen
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.PhaseThreeCompleteScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.ReturnDateScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.ReturnPortScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.TripTodayScreen
@@ -120,8 +123,29 @@ fun MmoNavHost(
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable(Destination.CatchRecordFlow.GEAR_LOOP_ROUTE) { backStackEntry ->
-                PhaseOneTwoCompleteScreen(
+            composable(Destination.CatchRecordFlow.GEAR_SEARCH_ROUTE) { backStackEntry ->
+                GearSearchScreen(
+                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                    onNavigate = { navController.navigate(routeFor(it)) },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(Destination.CatchRecordFlow.GEAR_MEASUREMENT_ROUTE) { backStackEntry ->
+                GearMeasurementScreen(
+                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                    onNavigate = { navController.navigate(routeFor(it)) },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(Destination.CatchRecordFlow.GEAR_SUMMARY_ROUTE) { backStackEntry ->
+                GearSummaryScreen(
+                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                    onNavigate = { navController.navigate(routeFor(it)) },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(Destination.CatchRecordFlow.PHASE_THREE_COMPLETE_ROUTE) { backStackEntry ->
+                PhaseThreeCompleteScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
                     onBack = { navController.popBackStack() },
                 )

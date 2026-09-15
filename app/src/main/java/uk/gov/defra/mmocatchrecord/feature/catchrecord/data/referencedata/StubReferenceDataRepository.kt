@@ -1,5 +1,8 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata
 
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementField
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldKeys
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.ReferenceDataRepository
@@ -34,12 +37,57 @@ class StubReferenceDataRepository : ReferenceDataRepository {
             "vessel-hercules" to emptyList(),
         )
 
-    // TBC: placeholder gear types only, pending confirmed reference data / later-phase screenshots.
+    // Confirmed Phase-3 screenshot gear types (search suggestion names/codes) plus their measurement
+    // field schemas where confirmed; Beam trawls/Bottom pair trawls are confirmed to exist as selectable
+    // gear types but their measurement fields are not yet screenshotted, so their schema is left empty
+    // (TODO Phase 3 follow-up) rather than invented.
     private val gearTypes =
         listOf(
-            GearType(id = "gear-trawl", name = "Trawl (TBC)"),
-            GearType(id = "gear-pots", name = "Pots and traps (TBC)"),
-            GearType(id = "gear-nets", name = "Static nets (TBC)"),
+            GearType(
+                id = "gear-seine-nets",
+                name = "Seine nets (not specified)",
+                measurementFields =
+                    listOf(
+                        GearMeasurementField(
+                            key = GearMeasurementFieldKeys.MESH_SIZE_MM,
+                            label = "Mesh size (mm)",
+                            type = GearMeasurementFieldType.Decimal,
+                            unit = "mm",
+                        ),
+                    ),
+            ),
+            // TODO(Phase 3 follow-up): measurement fields TBC, pending screenshots beyond mesh-size/
+            // trawl-net-count (only Seine nets and Bottom otter trawls are confirmed so far).
+            GearType(id = "gear-beam-trawls-tbb", name = "Beam trawls (TBB)"),
+            GearType(id = "gear-bottom-pair-trawls-ptb", name = "Bottom pair trawls (PTB)"),
+            GearType(
+                id = "gear-bottom-otter-trawls-tb",
+                name = "Bottom otter trawls (TB)",
+                measurementFields =
+                    listOf(
+                        GearMeasurementField(
+                            key = GearMeasurementFieldKeys.NUMBER_OF_TRAWL_NETS,
+                            label = "Number of trawl nets",
+                            type = GearMeasurementFieldType.Integer,
+                        ),
+                        GearMeasurementField(
+                            key = GearMeasurementFieldKeys.MESH_SIZE_MM,
+                            label = "Mesh size (mm)",
+                            type = GearMeasurementFieldType.Decimal,
+                            unit = "mm",
+                        ),
+                    ),
+            ),
+            // TBC: placeholder-only gear types from the confirmed gear-type category list, names not yet
+            // screenshotted in full and fields not yet confirmed — unblocks later-phase development
+            // without inventing unconfirmed reference data.
+            GearType(id = "gear-diving", name = "Diving (TBC)"),
+            GearType(id = "gear-dredge", name = "Dredge (TBC)"),
+            GearType(id = "gear-pots-and-traps", name = "Pots and traps (TBC)"),
+            GearType(id = "gear-handlines", name = "Handlines (TBC)"),
+            GearType(id = "gear-longlines", name = "Longlines (TBC)"),
+            GearType(id = "gear-nets-gillnets-trammels", name = "Nets/Gillnets and trammels (TBC)"),
+            GearType(id = "gear-trawls-not-specified", name = "Trawls (not specified) (TBC)"),
         )
 
     // TBC: placeholder species only, pending confirmed reference data.

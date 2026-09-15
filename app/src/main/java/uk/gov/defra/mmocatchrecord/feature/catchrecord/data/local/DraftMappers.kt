@@ -69,6 +69,8 @@ private object DraftToEntityMapper {
             gearTypeId = gearUse.gearTypeId,
             statRectangleId = gearUse.statRectangleId,
             orderIndex = orderIndex,
+            numberOfShots = gearUse.numberOfShots,
+            confirmedUsedOnTrip = gearUse.confirmedUsedOnTrip,
         )
 
     private fun toMeasurementEntities(gearUse: GearUse): List<MeasurementEntity> =
@@ -169,6 +171,8 @@ private object EntityToDraftMapper {
                         discardedKg = sw.discardedKg,
                     )
                 },
+            numberOfShots = withChildren.gearUse.numberOfShots,
+            confirmedUsedOnTrip = withChildren.gearUse.confirmedUsedOnTrip,
         )
     }
 

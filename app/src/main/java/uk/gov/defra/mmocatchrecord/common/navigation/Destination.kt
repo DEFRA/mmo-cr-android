@@ -28,6 +28,14 @@ sealed class Destination(
         const val RETURN_DATE_ROUTE = "$GRAPH_ROUTE/return_date"
         const val DEPARTURE_PORT_ROUTE = "$GRAPH_ROUTE/departure_port"
         const val RETURN_PORT_ROUTE = "$GRAPH_ROUTE/return_port"
-        const val GEAR_LOOP_ROUTE = "$GRAPH_ROUTE/gear_loop"
+        const val GEAR_SEARCH_ROUTE = "$GRAPH_ROUTE/gear_search"
+        const val GEAR_MEASUREMENT_ROUTE = "$GRAPH_ROUTE/gear_measurement"
+        const val GEAR_SUMMARY_ROUTE = "$GRAPH_ROUTE/gear_summary"
+
+        /**
+         * Placeholder landing spot after the gear-summary checklist's "Save and continue", until the
+         * Phase 4 statistical sub-rectangle screen (and beyond) are built — see [PhaseThreeCompleteScreen].
+         */
+        const val PHASE_THREE_COMPLETE_ROUTE = "$GRAPH_ROUTE/phase_three_complete"
     }
 }
