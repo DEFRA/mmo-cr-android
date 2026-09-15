@@ -21,8 +21,12 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.Depar
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.DraftResumeScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.GearMeasurementScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.GearSearchScreen
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.GearSpeciesChecklistScreen
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.GearSpeciesSearchScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.GearStatRectangleScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.GearSummaryScreen
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.NotLandedStraightAwayDecisionScreen
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.NotLandedStraightAwaySpeciesScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.PhaseThreeCompleteScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.ReturnDateScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.ReturnPortScreen
@@ -147,6 +151,34 @@ fun MmoNavHost(
             }
             composable(Destination.CatchRecordFlow.GEAR_STAT_RECTANGLE_ROUTE) { backStackEntry ->
                 GearStatRectangleScreen(
+                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                    onNavigate = { navController.navigate(routeFor(it)) },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(Destination.CatchRecordFlow.GEAR_SPECIES_SEARCH_ROUTE) { backStackEntry ->
+                GearSpeciesSearchScreen(
+                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                    onNavigate = { navController.navigate(routeFor(it)) },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(Destination.CatchRecordFlow.GEAR_SPECIES_CHECKLIST_ROUTE) { backStackEntry ->
+                GearSpeciesChecklistScreen(
+                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                    onNavigate = { navController.navigate(routeFor(it)) },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(Destination.CatchRecordFlow.NOT_LANDED_STRAIGHT_AWAY_DECISION_ROUTE) { backStackEntry ->
+                NotLandedStraightAwayDecisionScreen(
+                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                    onNavigate = { navController.navigate(routeFor(it)) },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(Destination.CatchRecordFlow.NOT_LANDED_STRAIGHT_AWAY_SPECIES_ROUTE) { backStackEntry ->
+                NotLandedStraightAwaySpeciesScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
                     onNavigate = { navController.navigate(routeFor(it)) },
                     onBack = { navController.popBackStack() },

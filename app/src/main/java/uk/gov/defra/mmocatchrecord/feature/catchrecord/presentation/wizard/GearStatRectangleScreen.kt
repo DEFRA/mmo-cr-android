@@ -94,12 +94,7 @@ fun GearStatRectangleScreen(
     GearStatRectangleScreen(
         state = state,
         onSubmit = { updatedDraft ->
-            val nextStep =
-                if (nextGearUsePendingStatRectangle(updatedDraft) != null) {
-                    WizardStep.GearStatRectangle
-                } else {
-                    WizardStep.LandingStorage
-                }
+            val nextStep = nextWizardStepForDraft(updatedDraft)
             viewModel.dispatch(CatchRecordFlowEvent.SaveAndContinue(updatedDraft, nextStep))
             onNavigate(nextStep)
         },

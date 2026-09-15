@@ -7,6 +7,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Gear
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.ReferenceDataRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Species
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.SpeciesWeightPrecision
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.StatisticalSubRectangle
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Vessel
 
@@ -189,12 +190,40 @@ class StubReferenceDataRepository : ReferenceDataRepository {
             GearType(id = "gear-trawls-not-specified", name = "Trawls (not specified) (TBC)"),
         )
 
-    // TBC: placeholder species only, pending confirmed reference data.
+    // "Atlantic cod (COD)" is the one confirmed-real species (Phase 5 screenshot); Plaice/Brown crab
+    // remain TBC placeholders so the autocomplete/checklist isn't trivially single-item. The three
+    // deliberately mix weightPrecision/weightAboveMinimumSizeMandatory/quota values so every validator
+    // branch (whole-number vs one-decimal-place precision, mandatory vs optional above-minimum weight,
+    // with vs without a quota limit) is exercised — see SpeciesWeightValidator and its tests.
     private val species =
         listOf(
-            Species(id = "species-cod", name = "Cod (TBC)", faoCode = "COD"),
-            Species(id = "species-plaice", name = "Plaice (TBC)", faoCode = "PLE"),
-            Species(id = "species-crab", name = "Brown crab (TBC)", faoCode = "CRE"),
+            Species(
+                id = "species-cod",
+                name = "Atlantic cod (COD)",
+                faoCode = "COD",
+                weightPrecision = SpeciesWeightPrecision.OneDecimalPlace,
+                weightAboveMinimumSizeMandatory = true,
+                monthlyQuotaKg = 50.0,
+                annualQuotaKg = 500.0,
+            ),
+            Species(
+                id = "species-plaice",
+                name = "Plaice (TBC)",
+                faoCode = "PLE",
+                weightPrecision = SpeciesWeightPrecision.WholeNumber,
+                weightAboveMinimumSizeMandatory = false,
+                monthlyQuotaKg = null,
+                annualQuotaKg = null,
+            ),
+            Species(
+                id = "species-crab",
+                name = "Brown crab (TBC)",
+                faoCode = "CRE",
+                weightPrecision = SpeciesWeightPrecision.WholeNumber,
+                weightAboveMinimumSizeMandatory = true,
+                monthlyQuotaKg = 20.0,
+                annualQuotaKg = 200.0,
+            ),
         )
 
     // Confirmed Phase-4 screenshot data: the statistical sub-rectangles shown nearest Hastings (the

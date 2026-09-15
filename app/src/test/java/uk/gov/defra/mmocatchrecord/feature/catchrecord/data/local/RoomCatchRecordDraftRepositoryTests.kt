@@ -18,6 +18,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.LandingStorageEntry
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementValue
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.NotLandedSpeciesEntry
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelection
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectionMode
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
@@ -119,9 +120,10 @@ class RoomCatchRecordDraftRepositoryTests {
                                         SpeciesWeightEntry(
                                             id = "sw-1",
                                             speciesId = "species-cod",
-                                            retainedAboveMcrsKg = 12.0,
-                                            retainedBelowMcrsKg = 0.0,
-                                            discardedKg = 0.0,
+                                            weightAboveMinimumSizeKg = 12.0,
+                                            weightBelowMinimumSizeKg = 0.0,
+                                            weightLegallyDiscardedKg = 0.0,
+                                            confirmedCaught = true,
                                         ),
                                     ),
                             ),
@@ -146,7 +148,8 @@ class RoomCatchRecordDraftRepositoryTests {
             assertEquals(MeasurementValue.Numeric(80.0, "mm"), gearUse.measurements["mesh_size"])
             assertEquals(MeasurementValue.Text("Standard set"), gearUse.measurements["notes"])
             assertEquals(1, gearUse.speciesWeights.size)
-            assertEquals(12.0, gearUse.speciesWeights.first().retainedAboveMcrsKg, 0.0)
+            assertEquals(12.0, gearUse.speciesWeights.first().weightAboveMinimumSizeKg!!, 0.0)
+            assertTrue(gearUse.speciesWeights.first().confirmedCaught)
             assertEquals(1, reloaded.landingStorageEntries.size)
             assertEquals("4", reloaded.landingStorageEntries.first().fields["box_count"])
         }
@@ -340,6 +343,80 @@ class RoomCatchRecordDraftRepositoryTests {
                 MeasurementValue.Numeric(50.0, "m"),
                 gillnets.measurements["total_length_of_nets_left_in_water_m"],
             )
+        }
+
+    /**
+     * Phase 5: the redesigned [SpeciesWeightEntry] (nullable weight fields + [SpeciesWeightEntry.confirmedCaught])
+     * and the draft-level [NotLandedSpeciesEntry] list (DB v3->v4) must round-trip correctly, including an
+     * added-but-not-yet-confirmed species entry (all weights null, `confirmedCaught = false`).
+     */
+    @Test
+    fun `species weight entries and not-landed species entries round-trip, including unconfirmed entries`() =
+        runTest {
+            val started = repository.startDraft("vessel-hercules").getOrThrow()
+            val fullDraft =
+                started.copy(
+                    gearUses =
+                        listOf(
+                            GearUse(
+                                id = "gear-1",
+                                gearTypeId = "gear-seine-nets",
+                                statisticalSubRectangleCode = "38E95",
+                                confirmedUsedOnTrip = true,
+                                speciesWeights =
+                                    listOf(
+                                        SpeciesWeightEntry(
+                                            id = "sw-1",
+                                            speciesId = "species-cod",
+                                            weightAboveMinimumSizeKg = 12.5,
+                                            weightBelowMinimumSizeKg = 1.5,
+                                            weightLegallyDiscardedKg = 0.5,
+                                            confirmedCaught = true,
+                                        ),
+                                        SpeciesWeightEntry(
+                                            id = "sw-2",
+                                            speciesId = "species-plaice",
+                                            confirmedCaught = false,
+                                        ),
+                                    ),
+                            ),
+                        ),
+                    notLandedStraightAway = true,
+                    notLandedSpeciesEntries =
+                        listOf(
+                            NotLandedSpeciesEntry(speciesId = "species-cod", weightAboveMinimumSizeKeptOnboardKg = 3.0),
+                        ),
+                )
+            repository.saveDraft(fullDraft).getOrThrow()
+            val reloaded = repository.getActiveDraft("vessel-hercules").getOrThrow()
+            assertNotNull(reloaded)
+            assertEquals(true, reloaded!!.notLandedStraightAway)
+            assertEquals(1, reloaded.notLandedSpeciesEntries.size)
+            assertEquals("species-cod", reloaded.notLandedSpeciesEntries.first().speciesId)
+            assertEquals(3.0, reloaded.notLandedSpeciesEntries.first().weightAboveMinimumSizeKeptOnboardKg!!, 0.0)
+
+            val gearUse = reloaded.gearUses.single()
+            assertEquals(2, gearUse.speciesWeights.size)
+            val cod = gearUse.speciesWeights.first { it.speciesId == "species-cod" }
+            assertTrue(cod.confirmedCaught)
+            assertEquals(12.5, cod.weightAboveMinimumSizeKg!!, 0.0)
+            assertEquals(1.5, cod.weightBelowMinimumSizeKg!!, 0.0)
+            assertEquals(0.5, cod.weightLegallyDiscardedKg!!, 0.0)
+            val plaice = gearUse.speciesWeights.first { it.speciesId == "species-plaice" }
+            assertTrue(!plaice.confirmedCaught)
+            assertNull(plaice.weightAboveMinimumSizeKg)
+            assertNull(plaice.weightBelowMinimumSizeKg)
+            assertNull(plaice.weightLegallyDiscardedKg)
+        }
+
+    @Test
+    fun `notLandedStraightAway defaults to null and notLandedSpeciesEntries defaults to empty`() =
+        runTest {
+            val started = repository.startDraft("vessel-hercules").getOrThrow()
+            repository.saveDraft(started).getOrThrow()
+            val reloaded = repository.getActiveDraft("vessel-hercules").getOrThrow()
+            assertNull(reloaded!!.notLandedStraightAway)
+            assertTrue(reloaded.notLandedSpeciesEntries.isEmpty())
         }
 
     @Test

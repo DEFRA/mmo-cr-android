@@ -9,6 +9,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Gear
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.ReferenceDataRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Species
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.SpeciesWeightPrecision
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.StatisticalSubRectangle
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Vessel
 
@@ -129,6 +130,27 @@ class FakeReferenceDataRepository(
                     ),
             ),
         ),
+    private val species: List<Species> =
+        listOf(
+            Species(
+                id = "species-cod",
+                name = "Atlantic cod (COD)",
+                faoCode = "COD",
+                weightPrecision = SpeciesWeightPrecision.OneDecimalPlace,
+                weightAboveMinimumSizeMandatory = true,
+                monthlyQuotaKg = 50.0,
+                annualQuotaKg = 500.0,
+            ),
+            Species(
+                id = "species-plaice",
+                name = "Plaice (TBC)",
+                faoCode = "PLE",
+                weightPrecision = SpeciesWeightPrecision.WholeNumber,
+                weightAboveMinimumSizeMandatory = false,
+                monthlyQuotaKg = null,
+                annualQuotaKg = null,
+            ),
+        ),
 ) : ReferenceDataRepository {
     companion object {
         // Shared by the "Pots" and "Traps" default gear types above — mirrors StubReferenceDataRepository.
@@ -156,7 +178,7 @@ class FakeReferenceDataRepository(
 
     override suspend fun getGearTypes(): Result<List<GearType>> = Result.success(gearTypes)
 
-    override suspend fun getSpecies(): Result<List<Species>> = Result.success(emptyList())
+    override suspend fun getSpecies(): Result<List<Species>> = Result.success(species)
 
     override suspend fun getStatisticalSubRectangles(): Result<List<StatisticalSubRectangle>> =
         Result.success(statisticalSubRectangles)

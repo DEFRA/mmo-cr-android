@@ -6,6 +6,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.LandingStorageEntry
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementValue
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.NotLandedSpeciesEntry
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelection
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectionMode
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
@@ -36,6 +37,7 @@ private object DraftToEntityMapper {
             measurements = measurementEntities,
             speciesWeights = speciesWeightEntities,
             landingStorage = toLandingStorageEntities(draft),
+            notLandedSpecies = toNotLandedSpeciesEntities(draft),
         )
     }
 
@@ -56,6 +58,7 @@ private object DraftToEntityMapper {
             returnPortSelectionMode = draft.returnPort?.selectionMode?.name,
             status = draft.status.name,
             modifiedAtEpochMillis = draft.modifiedAtEpochMillis,
+            notLandedStraightAway = draft.notLandedStraightAway,
         )
 
     private fun toGearUseEntity(
@@ -101,9 +104,10 @@ private object DraftToEntityMapper {
                 id = entry.id,
                 gearUseId = gearUse.id,
                 speciesId = entry.speciesId,
-                retainedAboveMcrsKg = entry.retainedAboveMcrsKg,
-                retainedBelowMcrsKg = entry.retainedBelowMcrsKg,
-                discardedKg = entry.discardedKg,
+                weightAboveMinimumSizeKg = entry.weightAboveMinimumSizeKg,
+                weightBelowMinimumSizeKg = entry.weightBelowMinimumSizeKg,
+                weightLegallyDiscardedKg = entry.weightLegallyDiscardedKg,
+                confirmedCaught = entry.confirmedCaught,
             )
         }
 
@@ -112,6 +116,15 @@ private object DraftToEntityMapper {
             entry.fields.map { (key, value) ->
                 LandingStorageEntity(draftId = draft.id, entryId = entry.id, key = key, value = value)
             }
+        }
+
+    private fun toNotLandedSpeciesEntities(draft: CatchRecordDraft): List<NotLandedSpeciesEntity> =
+        draft.notLandedSpeciesEntries.map { entry ->
+            NotLandedSpeciesEntity(
+                draftId = draft.id,
+                speciesId = entry.speciesId,
+                weightAboveMinimumSizeKeptOnboardKg = entry.weightAboveMinimumSizeKeptOnboardKg,
+            )
         }
 }
 
@@ -129,6 +142,8 @@ private object EntityToDraftMapper {
             returnPort = toPortSelection(draft.returnPortId, draft.returnPortSelectionMode),
             gearUses = entity.gearUses.sortedBy { it.gearUse.orderIndex }.map(::toGearUse),
             landingStorageEntries = toLandingStorageEntries(entity.landingStorage),
+            notLandedStraightAway = draft.notLandedStraightAway,
+            notLandedSpeciesEntries = entity.notLandedSpecies.map(::toNotLandedSpeciesEntry),
             status = DraftStatus.valueOf(draft.status),
             modifiedAtEpochMillis = draft.modifiedAtEpochMillis,
         )
@@ -166,9 +181,10 @@ private object EntityToDraftMapper {
                     SpeciesWeightEntry(
                         id = sw.id,
                         speciesId = sw.speciesId,
-                        retainedAboveMcrsKg = sw.retainedAboveMcrsKg,
-                        retainedBelowMcrsKg = sw.retainedBelowMcrsKg,
-                        discardedKg = sw.discardedKg,
+                        weightAboveMinimumSizeKg = sw.weightAboveMinimumSizeKg,
+                        weightBelowMinimumSizeKg = sw.weightBelowMinimumSizeKg,
+                        weightLegallyDiscardedKg = sw.weightLegallyDiscardedKg,
+                        confirmedCaught = sw.confirmedCaught,
                     )
                 },
             numberOfShots = withChildren.gearUse.numberOfShots,
@@ -182,6 +198,12 @@ private object EntityToDraftMapper {
             .map { (entryId, entryRows) ->
                 LandingStorageEntry(id = entryId, fields = entryRows.associate { it.key to it.value })
             }
+
+    private fun toNotLandedSpeciesEntry(entity: NotLandedSpeciesEntity): NotLandedSpeciesEntry =
+        NotLandedSpeciesEntry(
+            speciesId = entity.speciesId,
+            weightAboveMinimumSizeKeptOnboardKg = entity.weightAboveMinimumSizeKeptOnboardKg,
+        )
 }
 
 /** Flattened set of entities produced from a [CatchRecordDraft] aggregate, ready for [CatchRecordDraftDao]. */
@@ -191,4 +213,5 @@ data class DraftAggregateEntities(
     val measurements: List<MeasurementEntity>,
     val speciesWeights: List<SpeciesWeightEntity>,
     val landingStorage: List<LandingStorageEntity>,
+    val notLandedSpecies: List<NotLandedSpeciesEntity>,
 )

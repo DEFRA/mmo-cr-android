@@ -55,13 +55,35 @@ sealed interface MeasurementValue {
     ) : MeasurementValue
 }
 
-/** A retained-above/retained-below/discarded weight entry for one species within a [GearUse]. */
+/**
+ * A species catch entry captured against a [GearUse] (Phase 5). Added via the gear-species search screen
+ * (initially with every weight `null` and [confirmedCaught] `false`), then confirmed/edited on the
+ * gear-species checklist screen: ticking the checklist checkbox sets [confirmedCaught] true and requires
+ * [weightAboveMinimumSizeKg] (mandatory-ness varies per species — see
+ * [uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Species.weightAboveMinimumSizeMandatory]);
+ * [weightBelowMinimumSizeKg]/[weightLegallyDiscardedKg] are always optional, progressively-disclosed
+ * fields. Mirrors [GearUse.confirmedUsedOnTrip]'s "added but not yet confirmed" pattern: an
+ * added-but-unchecked species stays in the list (its captured measurements are not lost) but is excluded
+ * from the per-gear species step's "done" condition — see `nextGearUsePendingSpecies` in `WizardStep`.
+ */
 data class SpeciesWeightEntry(
     val id: String,
     val speciesId: String,
-    val retainedAboveMcrsKg: Double,
-    val retainedBelowMcrsKg: Double,
-    val discardedKg: Double,
+    val weightAboveMinimumSizeKg: Double? = null,
+    val weightBelowMinimumSizeKg: Double? = null,
+    val weightLegallyDiscardedKg: Double? = null,
+    val confirmedCaught: Boolean = false,
+)
+
+/**
+ * A species entry for the trip-level "not landing straight away" follow-up (Phase 5B, screen 4): the
+ * species (deduplicated across every confirmed gear's [SpeciesWeightEntry.confirmedCaught] entries) and the
+ * single weight kept onboard/in keep pots. Deliberately a much simpler shape than [SpeciesWeightEntry] — no
+ * below-minimum/discarded sub-fields exist on this screen, per the confirmed screenshot.
+ */
+data class NotLandedSpeciesEntry(
+    val speciesId: String,
+    val weightAboveMinimumSizeKeptOnboardKg: Double? = null,
 )
 
 /**
@@ -126,6 +148,13 @@ data class CatchRecordDraft(
     val returnPort: PortSelection? = null,
     val gearUses: List<GearUse> = emptyList(),
     val landingStorageEntries: List<LandingStorageEntry> = emptyList(),
+    /**
+     * Phase 5B: whether there is any catch from this trip that will not be landed straight away, asked
+     * once after every confirmed gear's species/weights step is complete. `null` means not yet answered.
+     */
+    val notLandedStraightAway: Boolean? = null,
+    /** Phase 5B: populated only when [notLandedStraightAway] is true — see [NotLandedSpeciesEntry]. */
+    val notLandedSpeciesEntries: List<NotLandedSpeciesEntry> = emptyList(),
     val status: DraftStatus = DraftStatus.Draft,
     val modifiedAtEpochMillis: Long,
 )

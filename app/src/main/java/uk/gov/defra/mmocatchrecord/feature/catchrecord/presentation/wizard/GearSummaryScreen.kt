@@ -2,11 +2,8 @@
 
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -17,17 +14,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.AppLanguageProvider
 import uk.gov.defra.mmocatchrecord.common.design.GdsCheckboxGroup
 import uk.gov.defra.mmocatchrecord.common.design.GdsCheckboxOption
+import uk.gov.defra.mmocatchrecord.common.design.GdsLinkAction
 import uk.gov.defra.mmocatchrecord.common.design.GdsNumericField
 import uk.gov.defra.mmocatchrecord.common.design.GdsNumericFieldKind
-import uk.gov.defra.mmocatchrecord.common.design.MmoColors
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
 import uk.gov.defra.mmocatchrecord.common.design.SecondaryActionButton
@@ -76,12 +71,15 @@ fun GearSummaryScreen(
         onRemoveGear = { updatedDraft -> viewModel.dispatch(CatchRecordFlowEvent.GearRemoved(updatedDraft)) },
         onAddAnotherGear = { onNavigate(WizardStep.GearSearch) },
         onSubmit = { updatedDraft ->
-            // At least one confirmed gear still needing a statistical sub-rectangle (Phase 4) routes into
-            // that per-gear loop first; only an updated draft with zero confirmed gear (edge case: every
-            // gear left unticked) skips straight past it, since there is nothing to loop over.
+            // At least one confirmed gear routes into the general next-step resolver (Phase 4/5's
+            // per-gear loops); only an updated draft with zero confirmed gear (edge case: every gear left
+            // unticked) skips straight past every per-gear/trip-level step, since there is nothing to loop
+            // over — this is a deliberate, pre-existing asymmetry from [nextWizardStepForDraft]'s own
+            // fallback (which would otherwise route back to [WizardStep.GearSummary] for a "some gear,
+            // none confirmed" resume scenario), preserved unchanged from Phase 4.
             val nextStep =
                 if (updatedDraft.gearUses.any { it.confirmedUsedOnTrip }) {
-                    WizardStep.GearStatRectangle
+                    nextWizardStepForDraft(updatedDraft)
                 } else {
                     WizardStep.LandingStorage
                 }
@@ -215,10 +213,7 @@ fun GearSummaryScreenContent(
 
 /**
  * "Remove gear" is rendered as a link-styled action that is always visible but disabled (dimmed, and
- * unclickable — communicated to TalkBack via [Modifier.clickable]'s own `enabled` semantics) when nothing
- * is checked, rather than hidden outright. Chosen over hiding it entirely so the action stays discoverable
- * (a screen-reader/keyboard user can find out it exists and why it's currently unavailable) — see the
- * Phase 3 "Remove gear" no-checked-items edge case note in the change summary.
+ * unclickable) when nothing is checked, rather than hidden outright — see [GdsLinkAction].
  */
 @Suppress("FunctionNaming")
 @Composable
@@ -227,16 +222,12 @@ private fun RemoveGearLink(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Text(
+    GdsLinkAction(
         text = stringResource(R.string.remove_gear),
-        color = if (enabled) MmoColors.Link else MmoColors.Grey1,
-        style = MaterialTheme.typography.bodyLarge.copy(textDecoration = TextDecoration.Underline),
-        modifier =
-            modifier
-                .heightIn(min = Spacing.minTouchTarget)
-                .wrapContentHeight()
-                .clickable(enabled = enabled, onClick = onClick, role = Role.Button)
-                .testTag(GearSummaryScreenTestTags.REMOVE_ACTION),
+        onClick = onClick,
+        testTag = GearSummaryScreenTestTags.REMOVE_ACTION,
+        enabled = enabled,
+        modifier = modifier,
     )
 }
 

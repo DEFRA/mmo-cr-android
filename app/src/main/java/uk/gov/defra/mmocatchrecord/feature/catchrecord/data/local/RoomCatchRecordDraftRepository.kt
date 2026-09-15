@@ -69,6 +69,7 @@ class RoomCatchRecordDraftRepository
                 measurements = entities.measurements,
                 speciesWeights = entities.speciesWeights,
                 landingStorage = entities.landingStorage,
+                notLandedSpecies = entities.notLandedSpecies,
             )
         }
     }

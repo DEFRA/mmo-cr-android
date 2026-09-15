@@ -23,6 +23,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementValue
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelection
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectionMode
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldKeys
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -424,13 +425,16 @@ class CatchRecordFlowViewModelTests {
         }
 
     /**
-     * Phase 4 per-gear stat-rectangle loop: with two confirmed gears, saving the first gear's rectangle
-     * (via the same generic [CatchRecordFlowEvent.SaveAndContinue] every screen uses) must re-land on
-     * [WizardStep.GearStatRectangle] — not advance past it — since a second confirmed gear is still
-     * pending; only saving the second (last) gear's rectangle advances to [WizardStep.LandingStorage].
+     * Phase 4/5 interleaved per-gear loop: with two confirmed gears, each gear's stat-rectangle step must
+     * complete *and* its species step must complete before the next gear's stat-rectangle step is ever
+     * reached (see [nextGearUsePendingStatRectangle]/[nextGearUsePendingSpecies]/[nextWizardStepForDraft]).
+     * Once every confirmed gear has both, the flow proceeds to the Phase 5B trip-level
+     * [WizardStep.NotLandedStraightAwayDecision] step (not per-gear) — answering `false` there advances
+     * straight to [WizardStep.LandingStorage], skipping [WizardStep.NotLandedStraightAwaySpecies] entirely.
      */
+    @Suppress("LongMethod")
     @Test
-    fun `saving each confirmed gear's stat rectangle loops until the last, then advances to landing storage`() =
+    fun `interleaved gear loop completes both gears rectangle and species before 5B decision`() =
         runTest {
             val (viewModel, gearOne, gearTwo) = setUpTwoConfirmedGearsAwaitingStatRectangle()
 
@@ -440,8 +444,8 @@ class CatchRecordFlowViewModelTests {
                 assertEquals(WizardStep.GearStatRectangle, current.currentStep)
                 assertEquals(gearOne.id, nextGearUsePendingStatRectangle(currentDraft)?.id)
 
-                // Save gear one's rectangle: gear two is still pending, so the step re-lands on itself.
-                val afterGearOne =
+                // Save gear one's rectangle: gear one's own species step is next, NOT gear two's rectangle.
+                val afterGearOneRectangle =
                     currentDraft.copy(
                         gearUses =
                             currentDraft.gearUses.map {
@@ -449,30 +453,116 @@ class CatchRecordFlowViewModelTests {
                             },
                     )
                 viewModel.dispatch(
-                    CatchRecordFlowEvent.SaveAndContinue(afterGearOne, WizardStep.GearStatRectangle),
+                    CatchRecordFlowEvent.SaveAndContinue(
+                        afterGearOneRectangle,
+                        nextWizardStepForDraft(afterGearOneRectangle),
+                    ),
                 )
                 assertEquals(UiStatus.Loading, awaitItem().status)
-                val afterFirstSave = awaitItem()
-                assertEquals(WizardStep.GearStatRectangle, afterFirstSave.currentStep)
-                val draftAfterFirstSave = (afterFirstSave.status as UiStatus.Content<CatchRecordDraft>).value
-                assertEquals(gearTwo.id, nextGearUsePendingStatRectangle(draftAfterFirstSave)?.id)
+                val afterGearOneRectangleState = awaitItem()
+                assertEquals(WizardStep.GearSpeciesSearch, afterGearOneRectangleState.currentStep)
+                val draftAfterGearOneRectangle =
+                    (afterGearOneRectangleState.status as UiStatus.Content<CatchRecordDraft>).value
+                assertEquals(gearOne.id, nextGearUsePendingSpecies(draftAfterGearOneRectangle)?.id)
 
-                // Save gear two's (the last confirmed gear's) rectangle: advances to landing storage.
-                val afterGearTwo =
-                    draftAfterFirstSave.copy(
+                // Confirm gear one's species: gear two's rectangle step is next.
+                val afterGearOneSpecies =
+                    draftAfterGearOneRectangle.copy(
                         gearUses =
-                            draftAfterFirstSave.gearUses.map {
+                            draftAfterGearOneRectangle.gearUses.map {
+                                if (it.id == gearOne.id) {
+                                    it.copy(
+                                        speciesWeights =
+                                            listOf(
+                                                SpeciesWeightEntry(
+                                                    id = "sw-1",
+                                                    speciesId = "species-cod",
+                                                    confirmedCaught = true,
+                                                ),
+                                            ),
+                                    )
+                                } else {
+                                    it
+                                }
+                            },
+                    )
+                viewModel.dispatch(
+                    CatchRecordFlowEvent.SaveAndContinue(
+                        afterGearOneSpecies,
+                        nextWizardStepForDraft(afterGearOneSpecies),
+                    ),
+                )
+                assertEquals(UiStatus.Loading, awaitItem().status)
+                val afterGearOneSpeciesState = awaitItem()
+                assertEquals(WizardStep.GearStatRectangle, afterGearOneSpeciesState.currentStep)
+                val draftAfterGearOneSpecies =
+                    (afterGearOneSpeciesState.status as UiStatus.Content<CatchRecordDraft>).value
+                assertEquals(gearTwo.id, nextGearUsePendingStatRectangle(draftAfterGearOneSpecies)?.id)
+
+                // Save gear two's rectangle: gear two's own species step is next.
+                val afterGearTwoRectangle =
+                    draftAfterGearOneSpecies.copy(
+                        gearUses =
+                            draftAfterGearOneSpecies.gearUses.map {
                                 if (it.id == gearTwo.id) it.copy(statisticalSubRectangleCode = "38E98") else it
                             },
                     )
                 viewModel.dispatch(
-                    CatchRecordFlowEvent.SaveAndContinue(afterGearTwo, WizardStep.LandingStorage),
+                    CatchRecordFlowEvent.SaveAndContinue(
+                        afterGearTwoRectangle,
+                        nextWizardStepForDraft(afterGearTwoRectangle),
+                    ),
                 )
                 assertEquals(UiStatus.Loading, awaitItem().status)
-                val afterSecondSave = awaitItem()
-                assertEquals(WizardStep.LandingStorage, afterSecondSave.currentStep)
-                val finalDraft = (afterSecondSave.status as UiStatus.Content<CatchRecordDraft>).value
-                assertNull(nextGearUsePendingStatRectangle(finalDraft))
+                val afterGearTwoRectangleState = awaitItem()
+                assertEquals(WizardStep.GearSpeciesSearch, afterGearTwoRectangleState.currentStep)
+
+                // Confirm gear two's species: every confirmed gear is now fully done, so the trip-level
+                // Phase 5B decision step is next — not another per-gear step.
+                val draftAfterGearTwoRectangle =
+                    (afterGearTwoRectangleState.status as UiStatus.Content<CatchRecordDraft>).value
+                val afterGearTwoSpecies =
+                    draftAfterGearTwoRectangle.copy(
+                        gearUses =
+                            draftAfterGearTwoRectangle.gearUses.map {
+                                if (it.id == gearTwo.id) {
+                                    it.copy(
+                                        speciesWeights =
+                                            listOf(
+                                                SpeciesWeightEntry(
+                                                    id = "sw-2",
+                                                    speciesId = "species-plaice",
+                                                    confirmedCaught = true,
+                                                ),
+                                            ),
+                                    )
+                                } else {
+                                    it
+                                }
+                            },
+                    )
+                viewModel.dispatch(
+                    CatchRecordFlowEvent.SaveAndContinue(
+                        afterGearTwoSpecies,
+                        nextWizardStepForDraft(afterGearTwoSpecies),
+                    ),
+                )
+                assertEquals(UiStatus.Loading, awaitItem().status)
+                val afterGearTwoSpeciesState = awaitItem()
+                assertEquals(WizardStep.NotLandedStraightAwayDecision, afterGearTwoSpeciesState.currentStep)
+                val draftAfterGearTwoSpecies =
+                    (afterGearTwoSpeciesState.status as UiStatus.Content<CatchRecordDraft>).value
+                assertNull(nextGearUsePendingStatRectangle(draftAfterGearTwoSpecies))
+                assertNull(nextGearUsePendingSpecies(draftAfterGearTwoSpecies))
+
+                // Answering "No" to the 5B decision skips WizardStep.NotLandedStraightAwaySpecies entirely.
+                val afterDecision = draftAfterGearTwoSpecies.copy(notLandedStraightAway = false)
+                viewModel.dispatch(
+                    CatchRecordFlowEvent.SaveAndContinue(afterDecision, nextWizardStepForDraft(afterDecision)),
+                )
+                assertEquals(UiStatus.Loading, awaitItem().status)
+                val afterDecisionState = awaitItem()
+                assertEquals(WizardStep.LandingStorage, afterDecisionState.currentStep)
             }
         }
 }

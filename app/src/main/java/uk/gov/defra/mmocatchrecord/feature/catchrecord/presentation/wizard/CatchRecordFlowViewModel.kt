@@ -1,4 +1,8 @@
-@file:Suppress("detekt.TooManyFunctions", "detekt.MaxLineLength")
+// `dispatch`'s cyclomatic complexity grows by exactly one flat `when` branch per wizard event (each a
+// one-line delegation to its own private handler, not nested logic) — same rationale as the existing
+// `TooManyFunctions` suppression: it scales with the number of wizard steps/events, not with genuine
+// per-branch complexity, so a file-level suppression is more honest than an arbitrary split.
+@file:Suppress("detekt.TooManyFunctions", "detekt.MaxLineLength", "detekt.CyclomaticComplexMethod")
 
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard
 
@@ -14,6 +18,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementValue
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelection
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectionMode
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.ReferenceDataRepository
 import java.time.Instant
@@ -47,7 +52,9 @@ class CatchRecordFlowViewModel
                 is CatchRecordFlowEvent.SaveAndContinue -> saveAndContinue(event.updatedDraft, event.nextStep)
                 is CatchRecordFlowEvent.GearTypeSelected -> gearTypeSelected(event.gearTypeId)
                 is CatchRecordFlowEvent.GearMeasurementsSubmitted -> gearMeasurementsSubmitted(event.measurements)
-                is CatchRecordFlowEvent.GearRemoved -> removeGear(event.updatedDraft)
+                is CatchRecordFlowEvent.GearRemoved -> persistDraftWithoutStepChange(event.updatedDraft)
+                is CatchRecordFlowEvent.SpeciesAddedToCurrentGear -> speciesAddedToCurrentGear(event.speciesId)
+                is CatchRecordFlowEvent.SpeciesRemoved -> persistDraftWithoutStepChange(event.updatedDraft)
                 CatchRecordFlowEvent.MarkReadyToSubmit -> markReadyToSubmit()
             }
         }
@@ -60,6 +67,7 @@ class CatchRecordFlowViewModel
                     val ports = referenceDataRepository.getPorts().getOrThrow()
                     val gearTypes = referenceDataRepository.getGearTypes().getOrThrow()
                     val statisticalSubRectangles = referenceDataRepository.getStatisticalSubRectangles().getOrThrow()
+                    val species = referenceDataRepository.getSpecies().getOrThrow()
                     val existingDraft = draftRepository.getAnyActiveDraft().getOrThrow()
                     val previouslyUsedPorts =
                         existingDraft
@@ -84,6 +92,7 @@ class CatchRecordFlowViewModel
                             ports = ports,
                             gearTypes = gearTypes,
                             statisticalSubRectangles = statisticalSubRectangles,
+                            species = species,
                             previouslyUsedPorts = previouslyUsedPorts,
                             departurePortEntryMode = deriveDeparturePortEntryMode(previouslyUsedPorts),
                             samePortCandidate = previouslyUsedPorts.firstOrNull(),
@@ -207,7 +216,32 @@ class CatchRecordFlowViewModel
             saveAndContinue(updatedDraft, WizardStep.GearSummary)
         }
 
-        private fun removeGear(updatedDraft: CatchRecordDraft) {
+        private fun speciesAddedToCurrentGear(speciesId: String) {
+            val draft = currentDraftOrNull() ?: return
+            val currentGearUse = nextGearUsePendingSpecies(draft) ?: return
+            val alreadyAdded = currentGearUse.speciesWeights.any { it.speciesId == speciesId }
+            val updatedGearUse =
+                if (alreadyAdded) {
+                    currentGearUse
+                } else {
+                    currentGearUse.copy(
+                        speciesWeights =
+                            currentGearUse.speciesWeights +
+                                SpeciesWeightEntry(id = idFactory(), speciesId = speciesId),
+                    )
+                }
+            val updatedDraft =
+                draft.copy(gearUses = draft.gearUses.map { if (it.id == updatedGearUse.id) updatedGearUse else it })
+            saveAndContinue(updatedDraft, WizardStep.GearSpeciesChecklist)
+        }
+
+        /**
+         * Persists [updatedDraft] without advancing [WizardStep] — shared by the gear-summary checklist's
+         * "Remove gear" action ([CatchRecordFlowEvent.GearRemoved]) and the species checklist's
+         * "Remove a species" action ([CatchRecordFlowEvent.SpeciesRemoved]), both of which keep the user on
+         * their current checklist screen after the bulk removal.
+         */
+        private fun persistDraftWithoutStepChange(updatedDraft: CatchRecordDraft) {
             updateState { it.copy(status = UiStatus.Loading) }
             launchInViewModelScope {
                 draftRepository.saveDraft(updatedDraft).fold(

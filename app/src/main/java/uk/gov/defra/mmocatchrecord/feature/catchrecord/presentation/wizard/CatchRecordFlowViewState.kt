@@ -6,6 +6,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordD
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementValue
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Species
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.StatisticalSubRectangle
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Vessel
 
@@ -35,6 +36,8 @@ data class CatchRecordFlowViewState(
      * autocomplete search across every known code.
      */
     val statisticalSubRectangles: List<StatisticalSubRectangle> = emptyList(),
+    /** Every known species (Phase 5), loaded once alongside ports/gear types. */
+    val species: List<Species> = emptyList(),
     /**
      * The gear type chosen on the gear-search screen, held only transiently until the measurement screen
      * submits (at which point a real [uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse]
@@ -99,6 +102,25 @@ sealed interface CatchRecordFlowEvent {
      * and persists immediately; does not advance [WizardStep] since the user stays on the checklist.
      */
     data class GearRemoved(
+        val updatedDraft: CatchRecordDraft,
+    ) : CatchRecordFlowEvent
+
+    /**
+     * Appends a new, unconfirmed
+     * [uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry] for [speciesId] to
+     * the current gear use (see [nextGearUsePendingSpecies]), persists it, and advances to the
+     * gear-species checklist. A no-op re-navigation (no duplicate entry) if [speciesId] was already added
+     * to this gear.
+     */
+    data class SpeciesAddedToCurrentGear(
+        val speciesId: String,
+    ) : CatchRecordFlowEvent
+
+    /**
+     * Bulk-removes the checked species from the current gear's species checklist and persists immediately;
+     * does not advance [WizardStep] since the user stays on the checklist — mirrors [GearRemoved].
+     */
+    data class SpeciesRemoved(
         val updatedDraft: CatchRecordDraft,
     ) : CatchRecordFlowEvent
 

@@ -51,18 +51,24 @@ interface CatchRecordDraftDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLandingStorage(entities: List<LandingStorageEntity>)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertNotLandedSpecies(entities: List<NotLandedSpeciesEntity>)
+
     @Query("DELETE FROM catch_record_gear_use WHERE draftId = :draftId")
     suspend fun deleteGearUsesForDraft(draftId: String)
 
     @Query("DELETE FROM catch_record_landing_storage WHERE draftId = :draftId")
     suspend fun deleteLandingStorageForDraft(draftId: String)
 
+    @Query("DELETE FROM catch_record_not_landed_species WHERE draftId = :draftId")
+    suspend fun deleteNotLandedSpeciesForDraft(draftId: String)
+
     @Query("DELETE FROM catch_record_draft WHERE id = :draftId")
     suspend fun deleteDraftById(draftId: String)
 
     /**
-     * Upserts [draft] then wholesale-replaces its gear-use/landing-storage children (and, via cascade,
-     * the measurement/species-weight grandchildren) in a single atomic transaction.
+     * Upserts [draft] then wholesale-replaces its gear-use/landing-storage/not-landed-species children
+     * (and, via cascade, the measurement/species-weight grandchildren) in a single atomic transaction.
      */
     @Transaction
     suspend fun replaceDraftAggregate(
@@ -71,13 +77,16 @@ interface CatchRecordDraftDao {
         measurements: List<MeasurementEntity>,
         speciesWeights: List<SpeciesWeightEntity>,
         landingStorage: List<LandingStorageEntity>,
+        notLandedSpecies: List<NotLandedSpeciesEntity>,
     ) {
         upsertDraft(draft)
         deleteGearUsesForDraft(draft.id)
         deleteLandingStorageForDraft(draft.id)
+        deleteNotLandedSpeciesForDraft(draft.id)
         if (gearUses.isNotEmpty()) insertGearUses(gearUses)
         if (measurements.isNotEmpty()) insertMeasurements(measurements)
         if (speciesWeights.isNotEmpty()) insertSpeciesWeights(speciesWeights)
         if (landingStorage.isNotEmpty()) insertLandingStorage(landingStorage)
+        if (notLandedSpecies.isNotEmpty()) insertNotLandedSpecies(notLandedSpecies)
     }
 }

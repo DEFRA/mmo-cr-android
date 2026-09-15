@@ -12,11 +12,14 @@ data class GearUseWithChildren(
     val speciesWeights: List<SpeciesWeightEntity>,
 )
 
-/** The full [DraftEntity] aggregate: its gear uses (with their own children) and landing/storage entries. */
+/** The full [DraftEntity] aggregate: its gear uses (with their own children), landing/storage entries, and
+ * trip-level "not landed straight away" species entries (Phase 5B). */
 data class DraftWithChildren(
     @Embedded val draft: DraftEntity,
     @Relation(entity = GearUseEntity::class, parentColumn = "id", entityColumn = "draftId")
     val gearUses: List<GearUseWithChildren>,
     @Relation(parentColumn = "id", entityColumn = "draftId")
     val landingStorage: List<LandingStorageEntity>,
+    @Relation(parentColumn = "id", entityColumn = "draftId")
+    val notLandedSpecies: List<NotLandedSpeciesEntity>,
 )

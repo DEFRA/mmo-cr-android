@@ -36,6 +36,8 @@ data class DraftEntity(
     val returnPortSelectionMode: String?,
     val status: String,
     val modifiedAtEpochMillis: Long,
+    /** Phase 5B: `null` (column default) until the "not landing straight away" question is answered. */
+    val notLandedStraightAway: Boolean? = null,
 )
 
 /** One gear deployment within a draft trip. Cascades from [DraftEntity] on delete (FR10 invalidation). */
@@ -87,7 +89,7 @@ data class MeasurementEntity(
     val textValue: String?,
 )
 
-/** A retained-above/retained-below/discarded species weight entry within a [GearUseEntity]. */
+/** A species catch entry captured for one species within a [GearUseEntity] (Phase 5). */
 @Entity(
     tableName = "catch_record_species_weight",
     foreignKeys = [
@@ -104,9 +106,33 @@ data class SpeciesWeightEntity(
     @PrimaryKey val id: String,
     val gearUseId: String,
     val speciesId: String,
-    val retainedAboveMcrsKg: Double,
-    val retainedBelowMcrsKg: Double,
-    val discardedKg: Double,
+    val weightAboveMinimumSizeKg: Double?,
+    val weightBelowMinimumSizeKg: Double?,
+    val weightLegallyDiscardedKg: Double?,
+    val confirmedCaught: Boolean,
+)
+
+/**
+ * A trip-level (not per-gear) "not landing straight away" species entry (Phase 5B). Cascades from
+ * [DraftEntity] on delete, mirroring [LandingStorageEntity].
+ */
+@Entity(
+    tableName = "catch_record_not_landed_species",
+    foreignKeys = [
+        ForeignKey(
+            entity = DraftEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["draftId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [Index(value = ["draftId"])],
+)
+data class NotLandedSpeciesEntity(
+    @PrimaryKey(autoGenerate = true) @ColumnInfo(name = "rowId") val rowId: Long = 0,
+    val draftId: String,
+    val speciesId: String,
+    val weightAboveMinimumSizeKeptOnboardKg: Double?,
 )
 
 /** A landing/storage key/value row (flexible shape — fields TBD, see domain model doc comment). */

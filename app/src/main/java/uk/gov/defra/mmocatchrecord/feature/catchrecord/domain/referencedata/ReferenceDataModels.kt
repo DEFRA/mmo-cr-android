@@ -74,11 +74,32 @@ data class GearType(
     val measurementTitleOverride: String? = null,
 )
 
+/**
+ * How precisely a species' captured weights must be entered (Phase 5) — see
+ * [uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.SpeciesWeightValidator].
+ */
+enum class SpeciesWeightPrecision {
+    WholeNumber,
+    OneDecimalPlace,
+}
+
 /** A species selectable for a species/weight entry. */
 data class Species(
     val id: String,
     val name: String,
     val faoCode: String,
+    /** Placeholder stub attribute (Phase 5) — see [SpeciesWeightPrecision]. */
+    val weightPrecision: SpeciesWeightPrecision = SpeciesWeightPrecision.OneDecimalPlace,
+    /**
+     * Whether "Weight above minimum size retained (kg)" is mandatory once this species is checked on the
+     * species checklist. Placeholder stub attribute (Phase 5) — varies per species per the confirmed
+     * screenshots' validation rules.
+     */
+    val weightAboveMinimumSizeMandatory: Boolean = true,
+    /** Placeholder stub monthly quota in kg; `null` means no monthly quota limit (Phase 5). */
+    val monthlyQuotaKg: Double? = null,
+    /** Placeholder stub annual quota in kg; `null` means no annual quota limit (Phase 5). */
+    val annualQuotaKg: Double? = null,
 )
 
 /** An ICES statistical sub-rectangle selectable for a [uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse]. */
