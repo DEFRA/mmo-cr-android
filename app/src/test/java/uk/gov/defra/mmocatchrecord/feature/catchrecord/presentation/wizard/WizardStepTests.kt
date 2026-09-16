@@ -1,8 +1,10 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard
 
+import androidx.navigation.navOptions
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import uk.gov.defra.mmocatchrecord.common.navigation.Destination
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DmyDate
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
@@ -249,5 +251,32 @@ class WizardStepTests {
         val theDraft = draft(returnDate = returnDate)
         val soonAfter = Instant.parse("2020-01-02T00:00:00Z").toEpochMilli()
         assertEquals(WizardStep.CheckYourAnswers, resolveSubmissionStep(theDraft, soonAfter))
+    }
+
+    // --- applySubmissionResultNavOptions ------------------------------------------------------------
+    //
+    // Regression coverage for the real navigation bug found and fixed while verifying Phase 8's
+    // "Accept and submit trip details" wiring: transitioning into a submission-result step must clear the
+    // wizard's back stack down to (but not including, i.e. not popping) the nav graph's own entry, so the
+    // nav-graph-scoped `CatchRecordFlowViewModel` instance survives, while every other step is a no-op.
+
+    @Test
+    fun `applySubmissionResultNavOptions pops up to the graph route, non-inclusive, for submission success`() {
+        val options = navOptions { applySubmissionResultNavOptions(WizardStep.SubmissionSuccess) }
+        assertEquals(Destination.CatchRecordFlow.GRAPH_ROUTE, options.popUpToRoute)
+        assertEquals(false, options.isPopUpToInclusive())
+    }
+
+    @Test
+    fun `applySubmissionResultNavOptions pops up to the graph route, non-inclusive, for submission pending sync`() {
+        val options = navOptions { applySubmissionResultNavOptions(WizardStep.SubmissionPendingSync) }
+        assertEquals(Destination.CatchRecordFlow.GRAPH_ROUTE, options.popUpToRoute)
+        assertEquals(false, options.isPopUpToInclusive())
+    }
+
+    @Test
+    fun `applySubmissionResultNavOptions is a no-op for every other wizard step`() {
+        val options = navOptions { applySubmissionResultNavOptions(WizardStep.CheckYourAnswers) }
+        assertNull(options.popUpToRoute)
     }
 }

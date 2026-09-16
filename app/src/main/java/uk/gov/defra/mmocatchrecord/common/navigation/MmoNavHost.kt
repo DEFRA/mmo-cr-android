@@ -36,6 +36,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.Submi
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.SubmissionSuccessScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.TripTodayScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.VesselSelectionScreen
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.applySubmissionResultNavOptions
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.routeFor
 import uk.gov.defra.mmocatchrecord.feature.home.presentation.HomeScreen
 import uk.gov.defra.mmocatchrecord.feature.signin.presentation.SignInScreen
@@ -204,7 +205,9 @@ fun MmoNavHost(
             composable(Destination.CatchRecordFlow.CHECK_YOUR_ANSWERS_ROUTE) { backStackEntry ->
                 CheckYourAnswersScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
-                    onNavigate = { navController.navigate(routeFor(it)) },
+                    onNavigate = { step ->
+                        navController.navigate(routeFor(step)) { applySubmissionResultNavOptions(step) }
+                    },
                     onBack = { navController.popBackStack() },
                 )
             }

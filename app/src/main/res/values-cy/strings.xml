@@ -155,8 +155,9 @@
     <string name="remove_a_species_action">Dileu rhywogaeth</string>
     <string name="species_checklist_error_required">Dewiswch o leiaf un rhywogaeth</string>
     <string name="species_weight_error_required_above_min">Nodwch y pwysau uwchlaw\'r maint lleiaf a gedwir</string>
-    <string name="species_weight_error_required_kept_onboard">Nodwch y pwysau uwchlaw\'r maint lleiaf a gedwir ar y cwch neu mewn cewyll cadw</string>
-    <string name="species_weight_error_range">Rhaid i\'r pwysau ar gyfer %1$s fod yn fwy na 0kg a dim mwy na 10,000kg</string>
+    <string name="species_weight_error_required_kept_onboard">Nodwch y pwysau uwchlaw\'r maint lleiaf a gedwir ar y cwch neu mewn cewyll cadw mewn cilogramau</string>
+    <string name="species_weight_error_below_minimum">Rhaid i\'r pwysau ar gyfer %1$s fod yn fwy na 0kg</string>
+    <string name="species_weight_error_above_maximum">Rhaid i\'r pwysau ar gyfer %1$s fod yn 10,000kg neu lai</string>
     <string name="species_weight_error_whole_number">Rhaid i\'r pwysau ar gyfer %1$s fod yn rif cyfan</string>
     <string name="species_weight_error_one_decimal">Rhaid i\'r pwysau ar gyfer %1$s fod yn rif hyd at 1 lle degol</string>
     <string name="species_weight_error_monthly_quota">Byddai\'r pwysau a nodwyd yn fwy na\'ch cwota ar gyfer y rhywogaeth hon. Nodwch bwysau is.</string>

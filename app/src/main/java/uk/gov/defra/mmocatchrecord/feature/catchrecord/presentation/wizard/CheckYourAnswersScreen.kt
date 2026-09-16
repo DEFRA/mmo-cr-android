@@ -10,7 +10,11 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -60,6 +64,25 @@ fun CheckYourAnswersScreen(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    // "Accept and submit trip details" is a genuinely asynchronous action (connectivity check + stub
+    // submit call — see `CatchRecordFlowViewModel.acceptDeclarationAndSubmit`): unlike every earlier
+    // wizard screen, this screen cannot compute its next step synchronously in the click handler, since
+    // the destination (SubmissionSuccess vs SubmissionPendingSync) depends on that async result. So,
+    // mirroring `CatchRecordFlowEntryScreen`'s own "react to a ViewModel-driven step change" pattern, this
+    // effect is what actually performs the navigation once the ViewModel has decided the outcome and
+    // updated `state.currentStep` — without it, tapping submit only updates ViewModel state and never
+    // navigates anywhere.
+    var hasNavigatedToSubmissionResult by remember { mutableStateOf(false) }
+    LaunchedEffect(state.currentStep) {
+        val isSubmissionResultStep =
+            state.currentStep == WizardStep.SubmissionSuccess || state.currentStep == WizardStep.SubmissionPendingSync
+        if (isSubmissionResultStep && !hasNavigatedToSubmissionResult) {
+            hasNavigatedToSubmissionResult = true
+            onNavigate(state.currentStep)
+        }
+    }
+
     CatchRecordWizardScaffold(
         screenTestTag = CheckYourAnswersScreenTestTags.SCREEN,
         title = stringResource(R.string.check_your_answers_title),

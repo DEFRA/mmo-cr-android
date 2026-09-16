@@ -155,8 +155,9 @@
     <string name="remove_a_species_action">Remove a species</string>
     <string name="species_checklist_error_required">Select at least one species</string>
     <string name="species_weight_error_required_above_min">Enter the weight above minimum size retained</string>
-    <string name="species_weight_error_required_kept_onboard">Enter the weight above minimum size kept onboard or in keep pots</string>
-    <string name="species_weight_error_range">Weight for %1$s must be more than 0kg and no more than 10,000kg</string>
+    <string name="species_weight_error_required_kept_onboard">Enter the weight above minimum size kept onboard or in keep pots in kilograms</string>
+    <string name="species_weight_error_below_minimum">Weight for %1$s must be more than 0kg</string>
+    <string name="species_weight_error_above_maximum">Weight for %1$s must be 10,000kg or less</string>
     <string name="species_weight_error_whole_number">Weight for %1$s must be a whole number</string>
     <string name="species_weight_error_one_decimal">Weight for %1$s must be a number with up to 1 decimal place</string>
     <string name="species_weight_error_monthly_quota">The weight entered would exceed your quota for this species. Enter a lower weight.</string>

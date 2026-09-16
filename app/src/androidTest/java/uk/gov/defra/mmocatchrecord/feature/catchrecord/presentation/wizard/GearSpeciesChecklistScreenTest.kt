@@ -326,6 +326,62 @@ class GearSpeciesChecklistScreenTest {
     }
 
     @Test
+    fun zeroAboveMinimumFieldShowsBelowMinimumRangeError() {
+        val gearUse = gearUseWithAddedSpecies(listOf(cod.id))
+        composeTestRule.setContent {
+            MmoTheme {
+                GearSpeciesChecklistScreenContent(
+                    draft = draftWith(gearUse),
+                    gearUse = gearUse,
+                    speciesList = speciesList,
+                    onRemoveSpecies = {},
+                    onAddAnotherSpecies = {},
+                    onSubmit = {},
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
+        composeTestRule
+            .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${cod.id}")
+            .performTextInput("0")
+        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performClick()
+
+        composeTestRule
+            .onAllNodesWithText("Weight for Atlantic cod must be more than 0kg")
+            .onFirst()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun aboveMinimumFieldOverTheMaximumShowsAboveMaximumRangeError() {
+        val gearUse = gearUseWithAddedSpecies(listOf(cod.id))
+        composeTestRule.setContent {
+            MmoTheme {
+                GearSpeciesChecklistScreenContent(
+                    draft = draftWith(gearUse),
+                    gearUse = gearUse,
+                    speciesList = speciesList,
+                    onRemoveSpecies = {},
+                    onAddAnotherSpecies = {},
+                    onSubmit = {},
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
+        composeTestRule
+            .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${cod.id}")
+            .performTextInput("10000.1")
+        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performClick()
+
+        composeTestRule
+            .onAllNodesWithText("Weight for Atlantic cod must be 10,000kg or less")
+            .onFirst()
+            .assertIsDisplayed()
+    }
+
+    @Test
     fun removeASpeciesLinkIsDisabledWhenNothingIsCheckedButRemainsVisible() {
         val gearUse = gearUseWithAddedSpecies(listOf(cod.id))
         composeTestRule.setContent {

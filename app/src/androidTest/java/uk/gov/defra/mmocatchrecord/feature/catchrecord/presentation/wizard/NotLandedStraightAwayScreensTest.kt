@@ -185,7 +185,55 @@ class NotLandedStraightAwayScreensTest {
 
         composeTestRule.onNodeWithTag(NotLandedStraightAwaySpeciesScreenTestTags.ERROR_SUMMARY).assertIsDisplayed()
         composeTestRule
-            .onAllNodesWithText("Enter the weight above minimum size kept onboard or in keep pots")
+            .onAllNodesWithText("Enter the weight above minimum size kept onboard or in keep pots in kilograms")
+            .onFirst()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun zeroKeptOnboardFieldShowsBelowMinimumRangeError() {
+        composeTestRule.setContent {
+            MmoTheme {
+                NotLandedStraightAwaySpeciesScreenContent(
+                    draft = draftWithConfirmedSpecies(listOf(cod.id)),
+                    speciesList = listOf(cod),
+                    onSubmit = {},
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("${NotLandedStraightAwaySpeciesScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
+        composeTestRule
+            .onNodeWithTag("${NotLandedStraightAwaySpeciesScreenTestTags.WEIGHT_FIELD_PREFIX}_${cod.id}")
+            .performTextInput("0")
+        composeTestRule.onNodeWithTag(NotLandedStraightAwaySpeciesScreenTestTags.SAVE_ACTION).performClick()
+
+        composeTestRule
+            .onAllNodesWithText("Weight for Atlantic cod must be more than 0kg")
+            .onFirst()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun keptOnboardFieldOverTheMaximumShowsAboveMaximumRangeError() {
+        composeTestRule.setContent {
+            MmoTheme {
+                NotLandedStraightAwaySpeciesScreenContent(
+                    draft = draftWithConfirmedSpecies(listOf(cod.id)),
+                    speciesList = listOf(cod),
+                    onSubmit = {},
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("${NotLandedStraightAwaySpeciesScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
+        composeTestRule
+            .onNodeWithTag("${NotLandedStraightAwaySpeciesScreenTestTags.WEIGHT_FIELD_PREFIX}_${cod.id}")
+            .performTextInput("10000.1")
+        composeTestRule.onNodeWithTag(NotLandedStraightAwaySpeciesScreenTestTags.SAVE_ACTION).performClick()
+
+        composeTestRule
+            .onAllNodesWithText("Weight for Atlantic cod must be 10,000kg or less")
             .onFirst()
             .assertIsDisplayed()
     }

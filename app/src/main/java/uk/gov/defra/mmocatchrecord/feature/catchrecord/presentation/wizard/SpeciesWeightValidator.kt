@@ -20,8 +20,11 @@ enum class SpeciesWeightFieldError {
     /** Left blank while mandatory for this field/species combination. */
     Required,
 
-    /** Parsed value is not `> 0` and `<= 10,000` (or wasn't parseable at all — defensive only). */
-    Range,
+    /** Parsed value is not `> 0` (or wasn't parseable at all — defensive only). */
+    BelowMinimum,
+
+    /** Parsed value is `> MAX_WEIGHT_KG`. */
+    AboveMaximum,
 
     /** Value doesn't match the species' [SpeciesWeightPrecision] (whole number vs up to 1 decimal place). */
     Precision,
@@ -47,7 +50,9 @@ data class SpeciesWeightEntryValidationResult(
  * one call, mirroring [GearMeasurementInputValidator]'s batch-validation pattern) since the quota check
  * only makes sense evaluated across the species' whole set of populated fields at once.
  *
- * Range (`> 0kg` and `<= 10,000kg`) and precision (whole-number vs one-decimal-place, per
+ * Range (`> 0kg` and `<= 10,000kg` — reported as two distinct [SpeciesWeightFieldError] values,
+ * [SpeciesWeightFieldError.BelowMinimum]/[SpeciesWeightFieldError.AboveMaximum], since a single parsed value
+ * can only ever violate one bound) and precision (whole-number vs one-decimal-place, per
  * [Species.weightPrecision]) are validated independently per field first; the quota check then only runs
  * if every field passed those, and — if it fails — is attached to every field that has a non-null value
  * (there is no single "correct" field to blame when several combine to exceed a quota, so this is a
@@ -94,8 +99,11 @@ object SpeciesWeightValidator {
                 else -> {
                     val parsed = trimmed.toDoubleOrNull()
                     when {
-                        parsed == null || parsed <= MIN_WEIGHT_KG || parsed > MAX_WEIGHT_KG ->
-                            errors[fieldKind] = SpeciesWeightFieldError.Range
+                        parsed == null || parsed <= MIN_WEIGHT_KG ->
+                            errors[fieldKind] = SpeciesWeightFieldError.BelowMinimum
+
+                        parsed > MAX_WEIGHT_KG ->
+                            errors[fieldKind] = SpeciesWeightFieldError.AboveMaximum
 
                         !matchesPrecision(parsed, species.weightPrecision) ->
                             errors[fieldKind] = SpeciesWeightFieldError.Precision

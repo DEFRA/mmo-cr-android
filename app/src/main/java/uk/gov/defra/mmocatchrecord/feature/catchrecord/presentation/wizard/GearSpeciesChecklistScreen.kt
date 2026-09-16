@@ -506,7 +506,8 @@ internal fun speciesWeightErrorMessage(
             } else {
                 stringResource(R.string.species_weight_error_required_above_min)
             }
-        SpeciesWeightFieldError.Range -> stringResource(R.string.species_weight_error_range, name)
+        SpeciesWeightFieldError.BelowMinimum -> stringResource(R.string.species_weight_error_below_minimum, name)
+        SpeciesWeightFieldError.AboveMaximum -> stringResource(R.string.species_weight_error_above_maximum, name)
         SpeciesWeightFieldError.Precision ->
             if (species.weightPrecision == SpeciesWeightPrecision.WholeNumber) {
                 stringResource(R.string.species_weight_error_whole_number, name)

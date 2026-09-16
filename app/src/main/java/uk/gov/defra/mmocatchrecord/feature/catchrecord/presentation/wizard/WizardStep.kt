@@ -6,6 +6,7 @@
 
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard
 
+import androidx.navigation.NavOptionsBuilder
 import uk.gov.defra.mmocatchrecord.common.navigation.Destination
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
@@ -141,6 +142,27 @@ fun routeFor(step: WizardStep): String =
         WizardStep.SubmissionSuccess -> Destination.CatchRecordFlow.SUBMISSION_SUCCESS_ROUTE
         WizardStep.SubmissionPendingSync -> Destination.CatchRecordFlow.SUBMISSION_PENDING_SYNC_ROUTE
     }
+
+/**
+ * Extra [androidx.navigation.NavOptionsBuilder] configuration required specifically when navigating away
+ * from [WizardStep.CheckYourAnswers] to one of the two Phase 8 submission-result steps (see
+ * `CheckYourAnswersScreen`'s post-submit `LaunchedEffect`, which drives that navigation once
+ * `CatchRecordFlowViewModel.acceptDeclarationAndSubmit` has asynchronously resolved the outcome). Submission
+ * is terminal for the draft, so every wizard screen pushed since entering the nav graph is cleared — down
+ * to, but keeping, the graph's own back stack entry (so the nav-graph-scoped `CatchRecordFlowViewModel`
+ * instance, and its already-updated post-submission draft state, survives) — meaning the user cannot
+ * navigate back into check-your-answers or any earlier wizard screen for an already-submitted or
+ * already-queued draft. A no-op for every other [WizardStep] (e.g. a "Change" link's synchronous
+ * navigation back to an earlier step, which flows through the same `onNavigate` callback).
+ *
+ * A single, shared function (rather than duplicated inline logic) so `MmoNavHost`'s real wiring and any
+ * instrumented test exercising this exact navigation behaviour cannot silently drift apart.
+ */
+fun NavOptionsBuilder.applySubmissionResultNavOptions(step: WizardStep) {
+    if (step == WizardStep.SubmissionSuccess || step == WizardStep.SubmissionPendingSync) {
+        popUpTo(Destination.CatchRecordFlow.GRAPH_ROUTE) { inclusive = false }
+    }
+}
 
 private fun isStatRectanglePending(gearUse: GearUse): Boolean = gearUse.statisticalSubRectangleCode == null
 

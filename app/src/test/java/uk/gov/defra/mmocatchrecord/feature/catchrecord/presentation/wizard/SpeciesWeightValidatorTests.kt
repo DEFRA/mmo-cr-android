@@ -57,36 +57,36 @@ class SpeciesWeightValidatorTests {
     // --- Range ----------------------------------------------------------------------------------
 
     @Test
-    fun `zero value fails the range check`() {
+    fun `zero value fails the range check as below minimum`() {
         val result =
             SpeciesWeightValidator.validateEntry(
                 species = wholeNumberSpecies,
                 rawValuesByField = mapOf(SpeciesWeightFieldKind.AboveMinimumSize to "0"),
             )
 
-        assertEquals(SpeciesWeightFieldError.Range, result.errors[SpeciesWeightFieldKind.AboveMinimumSize])
+        assertEquals(SpeciesWeightFieldError.BelowMinimum, result.errors[SpeciesWeightFieldKind.AboveMinimumSize])
     }
 
     @Test
-    fun `negative value fails the range check`() {
+    fun `negative value fails the range check as below minimum`() {
         val result =
             SpeciesWeightValidator.validateEntry(
                 species = wholeNumberSpecies,
                 rawValuesByField = mapOf(SpeciesWeightFieldKind.AboveMinimumSize to "-5"),
             )
 
-        assertEquals(SpeciesWeightFieldError.Range, result.errors[SpeciesWeightFieldKind.AboveMinimumSize])
+        assertEquals(SpeciesWeightFieldError.BelowMinimum, result.errors[SpeciesWeightFieldKind.AboveMinimumSize])
     }
 
     @Test
-    fun `value above the maximum fails the range check`() {
+    fun `value above the maximum fails the range check as above maximum`() {
         val result =
             SpeciesWeightValidator.validateEntry(
                 species = wholeNumberSpecies,
                 rawValuesByField = mapOf(SpeciesWeightFieldKind.AboveMinimumSize to "10001"),
             )
 
-        assertEquals(SpeciesWeightFieldError.Range, result.errors[SpeciesWeightFieldKind.AboveMinimumSize])
+        assertEquals(SpeciesWeightFieldError.AboveMaximum, result.errors[SpeciesWeightFieldKind.AboveMinimumSize])
     }
 
     @Test
@@ -102,14 +102,25 @@ class SpeciesWeightValidatorTests {
     }
 
     @Test
-    fun `non numeric value fails the range check`() {
+    fun `value just above the maximum boundary fails as above maximum`() {
+        val result =
+            SpeciesWeightValidator.validateEntry(
+                species = wholeNumberSpecies,
+                rawValuesByField = mapOf(SpeciesWeightFieldKind.AboveMinimumSize to "10000.01"),
+            )
+
+        assertEquals(SpeciesWeightFieldError.AboveMaximum, result.errors[SpeciesWeightFieldKind.AboveMinimumSize])
+    }
+
+    @Test
+    fun `non numeric value fails the range check as below minimum`() {
         val result =
             SpeciesWeightValidator.validateEntry(
                 species = wholeNumberSpecies,
                 rawValuesByField = mapOf(SpeciesWeightFieldKind.AboveMinimumSize to "abc"),
             )
 
-        assertEquals(SpeciesWeightFieldError.Range, result.errors[SpeciesWeightFieldKind.AboveMinimumSize])
+        assertEquals(SpeciesWeightFieldError.BelowMinimum, result.errors[SpeciesWeightFieldKind.AboveMinimumSize])
     }
 
     // --- Precision --------------------------------------------------------------------------------
@@ -288,7 +299,7 @@ class SpeciesWeightValidatorTests {
                 rawValuesByField = mapOf(SpeciesWeightFieldKind.AboveMinimumSize to "abc"),
             )
 
-        assertEquals(SpeciesWeightFieldError.Range, result.errors[SpeciesWeightFieldKind.AboveMinimumSize])
+        assertEquals(SpeciesWeightFieldError.BelowMinimum, result.errors[SpeciesWeightFieldKind.AboveMinimumSize])
     }
 
     // --- Multiple fields / values map behaviour --------------------------------------------------
