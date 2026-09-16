@@ -15,8 +15,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.FakeCatchRecordDraftRepository
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.FakeCatchRecordSubmissionRepository
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.FakeCatchRecordDraftRepository
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.FakeCatchRecordSubmissionRepository
 
 /**
  * Unit tests for [CatchRecordSyncWorker] using `androidx.work:work-testing`'s [TestListenableWorkerBuilder]

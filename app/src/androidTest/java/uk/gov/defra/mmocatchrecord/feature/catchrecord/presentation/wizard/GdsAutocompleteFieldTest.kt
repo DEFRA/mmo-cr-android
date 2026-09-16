@@ -16,6 +16,7 @@ import uk.gov.defra.mmocatchrecord.common.design.GdsAutocompleteField
 import uk.gov.defra.mmocatchrecord.common.design.GdsAutocompleteOption
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip.PortSearch
 
 class GdsAutocompleteFieldTest {
     @get:Rule

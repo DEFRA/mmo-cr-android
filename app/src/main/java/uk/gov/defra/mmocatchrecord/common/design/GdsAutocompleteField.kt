@@ -36,7 +36,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import uk.gov.defra.mmocatchrecord.R
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.PortSearch
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip.PortSearch
 
 data class GdsAutocompleteOption(
     val id: String,
