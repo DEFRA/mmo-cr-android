@@ -24,16 +24,23 @@ class FakeCatchRecordDraftRepository(
         return Result.success(drafts.values.filter { it.status.isActive }.maxByOrNull { it.modifiedAtEpochMillis })
     }
 
+    override suspend fun getDraftById(draftId: String): Result<CatchRecordDraft?> {
+        if (failNextOperation) return failure()
+        return Result.success(drafts[draftId])
+    }
+
     override suspend fun startDraft(vesselId: String): Result<CatchRecordDraft> {
         if (failNextOperation) return failure()
         val existing = drafts.values.firstOrNull { it.vesselId == vesselId && it.status.isActive }
         if (existing != null) return Result.success(existing)
+        val creationTime = clock()
         val draft =
             CatchRecordDraft(
                 id = idFactory(),
                 vesselId = vesselId,
                 status = DraftStatus.Draft,
-                modifiedAtEpochMillis = clock(),
+                modifiedAtEpochMillis = creationTime,
+                catchRecordReference = "A12345-$creationTime",
             )
         drafts[draft.id] = draft
         return Result.success(draft)

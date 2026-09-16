@@ -17,8 +17,14 @@ import androidx.room.RoomDatabase
  * `weightLegallyDiscardedKg` (all nullable `Double?`) plus a new `confirmedCaught` column, to match the
  * confirmed species-checklist screenshots' field vocabulary and progressive-disclosure behaviour; and a
  * new [NotLandedSpeciesEntity] table plus [DraftEntity]'s new `notLandedStraightAway` column were added
- * for the Phase 5B trip-level follow-up. As with the v1 -> v2 and v2 -> v3 bumps, no real
- * [androidx.room.migration.Migration] is written; see `di/DatabaseModule.kt` for why.
+ * for the Phase 5B trip-level follow-up.
+ *
+ * v4 -> v5 (Phase 8): [DraftEntity] gained `catchRecordReference` (the user-facing reference generated
+ * once at draft creation, see [CatchRecordReferenceGenerator]) and `lateSubmissionWarningAcknowledged`
+ * (breaks what would otherwise be an infinite wizard-step loop on the late-submission warning screen — see
+ * `presentation.wizard.WizardStep`), plus [DraftStatus.PendingSync] as a new stored status value. As with
+ * the v1 -> v2, v2 -> v3, and v3 -> v4 bumps, no real [androidx.room.migration.Migration] is written; see
+ * `di/DatabaseModule.kt` for why.
  */
 @Database(
     entities = [
@@ -29,7 +35,7 @@ import androidx.room.RoomDatabase
         LandingStorageEntity::class,
         NotLandedSpeciesEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 abstract class CatchRecordDatabase : RoomDatabase() {

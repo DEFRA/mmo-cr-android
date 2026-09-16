@@ -17,6 +17,13 @@ interface CatchRecordDraftRepository {
     suspend fun getAnyActiveDraft(): Result<CatchRecordDraft?>
 
     /**
+     * Returns the draft identified by [draftId] regardless of its status (unlike [getActiveDraft]/
+     * [getAnyActiveDraft], which only ever return an *active* draft) — used by `CatchRecordSyncWorker`
+     * (Phase 8/ADR 0009) to re-fetch a specific `PendingSync` draft by id in the background.
+     */
+    suspend fun getDraftById(draftId: String): Result<CatchRecordDraft?>
+
+    /**
      * Returns the vessel's existing active draft if one exists, otherwise creates and persists a new
      * empty draft for the vessel and returns it. Never creates a second concurrent active draft for the
      * same vessel.

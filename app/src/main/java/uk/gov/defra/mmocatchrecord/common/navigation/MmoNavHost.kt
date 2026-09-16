@@ -16,6 +16,7 @@ import uk.gov.defra.mmocatchrecord.core.root.RootEvent
 import uk.gov.defra.mmocatchrecord.core.root.SplashScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.CatchRecordFlowEntryScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.CatchRecordFlowViewModel
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.CheckYourAnswersScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.DepartureDateScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.DeparturePortScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.DraftResumeScreen
@@ -25,11 +26,14 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.GearS
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.GearSpeciesSearchScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.GearStatRectangleScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.GearSummaryScreen
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.LateSubmissionWarningScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.NotLandedStraightAwayDecisionScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.NotLandedStraightAwaySpeciesScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.PhaseThreeCompleteScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.ReturnDateScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.ReturnPortScreen
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.SubmissionPendingSyncScreen
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.SubmissionSuccessScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.TripTodayScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.VesselSelectionScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.routeFor
@@ -187,6 +191,47 @@ fun MmoNavHost(
             composable(Destination.CatchRecordFlow.PHASE_THREE_COMPLETE_ROUTE) { backStackEntry ->
                 PhaseThreeCompleteScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(Destination.CatchRecordFlow.LATE_SUBMISSION_WARNING_ROUTE) { backStackEntry ->
+                LateSubmissionWarningScreen(
+                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                    onNavigate = { navController.navigate(routeFor(it)) },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(Destination.CatchRecordFlow.CHECK_YOUR_ANSWERS_ROUTE) { backStackEntry ->
+                CheckYourAnswersScreen(
+                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                    onNavigate = { navController.navigate(routeFor(it)) },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(Destination.CatchRecordFlow.SUBMISSION_SUCCESS_ROUTE) { backStackEntry ->
+                SubmissionSuccessScreen(
+                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                    // Placeholder destination: no "my catch records" list screen exists yet (out of scope
+                    // for Phase 8) — navigates to the app's existing Home screen instead, clearing the
+                    // whole wizard graph off the back stack so the user cannot navigate "back" into a
+                    // now-submitted draft.
+                    onViewRecords = {
+                        navController.navigate(Destination.Home.route) {
+                            popUpTo(Destination.CatchRecordFlow.GRAPH_ROUTE) { inclusive = true }
+                        }
+                    },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(Destination.CatchRecordFlow.SUBMISSION_PENDING_SYNC_ROUTE) { backStackEntry ->
+                SubmissionPendingSyncScreen(
+                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                    // Same placeholder destination as SubmissionSuccessScreen above.
+                    onViewRecords = {
+                        navController.navigate(Destination.Home.route) {
+                            popUpTo(Destination.CatchRecordFlow.GRAPH_ROUTE) { inclusive = true }
+                        }
+                    },
                     onBack = { navController.popBackStack() },
                 )
             }

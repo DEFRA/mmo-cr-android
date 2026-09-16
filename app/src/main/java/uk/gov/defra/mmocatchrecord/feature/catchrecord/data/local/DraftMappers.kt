@@ -59,6 +59,8 @@ private object DraftToEntityMapper {
             status = draft.status.name,
             modifiedAtEpochMillis = draft.modifiedAtEpochMillis,
             notLandedStraightAway = draft.notLandedStraightAway,
+            catchRecordReference = draft.catchRecordReference,
+            lateSubmissionWarningAcknowledged = draft.lateSubmissionWarningAcknowledged,
         )
 
     private fun toGearUseEntity(
@@ -146,6 +148,8 @@ private object EntityToDraftMapper {
             notLandedSpeciesEntries = entity.notLandedSpecies.map(::toNotLandedSpeciesEntry),
             status = DraftStatus.valueOf(draft.status),
             modifiedAtEpochMillis = draft.modifiedAtEpochMillis,
+            catchRecordReference = draft.catchRecordReference,
+            lateSubmissionWarningAcknowledged = draft.lateSubmissionWarningAcknowledged,
         )
     }
 

@@ -169,5 +169,57 @@
     <plurals name="port_search_suggestions_available">
         <item quantity="one">%1$d suggestion available</item>
         <item quantity="other">%1$d suggestions available</item>
-    </plurals></resources>
+    </plurals>
+    <!-- Phase 8: late-submission warning -->
+    <plurals name="late_submission_warning_title">
+        <item quantity="one">This catch record is being submitted %1$d day after the trip end date</item>
+        <item quantity="other">This catch record is being submitted %1$d days after the trip end date</item>
+    </plurals>
+    <string name="late_submission_warning_body">Catch records must be submitted within 24 hours of a trip ending.</string>
+    <string name="late_submission_warning_check_trip_end_date">Check the trip end date</string>
+    <string name="late_submission_warning_check_trip_end_date_suffix">is correct before you continue.</string>
+    <!-- Phase 8: check your answers -->
+    <string name="check_your_answers_title">Check your catch record</string>
+    <string name="check_your_answers_section_trip">Trip</string>
+    <string name="check_your_answers_section_gear_used">Gear used</string>
+    <string name="check_your_answers_section_species_caught">Species caught</string>
+    <string name="check_your_answers_section_species_not_landed">Species not landed</string>
+    <string name="check_your_answers_row_vessel">Vessel</string>
+    <string name="check_your_answers_row_departure_date">Departure date</string>
+    <string name="check_your_answers_row_return_date">Return date</string>
+    <string name="check_your_answers_row_departure_port">Departure port</string>
+    <string name="check_your_answers_row_return_port">Return port</string>
+    <string name="check_your_answers_row_statistical_sub_area">Statistical sub area</string>
+    <string name="check_your_answers_row_gear_type">Gear type</string>
+    <string name="check_your_answers_row_times_shot">Times shot</string>
+    <string name="check_your_answers_row_species">Species</string>
+    <string name="check_your_answers_row_weight_above_minimum_size">Weight above minimum size retained</string>
+    <string name="check_your_answers_row_weight_below_minimum_size">Weight below minimum size retained</string>
+    <string name="check_your_answers_row_weight_legally_discarded">Weight legally discarded</string>
+    <string name="check_your_answers_row_not_landed_straight_away">Not landed</string>
+    <string name="check_your_answers_row_weight_kept_onboard">Weight above minimum size kept onboard or in keep pots</string>
+    <string name="check_your_answers_change_action">Change</string>
+    <string name="check_your_answers_change_action_with_label">Change %1$s</string>
+    <string name="check_your_answers_declaration_intro">By submitting this record, you agree that the information you\'ve given is complete and correct.</string>
+    <string name="check_your_answers_declaration_bullet_weight_accurate">The weight of fish you have landed is accurate</string>
+    <string name="check_your_answers_declaration_bullet_tolerance">This is within permitted tolerance levels</string>
+    <string name="check_your_answers_declaration_bullet_action">Fishing authorities may take action in respect of inaccurate catch recording</string>
+    <string name="check_your_answers_submit_action">Accept and submit trip details</string>
+    <!-- Phase 8: submission result -->
+    <string name="submission_success_banner_title">Your catch record has been submitted</string>
+    <string name="submission_reference_label">Your catch record reference %1$s</string>
+    <string name="submission_success_what_happens_next_title">What happens next</string>
+    <string name="submission_success_bullet_received">Your catch record has been received by the relevant fishing authority</string>
+    <string name="submission_success_bullet_email">You\'ll receive a confirmation email within 24 hours</string>
+    <string name="submission_success_bullet_view">You can view your submitted records in your account at any time</string>
+    <string name="submission_success_bullet_save_reference">Save your catch record reference for your records</string>
+    <string name="view_catch_records_action">View your catch records</string>
+    <string name="submission_pending_sync_banner_title">Your catch record has been recorded</string>
+    <string name="submission_pending_sync_body_title">Send your catch record to complete this submission</string>
+    <string name="submission_pending_sync_body">Your catch record has been saved and will be sent automatically when you next have a mobile signal or Wi-Fi connection.</string>
+    <string name="submission_pending_sync_check_records">Check your catch records</string>
+    <string name="submission_pending_sync_check_records_suffix">to make sure the status changes to Submitted. You are responsible for making sure we receive it.</string>
+    <string name="submission_pending_sync_warning">You must record your catch within 24 hours of landing.</string>
+</resources>
+
 

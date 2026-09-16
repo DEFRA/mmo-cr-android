@@ -3,12 +3,19 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft
 /**
  * Status of a [CatchRecordDraft]. Only [Draft] and [ReadyToSubmit] are non-terminal ("active") — an
  * active draft is what [CatchRecordDraftRepository] enforces at most one of, per vessel (the confirmed
- * "draft singularity" assumption). [Submitted] and [Discarded] are terminal and never block starting a
- * new draft for the same vessel.
+ * "draft singularity" assumption). [PendingSync], [Submitted] and [Discarded] are terminal and never
+ * block starting a new draft for the same vessel.
+ *
+ * [PendingSync] (Phase 8): the user accepted the declaration on the check-your-answers screen while
+ * offline (or the online submit attempt failed) — the record is treated as "committed" from the user's
+ * point of view (they may start a new trip's draft immediately) even though the network submission is
+ * still queued; see `CatchRecordSyncWorker`/ADR 0009. It transitions to [Submitted] once that background
+ * sync succeeds.
  */
 enum class DraftStatus {
     Draft,
     ReadyToSubmit,
+    PendingSync,
     Submitted,
     Discarded,
     ;
@@ -157,4 +164,19 @@ data class CatchRecordDraft(
     val notLandedSpeciesEntries: List<NotLandedSpeciesEntry> = emptyList(),
     val status: DraftStatus = DraftStatus.Draft,
     val modifiedAtEpochMillis: Long,
+    /**
+     * A stable, user-facing reference (e.g. `"A1234520260727150815"`), generated and persisted once by
+     * [CatchRecordDraftRepository.startDraft] and shown throughout the wizard and on the Phase 8
+     * submission-result screens. `null` only for drafts built directly in tests/previews that bypass the
+     * repository; every draft created via the real app always has one.
+     */
+    val catchRecordReference: String? = null,
+    /**
+     * Whether the user has already seen and continued past the Phase 8 late-submission warning screen for
+     * *this* draft state. Needed to break what would otherwise be an infinite loop in
+     * [nextWizardStepForDraft]: the warning's own "Save and continue" action re-derives the next step from
+     * the (otherwise unchanged) draft, and the time-based "is this late?" condition would still hold — see
+     * `WizardStep.LateSubmissionWarning`.
+     */
+    val lateSubmissionWarningAcknowledged: Boolean = false,
 )

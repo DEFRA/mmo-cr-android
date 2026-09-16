@@ -24,6 +24,9 @@ class RoomCatchRecordDraftRepository
         override suspend fun getAnyActiveDraft(): Result<CatchRecordDraft?> =
             runCatching { dao.getMostRecentlyModifiedActiveDraftWithChildren()?.let(DraftMappers::toDomain) }
 
+        override suspend fun getDraftById(draftId: String): Result<CatchRecordDraft?> =
+            runCatching { dao.getDraftWithChildren(draftId)?.let(DraftMappers::toDomain) }
+
         override suspend fun startDraft(vesselId: String): Result<CatchRecordDraft> =
             runCatching {
                 val existing = dao.getActiveDraftWithChildren(vesselId)
@@ -31,12 +34,14 @@ class RoomCatchRecordDraftRepository
                     return@runCatching DraftMappers.toDomain(existing)
                 }
 
+                val creationTime = clock()
                 val newDraft =
                     CatchRecordDraft(
                         id = idFactory(),
                         vesselId = vesselId,
                         status = DraftStatus.Draft,
-                        modifiedAtEpochMillis = clock(),
+                        modifiedAtEpochMillis = creationTime,
+                        catchRecordReference = CatchRecordReferenceGenerator.generate(creationTime),
                     )
                 persist(newDraft)
                 newDraft

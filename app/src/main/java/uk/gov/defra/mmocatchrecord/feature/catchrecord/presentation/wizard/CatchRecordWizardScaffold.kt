@@ -41,6 +41,12 @@ data class WizardErrorSummaryItem(
     val onClick: () -> Unit,
 )
 
+/**
+ * [title] renders as the page's `headlineLarge` heading — pass a blank string only for the (rare) Phase 8
+ * submission-result screens whose own coloured [uk.gov.defra.mmocatchrecord.common.design.GdsResultBanner]
+ * *is* the page heading (that banner's own text carries the `heading()` semantics instead), so no separate
+ * duplicate heading is rendered above it.
+ */
 @Suppress("FunctionNaming")
 @Composable
 fun CatchRecordWizardScaffold(
@@ -75,11 +81,13 @@ fun CatchRecordWizardScaffold(
                         .padding(Spacing.m),
                 verticalArrangement = Arrangement.spacedBy(Spacing.m),
             ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
-                    modifier = Modifier.semantics { heading() },
-                )
+                if (title.isNotBlank()) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
+                        modifier = Modifier.semantics { heading() },
+                    )
+                }
                 content()
             }
         }

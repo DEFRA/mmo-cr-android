@@ -470,4 +470,44 @@ class RoomCatchRecordDraftRepositoryTests {
             val result = repository.markReadyToSubmit("unknown-draft-id")
             assertTrue(result.isFailure)
         }
+
+    @Test
+    fun `starting a draft generates and persists a catch record reference`() =
+        runTest {
+            clockMillis = 1_700_000_000_000L
+            val started = repository.startDraft("vessel-achilles").getOrThrow()
+            assertNotNull(started.catchRecordReference)
+            assertEquals(CatchRecordReferenceGenerator.generate(clockMillis), started.catchRecordReference)
+
+            // Round-trips unchanged through a save/reload.
+            val reloaded = repository.getActiveDraft("vessel-achilles").getOrThrow()
+            assertEquals(started.catchRecordReference, reloaded?.catchRecordReference)
+        }
+
+    @Test
+    fun `late-submission acknowledgement and pending-sync status round-trip correctly`() =
+        runTest {
+            val started = repository.startDraft("vessel-achilles").getOrThrow()
+            val updated =
+                started.copy(
+                    status = DraftStatus.PendingSync,
+                    lateSubmissionWarningAcknowledged = true,
+                )
+            repository.saveDraft(updated).getOrThrow()
+
+            // PendingSync is a terminal, non-"active" status, so it must be reloaded by id rather than via
+            // getActiveDraft (which only ever returns Draft/ReadyToSubmit — see [DraftStatus.isActive]).
+            val reloaded = repository.getDraftById(updated.id).getOrThrow()
+            assertEquals(DraftStatus.PendingSync, reloaded?.status)
+            assertTrue(reloaded?.lateSubmissionWarningAcknowledged == true)
+        }
+
+    @Test
+    fun `a pending-sync draft does not block starting a new active draft for the same vessel`() =
+        runTest {
+            val first = repository.startDraft("vessel-achilles").getOrThrow()
+            repository.saveDraft(first.copy(status = DraftStatus.PendingSync)).getOrThrow()
+            val second = repository.startDraft("vessel-achilles").getOrThrow()
+            assertTrue(second.id != first.id)
+        }
 }

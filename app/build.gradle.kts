@@ -95,6 +95,12 @@ dependencies {
     ksp(libs.hilt.android.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
 
+    // Offline-first sync (Phase 8): background retry of a queued catch-record submission once
+    // connectivity returns — see ADR 0009.
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.hilt.work)
+    ksp(libs.androidx.hilt.compiler)
+
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
 
@@ -106,6 +112,7 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.room.runtime)
+    testImplementation(libs.androidx.work.testing)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

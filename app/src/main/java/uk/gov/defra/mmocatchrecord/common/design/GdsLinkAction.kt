@@ -11,6 +11,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextDecoration
 
 /**
@@ -23,6 +25,11 @@ import androidx.compose.ui.text.style.TextDecoration
  * currently unavailable) — see the Phase 3 "Remove gear" no-checked-items edge case note in the change
  * summary. Extracted from `GearSummaryScreen`'s original `RemoveGearLink` so the same pattern is not
  * duplicated across the gear-summary, gear-species-checklist, and progressive-disclosure weight fields.
+ *
+ * [accessibleLabel] (Phase 8) overrides the announced TalkBack text when the same visible "Change" text is
+ * repeated many times on one screen (the check-your-answers "Change" links) — GDS guidance is that each
+ * repeated link must announce which row it changes (e.g. "Change vessel"), not identical "Change, Change,
+ * Change..." — while the visible [text] itself stays the short, repeated "Change" per the design.
  */
 @Composable
 fun GdsLinkAction(
@@ -31,6 +38,7 @@ fun GdsLinkAction(
     testTag: String,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    accessibleLabel: String? = null,
 ) {
     Text(
         text = text,
@@ -41,6 +49,9 @@ fun GdsLinkAction(
                 .heightIn(min = Spacing.minTouchTarget)
                 .wrapContentHeight()
                 .clickable(enabled = enabled, onClick = onClick, role = Role.Button)
-                .testTag(testTag),
+                .testTag(testTag)
+                .let {
+                    if (accessibleLabel != null) it.semantics { contentDescription = accessibleLabel } else it
+                },
     )
 }

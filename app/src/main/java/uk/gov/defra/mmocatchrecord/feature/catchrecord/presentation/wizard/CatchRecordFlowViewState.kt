@@ -125,4 +125,11 @@ sealed interface CatchRecordFlowEvent {
     ) : CatchRecordFlowEvent
 
     data object MarkReadyToSubmit : CatchRecordFlowEvent
+
+    /**
+     * Phase 8: the user accepted the check-your-answers declaration and tapped "Accept and submit trip
+     * details" — see [CatchRecordFlowViewModel]'s online/offline branching logic. No payload: the draft to
+     * submit is always the current [UiStatus.Content] draft already held in state.
+     */
+    data object AcceptDeclarationAndSubmit : CatchRecordFlowEvent
 }

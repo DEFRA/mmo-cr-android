@@ -76,12 +76,13 @@ fun GearSummaryScreen(
             // unticked) skips straight past every per-gear/trip-level step, since there is nothing to loop
             // over — this is a deliberate, pre-existing asymmetry from [nextWizardStepForDraft]'s own
             // fallback (which would otherwise route back to [WizardStep.GearSummary] for a "some gear,
-            // none confirmed" resume scenario), preserved unchanged from Phase 4.
+            // none confirmed" resume scenario), preserved unchanged from Phase 4. Routes via
+            // [resolveSubmissionStep] (not [WizardStep.LandingStorage]) since Phase 6 is not yet built.
             val nextStep =
                 if (updatedDraft.gearUses.any { it.confirmedUsedOnTrip }) {
                     nextWizardStepForDraft(updatedDraft)
                 } else {
-                    WizardStep.LandingStorage
+                    resolveSubmissionStep(updatedDraft)
                 }
             viewModel.dispatch(CatchRecordFlowEvent.SaveAndContinue(updatedDraft, nextStep))
             onNavigate(nextStep)

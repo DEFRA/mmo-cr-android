@@ -174,5 +174,60 @@
         <item quantity="many">%1$d o awgrymiadau ar gael</item>
         <item quantity="other">%1$d o awgrymiadau ar gael</item>
     </plurals>
+    <!-- Phase 8: late-submission warning -->
+    <plurals name="late_submission_warning_title">
+        <item quantity="zero">Cyflwynir y cofnod dalfa hwn %1$d diwrnod ar ôl dyddiad diwedd y daith</item>
+        <item quantity="one">Cyflwynir y cofnod dalfa hwn %1$d diwrnod ar ôl dyddiad diwedd y daith</item>
+        <item quantity="two">Cyflwynir y cofnod dalfa hwn %1$d diwrnod ar ôl dyddiad diwedd y daith</item>
+        <item quantity="few">Cyflwynir y cofnod dalfa hwn %1$d diwrnod ar ôl dyddiad diwedd y daith</item>
+        <item quantity="many">Cyflwynir y cofnod dalfa hwn %1$d diwrnod ar ôl dyddiad diwedd y daith</item>
+        <item quantity="other">Cyflwynir y cofnod dalfa hwn %1$d diwrnod ar ôl dyddiad diwedd y daith</item>
+    </plurals>
+    <string name="late_submission_warning_body">Rhaid cyflwyno cofnodion dalfa o fewn 24 awr i daith ddod i ben.</string>
+    <string name="late_submission_warning_check_trip_end_date">Gwiriwch fod dyddiad diwedd y daith</string>
+    <string name="late_submission_warning_check_trip_end_date_suffix">yn gywir cyn i chi barhau.</string>
+    <!-- Phase 8: check your answers -->
+    <string name="check_your_answers_title">Gwiriwch eich cofnod dalfa</string>
+    <string name="check_your_answers_section_trip">Taith</string>
+    <string name="check_your_answers_section_gear_used">Offer a ddefnyddiwyd</string>
+    <string name="check_your_answers_section_species_caught">Rhywogaethau a ddaliwyd</string>
+    <string name="check_your_answers_section_species_not_landed">Rhywogaethau na chawsant eu glanio</string>
+    <string name="check_your_answers_row_vessel">Llong</string>
+    <string name="check_your_answers_row_departure_date">Dyddiad gadael</string>
+    <string name="check_your_answers_row_return_date">Dyddiad dychwelyd</string>
+    <string name="check_your_answers_row_departure_port">Porthladd gadael</string>
+    <string name="check_your_answers_row_return_port">Porthladd dychwelyd</string>
+    <string name="check_your_answers_row_statistical_sub_area">Is-ardal ystadegol</string>
+    <string name="check_your_answers_row_gear_type">Math o offer</string>
+    <string name="check_your_answers_row_times_shot">Nifer y castiau</string>
+    <string name="check_your_answers_row_species">Rhywogaeth</string>
+    <string name="check_your_answers_row_weight_above_minimum_size">Pwysau uwchlaw\'r maint lleiaf a gedwir</string>
+    <string name="check_your_answers_row_weight_below_minimum_size">Pwysau islaw\'r maint lleiaf a gedwir</string>
+    <string name="check_your_answers_row_weight_legally_discarded">Pwysau a waredwyd yn gyfreithlon</string>
+    <string name="check_your_answers_row_not_landed_straight_away">Heb ei lanio</string>
+    <string name="check_your_answers_row_weight_kept_onboard">Pwysau uwchlaw\'r maint lleiaf a gedwir ar y cwch neu mewn cewyll cadw</string>
+    <string name="check_your_answers_change_action">Newid</string>
+    <string name="check_your_answers_change_action_with_label">Newid %1$s</string>
+    <string name="check_your_answers_declaration_intro">Drwy gyflwyno\'r cofnod hwn, rydych yn cytuno bod y wybodaeth a roddwyd gennych yn gyflawn ac yn gywir.</string>
+    <string name="check_your_answers_declaration_bullet_weight_accurate">Mae pwysau\'r pysgod rydych wedi\'u glanio yn gywir</string>
+    <string name="check_your_answers_declaration_bullet_tolerance">Mae hyn o fewn y lefelau goddefiant a ganiateir</string>
+    <string name="check_your_answers_declaration_bullet_action">Gall awdurdodau pysgota gymryd camau o ran cofnodi dalfa anghywir</string>
+    <string name="check_your_answers_submit_action">Derbyn a chyflwyno manylion y daith</string>
+    <!-- Phase 8: submission result -->
+    <string name="submission_success_banner_title">Mae eich cofnod dalfa wedi\'i gyflwyno</string>
+    <string name="submission_reference_label">Cyfeirnod eich cofnod dalfa %1$s</string>
+    <string name="submission_success_what_happens_next_title">Beth sy\'n digwydd nesaf</string>
+    <string name="submission_success_bullet_received">Mae eich cofnod dalfa wedi dod i law\'r awdurdod pysgota perthnasol</string>
+    <string name="submission_success_bullet_email">Byddwch yn cael e-bost cadarnhau o fewn 24 awr</string>
+    <string name="submission_success_bullet_view">Gallwch weld eich cofnodion a gyflwynwyd yn eich cyfrif ar unrhyw adeg</string>
+    <string name="submission_success_bullet_save_reference">Cadwch gyfeirnod eich cofnod dalfa ar gyfer eich cofnodion</string>
+    <string name="view_catch_records_action">Gweld eich cofnodion dalfa</string>
+    <string name="submission_pending_sync_banner_title">Mae eich cofnod dalfa wedi\'i gofnodi</string>
+    <string name="submission_pending_sync_body_title">Anfonwch eich cofnod dalfa i gwblhau\'r cyflwyniad hwn</string>
+    <string name="submission_pending_sync_body">Mae eich cofnod dalfa wedi\'i gadw a bydd yn cael ei anfon yn awtomatig y tro nesaf y bydd gennych signal symudol neu gysylltiad Wi-Fi.</string>
+    <string name="submission_pending_sync_check_records">Gwiriwch eich cofnodion dalfa</string>
+    <string name="submission_pending_sync_check_records_suffix">i wneud yn siŵr bod y statws yn newid i Wedi\'i Gyflwyno. Chi sy\'n gyfrifol am wneud yn siŵr ein bod yn ei dderbyn.</string>
+    <string name="submission_pending_sync_warning">Rhaid i chi gofnodi eich dalfa o fewn 24 awr i lanio.</string>
 </resources>
+
 

@@ -1,3 +1,5 @@
+@file:Suppress("detekt.TooManyFunctions")
+
 package uk.gov.defra.mmocatchrecord.common.design
 
 import androidx.compose.foundation.Canvas
@@ -135,6 +137,73 @@ fun CustomSettingsIcon(
                 strokeWidth = w * 0.12f,
             )
         }
+    }
+}
+
+/** Custom filled check-in-circle icon shape drawer (success confirmation). */
+@Composable
+fun CustomCheckCircleIcon(
+    tint: Color,
+    modifier: Modifier = Modifier,
+) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        drawCircle(color = tint, radius = w * 0.45f, center = Offset(w / 2f, h / 2f))
+        val path =
+            Path().apply {
+                moveTo(w * 0.28f, h * 0.52f)
+                lineTo(w * 0.44f, h * 0.68f)
+                lineTo(w * 0.74f, h * 0.32f)
+            }
+        drawPath(path = path, color = Color.White, style = Stroke(width = w * 0.09f))
+    }
+}
+
+/** Custom filled "i" in-circle icon shape drawer (informational / pending-sync confirmation). */
+@Composable
+fun CustomInfoCircleIcon(
+    tint: Color,
+    modifier: Modifier = Modifier,
+) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        drawCircle(color = tint, radius = w * 0.45f, center = Offset(w / 2f, h / 2f))
+        drawCircle(color = Color.White, radius = w * 0.06f, center = Offset(w / 2f, h * 0.32f))
+        drawLine(
+            color = Color.White,
+            start = Offset(w / 2f, h * 0.46f),
+            end = Offset(w / 2f, h * 0.72f),
+            strokeWidth = w * 0.1f,
+        )
+    }
+}
+
+/** Custom warning-triangle shape drawer (GDS "Warning text" icon — the "!" component). */
+@Composable
+fun CustomWarningIcon(
+    tint: Color,
+    modifier: Modifier = Modifier,
+) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val path =
+            Path().apply {
+                moveTo(w / 2f, h * 0.05f)
+                lineTo(w * 0.97f, h * 0.95f)
+                lineTo(w * 0.03f, h * 0.95f)
+                close()
+            }
+        drawPath(path = path, color = tint)
+        drawLine(
+            color = Color.White,
+            start = Offset(w / 2f, h * 0.4f),
+            end = Offset(w / 2f, h * 0.68f),
+            strokeWidth = w * 0.08f,
+        )
+        drawCircle(color = Color.White, radius = w * 0.045f, center = Offset(w / 2f, h * 0.82f))
     }
 }
 

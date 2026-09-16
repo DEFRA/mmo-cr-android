@@ -8,10 +8,11 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard
 
 import uk.gov.defra.mmocatchrecord.common.navigation.Destination
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
 
 /**
- * A step in the "Create a Catch Record" wizard. Confirmed Stage-1 steps are modelled fully; steps for
+ * A step in the "Create a Catch Record" wizard. Confirmed Stage-1 steps are modeled fully; steps for
  * later phases (gear/measurement/species/landing-storage/review, blocked on user screenshots) are
  * deliberately placeholder-only entries so the flow's shape doesn't need re-plumbing once they're built —
  * see ADR 0007.
@@ -87,11 +88,34 @@ sealed interface WizardStep {
      */
     data object NotLandedStraightAwaySpecies : WizardStep
 
-    /** TODO(Phase 6): landing/storage entry, fields TBD, screenshots pending. */
+    /** TODO(Phase 6): landing/storage entry, fields TBD, screenshots pending — not yet built/routed to. */
     data object LandingStorage : WizardStep
 
-    /** TODO(Phase 6+): review and submit screen. */
-    data object ReviewAndSubmit : WizardStep
+    /**
+     * Phase 8, screen 1 (conditional): "This catch record is being submitted X days after the trip end
+     * date" — shown only when [nextWizardStepForDraft] determines the record is being submitted more than
+     * 24 hours after [uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft.returnDate]
+     * — see [LateSubmissionSupport].
+     */
+    data object LateSubmissionWarning : WizardStep
+
+    /**
+     * Phase 8, screen 2 — the GDS "check your answers" review screen: grouped Trip/Gear used/Species
+     * caught/Species not landed sections (see [CheckYourAnswersSupport]), each row deep-linking back to
+     * the wizard step where it was captured, followed by the declaration and "Accept and submit trip
+     * details" action.
+     *
+     * TODO(Phase 6/7): once landing-storage capture and dependent-data invalidation exist, insert their
+     * steps *before* this one in [nextWizardStepForDraft], and add a "Landing storage" section to
+     * [CheckYourAnswersSupport.buildSections].
+     */
+    data object CheckYourAnswers : WizardStep
+
+    /** Phase 8, screen 3: online submission succeeded — draft status becomes [DraftStatus.Submitted]. */
+    data object SubmissionSuccess : WizardStep
+
+    /** Phase 8, screen 4: submitted while offline (or the online attempt failed) — queued for background sync. */
+    data object SubmissionPendingSync : WizardStep
 }
 
 fun routeFor(step: WizardStep): String =
@@ -112,7 +136,10 @@ fun routeFor(step: WizardStep): String =
         WizardStep.NotLandedStraightAwayDecision -> Destination.CatchRecordFlow.NOT_LANDED_STRAIGHT_AWAY_DECISION_ROUTE
         WizardStep.NotLandedStraightAwaySpecies -> Destination.CatchRecordFlow.NOT_LANDED_STRAIGHT_AWAY_SPECIES_ROUTE
         WizardStep.LandingStorage -> Destination.CatchRecordFlow.PHASE_THREE_COMPLETE_ROUTE
-        WizardStep.ReviewAndSubmit -> Destination.CatchRecordFlow.PHASE_THREE_COMPLETE_ROUTE
+        WizardStep.LateSubmissionWarning -> Destination.CatchRecordFlow.LATE_SUBMISSION_WARNING_ROUTE
+        WizardStep.CheckYourAnswers -> Destination.CatchRecordFlow.CHECK_YOUR_ANSWERS_ROUTE
+        WizardStep.SubmissionSuccess -> Destination.CatchRecordFlow.SUBMISSION_SUCCESS_ROUTE
+        WizardStep.SubmissionPendingSync -> Destination.CatchRecordFlow.SUBMISSION_PENDING_SYNC_ROUTE
     }
 
 private fun isStatRectanglePending(gearUse: GearUse): Boolean = gearUse.statisticalSubRectangleCode == null
@@ -143,11 +170,14 @@ fun nextGearUsePendingStatRectangle(draft: CatchRecordDraft): GearUse? =
 fun nextGearUsePendingSpecies(draft: CatchRecordDraft): GearUse? =
     firstIncompleteConfirmedGearUse(draft)?.takeIf { !isStatRectanglePending(it) && isSpeciesPending(it) }
 
-fun nextWizardStepForDraft(draft: CatchRecordDraft): WizardStep =
+fun nextWizardStepForDraft(
+    draft: CatchRecordDraft,
+    nowEpochMillis: Long = System.currentTimeMillis(),
+): WizardStep =
     when {
         draft.isTripToday == null -> WizardStep.TripToday
-        draft.isTripToday == false && draft.departureDate == null -> WizardStep.DepartureDate
-        draft.isTripToday == false && draft.returnDate == null -> WizardStep.ReturnDate
+        !draft.isTripToday && draft.departureDate == null -> WizardStep.DepartureDate
+        !draft.isTripToday && draft.returnDate == null -> WizardStep.ReturnDate
         draft.departurePort == null -> WizardStep.DeparturePort
         draft.returnPort == null -> WizardStep.ReturnPort
         draft.gearUses.isEmpty() -> WizardStep.GearSearch
@@ -162,6 +192,31 @@ fun nextWizardStepForDraft(draft: CatchRecordDraft): WizardStep =
             WizardStep.NotLandedStraightAwayDecision
         draft.notLandedStraightAway == true && draft.notLandedSpeciesEntries.isEmpty() ->
             WizardStep.NotLandedStraightAwaySpecies
-        draft.gearUses.any { it.confirmedUsedOnTrip } -> WizardStep.LandingStorage
+        draft.gearUses.any { it.confirmedUsedOnTrip } -> resolveSubmissionStep(draft, nowEpochMillis)
         else -> WizardStep.GearSummary
+    }
+
+/**
+ * The terminal step once every earlier wizard step is complete for [draft]: the Phase 8 submission-result
+ * screen if [draft] already has an outcome, the (conditional) late-submission warning if it hasn't yet been
+ * acknowledged and applies, otherwise the check-your-answers review screen.
+ *
+ * TODO(Phase 6/7): once landing-storage capture and dependent-data invalidation are built, their steps
+ * belong *before* this resolver is reached (i.e. inserted into [nextWizardStepForDraft] ahead of the two
+ * call sites below), not inside it.
+ *
+ * Exposed (not `private`) because [GearSummaryScreen] also calls it directly for its own "no confirmed gear
+ * left" edge case — see that screen's doc comment.
+ */
+fun resolveSubmissionStep(
+    draft: CatchRecordDraft,
+    nowEpochMillis: Long = System.currentTimeMillis(),
+): WizardStep =
+    when {
+        draft.status == DraftStatus.Submitted -> WizardStep.SubmissionSuccess
+        draft.status == DraftStatus.PendingSync -> WizardStep.SubmissionPendingSync
+        !draft.lateSubmissionWarningAcknowledged &&
+            LateSubmissionSupport.isLateSubmission(draft.returnDate, nowEpochMillis) ->
+            WizardStep.LateSubmissionWarning
+        else -> WizardStep.CheckYourAnswers
     }

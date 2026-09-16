@@ -19,6 +19,7 @@ import org.junit.Test
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DmyDate
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementValue
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelection
@@ -38,13 +39,26 @@ class CatchRecordFlowViewModelTests {
         Dispatchers.resetMain()
     }
 
+    @Suppress("LongParameterList")
     private fun buildViewModel(
         repository: FakeCatchRecordDraftRepository,
         referenceDataRepository: FakeReferenceDataRepository = FakeReferenceDataRepository(),
+        submissionRepository: FakeCatchRecordSubmissionRepository = FakeCatchRecordSubmissionRepository(),
+        connectivityChecker: FakeNetworkConnectivityChecker = FakeNetworkConnectivityChecker(),
+        syncScheduler: FakeCatchRecordSyncScheduler = FakeCatchRecordSyncScheduler(),
         clock: () -> Long = { 0L },
         idFactory: () -> String = gearIdSequenceFactory(),
         dispatcher: kotlinx.coroutines.CoroutineDispatcher,
-    ) = CatchRecordFlowViewModel(repository, referenceDataRepository, clock, idFactory, dispatcher)
+    ) = CatchRecordFlowViewModel(
+        repository,
+        referenceDataRepository,
+        submissionRepository,
+        connectivityChecker,
+        syncScheduler,
+        clock,
+        idFactory,
+        dispatcher,
+    )
 
     /** Deterministic, unique-per-call id generator for gear uses created during a single test. */
     private fun gearIdSequenceFactory(): () -> String {
@@ -430,7 +444,8 @@ class CatchRecordFlowViewModelTests {
      * reached (see [nextGearUsePendingStatRectangle]/[nextGearUsePendingSpecies]/[nextWizardStepForDraft]).
      * Once every confirmed gear has both, the flow proceeds to the Phase 5B trip-level
      * [WizardStep.NotLandedStraightAwayDecision] step (not per-gear) — answering `false` there advances
-     * straight to [WizardStep.LandingStorage], skipping [WizardStep.NotLandedStraightAwaySpecies] entirely.
+     * straight to [WizardStep.CheckYourAnswers] (Phase 6/7 not yet built), skipping
+     * [WizardStep.NotLandedStraightAwaySpecies] entirely.
      */
     @Suppress("LongMethod")
     @Test
@@ -555,14 +570,122 @@ class CatchRecordFlowViewModelTests {
                 assertNull(nextGearUsePendingStatRectangle(draftAfterGearTwoSpecies))
                 assertNull(nextGearUsePendingSpecies(draftAfterGearTwoSpecies))
 
-                // Answering "No" to the 5B decision skips WizardStep.NotLandedStraightAwaySpecies entirely.
+                // Answering "No" to the 5B decision skips WizardStep.NotLandedStraightAwaySpecies entirely,
+                // landing on the Phase 8 check-your-answers step directly (Phase 6/7 not yet built — see
+                // resolveSubmissionStep's TODO).
                 val afterDecision = draftAfterGearTwoSpecies.copy(notLandedStraightAway = false)
                 viewModel.dispatch(
                     CatchRecordFlowEvent.SaveAndContinue(afterDecision, nextWizardStepForDraft(afterDecision)),
                 )
                 assertEquals(UiStatus.Loading, awaitItem().status)
                 val afterDecisionState = awaitItem()
-                assertEquals(WizardStep.LandingStorage, afterDecisionState.currentStep)
+                assertEquals(WizardStep.CheckYourAnswers, afterDecisionState.currentStep)
             }
+        }
+
+    // --- Phase 8: accept-declaration-and-submit online/offline branching -------------------------
+
+    @Test
+    fun `accepting the declaration while online and submission succeeds routes to submission success`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            val started = repository.startDraft("vessel-achilles").getOrThrow()
+            val submissionRepository = FakeCatchRecordSubmissionRepository(shouldSucceed = true)
+            val connectivityChecker = FakeNetworkConnectivityChecker(connected = true)
+            val syncScheduler = FakeCatchRecordSyncScheduler()
+            val viewModel =
+                buildViewModel(
+                    repository = repository,
+                    submissionRepository = submissionRepository,
+                    connectivityChecker = connectivityChecker,
+                    syncScheduler = syncScheduler,
+                    dispatcher = dispatcher,
+                )
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            testScheduler.advanceUntilIdle()
+            viewModel.dispatch(CatchRecordFlowEvent.ResumeDraft)
+            testScheduler.advanceUntilIdle()
+
+            viewModel.state.test {
+                awaitItem()
+                viewModel.dispatch(CatchRecordFlowEvent.AcceptDeclarationAndSubmit)
+                assertEquals(UiStatus.Loading, awaitItem().status)
+                val submitted = awaitItem()
+                assertEquals(WizardStep.SubmissionSuccess, submitted.currentStep)
+                val draft = (submitted.status as UiStatus.Content<CatchRecordDraft>).value
+                assertEquals(DraftStatus.Submitted, draft.status)
+            }
+            assertEquals(listOf(started.id), submissionRepository.submittedDrafts.map { it.id })
+            assertTrue(syncScheduler.scheduledDraftIds.isEmpty())
+        }
+
+    @Test
+    fun `accepting the declaration while online but the submission fails falls back to pending sync`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            val started = repository.startDraft("vessel-achilles").getOrThrow()
+            val submissionRepository = FakeCatchRecordSubmissionRepository(shouldSucceed = false)
+            val connectivityChecker = FakeNetworkConnectivityChecker(connected = true)
+            val syncScheduler = FakeCatchRecordSyncScheduler()
+            val viewModel =
+                buildViewModel(
+                    repository = repository,
+                    submissionRepository = submissionRepository,
+                    connectivityChecker = connectivityChecker,
+                    syncScheduler = syncScheduler,
+                    dispatcher = dispatcher,
+                )
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            testScheduler.advanceUntilIdle()
+            viewModel.dispatch(CatchRecordFlowEvent.ResumeDraft)
+            testScheduler.advanceUntilIdle()
+
+            viewModel.state.test {
+                awaitItem()
+                viewModel.dispatch(CatchRecordFlowEvent.AcceptDeclarationAndSubmit)
+                assertEquals(UiStatus.Loading, awaitItem().status)
+                val submitted = awaitItem()
+                assertEquals(WizardStep.SubmissionPendingSync, submitted.currentStep)
+                val draft = (submitted.status as UiStatus.Content<CatchRecordDraft>).value
+                assertEquals(DraftStatus.PendingSync, draft.status)
+            }
+            assertEquals(listOf(started.id), syncScheduler.scheduledDraftIds)
+        }
+
+    @Test
+    fun `accepting the declaration while offline never attempts a submission and enqueues pending sync`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            val started = repository.startDraft("vessel-achilles").getOrThrow()
+            val submissionRepository = FakeCatchRecordSubmissionRepository(shouldSucceed = true)
+            val connectivityChecker = FakeNetworkConnectivityChecker(connected = false)
+            val syncScheduler = FakeCatchRecordSyncScheduler()
+            val viewModel =
+                buildViewModel(
+                    repository = repository,
+                    submissionRepository = submissionRepository,
+                    connectivityChecker = connectivityChecker,
+                    syncScheduler = syncScheduler,
+                    dispatcher = dispatcher,
+                )
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            testScheduler.advanceUntilIdle()
+            viewModel.dispatch(CatchRecordFlowEvent.ResumeDraft)
+            testScheduler.advanceUntilIdle()
+
+            viewModel.state.test {
+                awaitItem()
+                viewModel.dispatch(CatchRecordFlowEvent.AcceptDeclarationAndSubmit)
+                assertEquals(UiStatus.Loading, awaitItem().status)
+                val submitted = awaitItem()
+                assertEquals(WizardStep.SubmissionPendingSync, submitted.currentStep)
+                val draft = (submitted.status as UiStatus.Content<CatchRecordDraft>).value
+                assertEquals(DraftStatus.PendingSync, draft.status)
+            }
+            assertTrue(submissionRepository.submittedDrafts.isEmpty())
+            assertEquals(listOf(started.id), syncScheduler.scheduledDraftIds)
         }
 }

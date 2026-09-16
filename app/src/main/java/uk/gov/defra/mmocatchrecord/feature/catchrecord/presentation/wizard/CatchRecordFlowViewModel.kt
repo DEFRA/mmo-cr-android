@@ -11,9 +11,13 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import uk.gov.defra.mmocatchrecord.core.architecture.BaseViewModel
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
+import uk.gov.defra.mmocatchrecord.core.connectivity.NetworkConnectivityChecker
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftRepository
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordSubmissionRepository
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordSyncScheduler
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DmyDate
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementValue
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelection
@@ -27,12 +31,15 @@ import javax.inject.Inject
 
 /** Nav-graph-scoped ViewModel shared by every catch-record wizard screen. */
 @HiltViewModel
-@Suppress("TooManyFunctions")
+@Suppress("TooManyFunctions", "LongParameterList")
 class CatchRecordFlowViewModel
     @Inject
     constructor(
         private val draftRepository: CatchRecordDraftRepository,
         private val referenceDataRepository: ReferenceDataRepository,
+        private val submissionRepository: CatchRecordSubmissionRepository,
+        private val connectivityChecker: NetworkConnectivityChecker,
+        private val syncScheduler: CatchRecordSyncScheduler,
         private val clock: () -> Long,
         private val idFactory: () -> String,
         defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
@@ -56,6 +63,7 @@ class CatchRecordFlowViewModel
                 is CatchRecordFlowEvent.SpeciesAddedToCurrentGear -> speciesAddedToCurrentGear(event.speciesId)
                 is CatchRecordFlowEvent.SpeciesRemoved -> persistDraftWithoutStepChange(event.updatedDraft)
                 CatchRecordFlowEvent.MarkReadyToSubmit -> markReadyToSubmit()
+                CatchRecordFlowEvent.AcceptDeclarationAndSubmit -> acceptDeclarationAndSubmit()
             }
         }
 
@@ -104,7 +112,9 @@ class CatchRecordFlowViewModel
 
         private fun resumeDraft() {
             val draft = currentDraftOrNull() ?: return
-            updateState { it.copy(currentStep = nextWizardStepForDraft(draft), status = UiStatus.Content(draft)) }
+            updateState {
+                it.copy(currentStep = nextWizardStepForDraft(draft, clock()), status = UiStatus.Content(draft))
+            }
         }
 
         private fun deleteDraft() {
@@ -259,6 +269,53 @@ class CatchRecordFlowViewModel
                     onFailure = ::emitLoadError,
                 )
             }
+        }
+
+        /**
+         * Phase 8 "Accept and submit trip details": attempts an online submission when connected, falling
+         * back to the offline pending-sync path both when there is no connectivity at all *and* when an
+         * online attempt itself fails (e.g. the stub/real backend call throws) — either way the user's
+         * declaration has been accepted and the draft must not be lost, only queued — see ADR 0009.
+         */
+        private fun acceptDeclarationAndSubmit() {
+            val draft = currentDraftOrNull() ?: return
+            updateState { it.copy(status = UiStatus.Loading) }
+            launchInViewModelScope {
+                if (connectivityChecker.isConnected()) {
+                    submissionRepository.submit(draft).fold(
+                        onSuccess = { completeSubmission(draft) },
+                        onFailure = { enqueuePendingSync(draft) },
+                    )
+                } else {
+                    enqueuePendingSync(draft)
+                }
+            }
+        }
+
+        private suspend fun completeSubmission(draft: CatchRecordDraft) {
+            draftRepository.saveDraft(draft.copy(status = DraftStatus.Submitted)).fold(
+                onSuccess = { saved ->
+                    updateState {
+                        it.copy(
+                            status = UiStatus.Content(saved),
+                            currentStep = WizardStep.SubmissionSuccess,
+                        )
+                    }
+                },
+                onFailure = ::emitLoadError,
+            )
+        }
+
+        private suspend fun enqueuePendingSync(draft: CatchRecordDraft) {
+            draftRepository.saveDraft(draft.copy(status = DraftStatus.PendingSync)).fold(
+                onSuccess = { saved ->
+                    syncScheduler.scheduleSync(saved.id)
+                    updateState {
+                        it.copy(status = UiStatus.Content(saved), currentStep = WizardStep.SubmissionPendingSync)
+                    }
+                },
+                onFailure = ::emitLoadError,
+            )
         }
 
         private fun emitLoadedDraft(

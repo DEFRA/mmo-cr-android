@@ -5,11 +5,13 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DmyDate
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.NotLandedSpeciesEntry
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelection
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectionMode
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
+import java.time.Instant
 
 class WizardStepTests {
     @Suppress("LongParameterList")
@@ -161,7 +163,7 @@ class WizardStepTests {
     }
 
     @Test
-    fun `not-landed decision answered false routes straight to landing storage`() {
+    fun `not-landed decision answered false routes straight to check your answers`() {
         val gearOne =
             gearUse(
                 "gear-use-1",
@@ -170,7 +172,7 @@ class WizardStepTests {
                 speciesWeights = listOf(confirmedSpecies("species-cod")),
             )
         val theDraft = draft(gearUses = listOf(gearOne), notLandedStraightAway = false)
-        assertEquals(WizardStep.LandingStorage, nextWizardStepForDraft(theDraft))
+        assertEquals(WizardStep.CheckYourAnswers, nextWizardStepForDraft(theDraft))
     }
 
     @Test
@@ -187,7 +189,7 @@ class WizardStepTests {
     }
 
     @Test
-    fun `not-landed decision answered true with species entries recorded routes to landing storage`() {
+    fun `not-landed decision answered true with species entries recorded routes to check your answers`() {
         val gearOne =
             gearUse(
                 "gear-use-1",
@@ -201,7 +203,7 @@ class WizardStepTests {
                 notLandedStraightAway = true,
                 notLandedSpeciesEntries = listOf(NotLandedSpeciesEntry(speciesId = "species-cod")),
             )
-        assertEquals(WizardStep.LandingStorage, nextWizardStepForDraft(theDraft))
+        assertEquals(WizardStep.CheckYourAnswers, nextWizardStepForDraft(theDraft))
     }
 
     @Test
@@ -209,5 +211,43 @@ class WizardStepTests {
         val pending = gearUse("gear-use-1", confirmedUsedOnTrip = true)
         val theDraft = draft(departurePort = null, gearUses = listOf(pending))
         assertEquals(WizardStep.DeparturePort, nextWizardStepForDraft(theDraft))
+    }
+
+    @Test
+    fun `submitted draft routes to submission success regardless of late-submission timing`() {
+        val theDraft = draft(returnDate = DmyDate(1, 1, 2020)).copy(status = DraftStatus.Submitted)
+        val farFuture = Instant.parse("2020-06-01T00:00:00Z").toEpochMilli()
+        assertEquals(WizardStep.SubmissionSuccess, resolveSubmissionStep(theDraft, farFuture))
+    }
+
+    @Test
+    fun `pending-sync draft routes to submission pending sync`() {
+        val theDraft = draft().copy(status = DraftStatus.PendingSync)
+        assertEquals(WizardStep.SubmissionPendingSync, resolveSubmissionStep(theDraft))
+    }
+
+    @Test
+    fun `late unacknowledged submission routes to the late-submission warning`() {
+        val returnDate = DmyDate(1, 1, 2020)
+        val theDraft = draft(returnDate = returnDate)
+        // Well over 24h after 2020-01-01 23:59 UTC.
+        val muchLater = Instant.parse("2020-01-05T00:00:00Z").toEpochMilli()
+        assertEquals(WizardStep.LateSubmissionWarning, resolveSubmissionStep(theDraft, muchLater))
+    }
+
+    @Test
+    fun `late submission already acknowledged skips the warning and routes to check your answers`() {
+        val returnDate = DmyDate(1, 1, 2020)
+        val theDraft = draft(returnDate = returnDate).copy(lateSubmissionWarningAcknowledged = true)
+        val muchLater = Instant.parse("2020-01-05T00:00:00Z").toEpochMilli()
+        assertEquals(WizardStep.CheckYourAnswers, resolveSubmissionStep(theDraft, muchLater))
+    }
+
+    @Test
+    fun `submission within 24 hours routes straight to check your answers, no warning`() {
+        val returnDate = DmyDate(1, 1, 2020)
+        val theDraft = draft(returnDate = returnDate)
+        val soonAfter = Instant.parse("2020-01-02T00:00:00Z").toEpochMilli()
+        assertEquals(WizardStep.CheckYourAnswers, resolveSubmissionStep(theDraft, soonAfter))
     }
 }

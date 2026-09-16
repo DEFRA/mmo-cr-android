@@ -38,6 +38,13 @@ data class DraftEntity(
     val modifiedAtEpochMillis: Long,
     /** Phase 5B: `null` (column default) until the "not landing straight away" question is answered. */
     val notLandedStraightAway: Boolean? = null,
+    /** Phase 8: user-facing reference generated once at draft creation — see [CatchRecordReferenceGenerator]. */
+    val catchRecordReference: String? = null,
+    /**
+     * Phase 8: see [uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft]'s
+     * `lateSubmissionWarningAcknowledged`.
+     */
+    val lateSubmissionWarningAcknowledged: Boolean = false,
 )
 
 /** One gear deployment within a draft trip. Cascades from [DraftEntity] on delete (FR10 invalidation). */

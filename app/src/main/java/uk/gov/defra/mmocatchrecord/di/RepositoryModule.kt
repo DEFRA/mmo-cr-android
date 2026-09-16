@@ -1,13 +1,21 @@
 package uk.gov.defra.mmocatchrecord.di
 
+import android.content.Context
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import uk.gov.defra.mmocatchrecord.core.connectivity.AndroidNetworkConnectivityChecker
+import uk.gov.defra.mmocatchrecord.core.connectivity.NetworkConnectivityChecker
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.CatchRecordDraftDao
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.RoomCatchRecordDraftRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.StubReferenceDataRepository
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission.StubCatchRecordSubmissionRepository
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.sync.WorkManagerCatchRecordSyncScheduler
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftRepository
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordSubmissionRepository
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordSyncScheduler
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.ReferenceDataRepository
 import uk.gov.defra.mmocatchrecord.feature.home.data.FakeHomeRepository
 import uk.gov.defra.mmocatchrecord.feature.home.domain.HomeRepository
@@ -51,4 +59,21 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideReferenceDataRepository(): ReferenceDataRepository = StubReferenceDataRepository()
+
+    @Provides
+    @Singleton
+    fun provideCatchRecordSubmissionRepository(): CatchRecordSubmissionRepository =
+        StubCatchRecordSubmissionRepository()
+
+    @Provides
+    @Singleton
+    fun provideNetworkConnectivityChecker(
+        @ApplicationContext context: Context,
+    ): NetworkConnectivityChecker = AndroidNetworkConnectivityChecker(context)
+
+    @Provides
+    @Singleton
+    fun provideCatchRecordSyncScheduler(
+        @ApplicationContext context: Context,
+    ): CatchRecordSyncScheduler = WorkManagerCatchRecordSyncScheduler(context)
 }

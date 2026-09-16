@@ -36,6 +36,10 @@ sealed class Destination(
         const val GEAR_SPECIES_CHECKLIST_ROUTE = "$GRAPH_ROUTE/gear_species_checklist"
         const val NOT_LANDED_STRAIGHT_AWAY_DECISION_ROUTE = "$GRAPH_ROUTE/not_landed_straight_away_decision"
         const val NOT_LANDED_STRAIGHT_AWAY_SPECIES_ROUTE = "$GRAPH_ROUTE/not_landed_straight_away_species"
+        const val LATE_SUBMISSION_WARNING_ROUTE = "$GRAPH_ROUTE/late_submission_warning"
+        const val CHECK_YOUR_ANSWERS_ROUTE = "$GRAPH_ROUTE/check_your_answers"
+        const val SUBMISSION_SUCCESS_ROUTE = "$GRAPH_ROUTE/submission_success"
+        const val SUBMISSION_PENDING_SYNC_ROUTE = "$GRAPH_ROUTE/submission_pending_sync"
 
         /**
          * Placeholder landing spot after the gear-summary checklist's "Save and continue", until the
