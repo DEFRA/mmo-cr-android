@@ -69,6 +69,8 @@ class FakeCatchRecordDraftRepository(
 
     private fun <T> failure(): Result<T> {
         failNextOperation = false
-        return Result.failure(IllegalStateException("Simulated failure"))
+        // A generic repository I/O failure — matches SafeErrorMapper's transient/retryable classification
+        // for IOException (see that class's docs), which is what a real Room/disk failure looks like.
+        return Result.failure(java.io.IOException("Simulated failure"))
     }
 }

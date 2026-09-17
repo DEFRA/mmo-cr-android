@@ -75,6 +75,7 @@ fun DeparturePortScreen(
             viewModel.dispatch(CatchRecordFlowEvent.SaveAndContinue(updatedDraft, WizardStep.ReturnPort))
             onNavigate(WizardStep.ReturnPort)
         },
+        onRetry = { viewModel.dispatch(CatchRecordFlowEvent.Retry) },
         onBack = onBack,
         modifier = modifier,
     )
@@ -89,6 +90,7 @@ private fun DeparturePortScreen(
     onSubmit: (CatchRecordDraft) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onRetry: () -> Unit = {},
 ) {
     CatchRecordWizardScaffold(
         screenTestTag = DeparturePortScreenTestTags.SCREEN,
@@ -98,7 +100,13 @@ private fun DeparturePortScreen(
     ) {
         when (val status = state.status) {
             UiStatus.Idle, UiStatus.Loading -> WizardLoadingState()
-            is UiStatus.Error -> WizardErrorState(status.message, DeparturePortScreenTestTags.ERROR_MESSAGE)
+            is UiStatus.Error ->
+                WizardErrorState(
+                    message = status.message,
+                    testTag = DeparturePortScreenTestTags.ERROR_MESSAGE,
+                    isRetryable = status.isRetryable,
+                    onRetry = onRetry,
+                )
             is UiStatus.Content ->
                 DeparturePortScreenContent(
                     draft = status.value,

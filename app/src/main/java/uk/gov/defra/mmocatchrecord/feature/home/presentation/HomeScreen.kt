@@ -20,7 +20,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -41,6 +40,7 @@ import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
 import uk.gov.defra.mmocatchrecord.common.design.RoyalCrestPlaceholder
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
+import uk.gov.defra.mmocatchrecord.core.language.AppLanguageViewModel
 import uk.gov.defra.mmocatchrecord.feature.home.domain.CatchRecordStatus
 import uk.gov.defra.mmocatchrecord.feature.home.domain.CatchRecordSummary
 import uk.gov.defra.mmocatchrecord.feature.home.domain.HomeSummary
@@ -58,9 +58,10 @@ fun HomeScreen(
     onCreateCatchRecord: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
+    languageViewModel: AppLanguageViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
-    var currentLanguage by remember { mutableStateOf("en") }
+    val currentLanguage by languageViewModel.language.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) }
 
     AppLanguageProvider(language = currentLanguage) {
@@ -68,7 +69,7 @@ fun HomeScreen(
             topBar = {
                 GdsTopAppBar(
                     currentLanguage = currentLanguage,
-                    onLanguageToggle = { currentLanguage = if (currentLanguage == "en") "cy" else "en" },
+                    onLanguageToggle = languageViewModel::toggleLanguage,
                     onBackClick = onSignOut,
                     showBackButton = false,
                 )

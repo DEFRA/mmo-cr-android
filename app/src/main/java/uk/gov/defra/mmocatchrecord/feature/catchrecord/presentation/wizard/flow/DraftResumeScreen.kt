@@ -54,7 +54,13 @@ fun DraftResumeScreen(
     ) {
         when (val status = state.status) {
             UiStatus.Loading -> WizardLoadingState()
-            is UiStatus.Error -> WizardErrorState(status.message, DraftResumeScreenTestTags.ERROR_MESSAGE)
+            is UiStatus.Error ->
+                WizardErrorState(
+                    message = status.message,
+                    testTag = DraftResumeScreenTestTags.ERROR_MESSAGE,
+                    isRetryable = status.isRetryable,
+                    onRetry = { viewModel.dispatch(CatchRecordFlowEvent.Retry) },
+                )
             UiStatus.Idle -> WizardLoadingState()
             is UiStatus.Content ->
                 DraftResumeScreenContent(

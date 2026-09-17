@@ -10,15 +10,18 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
-import uk.gov.defra.mmocatchrecord.common.navigation.Destination
+import uk.gov.defra.mmocatchrecord.common.navigation.AppLockRoute
+import uk.gov.defra.mmocatchrecord.common.navigation.HomeRoute
 import uk.gov.defra.mmocatchrecord.common.navigation.MmoNavHost
+import uk.gov.defra.mmocatchrecord.common.navigation.SignInRoute
+import uk.gov.defra.mmocatchrecord.common.navigation.SplashRoute
 
-private fun RootPhase.toDestination(): Destination =
+private fun RootPhase.toRoute(): Any =
     when (this) {
-        RootPhase.SPLASH -> Destination.Splash
-        RootPhase.SIGN_IN -> Destination.SignIn
-        RootPhase.APP_LOCK -> Destination.AppLock
-        RootPhase.HOME -> Destination.Home
+        RootPhase.SPLASH -> SplashRoute
+        RootPhase.SIGN_IN -> SignInRoute
+        RootPhase.APP_LOCK -> AppLockRoute
+        RootPhase.HOME -> HomeRoute
     }
 
 /**
@@ -50,8 +53,8 @@ fun RootNavigation(
     }
 
     LaunchedEffect(uiState.phase) {
-        val destination = uiState.phase.toDestination()
-        navController.navigate(destination.route) {
+        val destination = uiState.phase.toRoute()
+        navController.navigate(destination) {
             // popUpTo(0) is a fragile idiom: id 0 never matches a real (hash-based) destination id, so
             // NavController silently pops nothing — every phase change (now SPLASH, SIGN_IN, APP_LOCK,
             // HOME) just pushes a new entry, and the back stack grows unbounded across the app's
@@ -66,7 +69,7 @@ fun RootNavigation(
 
     MmoNavHost(
         navController = navController,
-        startDestination = uiState.phase.toDestination(),
+        startDestination = uiState.phase.toRoute(),
         onRootEvent = sessionCoordinator::dispatch,
         modifier = modifier,
     )

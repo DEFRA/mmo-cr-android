@@ -221,6 +221,7 @@
     <string name="submission_pending_sync_check_records">Check your catch records</string>
     <string name="submission_pending_sync_check_records_suffix">to make sure the status changes to Submitted. You are responsible for making sure we receive it.</string>
     <string name="submission_pending_sync_warning">You must record your catch within 24 hours of landing.</string>
+    <string name="wizard_error_retry_action">Try again</string>
 </resources>
 
 

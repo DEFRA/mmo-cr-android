@@ -87,17 +87,28 @@ fun GearSpeciesChecklistScreen(
     onNavigate: (WizardStep) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    editGearUseId: String? = null,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     GearSpeciesChecklistScreen(
         state = state,
+        editGearUseId = editGearUseId,
         onRemoveSpecies = { updatedDraft -> viewModel.dispatch(CatchRecordFlowEvent.SpeciesRemoved(updatedDraft)) },
         onAddAnotherSpecies = { onNavigate(WizardStep.GearSpeciesSearch) },
         onSubmit = { updatedDraft ->
-            val nextStep = nextWizardStepForDraft(updatedDraft)
-            viewModel.dispatch(CatchRecordFlowEvent.SaveAndContinue(updatedDraft, nextStep))
-            onNavigate(nextStep)
+            if (editGearUseId != null) {
+                val speciesWeights = updatedDraft.gearUses.firstOrNull { it.id == editGearUseId }?.speciesWeights
+                if (speciesWeights != null) {
+                    viewModel.dispatch(CatchRecordFlowEvent.EditGearSpeciesWeights(editGearUseId, speciesWeights))
+                }
+                onNavigate(WizardStep.CheckYourAnswers)
+            } else {
+                val nextStep = nextWizardStepForDraft(updatedDraft)
+                viewModel.dispatch(CatchRecordFlowEvent.SaveAndContinue(updatedDraft, nextStep))
+                onNavigate(nextStep)
+            }
         },
+        onRetry = { viewModel.dispatch(CatchRecordFlowEvent.Retry) },
         onBack = onBack,
         modifier = modifier,
     )
@@ -112,9 +123,16 @@ private fun GearSpeciesChecklistScreen(
     onSubmit: (CatchRecordDraft) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    editGearUseId: String? = null,
+    onRetry: () -> Unit = {},
 ) {
     val draft = (state.status as? UiStatus.Content<CatchRecordDraft>)?.value
-    val currentGearUse = draft?.let(::nextGearUsePendingSpecies)
+    val currentGearUse =
+        if (editGearUseId != null) {
+            draft?.gearUses?.firstOrNull { it.id == editGearUseId }
+        } else {
+            draft?.let(::nextGearUsePendingSpecies)
+        }
     val gearType = currentGearUse?.let { gearUse -> state.gearTypes.firstOrNull { it.id == gearUse.gearTypeId } }
     val gearNameWithMeasurement =
         currentGearUse?.let { GearStatRectangleSupport.gearNameWithIdentifyingMeasurementFor(gearType, it) }
@@ -129,7 +147,13 @@ private fun GearSpeciesChecklistScreen(
     ) {
         when (val status = state.status) {
             UiStatus.Idle, UiStatus.Loading -> WizardLoadingState()
-            is UiStatus.Error -> WizardErrorState(status.message, GearSpeciesChecklistScreenTestTags.CHECKLIST_ERROR)
+            is UiStatus.Error ->
+                WizardErrorState(
+                    message = status.message,
+                    testTag = GearSpeciesChecklistScreenTestTags.CHECKLIST_ERROR,
+                    isRetryable = status.isRetryable,
+                    onRetry = onRetry,
+                )
             is UiStatus.Content ->
                 if (draft == null || currentGearUse == null) {
                     // Defensive only — see the equivalent branch in GearSpeciesSearchScreen.

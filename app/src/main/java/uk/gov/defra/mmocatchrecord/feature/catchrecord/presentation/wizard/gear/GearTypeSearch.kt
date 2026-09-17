@@ -11,6 +11,16 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip.
 object GearTypeSearch {
     const val MIN_QUERY_LENGTH = PortSearch.MIN_QUERY_LENGTH
 
+    /**
+     * Gear types selectable in the wizard: those with a non-empty [GearType.measurementFields] schema.
+     * Gear types whose measurement schema is not yet confirmed (TBC placeholders — see
+     * [uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.StubReferenceDataRepository])
+     * must stay hidden until a real schema exists, per the approved product decision — there is no
+     * "generic no-fields" measurement screen to fall back to.
+     */
+    fun selectableGearTypes(allGearTypes: List<GearType>): List<GearType> =
+        allGearTypes.filter { it.measurementFields.isNotEmpty() }
+
     fun filterSuggestions(
         query: String,
         allGearTypes: List<GearType>,
@@ -20,7 +30,7 @@ object GearTypeSearch {
             return emptyList()
         }
 
-        return allGearTypes
+        return selectableGearTypes(allGearTypes)
             .filter { it.name.contains(normalizedQuery, ignoreCase = true) }
             .sortedBy { it.name }
     }

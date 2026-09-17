@@ -11,10 +11,22 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectio
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectionMode
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
 
+/**
+ * Thrown when a persisted Room entity holds a value that cannot be safely mapped back to the domain model
+ * (e.g. an enum-name column with a value that matches none of the current enum's constants) — see finding
+ * on "safe `DraftMappers` handling of null/unknown enums". Deliberately a distinct, named exception type
+ * (never a bare `!!`/unchecked cast) so callers can classify it as a terminal, non-retryable data-corruption
+ * failure (see `SafeErrorMapper`) rather than a transient one.
+ */
+class DraftMappingException(
+    message: String,
+) : IllegalStateException(message)
+
 /** Maps between the [CatchRecordDraft] domain aggregate and its Room entity representation. */
 object DraftMappers {
     fun toEntities(draft: CatchRecordDraft): DraftAggregateEntities = DraftToEntityMapper.map(draft)
 
+    /** @throws DraftMappingException if [entity] holds a persisted value that cannot be safely mapped. */
     fun toDomain(entity: DraftWithChildren): CatchRecordDraft = EntityToDraftMapper.map(entity)
 }
 
@@ -146,12 +158,20 @@ private object EntityToDraftMapper {
             landingStorageEntries = toLandingStorageEntries(entity.landingStorage),
             notLandedStraightAway = draft.notLandedStraightAway,
             notLandedSpeciesEntries = entity.notLandedSpecies.map(::toNotLandedSpeciesEntry),
-            status = DraftStatus.valueOf(draft.status),
+            status = toDraftStatus(draft.status),
             modifiedAtEpochMillis = draft.modifiedAtEpochMillis,
             catchRecordReference = draft.catchRecordReference,
             lateSubmissionWarningAcknowledged = draft.lateSubmissionWarningAcknowledged,
         )
     }
+
+    private fun toDraftStatus(raw: String): DraftStatus =
+        DraftStatus.entries.firstOrNull { it.name == raw }
+            ?: throw DraftMappingException("Unknown persisted draft status: '$raw'")
+
+    private fun toPortSelectionMode(raw: String): PortSelectionMode =
+        PortSelectionMode.entries.firstOrNull { it.name == raw }
+            ?: throw DraftMappingException("Unknown persisted port selection mode: '$raw'")
 
     private fun toDate(
         day: Int?,
@@ -162,7 +182,13 @@ private object EntityToDraftMapper {
     private fun toPortSelection(
         portId: String?,
         selectionMode: String?,
-    ): PortSelection? = portId?.let { PortSelection(it, PortSelectionMode.valueOf(selectionMode!!)) }
+    ): PortSelection? =
+        portId?.let {
+            val modeRaw =
+                selectionMode
+                    ?: throw DraftMappingException("Port '$it' was persisted without a selection mode")
+            PortSelection(it, toPortSelectionMode(modeRaw))
+        }
 
     private fun toGearUse(withChildren: GearUseWithChildren): GearUse {
         val measurements =

@@ -67,6 +67,33 @@ class CatchRecordFlowViewModelTests {
     }
 
     /**
+     * A fully complete, [CatchRecordDraftValidation]-valid draft (trip timing, ports, one confirmed gear
+     * use with a stat rectangle and a confirmed species, and the not-landed decision answered `false`) —
+     * the minimum a draft must satisfy to reach [WizardStep.CheckYourAnswers]/be submitted. Used by the
+     * Phase 8 accept-declaration-and-submit tests below, which exercise submission itself rather than the
+     * per-step wizard gating already covered elsewhere.
+     */
+    private fun CatchRecordDraft.asSubmissionReady(): CatchRecordDraft =
+        copy(
+            isTripToday = true,
+            departureDate = DmyDate(1, 1, 2020),
+            returnDate = DmyDate(1, 1, 2020),
+            departurePort = PortSelection("port-hastings", PortSelectionMode.Favourite),
+            returnPort = PortSelection("port-hastings", PortSelectionMode.Favourite),
+            gearUses =
+                listOf(
+                    GearUse(
+                        id = "gear-use-1",
+                        gearTypeId = "gear-seine-nets",
+                        statisticalSubRectangleCode = "38E95",
+                        confirmedUsedOnTrip = true,
+                        speciesWeights = listOf(SpeciesWeightEntry(id = "species-1", speciesId = "species-cod", confirmedCaught = true)),
+                    ),
+                ),
+            notLandedStraightAway = false,
+        )
+
+    /**
      * Shared setup for the Phase 4 per-gear stat-rectangle loop test: a resumed draft with two confirmed
      * (but no stat-rectangle yet) gear uses, sat on [WizardStep.GearStatRectangle] awaiting the first gear's
      * rectangle. Extracted purely to keep the test body under detekt's [LongMethod] limit.
@@ -348,6 +375,8 @@ class CatchRecordFlowViewModelTests {
             val dispatcher = StandardTestDispatcher(testScheduler)
             val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
             val viewModel = buildViewModel(repository = repository, dispatcher = dispatcher)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            testScheduler.advanceUntilIdle()
             viewModel.dispatch(CatchRecordFlowEvent.VesselSelected("vessel-achilles"))
             testScheduler.advanceUntilIdle()
 
@@ -369,6 +398,8 @@ class CatchRecordFlowViewModelTests {
             val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
             val viewModel =
                 buildViewModel(repository = repository, idFactory = { "gear-use-1" }, dispatcher = dispatcher)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            testScheduler.advanceUntilIdle()
             viewModel.dispatch(CatchRecordFlowEvent.VesselSelected("vessel-achilles"))
             testScheduler.advanceUntilIdle()
             viewModel.dispatch(CatchRecordFlowEvent.GearTypeSelected("gear-seine-nets"))
@@ -591,6 +622,7 @@ class CatchRecordFlowViewModelTests {
             val dispatcher = StandardTestDispatcher(testScheduler)
             val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
             val started = repository.startDraft("vessel-achilles").getOrThrow()
+            repository.saveDraft(started.asSubmissionReady()).getOrThrow()
             val submissionRepository = FakeCatchRecordSubmissionRepository(shouldSucceed = true)
             val connectivityChecker = FakeNetworkConnectivityChecker(connected = true)
             val syncScheduler = FakeCatchRecordSyncScheduler()
@@ -626,6 +658,7 @@ class CatchRecordFlowViewModelTests {
             val dispatcher = StandardTestDispatcher(testScheduler)
             val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
             val started = repository.startDraft("vessel-achilles").getOrThrow()
+            repository.saveDraft(started.asSubmissionReady()).getOrThrow()
             val submissionRepository = FakeCatchRecordSubmissionRepository(shouldSucceed = false)
             val connectivityChecker = FakeNetworkConnectivityChecker(connected = true)
             val syncScheduler = FakeCatchRecordSyncScheduler()
@@ -660,6 +693,7 @@ class CatchRecordFlowViewModelTests {
             val dispatcher = StandardTestDispatcher(testScheduler)
             val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
             val started = repository.startDraft("vessel-achilles").getOrThrow()
+            repository.saveDraft(started.asSubmissionReady()).getOrThrow()
             val submissionRepository = FakeCatchRecordSubmissionRepository(shouldSucceed = true)
             val connectivityChecker = FakeNetworkConnectivityChecker(connected = false)
             val syncScheduler = FakeCatchRecordSyncScheduler()

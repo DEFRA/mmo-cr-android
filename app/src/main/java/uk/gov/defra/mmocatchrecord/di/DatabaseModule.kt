@@ -10,6 +10,7 @@ import dagger.hilt.components.SingletonComponent
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.CatchRecordDatabase
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.CatchRecordDraftDao
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.CatchRecordMigrations
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.CatchRecordPassphraseProvider
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.SqlCipherLibraryLoader
 import javax.inject.Singleton
@@ -40,11 +41,9 @@ object DatabaseModule {
         return Room
             .databaseBuilder(context, CatchRecordDatabase::class.java, DATABASE_NAME)
             .openHelperFactory(supportFactory)
-            // Pre-release app, no production data to preserve yet: destructively recreate on schema
-            // bump (Phase 3: GearUse.numberOfShots/confirmedUsedOnTrip columns; Phase 4: GearUseEntity's
-            // statRectangleId column renamed to statisticalSubRectangleCode) rather than writing a real
-            // Migration. Revisit once the app has real users with drafts worth preserving.
-            .fallbackToDestructiveMigration(dropAllTables = true)
+            // A draft in progress must survive every schema change (see ADR 0010) — every version bump is
+            // covered by a real Migration in CatchRecordMigrations; destructive fallback must not be used.
+            .addMigrations(*CatchRecordMigrations.ALL)
             .build()
     }
 

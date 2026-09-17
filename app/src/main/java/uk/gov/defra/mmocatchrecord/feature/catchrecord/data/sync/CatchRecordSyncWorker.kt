@@ -6,9 +6,12 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import timber.log.Timber
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftRepository
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftValidation
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordSubmissionRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftSubmissionValidation
 
 /**
  * Background retry of a queued (`PendingSync`) catch-record submission once connectivity returns — see
@@ -35,6 +38,15 @@ class CatchRecordSyncWorker
             // Already handled (e.g. a previous run of this same work succeeded before a process death, or
             // the draft was discarded) — nothing left to do, and re-submitting would not be idempotent.
             if (draft.status != DraftStatus.PendingSync) return Result.success()
+
+            // Defence-in-depth (finding: aggregate validation "even via corrupted/persisted... events"):
+            // re-validate completeness before every retry attempt, not just once at the original
+            // acceptDeclarationAndSubmit() call. An invalid draft is a terminal, non-retryable condition —
+            // retrying cannot fix bad data, so this fails rather than requesting Result.retry().
+            if (CatchRecordDraftValidation.validateForSubmission(draft) is DraftSubmissionValidation.Invalid) {
+                Timber.e("PendingSync draft %s failed submission validation; not retrying", draftId)
+                return Result.failure()
+            }
 
             return submissionRepository
                 .submit(draft)

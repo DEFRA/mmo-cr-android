@@ -43,7 +43,13 @@ fun DepartureDateScreen(
     ) {
         when (val status = state.status) {
             UiStatus.Idle, UiStatus.Loading -> WizardLoadingState()
-            is UiStatus.Error -> WizardErrorState(status.message, DepartureDateScreenTestTags.ERROR_MESSAGE)
+            is UiStatus.Error ->
+                WizardErrorState(
+                    message = status.message,
+                    testTag = DepartureDateScreenTestTags.ERROR_MESSAGE,
+                    isRetryable = status.isRetryable,
+                    onRetry = { viewModel.dispatch(CatchRecordFlowEvent.Retry) },
+                )
             is UiStatus.Content ->
                 WizardDateStepContent(
                     initialDate = status.value.departureDate,

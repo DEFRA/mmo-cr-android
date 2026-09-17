@@ -99,7 +99,7 @@ class CheckYourAnswersScreenTest {
         )
 
     private fun setContent(
-        onChangeRow: (WizardStep) -> Unit = {},
+        onChangeRow: (CheckYourAnswersRow) -> Unit = {},
         onSubmit: () -> Unit = {},
     ) {
         composeTestRule.setContent {
@@ -177,13 +177,27 @@ class CheckYourAnswersScreenTest {
     @Test
     fun tappingAChangeLinkNavigatesToItsWizardStep() {
         var changedTo: WizardStep? = null
-        setContent(onChangeRow = { changedTo = it })
+        setContent(onChangeRow = { changedTo = it.changeStep })
 
         composeTestRule
             .onNodeWithTag("${CheckYourAnswersScreenTestTags.CHANGE_ACTION_PREFIX}_${CheckYourAnswersFieldKind.Vessel}")
             .performClick()
 
         assertEquals(WizardStep.VesselSelection, changedTo)
+    }
+
+    @Test
+    fun tappingAGearMeasurementChangeLinkCarriesTheGearUseEditContext() {
+        var changed: CheckYourAnswersRow? = null
+        setContent(onChangeRow = { changed = it })
+
+        composeTestRule
+            .onNodeWithTag("${CheckYourAnswersScreenTestTags.CHANGE_ACTION_PREFIX}_${CheckYourAnswersFieldKind.Measurement}")
+            .performScrollTo()
+            .performClick()
+
+        assertEquals(WizardStep.GearMeasurement, changed?.changeStep)
+        assertEquals("gear-use-1", changed?.changeGearUseId)
     }
 
     @Test

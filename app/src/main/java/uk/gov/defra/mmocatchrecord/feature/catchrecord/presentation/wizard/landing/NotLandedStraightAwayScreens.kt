@@ -99,7 +99,12 @@ fun NotLandedStraightAwayDecisionScreen(
         when (val status = state.status) {
             UiStatus.Idle, UiStatus.Loading -> WizardLoadingState()
             is UiStatus.Error ->
-                WizardErrorState(status.message, NotLandedStraightAwayDecisionScreenTestTags.ERROR_MESSAGE)
+                WizardErrorState(
+                    message = status.message,
+                    testTag = NotLandedStraightAwayDecisionScreenTestTags.ERROR_MESSAGE,
+                    isRetryable = status.isRetryable,
+                    onRetry = { viewModel.dispatch(CatchRecordFlowEvent.Retry) },
+                )
             is UiStatus.Content ->
                 NotLandedStraightAwayDecisionScreenContent(
                     initialValue = status.value.notLandedStraightAway,
@@ -187,7 +192,12 @@ fun NotLandedStraightAwaySpeciesScreen(
         when (val status = state.status) {
             UiStatus.Idle, UiStatus.Loading -> WizardLoadingState()
             is UiStatus.Error ->
-                WizardErrorState(status.message, NotLandedStraightAwaySpeciesScreenTestTags.ERROR_MESSAGE)
+                WizardErrorState(
+                    message = status.message,
+                    testTag = NotLandedStraightAwaySpeciesScreenTestTags.ERROR_MESSAGE,
+                    isRetryable = status.isRetryable,
+                    onRetry = { viewModel.dispatch(CatchRecordFlowEvent.Retry) },
+                )
             is UiStatus.Content ->
                 NotLandedStraightAwaySpeciesScreenContent(
                     draft = status.value,

@@ -43,7 +43,13 @@ fun ReturnDateScreen(
     ) {
         when (val status = state.status) {
             UiStatus.Idle, UiStatus.Loading -> WizardLoadingState()
-            is UiStatus.Error -> WizardErrorState(status.message, ReturnDateScreenTestTags.ERROR_MESSAGE)
+            is UiStatus.Error ->
+                WizardErrorState(
+                    message = status.message,
+                    testTag = ReturnDateScreenTestTags.ERROR_MESSAGE,
+                    isRetryable = status.isRetryable,
+                    onRetry = { viewModel.dispatch(CatchRecordFlowEvent.Retry) },
+                )
             is UiStatus.Content ->
                 WizardDateStepContent(
                     initialDate = status.value.returnDate,

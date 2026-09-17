@@ -31,7 +31,7 @@ object PhaseThreeCompleteScreenTestTags {
 @Composable
 fun CatchRecordFlowEntryScreen(
     viewModel: CatchRecordFlowViewModel,
-    onNavigate: (String) -> Unit,
+    onNavigate: (WizardStep) -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var hasNavigated by remember { mutableStateOf(false) }
@@ -44,7 +44,7 @@ fun CatchRecordFlowEntryScreen(
         val shouldNavigate = state.status !is UiStatus.Loading && state.status !is UiStatus.Error
         if (shouldNavigate && !hasNavigated) {
             hasNavigated = true
-            onNavigate(routeFor(state.currentStep))
+            onNavigate(state.currentStep)
         }
     }
 
@@ -55,7 +55,13 @@ fun CatchRecordFlowEntryScreen(
     ) {
         when (val status = state.status) {
             UiStatus.Idle, UiStatus.Loading -> WizardLoadingState()
-            is UiStatus.Error -> WizardErrorState(status.message, CatchRecordFlowEntryScreenTestTags.ERROR_MESSAGE)
+            is UiStatus.Error ->
+                WizardErrorState(
+                    message = status.message,
+                    testTag = CatchRecordFlowEntryScreenTestTags.ERROR_MESSAGE,
+                    isRetryable = status.isRetryable,
+                    onRetry = { viewModel.dispatch(CatchRecordFlowEvent.Retry) },
+                )
             is UiStatus.Content -> WizardLoadingState()
         }
     }
@@ -75,7 +81,13 @@ fun PhaseThreeCompleteScreen(
     ) {
         when (val status = state.status) {
             UiStatus.Loading -> WizardLoadingState()
-            is UiStatus.Error -> WizardErrorState(status.message, CatchRecordFlowEntryScreenTestTags.ERROR_MESSAGE)
+            is UiStatus.Error ->
+                WizardErrorState(
+                    message = status.message,
+                    testTag = CatchRecordFlowEntryScreenTestTags.ERROR_MESSAGE,
+                    isRetryable = status.isRetryable,
+                    onRetry = { viewModel.dispatch(CatchRecordFlowEvent.Retry) },
+                )
             UiStatus.Idle, is UiStatus.Content -> {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
                     Text(

@@ -101,15 +101,27 @@ fun GearStatRectangleScreen(
     onNavigate: (WizardStep) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    editGearUseId: String? = null,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     GearStatRectangleScreen(
         state = state,
+        editGearUseId = editGearUseId,
         onSubmit = { updatedDraft ->
-            val nextStep = nextWizardStepForDraft(updatedDraft)
-            viewModel.dispatch(CatchRecordFlowEvent.SaveAndContinue(updatedDraft, nextStep))
-            onNavigate(nextStep)
+            if (editGearUseId != null) {
+                val newCode =
+                    updatedDraft.gearUses.firstOrNull { it.id == editGearUseId }?.statisticalSubRectangleCode
+                if (newCode != null) {
+                    viewModel.dispatch(CatchRecordFlowEvent.EditGearStatRectangle(editGearUseId, newCode))
+                }
+                onNavigate(WizardStep.CheckYourAnswers)
+            } else {
+                val nextStep = nextWizardStepForDraft(updatedDraft)
+                viewModel.dispatch(CatchRecordFlowEvent.SaveAndContinue(updatedDraft, nextStep))
+                onNavigate(nextStep)
+            }
         },
+        onRetry = { viewModel.dispatch(CatchRecordFlowEvent.Retry) },
         onBack = onBack,
         modifier = modifier,
     )
@@ -122,9 +134,16 @@ internal fun GearStatRectangleScreen(
     onSubmit: (CatchRecordDraft) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    editGearUseId: String? = null,
+    onRetry: () -> Unit = {},
 ) {
     val draft = (state.status as? UiStatus.Content<CatchRecordDraft>)?.value
-    val currentGearUse = draft?.let(::nextGearUsePendingStatRectangle)
+    val currentGearUse =
+        if (editGearUseId != null) {
+            draft?.gearUses?.firstOrNull { it.id == editGearUseId }
+        } else {
+            draft?.let(::nextGearUsePendingStatRectangle)
+        }
     val gearType = currentGearUse?.let { gearUse -> state.gearTypes.firstOrNull { it.id == gearUse.gearTypeId } }
     val gearNameWithMeasurement =
         currentGearUse?.let { GearStatRectangleSupport.gearNameWithIdentifyingMeasurementFor(gearType, it) }
@@ -146,11 +165,19 @@ internal fun GearStatRectangleScreen(
     ) {
         when (val status = state.status) {
             UiStatus.Idle, UiStatus.Loading -> WizardLoadingState()
-            is UiStatus.Error -> WizardErrorState(status.message, GearStatRectangleScreenTestTags.ERROR_MESSAGE)
+            is UiStatus.Error ->
+                WizardErrorState(
+                    message = status.message,
+                    testTag = GearStatRectangleScreenTestTags.ERROR_MESSAGE,
+                    isRetryable = status.isRetryable,
+                    onRetry = onRetry,
+                )
             is UiStatus.Content ->
                 if (draft == null || currentGearUse == null) {
                     // Defensive only: normal navigation only reaches this screen while
-                    // nextGearUsePendingStatRectangle(draft) is non-null — see nextWizardStepForDraft.
+                    // nextGearUsePendingStatRectangle(draft) is non-null (add path), or editGearUseId
+                    // resolves to a real gear use (check-your-answers edit path) — see
+                    // nextWizardStepForDraft / editRouteFor.
                     WizardErrorState(
                         stringResource(R.string.gear_stat_rectangle_missing_gear),
                         GearStatRectangleScreenTestTags.ERROR_MESSAGE,

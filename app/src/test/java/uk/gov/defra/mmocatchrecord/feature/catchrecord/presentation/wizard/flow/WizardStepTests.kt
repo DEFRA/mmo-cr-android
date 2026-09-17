@@ -4,7 +4,7 @@ import androidx.navigation.navOptions
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
-import uk.gov.defra.mmocatchrecord.common.navigation.Destination
+import uk.gov.defra.mmocatchrecord.common.navigation.CatchRecordGraphRoute
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DmyDate
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
@@ -263,14 +263,14 @@ class WizardStepTests {
     @Test
     fun `applySubmissionResultNavOptions pops up to the graph route, non-inclusive, for submission success`() {
         val options = navOptions { applySubmissionResultNavOptions(WizardStep.SubmissionSuccess) }
-        assertEquals(Destination.CatchRecordFlow.GRAPH_ROUTE, options.popUpToRoute)
+        assertEquals(CatchRecordGraphRoute::class, options.popUpToRouteClass)
         assertEquals(false, options.isPopUpToInclusive())
     }
 
     @Test
     fun `applySubmissionResultNavOptions pops up to the graph route, non-inclusive, for submission pending sync`() {
         val options = navOptions { applySubmissionResultNavOptions(WizardStep.SubmissionPendingSync) }
-        assertEquals(Destination.CatchRecordFlow.GRAPH_ROUTE, options.popUpToRoute)
+        assertEquals(CatchRecordGraphRoute::class, options.popUpToRouteClass)
         assertEquals(false, options.isPopUpToInclusive())
     }
 

@@ -4,6 +4,8 @@ import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
+import timber.log.Timber
+import uk.gov.defra.mmocatchrecord.core.logging.ReleaseTree
 import javax.inject.Inject
 
 /**
@@ -23,4 +25,11 @@ class MmoApplication :
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
+
+    override fun onCreate() {
+        super.onCreate()
+        // Structured, redacted logging (ADR 0011): unrestricted Timber.DebugTree for local development,
+        // a redacted, WARN+-only ReleaseTree in release builds — see ReleaseTree's doc comment.
+        Timber.plant(if (BuildConfig.DEBUG) Timber.DebugTree() else ReleaseTree())
+    }
 }

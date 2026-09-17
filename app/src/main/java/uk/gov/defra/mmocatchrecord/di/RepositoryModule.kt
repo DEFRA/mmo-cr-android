@@ -8,6 +8,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import uk.gov.defra.mmocatchrecord.core.connectivity.AndroidNetworkConnectivityChecker
 import uk.gov.defra.mmocatchrecord.core.connectivity.NetworkConnectivityChecker
+import uk.gov.defra.mmocatchrecord.core.language.AppLanguageRepository
+import uk.gov.defra.mmocatchrecord.core.language.DataStoreAppLanguageRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.CatchRecordDraftDao
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.RoomCatchRecordDraftRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.StubReferenceDataRepository
@@ -76,4 +78,10 @@ object RepositoryModule {
     fun provideCatchRecordSyncScheduler(
         @ApplicationContext context: Context,
     ): CatchRecordSyncScheduler = WorkManagerCatchRecordSyncScheduler(context)
+
+    @Provides
+    @Singleton
+    fun provideAppLanguageRepository(
+        @ApplicationContext context: Context,
+    ): AppLanguageRepository = DataStoreAppLanguageRepository(context)
 }

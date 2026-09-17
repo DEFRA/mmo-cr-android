@@ -21,19 +21,19 @@
         Cold-start splash theme (AndroidX SplashScreen API). Shown by the OS while the app process
         starts, then handed over to Theme.MMOCatchRecord via postSplashScreenTheme.
 
-        windowSplashScreenAnimatedIcon is set to the GOV.UK wordmark (splash_govuk_logo, NOT the app's
-        launcher icon @mipmap/ic_launcher) so the Android 12+ system splash shows GOV.UK branding rather
-        than falling back to the launcher icon (today the default Android-robot icon — see the
-        launcher-icon follow-up). The system splash's icon slot is masked to a circle and sized like an
-        app icon (see https://developer.android.com/develop/ui/views/launch/splash-screen), so the
-        wordmark renders smaller/simpler here than in the full design. Immediately after this dismisses,
-        the in-app `SplashScreen` composable (core.root.SplashScreen) takes over and renders the full-size
-        wordmark + crown lock-up with full layout control (no masking). The crown branding image is added
-        on API 31+ (see values-v31/themes.xml), the only level where the platform supports it.
+        windowSplashScreenAnimatedIcon is deliberately a transparent no-op drawable (splash_transparent_
+        icon), NOT the GOV.UK wordmark and NOT the app's launcher icon (@mipmap/ic_launcher). The system
+        splash's icon slot is masked to a circle and sized like an app icon (see
+        https://developer.android.com/develop/ui/views/launch/splash-screen), so any wordmark placed here
+        renders smaller/cropped compared to the full-size, unmasked lock-up the in-app `SplashScreen`
+        composable (core.root.SplashScreen) renders immediately after — showing it in both places produced
+        a visible size-mismatch "zoom" during the handover. Using a transparent icon (see
+        splash_transparent_icon.xml for why it isn't simply omitted) means the system splash shows only
+        the plain GOV.UK-blue background, and the wordmark + crown are seen exactly once, at full size.
     -->
     <style name="Theme.MMOCatchRecord.Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/govuk_blue</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_govuk_logo</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_transparent_icon</item>
         <item name="postSplashScreenTheme">@style/Theme.MMOCatchRecord</item>
     </style>
 </resources>

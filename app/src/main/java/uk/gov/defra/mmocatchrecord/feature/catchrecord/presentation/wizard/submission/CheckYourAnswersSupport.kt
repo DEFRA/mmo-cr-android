@@ -49,13 +49,19 @@ enum class CheckYourAnswersFieldKind {
 /**
  * One row of the check-your-answers screen: a label (resolved from [kind], or [dynamicLabel] for
  * [CheckYourAnswersFieldKind.Measurement] rows), its [value] (already display-formatted, e.g. "50 mm"), and
- * the [changeStep] its "Change" link deep-links back to.
+ * the [changeStep] its "Change" link deep-links back to. [changeGearUseId], when non-null, is the stable,
+ * explicit gear-use edit context (finding: "Completed gear measurement/stat/species must be editable
+ * through Change and back flows via stable explicit edit context IDs typed nav route args") carried as a
+ * typed nav route argument so the destination screen edits that exact gear use in place rather than
+ * ambiguously resolving "whichever gear is next pending" (which would resolve to nothing for an
+ * already-complete gear) — see [uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.editRouteFor].
  */
 data class CheckYourAnswersRow(
     val kind: CheckYourAnswersFieldKind,
     val value: String,
     val changeStep: WizardStep,
     val dynamicLabel: String? = null,
+    val changeGearUseId: String? = null,
 )
 
 /**
@@ -93,7 +99,7 @@ object CheckYourAnswersSupport {
             val gearName = displayGearNameFor(gearUse, gearTypes)
             val multipleGears = confirmedGearUses.size > 1
             gearUse.speciesWeights.filter { it.confirmedCaught }.forEach { entry ->
-                sections += buildSpeciesSection(entry, species, gearName.takeIf { multipleGears })
+                sections += buildSpeciesSection(entry, species, gearName.takeIf { multipleGears }, gearUse.id)
             }
         }
         if (draft.notLandedStraightAway == true) {
@@ -169,6 +175,7 @@ object CheckYourAnswersSupport {
                     value = formatMeasurementValue(value),
                     changeStep = WizardStep.GearMeasurement,
                     dynamicLabel = field.label,
+                    changeGearUseId = gearUse.id,
                 )
         }
         return CheckYourAnswersSection(
@@ -182,19 +189,26 @@ object CheckYourAnswersSupport {
         entry: SpeciesWeightEntry,
         species: List<Species>,
         gearNamePrefix: String?,
+        gearUseId: String,
     ): CheckYourAnswersSection {
         val speciesName =
             species.firstOrNull { it.id == entry.speciesId }?.let(SpeciesSupport::displayNameFor)
                 ?: entry.speciesId
         val rows = mutableListOf<CheckYourAnswersRow>()
         rows +=
-            CheckYourAnswersRow(CheckYourAnswersFieldKind.Species, speciesName, WizardStep.GearSpeciesChecklist)
+            CheckYourAnswersRow(
+                CheckYourAnswersFieldKind.Species,
+                speciesName,
+                WizardStep.GearSpeciesChecklist,
+                changeGearUseId = gearUseId,
+            )
         entry.weightAboveMinimumSizeKg?.let {
             rows +=
                 CheckYourAnswersRow(
                     CheckYourAnswersFieldKind.WeightAboveMinimumSize,
                     formatWeight(it),
                     WizardStep.GearSpeciesChecklist,
+                    changeGearUseId = gearUseId,
                 )
         }
         entry.weightBelowMinimumSizeKg?.let {
@@ -203,6 +217,7 @@ object CheckYourAnswersSupport {
                     CheckYourAnswersFieldKind.WeightBelowMinimumSize,
                     formatWeight(it),
                     WizardStep.GearSpeciesChecklist,
+                    changeGearUseId = gearUseId,
                 )
         }
         entry.weightLegallyDiscardedKg?.let {
@@ -211,6 +226,7 @@ object CheckYourAnswersSupport {
                     CheckYourAnswersFieldKind.WeightLegallyDiscarded,
                     formatWeight(it),
                     WizardStep.GearSpeciesChecklist,
+                    changeGearUseId = gearUseId,
                 )
         }
         val heading = gearNamePrefix?.let { "$it – $speciesName" }

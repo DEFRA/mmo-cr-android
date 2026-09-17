@@ -14,7 +14,13 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftValidation
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DmyDate
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelection
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectionMode
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.FakeCatchRecordDraftRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.FakeCatchRecordSubmissionRepository
 
@@ -28,11 +34,43 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 class CatchRecordSyncWorkerTests {
     private val draftRepository = FakeCatchRecordDraftRepository()
 
-    /** Starts a fresh draft for "vessel-1", forces it to [DraftStatus.PendingSync], and persists it. */
+    /**
+     * Starts a fresh draft for "vessel-1", forces it to [DraftStatus.PendingSync], and persists it —
+     * populated as a [CatchRecordDraftValidation]-complete draft (trip timing, ports, one confirmed gear
+     * use with a stat rectangle and a confirmed species, not-landed decision answered) since
+     * [CatchRecordSyncWorker.doWork] re-validates completeness before every retry attempt.
+     */
     private fun pendingDraft(id: String = "draft-1"): CatchRecordDraft =
         runBlocking {
             val started = draftRepository.startDraft("vessel-1").getOrThrow()
-            val pending = started.copy(id = id, status = DraftStatus.PendingSync)
+            val pending =
+                started.copy(
+                    id = id,
+                    status = DraftStatus.PendingSync,
+                    isTripToday = true,
+                    departureDate = DmyDate(1, 1, 2020),
+                    returnDate = DmyDate(1, 1, 2020),
+                    departurePort = PortSelection("port-hastings", PortSelectionMode.Favourite),
+                    returnPort = PortSelection("port-hastings", PortSelectionMode.Favourite),
+                    gearUses =
+                        listOf(
+                            GearUse(
+                                id = "gear-use-1",
+                                gearTypeId = "gear-seine-nets",
+                                statisticalSubRectangleCode = "38E95",
+                                confirmedUsedOnTrip = true,
+                                speciesWeights =
+                                    listOf(
+                                        SpeciesWeightEntry(
+                                            id = "species-1",
+                                            speciesId = "species-cod",
+                                            confirmedCaught = true,
+                                        ),
+                                    ),
+                            ),
+                        ),
+                    notLandedStraightAway = false,
+                )
             draftRepository.saveDraft(pending).getOrThrow()
         }
 

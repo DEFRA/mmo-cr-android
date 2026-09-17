@@ -29,22 +29,32 @@ class RoomCatchRecordDraftRepository
 
         override suspend fun startDraft(vesselId: String): Result<CatchRecordDraft> =
             runCatching {
-                val existing = dao.getActiveDraftWithChildren(vesselId)
-                if (existing != null) {
-                    return@runCatching DraftMappers.toDomain(existing)
-                }
-
                 val creationTime = clock()
-                val newDraft =
-                    CatchRecordDraft(
+                val candidate =
+                    DraftEntity(
                         id = idFactory(),
                         vesselId = vesselId,
-                        status = DraftStatus.Draft,
+                        isTripToday = null,
+                        departureDay = null,
+                        departureMonth = null,
+                        departureYear = null,
+                        returnDay = null,
+                        returnMonth = null,
+                        returnYear = null,
+                        departurePortId = null,
+                        departurePortSelectionMode = null,
+                        returnPortId = null,
+                        returnPortSelectionMode = null,
+                        status = DraftStatus.Draft.name,
                         modifiedAtEpochMillis = creationTime,
                         catchRecordReference = CatchRecordReferenceGenerator.generate(creationTime),
                     )
-                persist(newDraft)
-                newDraft
+                // Race-safe find-or-create (see ADR 0010): returns the vessel's existing active draft
+                // unchanged if one already exists (including one created concurrently by another caller),
+                // never a duplicate.
+                val winningEntity = dao.findOrCreateActiveDraft(vesselId, candidate)
+                dao.getDraftWithChildren(winningEntity.id)?.let(DraftMappers::toDomain)
+                    ?: error("Draft '${winningEntity.id}' vanished immediately after find-or-create")
             }
 
         override suspend fun saveDraft(draft: CatchRecordDraft): Result<CatchRecordDraft> =

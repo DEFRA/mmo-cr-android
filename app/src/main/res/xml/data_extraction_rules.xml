@@ -12,14 +12,33 @@
         <!--
         Forward-safety: exclude the planned Jetpack DataStore-backed session/biometric-preference store
         (see core/security/SessionStore, BiometricPreferenceStore) from cloud backup — security-relevant
-        state must never leave the device via backup. See security.instructions.md "Data at rest".
+        state must never leave the device via backup. See security.instructions.md "Data at rest". The
+        app-language preference (ADR 0012) is carved back in below — no sensitive data, safe to restore.
         -->
         <exclude domain="file" path="datastore/" />
+        <include domain="file" path="datastore/app_language.preferences_pb" />
+        <!--
+        The SQLCipher-encrypted catch-record draft database (ADR 0006) and its Android-Keystore-wrapped
+        passphrase file: never cloud-backed-up (a restored backup on a different/reinstalled device cannot
+        decrypt data whose passphrase is wrapped by a device-bound Android Keystore key). `-wal`/`-shm` are
+        the same database's SQLite sidecar files.
+        -->
+        <exclude domain="database" path="catch_record_draft.db" />
+        <exclude domain="database" path="catch_record_draft.db-wal" />
+        <exclude domain="database" path="catch_record_draft.db-shm" />
+        <exclude domain="file" path="catch_record_draft.passphrase" />
     </cloud-backup>
-    <!--
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <!--
+        Same rationale as <cloud-backup> above: the wrapped passphrase is bound to this device's Android
+        Keystore and is not portable to a new device, so the encrypted database it protects must not be
+        carried over by device-to-device transfer either. The app-language preference is carved back in.
+        -->
+        <exclude domain="file" path="datastore/" />
+        <include domain="file" path="datastore/app_language.preferences_pb" />
+        <exclude domain="database" path="catch_record_draft.db" />
+        <exclude domain="database" path="catch_record_draft.db-wal" />
+        <exclude domain="database" path="catch_record_draft.db-shm" />
+        <exclude domain="file" path="catch_record_draft.passphrase" />
     </device-transfer>
-    -->
 </data-extraction-rules>

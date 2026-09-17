@@ -66,6 +66,7 @@ object CheckYourAnswersScreenTestTags {
 fun CheckYourAnswersScreen(
     viewModel: CatchRecordFlowViewModel,
     onNavigate: (WizardStep) -> Unit,
+    onNavigateToEdit: (WizardStep, String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -97,7 +98,13 @@ fun CheckYourAnswersScreen(
     ) {
         when (val status = state.status) {
             UiStatus.Idle, UiStatus.Loading -> WizardLoadingState()
-            is UiStatus.Error -> WizardErrorState(status.message, CheckYourAnswersScreenTestTags.ERROR_MESSAGE)
+            is UiStatus.Error ->
+                WizardErrorState(
+                    message = status.message,
+                    testTag = CheckYourAnswersScreenTestTags.ERROR_MESSAGE,
+                    isRetryable = status.isRetryable,
+                    onRetry = { viewModel.dispatch(CatchRecordFlowEvent.Retry) },
+                )
             is UiStatus.Content ->
                 CheckYourAnswersScreenContent(
                     draft = status.value,
@@ -105,7 +112,10 @@ fun CheckYourAnswersScreen(
                     ports = state.ports,
                     gearTypes = state.gearTypes,
                     species = state.species,
-                    onChangeRow = { onNavigate(it) },
+                    onChangeRow = { row ->
+                        val gearUseId = row.changeGearUseId
+                        if (gearUseId != null) onNavigateToEdit(row.changeStep, gearUseId) else onNavigate(row.changeStep)
+                    },
                     onSubmit = { viewModel.dispatch(CatchRecordFlowEvent.AcceptDeclarationAndSubmit) },
                 )
         }
@@ -119,7 +129,7 @@ fun CheckYourAnswersScreenContent(
     ports: List<Port>,
     gearTypes: List<GearType>,
     species: List<Species>,
-    onChangeRow: (WizardStep) -> Unit,
+    onChangeRow: (CheckYourAnswersRow) -> Unit,
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -157,7 +167,7 @@ fun CheckYourAnswersScreenContent(
 @Composable
 private fun CheckYourAnswersRowView(
     row: CheckYourAnswersRow,
-    onChangeRow: (WizardStep) -> Unit,
+    onChangeRow: (CheckYourAnswersRow) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val label = row.dynamicLabel ?: stringResource(rowLabelRes(row.kind))
@@ -174,7 +184,7 @@ private fun CheckYourAnswersRowView(
         }
         GdsLinkAction(
             text = stringResource(R.string.check_your_answers_change_action),
-            onClick = { onChangeRow(row.changeStep) },
+            onClick = { onChangeRow(row) },
             testTag = "${CheckYourAnswersScreenTestTags.CHANGE_ACTION_PREFIX}_${row.kind}",
             accessibleLabel = stringResource(R.string.check_your_answers_change_action_with_label, label),
         )

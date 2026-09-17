@@ -12,6 +12,11 @@ import java.util.Locale
 /**
  * Screen-level composition wrapper to temporarily override the Context's active locale
  * so nested calls to stringResource resolve English/Welsh without restarting the activity.
+ *
+ * Deliberately does **not** call `Locale.setDefault` (see ADR 0012): mutating the JVM-wide default locale
+ * from a composable is an unsafe, process-global side effect that would silently change locale-sensitive
+ * behaviour for every other component in the process, not just this composition subtree. Only the
+ * `Context` provided to nested composables via [LocalContext] is locale-overridden.
  */
 @Composable
 fun AppLanguageProvider(
@@ -27,7 +32,6 @@ fun AppLanguageProvider(
         val localizedContext =
             remember(context, language, currentConfig) {
                 val locale = Locale.forLanguageTag(language)
-                Locale.setDefault(locale)
                 val config = Configuration(currentConfig)
                 config.setLocale(locale)
                 context.createConfigurationContext(config)

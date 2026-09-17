@@ -15,7 +15,21 @@
    planned real implementation (core/security/SessionStore, BiometricPreferenceStore) will persist via
    Jetpack DataStore under files/datastore/. Exclude it up front so security-relevant session/biometric
    state can never be included in a legacy (pre-API 31) full backup — see security.instructions.md
-   "Data at rest".
+   "Data at rest". The app-language preference (ADR 0012) is deliberately carved back in below: it holds
+   no sensitive data and restoring a user's language choice on backup/restore is desirable.
 -->
     <exclude domain="file" path="datastore/" />
+    <include domain="file" path="datastore/app_language.preferences_pb" />
+    <!--
+   The SQLCipher-encrypted catch-record draft database (ADR 0006) and its Android-Keystore-wrapped
+   passphrase file must never leave the device via a legacy (pre-API 31) full backup/device transfer: a
+   restored backup on a different device cannot decrypt data whose passphrase is wrapped by a
+   device-bound, non-exportable Android Keystore key, and the encrypted bytes are operational fishing
+   data that should not be duplicated onto a backup medium regardless. `-wal`/`-shm` are SQLite's
+   write-ahead-log/shared-memory sidecar files for the same database and must be excluded alongside it.
+-->
+    <exclude domain="database" path="catch_record_draft.db" />
+    <exclude domain="database" path="catch_record_draft.db-wal" />
+    <exclude domain="database" path="catch_record_draft.db-shm" />
+    <exclude domain="file" path="catch_record_draft.passphrase" />
 </full-backup-content>

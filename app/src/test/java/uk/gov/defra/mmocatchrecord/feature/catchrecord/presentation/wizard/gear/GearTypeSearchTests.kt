@@ -3,16 +3,32 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementField
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip.PortSearch
 
 class GearTypeSearchTests {
+    // Non-empty `measurementFields` on every fixture: `GearTypeSearch.filterSuggestions` only ever
+    // surfaces selectable gear types (see `GearTypeSearch.selectableGearTypes`), i.e. those with a
+    // confirmed measurement schema.
+    private val meshSizeField =
+        GearMeasurementField(key = "mesh_size_mm", label = "Mesh size (mm)", type = GearMeasurementFieldType.Integer)
+
     private val gearTypes =
         listOf(
-            GearType(id = "gear-seine-nets", name = "Seine nets (not specified)"),
-            GearType(id = "gear-beam-trawls-tbb", name = "Beam trawls (TBB)"),
-            GearType(id = "gear-bottom-pair-trawls-ptb", name = "Bottom pair trawls (PTB)"),
-            GearType(id = "gear-bottom-otter-trawls-tb", name = "Bottom otter trawls (TB)"),
+            GearType(id = "gear-seine-nets", name = "Seine nets (not specified)", measurementFields = listOf(meshSizeField)),
+            GearType(id = "gear-beam-trawls-tbb", name = "Beam trawls (TBB)", measurementFields = listOf(meshSizeField)),
+            GearType(
+                id = "gear-bottom-pair-trawls-ptb",
+                name = "Bottom pair trawls (PTB)",
+                measurementFields = listOf(meshSizeField),
+            ),
+            GearType(
+                id = "gear-bottom-otter-trawls-tb",
+                name = "Bottom otter trawls (TB)",
+                measurementFields = listOf(meshSizeField),
+            ),
         )
 
     @Test

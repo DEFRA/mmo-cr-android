@@ -9,15 +9,20 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import timber.log.Timber
 import uk.gov.defra.mmocatchrecord.core.architecture.BaseViewModel
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.core.connectivity.NetworkConnectivityChecker
+import uk.gov.defra.mmocatchrecord.core.error.SafeErrorMapper
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftRepository
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftValidation
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordSubmissionRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordSyncScheduler
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DmyDate
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftInvalidation
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftSubmissionValidation
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementValue
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelection
@@ -28,6 +33,9 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Refe
 import java.time.Instant
 import java.time.ZoneOffset
 import javax.inject.Inject
+
+private const val SUBMISSION_VALIDATION_MESSAGE =
+    "Your catch record is incomplete. Go back and complete every step before submitting."
 
 /** Nav-graph-scoped ViewModel shared by every catch-record wizard screen. */
 @HiltViewModel
@@ -47,6 +55,14 @@ class CatchRecordFlowViewModel
             initialState = CatchRecordFlowViewState(),
             defaultDispatcher = defaultDispatcher,
         ) {
+        /**
+         * The most recent event whose handling failed, tracked so [CatchRecordFlowEvent.Retry] can safely
+         * re-attempt it — see `WizardErrorState`'s Retry control. Deliberately **not** part of
+         * [CatchRecordFlowViewState] (an event is not an immutable, comparable presentation value); this is
+         * ViewModel-internal orchestration state only.
+         */
+        private var lastFailedEvent: CatchRecordFlowEvent? = null
+
         override fun dispatch(event: CatchRecordFlowEvent) {
             when (event) {
                 CatchRecordFlowEvent.EnterFlow -> enterFlow()
@@ -59,11 +75,16 @@ class CatchRecordFlowViewModel
                 is CatchRecordFlowEvent.SaveAndContinue -> saveAndContinue(event.updatedDraft, event.nextStep)
                 is CatchRecordFlowEvent.GearTypeSelected -> gearTypeSelected(event.gearTypeId)
                 is CatchRecordFlowEvent.GearMeasurementsSubmitted -> gearMeasurementsSubmitted(event.measurements)
-                is CatchRecordFlowEvent.GearRemoved -> persistDraftWithoutStepChange(event.updatedDraft)
+                is CatchRecordFlowEvent.GearRemoved -> persistDraftWithoutStepChange(event, event.updatedDraft)
                 is CatchRecordFlowEvent.SpeciesAddedToCurrentGear -> speciesAddedToCurrentGear(event.speciesId)
-                is CatchRecordFlowEvent.SpeciesRemoved -> persistDraftWithoutStepChange(event.updatedDraft)
+                is CatchRecordFlowEvent.SpeciesRemoved -> persistDraftWithoutStepChange(event, event.updatedDraft)
                 CatchRecordFlowEvent.MarkReadyToSubmit -> markReadyToSubmit()
                 CatchRecordFlowEvent.AcceptDeclarationAndSubmit -> acceptDeclarationAndSubmit()
+                CatchRecordFlowEvent.Retry -> retryLastFailedEvent()
+                is CatchRecordFlowEvent.EditGearMeasurements -> editGearMeasurements(event)
+                is CatchRecordFlowEvent.EditGearStatRectangle -> editGearStatRectangle(event)
+                is CatchRecordFlowEvent.SpeciesAddedToGearUse -> speciesAddedToGearUse(event)
+                is CatchRecordFlowEvent.EditGearSpeciesWeights -> editGearSpeciesWeights(event)
             }
         }
 
@@ -106,7 +127,7 @@ class CatchRecordFlowViewModel
                             samePortCandidate = previouslyUsedPorts.firstOrNull(),
                         )
                     }
-                }.onFailure(::emitLoadError)
+                }.onFailure { emitLoadError(CatchRecordFlowEvent.EnterFlow, it) }
             }
         }
 
@@ -133,7 +154,7 @@ class CatchRecordFlowViewModel
                             )
                         }
                     },
-                    onFailure = ::emitLoadError,
+                    onFailure = { emitLoadError(CatchRecordFlowEvent.DeleteDraft, it) },
                 )
             }
         }
@@ -145,7 +166,7 @@ class CatchRecordFlowViewModel
                     val draft = draftRepository.startDraft(vesselId).getOrThrow()
                     val previouslyUsedPorts = referenceDataRepository.getPreviouslyUsedPorts(vesselId).getOrThrow()
                     emitLoadedDraft(draft, WizardStep.TripToday, previouslyUsedPorts)
-                }.onFailure(::emitLoadError)
+                }.onFailure { emitLoadError(CatchRecordFlowEvent.VesselSelected(vesselId), it) }
             }
         }
 
@@ -189,9 +210,11 @@ class CatchRecordFlowViewModel
             updatedDraft: CatchRecordDraft,
             nextStep: WizardStep,
         ) {
+            val previousDraft = currentDraftOrNull()
             updateState { it.copy(status = UiStatus.Loading) }
             launchInViewModelScope {
-                draftRepository.saveDraft(updatedDraft).fold(
+                val reconciled = DraftInvalidation.reconcile(previousDraft, updatedDraft)
+                draftRepository.saveDraft(reconciled).fold(
                     onSuccess = { saved ->
                         updateState {
                             it.copy(
@@ -203,12 +226,23 @@ class CatchRecordFlowViewModel
                             )
                         }
                     },
-                    onFailure = ::emitLoadError,
+                    onFailure = { emitLoadError(CatchRecordFlowEvent.SaveAndContinue(updatedDraft, nextStep), it) },
                 )
             }
         }
 
+        /**
+         * Validates [gearTypeId] against the currently loaded reference data before recording it as the
+         * pending gear-type selection: a gear type with no confirmed measurement schema
+         * (`GearType.measurementFields` empty) must never be accepted, even via a direct event dispatch that
+         * bypassed [uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearTypeSearch.selectableGearTypes]'s
+         * UI-level filtering (which already hides such gear types from the search screen's suggestions). An
+         * invalid selection is silently ignored rather than surfaced as an error: the UI-level filtering is
+         * the primary defence and already prevents a real user from ever reaching this with an invalid id.
+         */
         private fun gearTypeSelected(gearTypeId: String) {
+            val gearType = currentState.gearTypes.firstOrNull { it.id == gearTypeId } ?: return
+            if (gearType.measurementFields.isEmpty()) return
             updateState { it.copy(pendingGearTypeId = gearTypeId) }
         }
 
@@ -251,12 +285,82 @@ class CatchRecordFlowViewModel
          * "Remove a species" action ([CatchRecordFlowEvent.SpeciesRemoved]), both of which keep the user on
          * their current checklist screen after the bulk removal.
          */
-        private fun persistDraftWithoutStepChange(updatedDraft: CatchRecordDraft) {
+        private fun persistDraftWithoutStepChange(
+            event: CatchRecordFlowEvent,
+            updatedDraft: CatchRecordDraft,
+        ) {
+            val previousDraft = currentDraftOrNull()
             updateState { it.copy(status = UiStatus.Loading) }
             launchInViewModelScope {
-                draftRepository.saveDraft(updatedDraft).fold(
+                val reconciled = DraftInvalidation.reconcile(previousDraft, updatedDraft)
+                draftRepository.saveDraft(reconciled).fold(
                     onSuccess = { saved -> updateState { it.copy(status = UiStatus.Content(saved)) } },
-                    onFailure = ::emitLoadError,
+                    onFailure = { emitLoadError(event, it) },
+                )
+            }
+        }
+
+        /**
+         * Persists an edit made via a Check-your-answers "Change" link to an *already-completed* gear
+         * (finding: "Completed gear measurement/stat/species must be editable through Change and back
+         * flows"): [transform] updates the existing [GearUse] identified by [gearUseId] in place (never
+         * appending a new one); FR10 dependent-data invalidation is applied by the same
+         * [DraftInvalidation.reconcile] call every other persistence path goes through; [nextStep] is
+         * [WizardStep.CheckYourAnswers] for a completed edit, or [WizardStep.GearSpeciesChecklist] for the
+         * "add a species mid-edit" step (see [speciesAddedToGearUse]).
+         */
+        private fun persistGearEdit(
+            event: CatchRecordFlowEvent,
+            gearUseId: String,
+            nextStep: WizardStep,
+            transform: (GearUse) -> GearUse,
+        ) {
+            val draft = currentDraftOrNull() ?: return
+            if (draft.gearUses.none { it.id == gearUseId }) return
+            val updatedDraft =
+                draft.copy(gearUses = draft.gearUses.map { if (it.id == gearUseId) transform(it) else it })
+            updateState { it.copy(status = UiStatus.Loading) }
+            launchInViewModelScope {
+                val reconciled = DraftInvalidation.reconcile(draft, updatedDraft)
+                draftRepository.saveDraft(reconciled).fold(
+                    onSuccess = { saved ->
+                        updateState { it.copy(status = UiStatus.Content(saved), currentStep = nextStep) }
+                    },
+                    onFailure = { emitLoadError(event, it) },
+                )
+            }
+        }
+
+        private fun editGearMeasurements(event: CatchRecordFlowEvent.EditGearMeasurements) {
+            persistGearEdit(event, event.gearUseId, WizardStep.CheckYourAnswers) {
+                it.copy(measurements = event.measurements)
+            }
+        }
+
+        private fun editGearStatRectangle(event: CatchRecordFlowEvent.EditGearStatRectangle) {
+            persistGearEdit(event, event.gearUseId, WizardStep.CheckYourAnswers) {
+                it.copy(statisticalSubRectangleCode = event.statisticalSubRectangleCode)
+            }
+        }
+
+        private fun editGearSpeciesWeights(event: CatchRecordFlowEvent.EditGearSpeciesWeights) {
+            persistGearEdit(event, event.gearUseId, WizardStep.CheckYourAnswers) {
+                it.copy(speciesWeights = event.speciesWeights)
+            }
+        }
+
+        private fun speciesAddedToGearUse(event: CatchRecordFlowEvent.SpeciesAddedToGearUse) {
+            val draft = currentDraftOrNull() ?: return
+            val gearUse = draft.gearUses.firstOrNull { it.id == event.gearUseId } ?: return
+            if (gearUse.speciesWeights.any { it.speciesId == event.speciesId }) {
+                // Already added — a no-op re-navigation only, mirroring speciesAddedToCurrentGear.
+                updateState { it.copy(currentStep = WizardStep.GearSpeciesChecklist) }
+                return
+            }
+            persistGearEdit(event, event.gearUseId, WizardStep.GearSpeciesChecklist) {
+                it.copy(
+                    speciesWeights =
+                        it.speciesWeights + SpeciesWeightEntry(id = idFactory(), speciesId = event.speciesId),
                 )
             }
         }
@@ -266,7 +370,7 @@ class CatchRecordFlowViewModel
             launchInViewModelScope {
                 draftRepository.markReadyToSubmit(draft.id).fold(
                     onSuccess = { updated -> updateState { it.copy(status = UiStatus.Content(updated)) } },
-                    onFailure = ::emitLoadError,
+                    onFailure = { emitLoadError(CatchRecordFlowEvent.MarkReadyToSubmit, it) },
                 )
             }
         }
@@ -276,9 +380,21 @@ class CatchRecordFlowViewModel
          * back to the offline pending-sync path both when there is no connectivity at all *and* when an
          * online attempt itself fails (e.g. the stub/real backend call throws) — either way the user's
          * declaration has been accepted and the draft must not be lost, only queued — see ADR 0009.
+         *
+         * Validates the draft's completeness first (see [CatchRecordDraftValidation]) — an incomplete draft
+         * must never be submitted, even if this were somehow reached with one (defence-in-depth against a
+         * future bug or a corrupted/persisted state, not just the normal step-by-step wizard gating).
          */
         private fun acceptDeclarationAndSubmit() {
             val draft = currentDraftOrNull() ?: return
+            val validation = CatchRecordDraftValidation.validateForSubmission(draft)
+            if (validation is DraftSubmissionValidation.Invalid) {
+                Timber.w("Blocked submission of an incomplete draft: %s", validation.issues.joinToString())
+                updateState {
+                    it.copy(status = UiStatus.Error(message = SUBMISSION_VALIDATION_MESSAGE, isRetryable = false))
+                }
+                return
+            }
             updateState { it.copy(status = UiStatus.Loading) }
             launchInViewModelScope {
                 if (connectivityChecker.isConnected()) {
@@ -302,7 +418,7 @@ class CatchRecordFlowViewModel
                         )
                     }
                 },
-                onFailure = ::emitLoadError,
+                onFailure = { emitLoadError(CatchRecordFlowEvent.AcceptDeclarationAndSubmit, it) },
             )
         }
 
@@ -314,7 +430,7 @@ class CatchRecordFlowViewModel
                         it.copy(status = UiStatus.Content(saved), currentStep = WizardStep.SubmissionPendingSync)
                     }
                 },
-                onFailure = ::emitLoadError,
+                onFailure = { emitLoadError(CatchRecordFlowEvent.AcceptDeclarationAndSubmit, it) },
             )
         }
 
@@ -350,15 +466,28 @@ class CatchRecordFlowViewModel
         private fun currentDraftOrNull(): CatchRecordDraft? =
             (currentState.status as? UiStatus.Content<CatchRecordDraft>)?.value
 
-        private fun emitLoadError(error: Throwable) {
+        /** Re-attempts [lastFailedEvent] (see [CatchRecordFlowEvent.Retry]'s doc comment); a no-op if none. */
+        private fun retryLastFailedEvent() {
+            val event = lastFailedEvent ?: return
+            lastFailedEvent = null
+            dispatch(event)
+        }
+
+        /**
+         * Records [event] as retryable (see [retryLastFailedEvent]), logs [throwable] for diagnostics via
+         * Timber (never the user-facing message — see ADR 0011), and maps it to a safe, generic,
+         * already-reviewed user-facing message via [SafeErrorMapper] — **never** [Throwable.message]
+         * directly, which may embed data unsafe to show a user or log verbatim.
+         */
+        private fun emitLoadError(
+            event: CatchRecordFlowEvent,
+            throwable: Throwable,
+        ) {
+            Timber.w(throwable, "CatchRecordFlowViewModel action failed: ${event::class.simpleName}")
+            lastFailedEvent = event
+            val safeError = SafeErrorMapper.map(throwable)
             updateState {
-                it.copy(
-                    status =
-                        UiStatus.Error(
-                            message = error.message ?: "Unable to load your catch record draft.",
-                            isRetryable = true,
-                        ),
-                )
+                it.copy(status = UiStatus.Error(message = safeError.message, isRetryable = safeError.isRetryable))
             }
         }
     }

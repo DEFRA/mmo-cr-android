@@ -22,9 +22,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
@@ -46,6 +43,7 @@ import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
+import uk.gov.defra.mmocatchrecord.core.language.AppLanguageViewModel
 
 /** Compose test tags for [SignInScreen], kept in one place so tests don't hard-code strings. */
 object SignInScreenTestTags {
@@ -66,9 +64,10 @@ fun SignInScreen(
     onSignedIn: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SignInViewModel = hiltViewModel(),
+    languageViewModel: AppLanguageViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
-    var currentLanguage by remember { mutableStateOf("en") }
+    val currentLanguage by languageViewModel.language.collectAsState()
 
     if (state.status is UiStatus.Content) {
         onSignedIn()
@@ -84,9 +83,7 @@ fun SignInScreen(
             SignInContent(
                 state = state,
                 currentLanguage = currentLanguage,
-                onLanguageToggle = {
-                    currentLanguage = if (currentLanguage == "en") "cy" else "en"
-                },
+                onLanguageToggle = languageViewModel::toggleLanguage,
                 onUsernameChanged = { viewModel.dispatch(SignInEvent.UsernameChanged(it)) },
                 onPasswordChanged = { viewModel.dispatch(SignInEvent.PasswordChanged(it)) },
                 onSubmit = { viewModel.dispatch(SignInEvent.SubmitRequested) },

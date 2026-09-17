@@ -7,7 +7,7 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow
 
 import androidx.navigation.NavOptionsBuilder
-import uk.gov.defra.mmocatchrecord.common.navigation.Destination
+import uk.gov.defra.mmocatchrecord.common.navigation.CatchRecordGraphRoute
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
@@ -122,28 +122,46 @@ sealed interface WizardStep {
     data object SubmissionPendingSync : WizardStep
 }
 
-fun routeFor(step: WizardStep): String =
+fun routeFor(step: WizardStep): Any =
     when (step) {
-        WizardStep.DraftResume -> Destination.CatchRecordFlow.DRAFT_RESUME_ROUTE
-        WizardStep.VesselSelection -> Destination.CatchRecordFlow.VESSEL_SELECTION_ROUTE
-        WizardStep.TripToday -> Destination.CatchRecordFlow.TRIP_TODAY_ROUTE
-        WizardStep.DepartureDate -> Destination.CatchRecordFlow.DEPARTURE_DATE_ROUTE
-        WizardStep.ReturnDate -> Destination.CatchRecordFlow.RETURN_DATE_ROUTE
-        WizardStep.DeparturePort -> Destination.CatchRecordFlow.DEPARTURE_PORT_ROUTE
-        WizardStep.ReturnPort -> Destination.CatchRecordFlow.RETURN_PORT_ROUTE
-        WizardStep.GearSearch -> Destination.CatchRecordFlow.GEAR_SEARCH_ROUTE
-        WizardStep.GearMeasurement -> Destination.CatchRecordFlow.GEAR_MEASUREMENT_ROUTE
-        WizardStep.GearSummary -> Destination.CatchRecordFlow.GEAR_SUMMARY_ROUTE
-        WizardStep.GearStatRectangle -> Destination.CatchRecordFlow.GEAR_STAT_RECTANGLE_ROUTE
-        WizardStep.GearSpeciesSearch -> Destination.CatchRecordFlow.GEAR_SPECIES_SEARCH_ROUTE
-        WizardStep.GearSpeciesChecklist -> Destination.CatchRecordFlow.GEAR_SPECIES_CHECKLIST_ROUTE
-        WizardStep.NotLandedStraightAwayDecision -> Destination.CatchRecordFlow.NOT_LANDED_STRAIGHT_AWAY_DECISION_ROUTE
-        WizardStep.NotLandedStraightAwaySpecies -> Destination.CatchRecordFlow.NOT_LANDED_STRAIGHT_AWAY_SPECIES_ROUTE
-        WizardStep.LandingStorage -> Destination.CatchRecordFlow.PHASE_THREE_COMPLETE_ROUTE
-        WizardStep.LateSubmissionWarning -> Destination.CatchRecordFlow.LATE_SUBMISSION_WARNING_ROUTE
-        WizardStep.CheckYourAnswers -> Destination.CatchRecordFlow.CHECK_YOUR_ANSWERS_ROUTE
-        WizardStep.SubmissionSuccess -> Destination.CatchRecordFlow.SUBMISSION_SUCCESS_ROUTE
-        WizardStep.SubmissionPendingSync -> Destination.CatchRecordFlow.SUBMISSION_PENDING_SYNC_ROUTE
+        WizardStep.DraftResume -> DraftResumeRoute
+        WizardStep.VesselSelection -> VesselSelectionRoute
+        WizardStep.TripToday -> TripTodayRoute
+        WizardStep.DepartureDate -> DepartureDateRoute
+        WizardStep.ReturnDate -> ReturnDateRoute
+        WizardStep.DeparturePort -> DeparturePortRoute
+        WizardStep.ReturnPort -> ReturnPortRoute
+        WizardStep.GearSearch -> GearSearchRoute
+        WizardStep.GearMeasurement -> GearMeasurementRoute()
+        WizardStep.GearSummary -> GearSummaryRoute
+        WizardStep.GearStatRectangle -> GearStatRectangleRoute()
+        WizardStep.GearSpeciesSearch -> GearSpeciesSearchRoute()
+        WizardStep.GearSpeciesChecklist -> GearSpeciesChecklistRoute()
+        WizardStep.NotLandedStraightAwayDecision -> NotLandedStraightAwayDecisionRoute
+        WizardStep.NotLandedStraightAwaySpecies -> NotLandedStraightAwaySpeciesRoute
+        WizardStep.LandingStorage -> PhaseThreeCompleteRoute
+        WizardStep.LateSubmissionWarning -> LateSubmissionWarningRoute
+        WizardStep.CheckYourAnswers -> CheckYourAnswersRoute
+        WizardStep.SubmissionSuccess -> SubmissionSuccessRoute
+        WizardStep.SubmissionPendingSync -> SubmissionPendingSyncRoute
+    }
+
+/**
+ * Editable-step "Change" navigation target carrying an explicit [gearUseId] edit context (finding:
+ * "Completed gear measurement/stat/species must be editable through Change and back flows via stable
+ * explicit edit context IDs typed nav route args") — used only by the check-your-answers screen's "Change"
+ * links for the three per-gear steps that support in-place editing. Falls back to [routeFor] for every
+ * other step, which has no gear-scoped edit context.
+ */
+fun editRouteFor(
+    step: WizardStep,
+    gearUseId: String,
+): Any =
+    when (step) {
+        WizardStep.GearMeasurement -> GearMeasurementRoute(editGearUseId = gearUseId)
+        WizardStep.GearStatRectangle -> GearStatRectangleRoute(editGearUseId = gearUseId)
+        WizardStep.GearSpeciesChecklist -> GearSpeciesChecklistRoute(editGearUseId = gearUseId)
+        else -> routeFor(step)
     }
 
 /**
@@ -163,7 +181,7 @@ fun routeFor(step: WizardStep): String =
  */
 fun NavOptionsBuilder.applySubmissionResultNavOptions(step: WizardStep) {
     if (step == WizardStep.SubmissionSuccess || step == WizardStep.SubmissionPendingSync) {
-        popUpTo(Destination.CatchRecordFlow.GRAPH_ROUTE) { inclusive = false }
+        popUpTo<CatchRecordGraphRoute> { inclusive = false }
     }
 }
 

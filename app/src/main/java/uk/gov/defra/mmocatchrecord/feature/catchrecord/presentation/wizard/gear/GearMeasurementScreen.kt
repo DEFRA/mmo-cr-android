@@ -59,6 +59,13 @@ object GearMeasurementScreenTestTags {
  * the pending gear type's [GearType.measurementFields], not hardcoded per gear type — this is the
  * framework the task asks for, with only the two confirmed schemas (Seine nets, Bottom otter trawls)
  * populated in [uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.StubReferenceDataRepository].
+ *
+ * [editGearUseId], when non-null, means this is a check-your-answers "Change" edit of an *already-completed*
+ * gear use's measurements (finding: "Completed gear measurement/stat/species must be editable through
+ * Change and back flows") rather than the forward "add a new gear" flow: the existing gear use's own gear
+ * type and previously captured values are used (never [CatchRecordFlowViewState.pendingGearTypeId], which is
+ * only ever set by the add-new-gear path), the submitted measurements update that gear use in place via
+ * [CatchRecordFlowEvent.EditGearMeasurements], and the flow returns to [WizardStep.CheckYourAnswers].
  */
 @Suppress("FunctionNaming")
 @Composable
@@ -67,14 +74,22 @@ fun GearMeasurementScreen(
     onNavigate: (WizardStep) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    editGearUseId: String? = null,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     GearMeasurementScreen(
         state = state,
+        editGearUseId = editGearUseId,
         onSubmit = { measurements ->
-            viewModel.dispatch(CatchRecordFlowEvent.GearMeasurementsSubmitted(measurements))
-            onNavigate(WizardStep.GearSummary)
+            if (editGearUseId != null) {
+                viewModel.dispatch(CatchRecordFlowEvent.EditGearMeasurements(editGearUseId, measurements))
+                onNavigate(WizardStep.CheckYourAnswers)
+            } else {
+                viewModel.dispatch(CatchRecordFlowEvent.GearMeasurementsSubmitted(measurements))
+                onNavigate(WizardStep.GearSummary)
+            }
         },
+        onRetry = { viewModel.dispatch(CatchRecordFlowEvent.Retry) },
         onBack = onBack,
         modifier = modifier,
     )
@@ -87,8 +102,17 @@ private fun GearMeasurementScreen(
     onSubmit: (Map<String, MeasurementValue>) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    editGearUseId: String? = null,
+    onRetry: () -> Unit = {},
 ) {
-    val gearType = state.gearTypes.firstOrNull { it.id == state.pendingGearTypeId }
+    val draft = (state.status as? UiStatus.Content<CatchRecordDraft>)?.value
+    val editingGearUse = editGearUseId?.let { id -> draft?.gearUses?.firstOrNull { it.id == id } }
+    val gearType =
+        if (editGearUseId != null) {
+            editingGearUse?.let { gearUse -> state.gearTypes.firstOrNull { it.id == gearUse.gearTypeId } }
+        } else {
+            state.gearTypes.firstOrNull { it.id == state.pendingGearTypeId }
+        }
     CatchRecordWizardScaffold(
         screenTestTag = GearMeasurementScreenTestTags.SCREEN,
         title =
@@ -104,18 +128,28 @@ private fun GearMeasurementScreen(
     ) {
         when (val status = state.status) {
             UiStatus.Idle, UiStatus.Loading -> WizardLoadingState()
-            is UiStatus.Error -> WizardErrorState(status.message, GearMeasurementScreenTestTags.ERROR_MESSAGE)
+            is UiStatus.Error ->
+                WizardErrorState(
+                    message = status.message,
+                    testTag = GearMeasurementScreenTestTags.ERROR_MESSAGE,
+                    isRetryable = status.isRetryable,
+                    onRetry = onRetry,
+                )
             is UiStatus.Content ->
-                if (gearType == null) {
-                    // Defensive only: normal navigation always sets pendingGearTypeId before reaching this
-                    // screen, and a resumed-after-process-death draft with no gear uses yet routes to
-                    // GearSearch, never here — see nextWizardStepForDraft.
+                if (gearType == null || (editGearUseId != null && editingGearUse == null)) {
+                    // Defensive only: normal navigation always sets pendingGearTypeId (add-new-gear path) or
+                    // supplies a valid editGearUseId (check-your-answers edit path) before reaching this
+                    // screen — see nextWizardStepForDraft / editRouteFor.
                     WizardErrorState(
                         stringResource(R.string.gear_measurement_missing_gear_type),
                         GearMeasurementScreenTestTags.ERROR_MESSAGE,
                     )
                 } else {
-                    GearMeasurementScreenContent(gearType = gearType, onSubmit = onSubmit)
+                    GearMeasurementScreenContent(
+                        gearType = gearType,
+                        initialMeasurements = editingGearUse?.measurements.orEmpty(),
+                        onSubmit = onSubmit,
+                    )
                 }
         }
     }
@@ -127,10 +161,20 @@ fun GearMeasurementScreenContent(
     gearType: GearType,
     onSubmit: (Map<String, MeasurementValue>) -> Unit,
     modifier: Modifier = Modifier,
+    initialMeasurements: Map<String, MeasurementValue> = emptyMap(),
 ) {
     var rawValues by
         rememberSaveable(gearType.id) {
-            mutableStateOf(gearType.measurementFields.associate { it.key to "" })
+            mutableStateOf(
+                gearType.measurementFields.associate { field ->
+                    field.key to
+                        when (val value = initialMeasurements[field.key]) {
+                            is MeasurementValue.Numeric -> GearMeasurementSupport.formatNumber(value.value)
+                            is MeasurementValue.Text -> value.value
+                            null -> ""
+                        }
+                },
+            )
         }
     var errors by remember(gearType.id) { mutableStateOf<Map<String, GearMeasurementFieldError>>(emptyMap()) }
     var focusSummary by remember { mutableStateOf(false) }

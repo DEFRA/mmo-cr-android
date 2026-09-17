@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.ksp)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.androidx.room)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.kover)
@@ -101,6 +102,15 @@ dependencies {
     implementation(libs.androidx.hilt.work)
     ksp(libs.androidx.hilt.compiler)
 
+    // Type-safe Navigation Compose routes (ADR 0007) — @Serializable route classes/objects.
+    implementation(libs.kotlinx.serialization.json)
+
+    // Structured, redacted logging (see ADR 0011 / security instructions "no PII/secrets in logs").
+    implementation(libs.timber)
+
+    // App-wide language preference persistence (DataStore Preferences — see ADR 0012).
+    implementation(libs.androidx.datastore.preferences)
+
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
 
@@ -112,6 +122,7 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.room.runtime)
+    testImplementation(libs.androidx.room.testing)
     testImplementation(libs.androidx.work.testing)
 
     androidTestImplementation(libs.androidx.junit)

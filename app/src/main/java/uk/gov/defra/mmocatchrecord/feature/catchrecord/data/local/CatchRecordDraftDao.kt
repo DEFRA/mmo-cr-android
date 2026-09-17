@@ -39,6 +39,18 @@ interface CatchRecordDraftDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertDraft(entity: DraftEntity)
 
+    /**
+     * Inserts [entity] only if it does not conflict with an existing row — in particular, the v6 partial
+     * unique index (`index_catch_record_draft_active_vessel`, see ADR 0010) that allows at most one
+     * `Draft`/`ReadyToSubmit` row per `vesselId`. Deliberately [OnConflictStrategy.IGNORE], never `REPLACE`:
+     * replacing would silently delete a concurrently-created active draft for the same vessel (and, via
+     * cascade, its child rows) rather than preserving it — see [findOrCreateActiveDraft].
+     *
+     * @return the inserted row's rowId, or -1 if the insert was ignored due to a conflict.
+     */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertDraftIfAbsent(entity: DraftEntity): Long
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertGearUses(entities: List<GearUseEntity>)
 
@@ -88,5 +100,32 @@ interface CatchRecordDraftDao {
         if (speciesWeights.isNotEmpty()) insertSpeciesWeights(speciesWeights)
         if (landingStorage.isNotEmpty()) insertLandingStorage(landingStorage)
         if (notLandedSpecies.isNotEmpty()) insertNotLandedSpecies(notLandedSpecies)
+    }
+
+    /**
+     * Race-safe "find the vessel's active draft, or create [candidate] as its new one" — see ADR 0010. The
+     * whole find+insert-if-absent sequence runs inside one Room `@Transaction`, so SQLite's write-transaction
+     * serialization makes the overall operation atomic across concurrent callers: whichever caller's
+     * transaction commits first "wins" (its insert succeeds), and every other concurrent caller's own
+     * transaction only begins evaluating [findActiveDraftEntity] after that commit, so it always observes the
+     * winner's row and returns it — the partial unique index guarantees at most one winner even if this
+     * transactional serialization guarantee were ever weakened, since [insertDraftIfAbsent] is ignore-on-conflict
+     * rather than throwing or replacing.
+     */
+    @Transaction
+    suspend fun findOrCreateActiveDraft(
+        vesselId: String,
+        candidate: DraftEntity,
+    ): DraftEntity {
+        findActiveDraftEntity(vesselId)?.let { return it }
+        val insertedRowId = insertDraftIfAbsent(candidate)
+        if (insertedRowId != -1L) {
+            return candidate
+        }
+        // Lost the race to a concurrent create — the unique index means an active draft now exists for
+        // this vessel; return it rather than duplicating or failing (finding: "unique constraint returns
+        // existing").
+        return findActiveDraftEntity(vesselId)
+            ?: error("Draft insert for vessel '$vesselId' conflicted but no active draft was found")
     }
 }

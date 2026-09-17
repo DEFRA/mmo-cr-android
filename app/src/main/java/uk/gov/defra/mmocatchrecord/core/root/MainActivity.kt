@@ -15,11 +15,21 @@ import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Install the GOV.UK-branded cold-start splash (AndroidX SplashScreen API) before the first
-        // frame. It is dismissed automatically once Compose draws — no artificial delay.
-        installSplashScreen()
+        // Install the GOV.UK-blue cold-start splash background (AndroidX SplashScreen API) before the
+        // first frame. It shows no logo/icon of its own (see Theme.MMOCatchRecord.Starting in
+        // res/values/themes.xml) — the wordmark + crown are drawn exactly once, at full size, by the
+        // in-app SplashScreen composable (core.root.SplashScreen) that composes underneath it.
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // The system splash's default exit transition is a ~200ms fade-out of its own (blue,
+        // logo-less) view, played on top of the Activity content already drawing underneath. Removing
+        // it immediately instead of letting that animation play avoids any residual flash/flicker during
+        // the handover to the in-app SplashScreen composable, which is already the correct frame by the
+        // time this listener fires.
+        splashScreen.setOnExitAnimationListener { splashScreenView -> splashScreenView.remove() }
+
         setContent {
             MmoTheme {
                 RootNavigation(sessionCoordinator = hiltViewModel())

@@ -22,9 +22,17 @@ import androidx.room.RoomDatabase
  * v4 -> v5 (Phase 8): [DraftEntity] gained `catchRecordReference` (the user-facing reference generated
  * once at draft creation, see [CatchRecordReferenceGenerator]) and `lateSubmissionWarningAcknowledged`
  * (breaks what would otherwise be an infinite wizard-step loop on the late-submission warning screen — see
- * `presentation.wizard.WizardStep`), plus [DraftStatus.PendingSync] as a new stored status value. As with
- * the v1 -> v2, v2 -> v3, and v3 -> v4 bumps, no real [androidx.room.migration.Migration] is written; see
- * `di/DatabaseModule.kt` for why.
+ * `presentation.wizard.WizardStep`), plus [DraftStatus.PendingSync] as a new stored status value.
+ *
+ * v5 -> v6 (see ADR 0010): a genuine partial unique index — `index_catch_record_draft_active_vessel` on
+ * `(vesselId) WHERE status IN ('Draft', 'ReadyToSubmit')` — now enforces "one active draft per vessel" at
+ * the SQLite level (Room's `@Index` annotation cannot express a `WHERE` clause, so it is created via raw SQL
+ * in [CatchRecordMigrations.MIGRATION_5_6]); [CatchRecordDraftDao.findOrCreateActiveDraft] is the
+ * corresponding race-safe find-or-create DAO path.
+ *
+ * Every version bump above has a real [androidx.room.migration.Migration] registered in
+ * [CatchRecordMigrations] (see `di/DatabaseModule.kt`) — a draft in progress must survive every schema
+ * change, so `fallbackToDestructiveMigration` must never be reintroduced for this database (ADR 0010).
  */
 @Database(
     entities = [
@@ -35,7 +43,7 @@ import androidx.room.RoomDatabase
         LandingStorageEntity::class,
         NotLandedSpeciesEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 abstract class CatchRecordDatabase : RoomDatabase() {

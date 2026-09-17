@@ -72,6 +72,7 @@ fun GearSearchScreen(
             viewModel.dispatch(CatchRecordFlowEvent.GearTypeSelected(gearTypeId))
             onNavigate(WizardStep.GearMeasurement)
         },
+        onRetry = { viewModel.dispatch(CatchRecordFlowEvent.Retry) },
         onBack = onBack,
         modifier = modifier,
     )
@@ -84,6 +85,7 @@ internal fun GearSearchScreen(
     onSubmit: (String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onRetry: () -> Unit = {},
 ) {
     val isFirstGear =
         (state.status as? UiStatus.Content<CatchRecordDraft>)?.value?.gearUses?.isEmpty() ?: true
@@ -100,7 +102,13 @@ internal fun GearSearchScreen(
     ) {
         when (val status = state.status) {
             UiStatus.Idle, UiStatus.Loading -> WizardLoadingState()
-            is UiStatus.Error -> WizardErrorState(status.message, GearSearchScreenTestTags.ERROR_MESSAGE)
+            is UiStatus.Error ->
+                WizardErrorState(
+                    message = status.message,
+                    testTag = GearSearchScreenTestTags.ERROR_MESSAGE,
+                    isRetryable = status.isRetryable,
+                    onRetry = onRetry,
+                )
             is UiStatus.Content -> GearSearchScreenContent(gearTypes = state.gearTypes, onSubmit = onSubmit)
         }
     }
@@ -116,7 +124,12 @@ fun GearSearchScreenContent(
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var selectedGearTypeId by rememberSaveable { mutableStateOf<String?>(null) }
     var showError by rememberSaveable { mutableStateOf(false) }
-    val suggestions = remember(searchQuery, gearTypes) { GearTypeSearch.filterSuggestions(searchQuery, gearTypes) }
+    // Gear types with no confirmed measurement schema (TBC placeholders) are never selectable — see
+    // GearTypeSearch.selectableGearTypes. Filtering once here (rather than only inside filterSuggestions)
+    // also prevents an exact-name match resolving to a hidden gear type's id via free-text entry.
+    val selectableGearTypes = remember(gearTypes) { GearTypeSearch.selectableGearTypes(gearTypes) }
+    val suggestions =
+        remember(searchQuery, selectableGearTypes) { GearTypeSearch.filterSuggestions(searchQuery, selectableGearTypes) }
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
         GdsAutocompleteField(
@@ -126,7 +139,7 @@ fun GearSearchScreenContent(
             onValueChange = {
                 searchQuery = it
                 selectedGearTypeId =
-                    gearTypes.firstOrNull { gearType -> gearType.name.equals(it, ignoreCase = true) }?.id
+                    selectableGearTypes.firstOrNull { gearType -> gearType.name.equals(it, ignoreCase = true) }?.id
                 showError = false
             },
             onOptionSelected = {

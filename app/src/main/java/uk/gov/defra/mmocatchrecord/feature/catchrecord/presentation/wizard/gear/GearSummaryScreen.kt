@@ -96,6 +96,7 @@ fun GearSummaryScreen(
             viewModel.dispatch(CatchRecordFlowEvent.SaveAndContinue(updatedDraft, nextStep))
             onNavigate(nextStep)
         },
+        onRetry = { viewModel.dispatch(CatchRecordFlowEvent.Retry) },
         onBack = onBack,
         modifier = modifier,
     )
@@ -110,6 +111,7 @@ private fun GearSummaryScreen(
     onSubmit: (CatchRecordDraft) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onRetry: () -> Unit = {},
 ) {
     CatchRecordWizardScaffold(
         screenTestTag = GearSummaryScreenTestTags.SCREEN,
@@ -119,7 +121,13 @@ private fun GearSummaryScreen(
     ) {
         when (val status = state.status) {
             UiStatus.Idle, UiStatus.Loading -> WizardLoadingState()
-            is UiStatus.Error -> WizardErrorState(status.message, GearSummaryScreenTestTags.ERROR_MESSAGE)
+            is UiStatus.Error ->
+                WizardErrorState(
+                    message = status.message,
+                    testTag = GearSummaryScreenTestTags.ERROR_MESSAGE,
+                    isRetryable = status.isRetryable,
+                    onRetry = onRetry,
+                )
             is UiStatus.Content ->
                 GearSummaryScreenContent(
                     draft = status.value,

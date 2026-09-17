@@ -229,6 +229,7 @@
     <string name="submission_pending_sync_check_records">Gwiriwch eich cofnodion dalfa</string>
     <string name="submission_pending_sync_check_records_suffix">i wneud yn siŵr bod y statws yn newid i Wedi\'i Gyflwyno. Chi sy\'n gyfrifol am wneud yn siŵr ein bod yn ei dderbyn.</string>
     <string name="submission_pending_sync_warning">Rhaid i chi gofnodi eich dalfa o fewn 24 awr i lanio.</string>
+    <string name="wizard_error_retry_action">Rhowch gynnig arall arni</string>
 </resources>
 
 

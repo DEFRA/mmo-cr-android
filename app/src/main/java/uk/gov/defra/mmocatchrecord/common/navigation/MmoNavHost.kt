@@ -11,14 +11,37 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
+import androidx.navigation.toRoute
 import uk.gov.defra.mmocatchrecord.core.root.AppLockScreen
 import uk.gov.defra.mmocatchrecord.core.root.RootEvent
 import uk.gov.defra.mmocatchrecord.core.root.SplashScreen
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordEntryRoute
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordFlowEntryScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordFlowViewModel
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CheckYourAnswersRoute
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.DepartureDateRoute
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.DeparturePortRoute
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.DraftResumeRoute
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.DraftResumeScreen
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.GearMeasurementRoute
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.GearSearchRoute
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.GearSpeciesChecklistRoute
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.GearSpeciesSearchRoute
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.GearStatRectangleRoute
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.GearSummaryRoute
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.LateSubmissionWarningRoute
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.NotLandedStraightAwayDecisionRoute
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.NotLandedStraightAwaySpeciesRoute
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.PhaseThreeCompleteRoute
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.PhaseThreeCompleteScreen
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.ReturnDateRoute
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.ReturnPortRoute
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.SubmissionPendingSyncRoute
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.SubmissionSuccessRoute
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.TripTodayRoute
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.VesselSelectionRoute
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.applySubmissionResultNavOptions
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.editRouteFor
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.routeFor
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearMeasurementScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearSearchScreen
@@ -41,177 +64,196 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip.
 import uk.gov.defra.mmocatchrecord.feature.home.presentation.HomeScreen
 import uk.gov.defra.mmocatchrecord.feature.signin.presentation.SignInScreen
 
+/**
+ * Type-safe Navigation Compose routes (ADR 0007/0010, kotlinx.serialization `@Serializable` route
+ * classes/objects — see `AppRoutes.kt` and `feature.catchrecord.presentation.wizard.flow.CatchRecordRoutes.kt`)
+ * replace what were previously hand-built string routes throughout this app.
+ */
 @Suppress("FunctionNaming", "LongMethod")
 @Composable
 fun MmoNavHost(
     navController: NavHostController,
-    startDestination: Destination,
+    startDestination: Any,
     onRootEvent: (RootEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     NavHost(
         navController = navController,
-        startDestination = startDestination.route,
+        startDestination = startDestination,
         modifier = modifier,
     ) {
-        composable(Destination.Splash.route) {
+        composable<SplashRoute> {
             SplashScreen()
         }
-        composable(Destination.SignIn.route) {
+        composable<SignInRoute> {
             SignInScreen(onSignedIn = { onRootEvent(RootEvent.SignedIn) })
         }
-        composable(Destination.AppLock.route) {
+        composable<AppLockRoute> {
             AppLockScreen(onUnlock = { onRootEvent(RootEvent.BiometricUnlockRequested) })
         }
-        composable(Destination.Home.route) {
+        composable<HomeRoute> {
             HomeScreen(
                 onSignOut = { onRootEvent(RootEvent.SignedOut) },
-                onCreateCatchRecord = { navController.navigate(Destination.CatchRecordFlow.GRAPH_ROUTE) },
+                onCreateCatchRecord = { navController.navigate(CatchRecordGraphRoute) },
             )
         }
-        navigation(
-            startDestination = Destination.CatchRecordFlow.ENTRY_ROUTE,
-            route = Destination.CatchRecordFlow.GRAPH_ROUTE,
-        ) {
-            composable(Destination.CatchRecordFlow.ENTRY_ROUTE) { backStackEntry ->
+        navigation<CatchRecordGraphRoute>(startDestination = CatchRecordEntryRoute) {
+            composable<CatchRecordEntryRoute> { backStackEntry ->
                 val flowViewModel = catchRecordFlowViewModel(navController, backStackEntry)
                 CatchRecordFlowEntryScreen(
                     viewModel = flowViewModel,
-                    onNavigate = { route ->
-                        navController.navigate(route) {
-                            popUpTo(Destination.CatchRecordFlow.ENTRY_ROUTE) { inclusive = true }
+                    onNavigate = { step ->
+                        navController.navigate(routeFor(step)) {
+                            popUpTo<CatchRecordEntryRoute> { inclusive = true }
                         }
                     },
                 )
             }
-            composable(Destination.CatchRecordFlow.DRAFT_RESUME_ROUTE) { backStackEntry ->
+            composable<DraftResumeRoute> { backStackEntry ->
                 DraftResumeScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
                     onNavigate = { navController.navigate(routeFor(it)) },
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable(Destination.CatchRecordFlow.VESSEL_SELECTION_ROUTE) { backStackEntry ->
+            composable<VesselSelectionRoute> { backStackEntry ->
                 VesselSelectionScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
                     onNavigate = { navController.navigate(routeFor(it)) },
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable(Destination.CatchRecordFlow.TRIP_TODAY_ROUTE) { backStackEntry ->
+            composable<TripTodayRoute> { backStackEntry ->
                 TripTodayScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
                     onNavigate = { navController.navigate(routeFor(it)) },
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable(Destination.CatchRecordFlow.DEPARTURE_DATE_ROUTE) { backStackEntry ->
+            composable<DepartureDateRoute> { backStackEntry ->
                 DepartureDateScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
                     onNavigate = { navController.navigate(routeFor(it)) },
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable(Destination.CatchRecordFlow.RETURN_DATE_ROUTE) { backStackEntry ->
+            composable<ReturnDateRoute> { backStackEntry ->
                 ReturnDateScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
                     onNavigate = { navController.navigate(routeFor(it)) },
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable(Destination.CatchRecordFlow.DEPARTURE_PORT_ROUTE) { backStackEntry ->
+            composable<DeparturePortRoute> { backStackEntry ->
                 DeparturePortScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
                     onNavigate = { navController.navigate(routeFor(it)) },
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable(Destination.CatchRecordFlow.RETURN_PORT_ROUTE) { backStackEntry ->
+            composable<ReturnPortRoute> { backStackEntry ->
                 ReturnPortScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
                     onNavigate = { navController.navigate(routeFor(it)) },
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable(Destination.CatchRecordFlow.GEAR_SEARCH_ROUTE) { backStackEntry ->
+            composable<GearSearchRoute> { backStackEntry ->
                 GearSearchScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
                     onNavigate = { navController.navigate(routeFor(it)) },
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable(Destination.CatchRecordFlow.GEAR_MEASUREMENT_ROUTE) { backStackEntry ->
+            composable<GearMeasurementRoute> { backStackEntry ->
+                val editGearUseId = backStackEntry.toRoute<GearMeasurementRoute>().editGearUseId
                 GearMeasurementScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                    editGearUseId = editGearUseId,
                     onNavigate = { navController.navigate(routeFor(it)) },
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable(Destination.CatchRecordFlow.GEAR_SUMMARY_ROUTE) { backStackEntry ->
+            composable<GearSummaryRoute> { backStackEntry ->
                 GearSummaryScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
                     onNavigate = { navController.navigate(routeFor(it)) },
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable(Destination.CatchRecordFlow.GEAR_STAT_RECTANGLE_ROUTE) { backStackEntry ->
+            composable<GearStatRectangleRoute> { backStackEntry ->
+                val editGearUseId = backStackEntry.toRoute<GearStatRectangleRoute>().editGearUseId
                 GearStatRectangleScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                    editGearUseId = editGearUseId,
                     onNavigate = { navController.navigate(routeFor(it)) },
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable(Destination.CatchRecordFlow.GEAR_SPECIES_SEARCH_ROUTE) { backStackEntry ->
+            composable<GearSpeciesSearchRoute> { backStackEntry ->
+                val editGearUseId = backStackEntry.toRoute<GearSpeciesSearchRoute>().editGearUseId
                 GearSpeciesSearchScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
-                    onNavigate = { navController.navigate(routeFor(it)) },
+                    editGearUseId = editGearUseId,
+                    onNavigate = { step ->
+                        navController.navigate(
+                            if (editGearUseId != null) editRouteFor(step, editGearUseId) else routeFor(step),
+                        )
+                    },
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable(Destination.CatchRecordFlow.GEAR_SPECIES_CHECKLIST_ROUTE) { backStackEntry ->
+            composable<GearSpeciesChecklistRoute> { backStackEntry ->
+                val editGearUseId = backStackEntry.toRoute<GearSpeciesChecklistRoute>().editGearUseId
                 GearSpeciesChecklistScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
-                    onNavigate = { navController.navigate(routeFor(it)) },
+                    editGearUseId = editGearUseId,
+                    onNavigate = { step ->
+                        navController.navigate(
+                            if (editGearUseId != null) editRouteFor(step, editGearUseId) else routeFor(step),
+                        )
+                    },
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable(Destination.CatchRecordFlow.NOT_LANDED_STRAIGHT_AWAY_DECISION_ROUTE) { backStackEntry ->
+            composable<NotLandedStraightAwayDecisionRoute> { backStackEntry ->
                 NotLandedStraightAwayDecisionScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
                     onNavigate = { navController.navigate(routeFor(it)) },
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable(Destination.CatchRecordFlow.NOT_LANDED_STRAIGHT_AWAY_SPECIES_ROUTE) { backStackEntry ->
+            composable<NotLandedStraightAwaySpeciesRoute> { backStackEntry ->
                 NotLandedStraightAwaySpeciesScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
                     onNavigate = { navController.navigate(routeFor(it)) },
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable(Destination.CatchRecordFlow.PHASE_THREE_COMPLETE_ROUTE) { backStackEntry ->
+            composable<PhaseThreeCompleteRoute> { backStackEntry ->
                 PhaseThreeCompleteScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable(Destination.CatchRecordFlow.LATE_SUBMISSION_WARNING_ROUTE) { backStackEntry ->
+            composable<LateSubmissionWarningRoute> { backStackEntry ->
                 LateSubmissionWarningScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
                     onNavigate = { navController.navigate(routeFor(it)) },
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable(Destination.CatchRecordFlow.CHECK_YOUR_ANSWERS_ROUTE) { backStackEntry ->
+            composable<CheckYourAnswersRoute> { backStackEntry ->
                 CheckYourAnswersScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
                     onNavigate = { step ->
                         navController.navigate(routeFor(step)) { applySubmissionResultNavOptions(step) }
                     },
+                    onNavigateToEdit = { step, gearUseId -> navController.navigate(editRouteFor(step, gearUseId)) },
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable(Destination.CatchRecordFlow.SUBMISSION_SUCCESS_ROUTE) { backStackEntry ->
+            composable<SubmissionSuccessRoute> { backStackEntry ->
                 SubmissionSuccessScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
                     // Placeholder destination: no "my catch records" list screen exists yet (out of scope
@@ -219,20 +261,20 @@ fun MmoNavHost(
                     // whole wizard graph off the back stack so the user cannot navigate "back" into a
                     // now-submitted draft.
                     onViewRecords = {
-                        navController.navigate(Destination.Home.route) {
-                            popUpTo(Destination.CatchRecordFlow.GRAPH_ROUTE) { inclusive = true }
+                        navController.navigate(HomeRoute) {
+                            popUpTo<CatchRecordGraphRoute> { inclusive = true }
                         }
                     },
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable(Destination.CatchRecordFlow.SUBMISSION_PENDING_SYNC_ROUTE) { backStackEntry ->
+            composable<SubmissionPendingSyncRoute> { backStackEntry ->
                 SubmissionPendingSyncScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
                     // Same placeholder destination as SubmissionSuccessScreen above.
                     onViewRecords = {
-                        navController.navigate(Destination.Home.route) {
-                            popUpTo(Destination.CatchRecordFlow.GRAPH_ROUTE) { inclusive = true }
+                        navController.navigate(HomeRoute) {
+                            popUpTo<CatchRecordGraphRoute> { inclusive = true }
                         }
                     },
                     onBack = { navController.popBackStack() },
@@ -248,7 +290,6 @@ private fun catchRecordFlowViewModel(
     navController: NavHostController,
     backStackEntry: NavBackStackEntry,
 ): CatchRecordFlowViewModel {
-    val graphEntry =
-        remember(backStackEntry) { navController.getBackStackEntry(Destination.CatchRecordFlow.GRAPH_ROUTE) }
+    val graphEntry = remember(backStackEntry) { navController.getBackStackEntry<CatchRecordGraphRoute>() }
     return hiltViewModel(graphEntry)
 }

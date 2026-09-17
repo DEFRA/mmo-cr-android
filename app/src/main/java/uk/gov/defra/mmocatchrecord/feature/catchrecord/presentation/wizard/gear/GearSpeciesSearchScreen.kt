@@ -49,8 +49,11 @@ object GearSpeciesSearchScreenTestTags {
 
 /**
  * "Which species did you catch with {gear}?" — reuses the exact same accessible autocomplete pattern as
- * gear/port search. The current gear (and its display title) is derived from [nextGearUsePendingSpecies],
- * mirroring [GearStatRectangleScreen]'s own "current gear" derivation.
+ * gear/port search. The current gear (and its display title) is derived from [nextGearUsePendingSpecies]
+ * for the normal add-species flow, or explicitly from [editGearUseId] when editing an already-completed
+ * gear's species via a check-your-answers "Change" link (finding: "Completed gear measurement/stat/species
+ * must be editable through Change and back flows") — mirroring [GearStatRectangleScreen]'s own "current
+ * gear" derivation.
  */
 @Suppress("FunctionNaming")
 @Composable
@@ -59,14 +62,21 @@ fun GearSpeciesSearchScreen(
     onNavigate: (WizardStep) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    editGearUseId: String? = null,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     GearSpeciesSearchScreen(
         state = state,
+        editGearUseId = editGearUseId,
         onSubmit = { speciesId ->
-            viewModel.dispatch(CatchRecordFlowEvent.SpeciesAddedToCurrentGear(speciesId))
+            if (editGearUseId != null) {
+                viewModel.dispatch(CatchRecordFlowEvent.SpeciesAddedToGearUse(editGearUseId, speciesId))
+            } else {
+                viewModel.dispatch(CatchRecordFlowEvent.SpeciesAddedToCurrentGear(speciesId))
+            }
             onNavigate(WizardStep.GearSpeciesChecklist)
         },
+        onRetry = { viewModel.dispatch(CatchRecordFlowEvent.Retry) },
         onBack = onBack,
         modifier = modifier,
     )
@@ -79,9 +89,16 @@ internal fun GearSpeciesSearchScreen(
     onSubmit: (String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    editGearUseId: String? = null,
+    onRetry: () -> Unit = {},
 ) {
     val draft = (state.status as? UiStatus.Content<CatchRecordDraft>)?.value
-    val currentGearUse = draft?.let(::nextGearUsePendingSpecies)
+    val currentGearUse =
+        if (editGearUseId != null) {
+            draft?.gearUses?.firstOrNull { it.id == editGearUseId }
+        } else {
+            draft?.let(::nextGearUsePendingSpecies)
+        }
     val gearType = currentGearUse?.let { gearUse -> state.gearTypes.firstOrNull { it.id == gearUse.gearTypeId } }
     val gearNameWithMeasurement =
         currentGearUse?.let { GearStatRectangleSupport.gearNameWithIdentifyingMeasurementFor(gearType, it) }
@@ -96,11 +113,18 @@ internal fun GearSpeciesSearchScreen(
     ) {
         when (val status = state.status) {
             UiStatus.Idle, UiStatus.Loading -> WizardLoadingState()
-            is UiStatus.Error -> WizardErrorState(status.message, GearSpeciesSearchScreenTestTags.ERROR_MESSAGE)
+            is UiStatus.Error ->
+                WizardErrorState(
+                    message = status.message,
+                    testTag = GearSpeciesSearchScreenTestTags.ERROR_MESSAGE,
+                    isRetryable = status.isRetryable,
+                    onRetry = onRetry,
+                )
             is UiStatus.Content ->
                 if (draft == null || currentGearUse == null) {
                     // Defensive only: normal navigation only reaches this screen while
-                    // nextGearUsePendingSpecies(draft) is non-null — see nextWizardStepForDraft.
+                    // nextGearUsePendingSpecies(draft) is non-null (add path), or editGearUseId resolves to
+                    // a real gear use (check-your-answers edit path) — see nextWizardStepForDraft/editRouteFor.
                     WizardErrorState(
                         stringResource(R.string.gear_species_search_title_fallback),
                         GearSpeciesSearchScreenTestTags.ERROR_MESSAGE,

@@ -21,7 +21,7 @@ import uk.gov.defra.mmocatchrecord.feature.signin.presentation.SignInScreenTestT
  *
  * Asserts against [SignInScreenTestTags] (the tags actually rendered by
  * `feature.signin.presentation.SignInScreen`, which [uk.gov.defra.mmocatchrecord.common.navigation.MmoNavHost]
- * wires in for [uk.gov.defra.mmocatchrecord.common.navigation.Destination.SignIn]) rather than the
+ * wires in for [uk.gov.defra.mmocatchrecord.common.navigation.SignInRoute]) rather than the
  * Stage-1 `core.root.RootScreenTestTags` placeholder tags, which stopped matching any composed screen
  * once the real sign-in feature replaced the placeholder.
  */

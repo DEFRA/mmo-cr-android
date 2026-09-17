@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -20,7 +21,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
-import uk.gov.defra.mmocatchrecord.common.navigation.Destination
+import uk.gov.defra.mmocatchrecord.common.navigation.CatchRecordGraphRoute
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.core.connectivity.NetworkConnectivityChecker
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.StubReferenceDataRepository
@@ -199,24 +200,24 @@ class SubmissionFlowNavigationTest {
         navController: NavHostController,
     ) {
         MmoTheme {
-            NavHost(navController = navController, startDestination = Destination.CatchRecordFlow.GRAPH_ROUTE) {
-                navigation(
-                    startDestination = Destination.CatchRecordFlow.CHECK_YOUR_ANSWERS_ROUTE,
-                    route = Destination.CatchRecordFlow.GRAPH_ROUTE,
-                ) {
-                    composable(Destination.CatchRecordFlow.CHECK_YOUR_ANSWERS_ROUTE) {
+            NavHost(navController = navController, startDestination = CatchRecordGraphRoute) {
+                navigation<CatchRecordGraphRoute>(startDestination = CheckYourAnswersRoute) {
+                    composable<CheckYourAnswersRoute> {
                         CheckYourAnswersScreen(
                             viewModel = viewModel,
                             onNavigate = { step ->
                                 navController.navigate(routeFor(step)) { applySubmissionResultNavOptions(step) }
                             },
+                            onNavigateToEdit = { step, gearUseId ->
+                                navController.navigate(editRouteFor(step, gearUseId))
+                            },
                             onBack = {},
                         )
                     }
-                    composable(Destination.CatchRecordFlow.SUBMISSION_SUCCESS_ROUTE) {
+                    composable<SubmissionSuccessRoute> {
                         SubmissionSuccessScreen(viewModel = viewModel, onViewRecords = {}, onBack = {})
                     }
-                    composable(Destination.CatchRecordFlow.SUBMISSION_PENDING_SYNC_ROUTE) {
+                    composable<SubmissionPendingSyncRoute> {
                         SubmissionPendingSyncScreen(viewModel = viewModel, onViewRecords = {}, onBack = {})
                     }
                 }
@@ -224,14 +225,11 @@ class SubmissionFlowNavigationTest {
         }
     }
 
-    /** Asserts [route] is no longer reachable on [navController]'s back stack (throws if still present). */
-    private fun assertRouteClearedFromBackStack(
-        navController: NavHostController,
-        route: String,
-    ) {
-        val stillOnBackStack = runCatching { navController.getBackStackEntry(route) }.isSuccess
+    /** Asserts the [SubmissionSuccessRoute]/[SubmissionPendingSyncRoute]-style destination is no longer reachable. */
+    private inline fun <reified T : Any> assertRouteClearedFromBackStack(navController: NavHostController) {
+        val stillOnBackStack = runCatching { navController.getBackStackEntry<T>() }.isSuccess
         assertTrue(
-            "Expected route '$route' to have been cleared from the back stack by applySubmissionResultNavOptions",
+            "Expected route '${T::class.simpleName}' to have been cleared from the back stack by applySubmissionResultNavOptions",
             !stillOnBackStack,
         )
     }
@@ -275,7 +273,7 @@ class SubmissionFlowNavigationTest {
             .performClick()
 
         composeTestRule.waitUntil(timeoutMillis = 5_000) {
-            navController.currentDestination?.route == Destination.CatchRecordFlow.SUBMISSION_SUCCESS_ROUTE
+            navController.currentDestination?.hasRoute<SubmissionSuccessRoute>() == true
         }
         composeTestRule.waitForIdle()
 
@@ -289,7 +287,7 @@ class SubmissionFlowNavigationTest {
         assertTrue("Online success must not enqueue a background sync", syncScheduler.scheduledDraftIds.isEmpty())
 
         // Back stack genuinely cleared: the user cannot navigate back into an already-submitted draft.
-        assertRouteClearedFromBackStack(navController, Destination.CatchRecordFlow.CHECK_YOUR_ANSWERS_ROUTE)
+        assertRouteClearedFromBackStack<CheckYourAnswersRoute>(navController)
     }
 
     @Test
@@ -314,7 +312,7 @@ class SubmissionFlowNavigationTest {
             .performClick()
 
         composeTestRule.waitUntil(timeoutMillis = 5_000) {
-            navController.currentDestination?.route == Destination.CatchRecordFlow.SUBMISSION_PENDING_SYNC_ROUTE
+            navController.currentDestination?.hasRoute<SubmissionPendingSyncRoute>() == true
         }
         composeTestRule.waitForIdle()
 
@@ -328,7 +326,7 @@ class SubmissionFlowNavigationTest {
         // (`WorkManagerCatchRecordSyncScheduler.scheduleSync`) is genuinely reached, for this exact draft id.
         assertEquals(listOf(seedDraft.id), syncScheduler.scheduledDraftIds)
 
-        assertRouteClearedFromBackStack(navController, Destination.CatchRecordFlow.CHECK_YOUR_ANSWERS_ROUTE)
+        assertRouteClearedFromBackStack<CheckYourAnswersRoute>(navController)
     }
 
     @Test
@@ -354,7 +352,7 @@ class SubmissionFlowNavigationTest {
             .performClick()
 
         composeTestRule.waitUntil(timeoutMillis = 5_000) {
-            navController.currentDestination?.route == Destination.CatchRecordFlow.SUBMISSION_PENDING_SYNC_ROUTE
+            navController.currentDestination?.hasRoute<SubmissionPendingSyncRoute>() == true
         }
         composeTestRule.waitForIdle()
 

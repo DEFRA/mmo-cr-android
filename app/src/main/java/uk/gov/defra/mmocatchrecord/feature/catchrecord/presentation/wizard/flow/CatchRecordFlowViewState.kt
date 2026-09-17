@@ -4,6 +4,7 @@ import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.core.architecture.ViewState
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementValue
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Species
@@ -133,4 +134,53 @@ sealed interface CatchRecordFlowEvent {
      * submit is always the current [UiStatus.Content] draft already held in state.
      */
     data object AcceptDeclarationAndSubmit : CatchRecordFlowEvent
+
+    /**
+     * Re-attempts whichever event most recently failed (tracked internally by the ViewModel) — dispatched
+     * by the shared retry control on any retryable [UiStatus.Error] (see `WizardErrorState`/finding on
+     * "Retryable wizard errors need accessible Retry control"). A no-op if nothing has failed.
+     */
+    data object Retry : CatchRecordFlowEvent
+
+    /**
+     * Check-your-answers "Change" edit flow (finding: "Completed gear measurement/stat/species must be
+     * editable through Change and back flows"): updates the *existing* [uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse]
+     * identified by [gearUseId]'s measurements in place, then returns to [uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardStep.CheckYourAnswers].
+     */
+    data class EditGearMeasurements(
+        val gearUseId: String,
+        val measurements: Map<String, MeasurementValue>,
+    ) : CatchRecordFlowEvent
+
+    /**
+     * Check-your-answers "Change" edit flow for a gear's statistical sub-rectangle: updates the existing
+     * gear use in place. FR10 dependent-data invalidation (clearing its species/weight entries, captured
+     * against the previous rectangle) is applied centrally by the ViewModel's persistence funnel, not here.
+     */
+    data class EditGearStatRectangle(
+        val gearUseId: String,
+        val statisticalSubRectangleCode: String,
+    ) : CatchRecordFlowEvent
+
+    /**
+     * Adds a new species to an *already-confirmed* gear use during a Check-your-answers edit (mirrors
+     * [SpeciesAddedToCurrentGear], but targets an explicit [gearUseId] rather than "whichever gear is
+     * next pending species" — the latter would resolve to nothing for a gear that already has confirmed
+     * species). Advances to the gear-species checklist (still in this gear's edit context) rather than
+     * check-your-answers, so the user can enter the new species' weight before returning.
+     */
+    data class SpeciesAddedToGearUse(
+        val gearUseId: String,
+        val speciesId: String,
+    ) : CatchRecordFlowEvent
+
+    /**
+     * Check-your-answers "Change" edit flow for a gear's species/weight entries: replaces the existing gear
+     * use's species-weight list wholesale (the species checklist screen's own save action already produces
+     * the complete, validated list), then returns to check-your-answers.
+     */
+    data class EditGearSpeciesWeights(
+        val gearUseId: String,
+        val speciesWeights: List<SpeciesWeightEntry>,
+    ) : CatchRecordFlowEvent
 }

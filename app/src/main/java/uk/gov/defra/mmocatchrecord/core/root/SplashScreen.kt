@@ -4,7 +4,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
@@ -24,22 +23,18 @@ import uk.gov.defra.mmocatchrecord.common.design.Spacing
 /** Fixed width of the centred wordmark; height follows automatically to preserve its aspect ratio. */
 private val SplashWordmarkWidth = 190.dp
 
-/** Fixed height of the bottom crown, within the GOV.UK brand lock-up's usual 40–56dp range. */
-private val SplashCrownHeight = 48.dp
-
 /**
  * In-app cold-start splash: a full-bleed GOV.UK-blue background with the GOV.UK wordmark centred on
  * screen and the white Tudor crown pinned near the bottom — the full-size brand lock-up from the design.
  *
  * This is the [RootPhase.SPLASH] destination, shown only for the brief, local-only window while
- * [SessionCoordinator] resolves the real phase (sign-in / app-lock / home) — see [RootNavigation]. It is
- * rendered as ordinary Compose content rather than relying solely on the Android 12+ system splash
- * screen's animated-icon slot, which is masked to a circle and sized like an app icon: that slot renders
- * the wordmark smaller than this full design. The system splash (see the `Theme.MMOCatchRecord.Starting`
- * styles in `res/values` and `res/values-v31`) still shows the GOV.UK wordmark + crown at process start
- * (so the cold start never shows the bare launcher icon), and this composable takes over immediately
- * after to render the complete, unmasked lock-up — the crown position matches across the handover.
- *
+ * [SessionCoordinator] resolves the real phase (sign-in / app-lock / home) — see [RootNavigation]. The
+ * Android 12+ system splash screen (`Theme.MMOCatchRecord.Starting` in `res/values/themes.xml`) shows only
+ * the plain GOV.UK-blue background with no logo — it deliberately does not render the wordmark or crown at
+ * all, because that slot is masked to a circle and sized like an app icon, so anything drawn there would
+ * necessarily be smaller/cropped compared to this full-size, unmasked lock-up, producing a visible
+ * size-mismatch "zoom" during the handover between the two. This composable is therefore the *only* place
+ * the wordmark + crown are drawn, at their correct full size, with full layout control (no masking).
  * The background fills the entire screen edge-to-edge (full bleed, matching the design); only the
  * wordmark and crown content are inset from the status/navigation bars, via [Modifier.systemBarsPadding].
  * There is no artificial delay here — the splash is dismissed the instant [RootPhase] resolves.
@@ -53,32 +48,24 @@ fun SplashScreen(modifier: Modifier = Modifier) {
                 .background(MmoColors.GovBlue)
                 .testTag(RootScreenTestTags.SPLASH_SCREEN),
     ) {
-        Box(
+        Image(
+            painter = painterResource(id = R.drawable.ic_govuk_logo),
+            contentDescription = stringResource(R.string.gov_uk),
             modifier =
                 Modifier
-                    .fillMaxSize()
-                    .systemBarsPadding(),
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.ic_govuk_logo),
-                contentDescription = stringResource(R.string.gov_uk),
-                modifier =
-                    Modifier
-                        .align(Alignment.Center)
-                        .width(SplashWordmarkWidth),
-            )
-            Image(
-                painter = painterResource(id = R.drawable.ic_govuk_crown),
-                // Decorative: the wordmark above already conveys the "GOV.UK" identity to TalkBack, so
-                // the crown must not be announced again per the app's accessibility instructions.
-                contentDescription = null,
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = Spacing.xl)
-                        .height(SplashCrownHeight),
-            )
-        }
+                    .align(Alignment.Center)
+                    .systemBarsPadding()
+                    .width(SplashWordmarkWidth),
+        )
+        Image(
+            painter = painterResource(id = R.drawable.ic_govuk_crown),
+            contentDescription = stringResource(R.string.gov_uk_crown_logo),
+            modifier =
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .systemBarsPadding()
+                    .padding(bottom = Spacing.xxl),
+        )
     }
 }
 
