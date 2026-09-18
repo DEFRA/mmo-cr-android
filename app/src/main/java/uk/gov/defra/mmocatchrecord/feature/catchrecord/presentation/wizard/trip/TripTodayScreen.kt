@@ -4,8 +4,6 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -79,7 +77,6 @@ fun TripTodayScreenContent(
     modifier: Modifier = Modifier,
 ) {
     var selectedOptionId by rememberSaveable { mutableStateOf(initialValue?.toString()) }
-    var showError by rememberSaveable { mutableStateOf(false) }
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
         GdsRadioGroup(
@@ -89,30 +86,16 @@ fun TripTodayScreenContent(
                     GdsRadioOption("false", stringResource(R.string.no)),
                 ),
             selectedOptionId = selectedOptionId,
-            onOptionSelected = {
-                selectedOptionId = it
-                showError = false
-            },
+            onOptionSelected = { selectedOptionId = it },
             optionTestTagPrefix = TripTodayScreenTestTags.OPTION_PREFIX,
         )
-        if (showError) {
-            Text(
-                text = stringResource(R.string.trip_today_error),
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.testTag(TripTodayScreenTestTags.ERROR_MESSAGE),
-            )
+        when (selectedOptionId) {
+            "true", "false" ->
+                PrimaryActionButton(
+                    text = stringResource(R.string.save_and_continue),
+                    onClick = { onSubmit(selectedOptionId == "true") },
+                    modifier = Modifier.testTag(TripTodayScreenTestTags.SAVE_ACTION),
+                )
         }
-        PrimaryActionButton(
-            text = stringResource(R.string.save_and_continue),
-            onClick = {
-                when (selectedOptionId) {
-                    "true" -> onSubmit(true)
-                    "false" -> onSubmit(false)
-                    else -> showError = true
-                }
-            },
-            modifier = Modifier.testTag(TripTodayScreenTestTags.SAVE_ACTION),
-        )
     }
 }

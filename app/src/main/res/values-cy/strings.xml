@@ -70,9 +70,7 @@
     <string name="draft_delete_confirmation_message">Ydych chiâ€™n siÅµr eich bod am ddileuâ€™r drafft hwn? Ni ellir dadwneud hyn.</string>
     <string name="draft_delete_confirmation_confirm">Dileu drafft</string>
     <string name="vessel_selection_title">Pa long a ddefnyddiwyd gennych?</string>
-    <string name="vessel_selection_error">Dewiswch y llong a ddefnyddiwyd gennych</string>
     <string name="trip_today_title">A ddechreuodd ac a orffennodd eich taith heddiw?</string>
-    <string name="trip_today_error">Dewiswch a ddechreuodd ac a orffennodd eich taith heddiw</string>
     <string name="departure_date_title">Ar ba ddyddiad ddechreuodd eich taith?</string>
     <string name="return_date_title">Ar ba ddyddiad orffennodd eich taith?</string>
     <string name="date_day_label">Diwrnod</string>
