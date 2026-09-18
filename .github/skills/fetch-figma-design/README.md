@@ -35,7 +35,7 @@ full data-minimisation and PII contract, and
 
 ## Setup
 
-1. Copy [assets/.env.example](assets/.env.example) to `.env` in this folder.
+1. Copy [assets/.env.example](.env.example) to `.env` in this folder.
 2. Create a token: Figma → **Settings** → **Security** → **Personal access
    tokens** → **Generate new token**, scope **File content: Read-only**. Copy it
    immediately (shown once).
