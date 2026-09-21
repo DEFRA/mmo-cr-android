@@ -50,6 +50,13 @@
     <string name="nav_notifications">Hysbysiadau</string>
     <string name="nav_settings">Gosodiadau</string>
     <string name="sign_out">Allgofnodi</string>
+    <string name="settings_title">Eich gosodiadau</string>
+    <string name="settings_analytics_heading">Data dadansoddeg dewisol</string>
+    <string name="settings_analytics_body">Rydym yn defnyddio hyn i wella profiad a sefydlogrwydd yr ap. Darllenwch fwy am sut rydym yn defnyddio eich data yn ein hysbysiad preifatrwydd.</string>
+    <string name="settings_how_we_use_your_data">Sut rydym yn defnyddio eich data</string>
+    <string name="settings_my_account">Fy nghyfrif</string>
+    <string name="settings_privacy_notice">Hysbysiad preifatrwydd</string>
+    <string name="settings_support_information">Gwybodaeth gymorth</string>
     <string name="signin_title">Mewngofnodi</string>
     <string name="email_address">Cyfeiriad e-bost</string>
     <string name="password">Cyfrinair</string>

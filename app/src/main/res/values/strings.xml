@@ -47,6 +47,13 @@
     <string name="nav_notifications">Notifications</string>
     <string name="nav_settings">Settings</string>
     <string name="sign_out">Sign out</string>
+    <string name="settings_title">Your settings</string>
+    <string name="settings_analytics_heading">Optional analytics data</string>
+    <string name="settings_analytics_body">We use this to improve the experience and stability of the app. Read more about how we use your data in our privacy notice.</string>
+    <string name="settings_how_we_use_your_data">How we use your data</string>
+    <string name="settings_my_account">My account</string>
+    <string name="settings_privacy_notice">Privacy notice</string>
+    <string name="settings_support_information">Support information</string>
     <string name="signin_title">Sign in</string>
     <string name="email_address">Email address</string>
     <string name="password">Password</string>
