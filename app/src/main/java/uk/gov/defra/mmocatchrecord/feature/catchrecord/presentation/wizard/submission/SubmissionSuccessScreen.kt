@@ -2,6 +2,7 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.subm
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -10,10 +11,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.GdsResultBanner
 import uk.gov.defra.mmocatchrecord.common.design.GdsResultBannerVariant
+import uk.gov.defra.mmocatchrecord.common.design.MmoColors
+import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
@@ -49,20 +54,37 @@ fun SubmissionSuccessScreen(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    SubmissionSuccessScreen(
+        status = state.status,
+        onRetry = { viewModel.dispatch(CatchRecordFlowEvent.Retry) },
+        onViewRecords = onViewRecords,
+        onBack = onBack,
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun SubmissionSuccessScreen(
+    status: UiStatus<CatchRecordDraft>,
+    onRetry: () -> Unit,
+    onViewRecords: () -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     CatchRecordWizardScaffold(
         screenTestTag = SubmissionSuccessScreenTestTags.SCREEN,
         title = "",
         onBack = onBack,
         modifier = modifier,
     ) {
-        when (val status = state.status) {
+        when (status) {
             UiStatus.Idle, UiStatus.Loading -> WizardLoadingState()
             is UiStatus.Error ->
                 WizardErrorState(
                     message = status.message,
                     testTag = SubmissionSuccessScreenTestTags.ERROR_MESSAGE,
                     isRetryable = status.isRetryable,
-                    onRetry = { viewModel.dispatch(CatchRecordFlowEvent.Retry) },
+                    onRetry = onRetry,
                 )
             is UiStatus.Content ->
                 SubmissionSuccessScreenContent(draft = status.value, onViewRecords = onViewRecords)
@@ -76,35 +98,69 @@ fun SubmissionSuccessScreenContent(
     onViewRecords: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.l)) {
         GdsResultBanner(
             variant = GdsResultBannerVariant.Success,
             title = stringResource(R.string.submission_success_banner_title),
             testTag = SubmissionSuccessScreenTestTags.BANNER,
-        )
-        draft.catchRecordReference?.let { reference ->
-            Text(
-                text = stringResource(R.string.submission_reference_label, reference),
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                modifier = Modifier.testTag(SubmissionSuccessScreenTestTags.REFERENCE),
-            )
+        ) {
+            draft.catchRecordReference?.let { reference ->
+                Text(
+                    text = stringResource(R.string.submission_reference_label, reference),
+                    style =
+                        MaterialTheme.typography.titleMedium.copy(
+                            color = MmoColors.White,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                        ),
+                    modifier = Modifier.testTag(SubmissionSuccessScreenTestTags.REFERENCE),
+                )
+            }
         }
-        Text(
-            text = stringResource(R.string.submission_success_what_happens_next_title),
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-        )
-        listOf(
-            R.string.submission_success_bullet_received,
-            R.string.submission_success_bullet_email,
-            R.string.submission_success_bullet_view,
-            R.string.submission_success_bullet_save_reference,
-        ).forEach { bulletRes ->
-            Text(text = "• " + stringResource(bulletRes), style = MaterialTheme.typography.bodyLarge)
+        Column(
+            modifier = Modifier.padding(horizontal = Spacing.l),
+            verticalArrangement = Arrangement.spacedBy(Spacing.s),
+        ) {
+            Text(
+                text = stringResource(R.string.submission_success_what_happens_next_title),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                listOf(
+                    R.string.submission_success_bullet_received,
+                    R.string.submission_success_bullet_email,
+                    R.string.submission_success_bullet_view,
+                    R.string.submission_success_bullet_save_reference,
+                ).forEach { bulletRes ->
+                    Text(text = "• " + stringResource(bulletRes), style = MaterialTheme.typography.bodyLarge)
+                }
+            }
         }
         PrimaryActionButton(
             text = stringResource(R.string.view_catch_records_action),
             onClick = onViewRecords,
             modifier = Modifier.testTag(SubmissionSuccessScreenTestTags.VIEW_RECORDS_ACTION),
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Suppress("FunctionNaming")
+@Composable
+fun SubmissionSuccessScreenPreview() {
+    MmoTheme {
+        SubmissionSuccessScreen(
+            status = UiStatus.Content(
+                CatchRecordDraft(
+                    id = "draft-1",
+                    vesselId = "vessel-1",
+                    modifiedAtEpochMillis = 0L,
+                    catchRecordReference = "A1234520260727150815",
+                )
+            ),
+            onRetry = {},
+            onViewRecords = {},
+            onBack = {},
         )
     }
 }

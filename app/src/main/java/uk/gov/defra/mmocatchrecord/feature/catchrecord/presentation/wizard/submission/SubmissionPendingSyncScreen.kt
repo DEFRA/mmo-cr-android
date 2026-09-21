@@ -2,12 +2,11 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.subm
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -18,6 +17,7 @@ import uk.gov.defra.mmocatchrecord.common.design.GdsLinkAction
 import uk.gov.defra.mmocatchrecord.common.design.GdsResultBanner
 import uk.gov.defra.mmocatchrecord.common.design.GdsResultBannerVariant
 import uk.gov.defra.mmocatchrecord.common.design.GdsWarningText
+import uk.gov.defra.mmocatchrecord.common.design.MmoColors
 import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
@@ -86,27 +86,35 @@ fun SubmissionPendingSyncScreenContent(
             variant = GdsResultBannerVariant.PendingSync,
             title = stringResource(R.string.submission_pending_sync_banner_title),
             testTag = SubmissionPendingSyncScreenTestTags.BANNER,
-        )
-        draft.catchRecordReference?.let { reference ->
-            Text(
-                text = stringResource(R.string.submission_reference_label, reference),
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                modifier = Modifier.testTag(SubmissionPendingSyncScreenTestTags.REFERENCE),
-            )
+        ) {
+            draft.catchRecordReference?.let { reference ->
+                Text(
+                    text = stringResource(R.string.submission_reference_label, reference),
+                    style =
+                        MaterialTheme.typography.bodyLarge.copy(
+                            color = MmoColors.White,
+                            fontWeight = FontWeight.Bold,
+                        ),
+                    modifier = Modifier.testTag(SubmissionPendingSyncScreenTestTags.REFERENCE),
+                )
+            }
         }
         Text(
             text = stringResource(R.string.submission_pending_sync_body_title),
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
         )
         Text(text = stringResource(R.string.submission_pending_sync_body), style = MaterialTheme.typography.bodyLarge)
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        // FlowRow (not Row) so the long suffix wraps onto its own full-width line(s) below the link
+        // instead of overflowing past the screen edge — Row would measure the suffix Text at up to full
+        // width but place it starting immediately after the link, pushing wrapped lines off-screen.
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             GdsLinkAction(
                 text = stringResource(R.string.submission_pending_sync_check_records),
                 onClick = onViewRecords,
                 testTag = SubmissionPendingSyncScreenTestTags.CHECK_RECORDS_LINK,
             )
             Text(
-                text = " " + stringResource(R.string.submission_pending_sync_check_records_suffix),
+                text = stringResource(R.string.submission_pending_sync_check_records_suffix),
                 style = MaterialTheme.typography.bodyLarge,
             )
         }

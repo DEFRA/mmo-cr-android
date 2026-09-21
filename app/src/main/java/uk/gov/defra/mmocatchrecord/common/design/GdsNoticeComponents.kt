@@ -20,11 +20,12 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 /** Which confirmation banner colour/icon to show — see [GdsResultBanner]. */
 enum class GdsResultBannerVariant {
-    /** Green header + check-circle icon — the record was submitted online successfully. */
+    /** Green header, text-only — the record was submitted online successfully. */
     Success,
 
     /** Blue header + info-circle icon — the record was recorded and is queued for background sync. */
@@ -33,9 +34,14 @@ enum class GdsResultBannerVariant {
 
 /**
  * GOV.UK-style confirmation banner (coloured header + white body), used by the Phase 8 submission-result
- * screens. Conveys its meaning via **icon + text + colour together** (never colour alone), per WCAG 2.2 AA
- * — the icon shape (check vs info) and the [title] text both differ between variants, so the banner still
- * reads correctly to a colour-blind user or when rendered in greyscale.
+ * screens. The [title] text itself differs between variants ("submitted" vs "recorded"), so meaning is
+ * never conveyed by colour alone even though only [GdsResultBannerVariant.PendingSync] pairs its text
+ * with an icon — per WCAG 2.2 AA, the banner still reads correctly to a colour-blind user or when
+ * rendered in greyscale.
+ *
+ * [content], when supplied, renders additional white text inside the same coloured panel below the title
+ * (e.g. the catch record reference on the pending-sync screen) rather than as separate black body copy —
+ * matching the GOV.UK confirmation-page pattern of keeping the reference inside the coloured banner.
  */
 @Composable
 fun GdsResultBanner(
@@ -43,38 +49,52 @@ fun GdsResultBanner(
     title: String,
     testTag: String,
     modifier: Modifier = Modifier,
+    content: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     val headerColor = if (variant == GdsResultBannerVariant.Success) MmoColors.SuccessGreen else MmoColors.GovBlue
-    Column(modifier = modifier.fillMaxWidth().testTag(testTag)) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .background(headerColor)
-                    .padding(horizontal = Spacing.s, vertical = Spacing.s),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (variant == GdsResultBannerVariant.Success) {
-                CustomCheckCircleIcon(tint = MmoColors.White, modifier = Modifier.size(Spacing.m))
-            } else {
-                CustomInfoCircleIcon(tint = MmoColors.White, modifier = Modifier.size(Spacing.m))
-            }
+    Column(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .testTag(testTag)
+                .background(headerColor)
+                .padding(horizontal = Spacing.m, vertical = Spacing.l),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(Spacing.m),
+    ) {
+        if (variant == GdsResultBannerVariant.Success) {
             Text(
                 text = title,
                 style =
-                    MaterialTheme.typography.titleMedium.copy(
+                    MaterialTheme.typography.headlineMedium.copy(
                         color = MmoColors.White,
-                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
                     ),
                 modifier = Modifier.semantics { heading() },
             )
+        } else {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                CustomInfoCircleIcon(tint = MmoColors.White, modifier = Modifier.size(Spacing.m))
+                Text(
+                    text = title,
+                    style =
+                        MaterialTheme.typography.headlineMedium.copy(
+                            color = MmoColors.White,
+                            textAlign = TextAlign.Center,
+                        ),
+                    modifier = Modifier.semantics { heading() },
+                )
+            }
         }
+        content?.invoke(this)
     }
 }
 
 /**
- * GOV.UK "Warning text" pattern: a warning-triangle icon beside bold body text, deliberately **not**
+ * GOV.UK "Warning text" pattern: a filled circle "!" icon beside bold body text, deliberately **not**
  * a coloured banner (per GDS guidance, warning text relies on the icon + bold weight, not background
  * colour) — used for "You must record your catch within 24 hours of landing." on the pending-sync screen.
  */

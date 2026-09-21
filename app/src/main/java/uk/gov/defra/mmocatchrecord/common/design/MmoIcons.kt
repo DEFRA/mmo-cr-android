@@ -180,7 +180,11 @@ fun CustomInfoCircleIcon(
     }
 }
 
-/** Custom warning-triangle shape drawer (GDS "Warning text" icon — the "!" component). */
+/**
+ * Custom filled "!" in-circle shape drawer (GOV.UK "Warning text" icon) — matches the GDS warning-text
+ * pattern's filled circle + exclamation mark (not a triangle), per
+ * https://design-system.service.gov.uk/components/warning-text/.
+ */
 @Composable
 fun CustomWarningIcon(
     tint: Color,
@@ -189,21 +193,14 @@ fun CustomWarningIcon(
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
-        val path =
-            Path().apply {
-                moveTo(w / 2f, h * 0.05f)
-                lineTo(w * 0.97f, h * 0.95f)
-                lineTo(w * 0.03f, h * 0.95f)
-                close()
-            }
-        drawPath(path = path, color = tint)
+        drawCircle(color = tint, radius = w * 0.45f, center = Offset(w / 2f, h / 2f))
         drawLine(
             color = Color.White,
-            start = Offset(w / 2f, h * 0.4f),
-            end = Offset(w / 2f, h * 0.68f),
-            strokeWidth = w * 0.08f,
+            start = Offset(w / 2f, h * 0.28f),
+            end = Offset(w / 2f, h * 0.6f),
+            strokeWidth = w * 0.1f,
         )
-        drawCircle(color = Color.White, radius = w * 0.045f, center = Offset(w / 2f, h * 0.82f))
+        drawCircle(color = Color.White, radius = w * 0.05f, center = Offset(w / 2f, h * 0.74f))
     }
 }
 
