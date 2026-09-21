@@ -1,0 +1,30 @@
+# Detekt configuration for the MMO Catch Recording Android app.
+#
+# Baseline is detekt's default ruleset, with a small number of deliberate overrides suited to a
+# Jetpack Compose codebase (PascalCase composable function names) and this design-system module
+# (colour/spacing constant files, which are inherently full of "magic numbers" that are the actual
+# named palette/scale values).
+
+naming:
+  FunctionNaming:
+    active: true
+    functionPattern: '([a-z][a-zA-Z0-9]*)|(`.*`)'
+    ignoreAnnotated: ['Composable']
+  MatchingDeclarationName:
+    active: false
+
+style:
+  MagicNumber:
+    active: true
+    ignorePropertyDeclaration: true
+    ignoreAnnotated: ['Composable']
+  ReturnCount:
+    active: true
+    max: 4
+
+complexity:
+  LongParameterList:
+    active: true
+    functionThreshold: 8
+    constructorThreshold: 8
+

@@ -30,13 +30,21 @@ work, or delegate to the **Android Planner** for **Complex** work — then obtai
 
 ## Tech-stack confirmation status (app stack)
 
-> **Status: ❌ Not yet confirmed** — the app tech-stack decisions in
-> [copilot-instructions.md](../copilot-instructions.md) §5 (language, UI, architecture, DI, persistence,
-> testing, lint, SDK levels) are **tentative proposed defaults** and have **not** been confirmed by the
-> Android developer.
->
-> _When confirmed, replace the line above with, e.g.:_
-> `Status: ✅ Confirmed on YYYY-MM-DD by <developer> — deviations from §5 defaults: <none / list>.`
+> **Status: ✅ Confirmed on 2026-09-04 by developer via orchestrator, DI reverted to Hilt on 2026-09-07,
+> catch-record persistence encryption confirmed on 2026-09-11 via orchestrator-approved E4-S01 plan** —
+> remaining deviations from §5 defaults: Mockito instead of MockK (testing; Robolectric added for JVM-side
+> Room DAO tests), targetSdk 35 (compileSdk 36/37 — see `app/build.gradle.kts` note, minSdk 26), and
+> **SQLCipher (`net.zetetic:sqlcipher-android`) added to Room via `SupportFactory`, with the passphrase
+> wrapped by a non-auth-bound Android Keystore key, for at-rest encryption of the catch-record draft** —
+> this supersedes/clarifies ADR-0003's "Room stub" and confirms **`androidx.security-crypto` (Jetpack
+> Security Crypto) is explicitly NOT used** (deprecated upstream; see
+> [ADR-0006](../../docs/adr/0006-catch-record-draft-persistence-and-encryption.md)). Stack: Kotlin +
+> Jetpack Compose, Material 3 light-only GOV.UK theme, MVVM + Clean Architecture, Hilt (DI, §5 default —
+> reverts the earlier Koin deviation, see ADR 0005), Navigation Compose, Room (now real entities for the
+> catch-record draft aggregate, SQLCipher-encrypted — see ADR-0006), androidx.biometric (Stage-1
+> interfaces/fakes only), JUnit4 + Mockito + mockito-kotlin + coroutines-test + Turbine + Robolectric +
+> Compose UI Test + Espresso, Kover coverage, system-font fallback (GDS Transport not licensed for
+> non-gov.uk products).
 
 **You own the tech-stack confirmation gate for the app stack (copilot-instructions §5.1).** Before you make
 **any** app code change — including the first scaffold, and even if the user did not raise the tech stack —
