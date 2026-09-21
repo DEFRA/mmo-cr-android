@@ -21,7 +21,10 @@ import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
 
 /** Fixed width of the centred wordmark; height follows automatically to preserve its aspect ratio. */
-private val SplashWordmarkWidth = 190.dp
+private val SplashWordmarkWidth = 260.dp
+
+/** Fixed width of the bottom-pinned crown; height follows automatically to preserve its aspect ratio. */
+private val SplashCrownWidth = 64.dp
 
 /**
  * In-app cold-start splash: a full-bleed GOV.UK-blue background with the GOV.UK wordmark centred on
@@ -37,7 +40,10 @@ private val SplashWordmarkWidth = 190.dp
  * the wordmark + crown are drawn, at their correct full size, with full layout control (no masking).
  * The background fills the entire screen edge-to-edge (full bleed, matching the design); only the
  * wordmark and crown content are inset from the status/navigation bars, via [Modifier.systemBarsPadding].
- * There is no artificial delay here — the splash is dismissed the instant [RootPhase] resolves.
+ * This composable itself renders as soon as it is composed, with no delay; [RootNavigation] is
+ * responsible for holding the handover to the next resolved [RootPhase] open for a short minimum
+ * duration (see `SPLASH_MINIMUM_VISIBLE_DURATION_MILLIS`) so the wordmark + crown are guaranteed at
+ * least one perceivable frame even when [SessionCoordinator] resolves the real phase almost instantly.
  */
 @Composable
 fun SplashScreen(modifier: Modifier = Modifier) {
@@ -64,7 +70,8 @@ fun SplashScreen(modifier: Modifier = Modifier) {
                 Modifier
                     .align(Alignment.BottomCenter)
                     .systemBarsPadding()
-                    .padding(bottom = Spacing.xxl),
+                    .padding(bottom = Spacing.xxl)
+                    .width(SplashCrownWidth),
         )
     }
 }
