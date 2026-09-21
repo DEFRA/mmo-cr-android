@@ -3,6 +3,7 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.subm
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -11,6 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.GdsLinkAction
@@ -18,6 +21,7 @@ import uk.gov.defra.mmocatchrecord.common.design.GdsResultBanner
 import uk.gov.defra.mmocatchrecord.common.design.GdsResultBannerVariant
 import uk.gov.defra.mmocatchrecord.common.design.GdsWarningText
 import uk.gov.defra.mmocatchrecord.common.design.MmoColors
+import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
@@ -94,8 +98,12 @@ fun SubmissionPendingSyncScreenContent(
                         MaterialTheme.typography.bodyLarge.copy(
                             color = MmoColors.White,
                             fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
                         ),
-                    modifier = Modifier.testTag(SubmissionPendingSyncScreenTestTags.REFERENCE),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .testTag(SubmissionPendingSyncScreenTestTags.REFERENCE),
                 )
             }
         }
@@ -126,6 +134,23 @@ fun SubmissionPendingSyncScreenContent(
             text = stringResource(R.string.view_catch_records_action),
             onClick = onViewRecords,
             modifier = Modifier.testTag(SubmissionPendingSyncScreenTestTags.VIEW_RECORDS_ACTION),
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Suppress("FunctionNaming")
+@Composable
+fun SubmissionPendingSyncScreenContentPreview() {
+    MmoTheme {
+        SubmissionPendingSyncScreenContent(
+            draft = CatchRecordDraft(
+                id = "draft-1",
+                vesselId = "vessel-1",
+                modifiedAtEpochMillis = 0L,
+                catchRecordReference = "A1234520260727150815",
+            ),
+            onViewRecords = {},
         )
     }
 }
