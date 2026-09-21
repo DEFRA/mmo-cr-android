@@ -12,11 +12,8 @@ plugins {
 
 android {
     namespace = "uk.gov.defra.mmocatchrecord"
-    // NOTE: compileSdk pinned to 37, one above the planned 36, because several pinned library
-    // versions (androidx.core 1.19.0, lifecycle 2.11.0, androidx.navigation:navigation-compose 2.10.0)
-    // declare an AAR metadata requirement of compileSdk >= 37. compileSdk is compile-time only and does
-    // not change runtime behaviour; targetSdk remains pinned at 35 as planned. See README governance
-    // notes / implementation summary for detail.
+    // Pinned to 37 due to library AAR metadata requirements (androidx.core, lifecycle, navigation).
+    // Runtime behavior is unchanged; targetSdk remains pinned at 35.
     compileSdk = 37
 
     defaultConfig {
@@ -51,6 +48,14 @@ android {
         unitTests {
             isIncludeAndroidResources = true
             isReturnDefaultValues = true
+            all {
+                it.testLogging {
+                    events("passed", "skipped", "failed")
+                }
+                // Asking for tests must actually run them: an UP-TO-DATE skip reports green
+                // with no executed tests, which hides whether the suite really passed.
+                it.outputs.upToDateWhen { false }
+            }
         }
     }
 }

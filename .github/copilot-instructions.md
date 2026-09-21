@@ -199,6 +199,16 @@ See [ci-cd instructions](.github/instructions/ci-cd.instructions.md) and the
 - Keep composables small and stateless where possible; hoist state and push logic into view
   models/use-cases.
 - Use ktlint/detekt if configured; do not fight the formatter.
+- **⛔ STRICT — comments MUST NOT exceed 2 lines. No exceptions.** This applies to **every** file type
+  (Kotlin, Gradle/KTS, YAML workflows, Ruby/Fastlane, `.properties`, shell, XML) and to **every** comment
+  form (`//`, `/* */`, KDoc `/** */`, `#`). A comment that needs a third line does not belong in the file:
+  put it in the README or an ADR under `docs/adr/` and reference it in one short line instead.
+  - Write a comment only to say **why** — something the code cannot show on its own. Never restate what the
+    next line does, never explain a change to the reviewer, and never write a multi-paragraph doc comment
+    where one line will do.
+  - This is a hard limit, not a guideline. Reviewers and agents MUST reject or shorten any comment over
+    2 lines. Commented-out configuration kept deliberately (e.g. a not-yet-enabled CI step) is exempt from
+    the limit for the commented code itself, but its explanatory preamble is not.
 - Conventional, descriptive commits; small PRs; follow DEFRA
   [pull request](https://defra.github.io/software-development-standards/processes/pull_requests/) and
   [version control](https://defra.github.io/software-development-standards/standards/version_control_standards/) standards.

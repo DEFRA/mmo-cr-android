@@ -28,7 +28,8 @@ release engineering. Any deviation from a DEFRA standard must be raised as a gov
 - **Build system:** **Gradle (Kotlin DSL)** with a version catalog (`gradle/libs.versions.toml`). Build an
   **Android App Bundle (AAB)** for release (`bundleRelease`), never a bare APK for Play upload.
 - **Build infrastructure:** **GitHub-hosted Ubuntu runners** (e.g. `ubuntu-latest`). Pin the JDK
-  (Temurin 17), the Android SDK/command-line-tools and build-tools versions, and cache Gradle so builds are
+  (Temurin 21, matching `jvmToolchain(21)` and `gradle/gradle-daemon-jvm.properties`), the Android
+  SDK/command-line-tools and build-tools versions, and cache Gradle so builds are
   reproducible. Instrumented tests run on an emulator (e.g. `reactivecircus/android-emulator-runner`) or a
   Gradle Managed Device.
 - **Quality/coverage:** **SonarCloud** (DEFRA organisation) is the source of truth for coverage and the

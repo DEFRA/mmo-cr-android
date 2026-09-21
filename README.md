@@ -6,7 +6,8 @@ why this is a native app (a governed exception to the DEFRA mobile standard's de
 
 ## Quick start
 
-Prerequisites: JDK 17, Android Studio (latest stable), an Android device/emulator running API 26+.
+Prerequisites: JDK 21, Android Studio (latest stable), an Android device/emulator running API 26+.
+Fastlane (optional locally, used by CI) additionally needs Ruby 3.3+ and Bundler.
 
 ```powershell
 git clone <this-repo-url>
@@ -19,13 +20,23 @@ cd mmo-cr-android
 ./gradlew testDebugUnitTest
 
 # Run unit tests + generate coverage report (Kover)
-./gradlew testDebugUnitTest koverXmlReport
+./gradlew testDebugUnitTest koverXmlReportDebug
 
 # Lint / static analysis
-./gradlew ktlintCheck detekt lint
+./gradlew ktlintCheck detekt lintDebug --continue
 
 # Install & run on a connected device/emulator
 ./gradlew installDebug
+```
+
+The same steps are also exposed as Fastlane lanes, which is exactly what CI runs:
+
+```powershell
+bundle install
+bundle exec fastlane lint              # ktlintCheck + detekt + lintDebug (--continue)
+bundle exec fastlane build             # assembleDebug
+bundle exec fastlane test              # testDebugUnitTest + koverXmlReportDebug
+bundle exec fastlane instrumented_test # connectedDebugAndroidTest
 ```
 
 Or open the project in Android Studio and use the standard Run/Debug configurations.
@@ -97,9 +108,17 @@ split per feature package, per
 
 ## CI
 
-`.github/workflows/android-ci.yml` runs lightweight **PR validation only** (lint, unit tests, debug
-assemble, coverage report). It does **not** perform release signing or Play Store publishing — that is a
-separate release-engineering/DevOps responsibility, out of scope for this workflow.
+`.github/workflows/android-ci.yml` runs lightweight **PR validation only** (static analysis, debug
+assemble, unit tests with coverage, and emulator-based instrumented/accessibility tests). Every Gradle
+invocation goes through a Fastlane lane in `fastlane/Fastfile`, so CI and local runs are identical.
+
+It does **not** perform release signing or Play Store publishing — that is a separate
+release-engineering/DevOps responsibility, out of scope for this workflow.
+
+SonarCloud analysis is configured in `sonar-project.properties` but the scan step in the workflow is
+**commented out** until the `DEFRA_mmo-cr-android` SonarCloud project and the `MMO_CR_SONAR_TOKEN` secret
+exist. Actions are currently pinned by version tag rather than commit SHA for readability; they must be
+re-hardened to SHAs (a DEFRA supply-chain requirement) before this workflow gates production releases.
 
 ## Governance notes / DEFRA standard deviations
 

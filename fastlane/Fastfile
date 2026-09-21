@@ -1,0 +1,27 @@
+default_platform(:android)
+
+GRADLE_FLAGS = "--console=plain".freeze
+
+platform :android do
+  desc "Static analysis: ktlint, detekt and Android Lint."
+  lane :lint do
+    gradle(tasks: ["ktlintCheck", "detekt", "lintDebug"], flags: "#{GRADLE_FLAGS} --continue")
+  end
+
+  desc "Compile the debug variant — the CI compile gate."
+  lane :build do
+    gradle(task: "assembleDebug", flags: GRADLE_FLAGS)
+  end
+
+  desc "Run the local unit tests with Kover coverage (used by CI)."
+  lane :test do
+    # koverXmlReportDebug reports on the debug variant only; the unnamed koverXmlReport
+    # task is the "total" variant and would also run the release unit tests.
+    gradle(tasks: ["testDebugUnitTest", "koverXmlReportDebug"], flags: GRADLE_FLAGS)
+  end
+
+  desc "Run the instrumented Compose UI / accessibility tests on a connected device or emulator."
+  lane :instrumented_test do
+    gradle(task: "connectedDebugAndroidTest", flags: GRADLE_FLAGS)
+  end
+end
