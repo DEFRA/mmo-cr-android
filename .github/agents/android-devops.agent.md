@@ -11,7 +11,7 @@ description: >-
   delegate planning to the Android Planner.
 name: Android DevOps
 tools: ['read', 'edit', 'search', 'execute', 'web', 'todo', 'agent', 'apply_patch', 'create_file', 'insert_edit_into_file', 'fetch_webpage', 'file_search', 'grep_search', 'get_errors', 'list_dir', 'get_terminal_output', 'read_file', 'replace_string_in_file', 'run_subagent', 'run_in_terminal', 'validate_cves']
-model: Claude Opus 4.8 (copilot)
+model: Claude Opus 5 (copilot)
 argument-hint: Describe the CI/CD, signing, versioning, release or pipeline task you want.
 agents:
   - Explore
