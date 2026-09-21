@@ -29,6 +29,8 @@
     <string name="status_late_title">Late:</string>
     <string name="status_late_desc">This record was received by the MMO after the required deadline.</string>
     <string name="status_check_tab">Check the How to record a catch tab to make sure you are recording your catches at the correct time.</string>
+    <string name="offline_banner_label">Offline</string>
+    <string name="offline_banner_message">You can still record your catch. Your record will be saved and sent when you\'re back online.</string>
     <string name="help_need_to_do">What you need to do</string>
     <string name="help_need_to_do_body">You must record all catches unless an exemption applies.\n\nWe\'ll ask whether you caught any species subject to catch limits (quota).</string>
     <string name="help_when_create">When to create your record</string>
