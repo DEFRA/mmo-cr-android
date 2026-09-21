@@ -49,6 +49,14 @@ data class CatchRecordFlowViewState(
     val pendingGearTypeId: String? = null,
 ) : ViewState
 
+/**
+ * The user-facing catch-record reference (see [CatchRecordDraft.catchRecordReference]), shown as a caption
+ * on every wizard screen once the draft exists (see [uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordWizardScaffold]'s
+ * `referenceNumber` parameter) — `null` before a draft has been created (e.g. vessel selection).
+ */
+val CatchRecordFlowViewState.catchRecordReference: String?
+    get() = (status as? UiStatus.Content<CatchRecordDraft>)?.value?.catchRecordReference
+
 /** UI-originated events for the catch-record wizard flow, dispatched by whichever step screen is shown. */
 sealed interface CatchRecordFlowEvent {
     data object EnterFlow : CatchRecordFlowEvent

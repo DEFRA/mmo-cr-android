@@ -36,7 +36,6 @@ import uk.gov.defra.mmocatchrecord.common.design.GdsTopAppBar
 import uk.gov.defra.mmocatchrecord.common.design.MmoBottomNavigationBar
 import uk.gov.defra.mmocatchrecord.common.design.MmoColors
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
-import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
 import uk.gov.defra.mmocatchrecord.common.design.RoyalCrestPlaceholder
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
@@ -70,8 +69,8 @@ fun HomeScreen(
                 GdsTopAppBar(
                     currentLanguage = currentLanguage,
                     onLanguageToggle = languageViewModel::toggleLanguage,
-                    onBackClick = onSignOut,
-                    showBackButton = false,
+                    onBackClick = { if (selectedTab == 0) onSignOut() else selectedTab = 0 },
+                    showBackButton = selectedTab != 0,
                 )
             },
             bottomBar = {
@@ -135,19 +134,6 @@ fun NotificationsTabContent() {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(text = stringResource(R.string.nav_notifications), style = MaterialTheme.typography.headlineMedium)
-    }
-}
-
-@Suppress("FunctionNaming")
-@Composable
-fun SettingsTabContent(onSignOut: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxSize().padding(Spacing.m),
-        verticalArrangement = Arrangement.spacedBy(Spacing.m, Alignment.CenterVertically),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(text = stringResource(R.string.nav_settings), style = MaterialTheme.typography.headlineMedium)
-        PrimaryActionButton(text = stringResource(R.string.sign_out), onClick = onSignOut)
     }
 }
 

@@ -2,6 +2,7 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.subm
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -113,7 +114,10 @@ fun SubmissionSuccessScreenContent(
                             fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.Center,
                         ),
-                    modifier = Modifier.testTag(SubmissionSuccessScreenTestTags.REFERENCE),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .testTag(SubmissionSuccessScreenTestTags.REFERENCE),
                 )
             }
         }

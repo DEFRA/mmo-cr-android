@@ -32,6 +32,8 @@
     <string name="status_late_title">Hwyr:</string>
     <string name="status_late_desc">Derbyniwyd y cofnod hwn gan yr MMO ar ÃƒÂ´l y terfyn amser gofynnol.</string>
     <string name="status_check_tab">Gwiriwch y tab Sut i gofnodi dalfa i wneud yn siÃ…Âµr eich bod yn cofnodi eich dalfeydd ar yr amser cywir.</string>
+    <string name="offline_banner_label">All-lein</string>
+    <string name="offline_banner_message">Gallwch barhau i gofnodi eich dalfa. Bydd eich cofnod yn cael ei gadw a\'i anfon pan fyddwch ar-lein eto.</string>
     <string name="help_need_to_do">Beth sydd angen i chi ei wneud</string>
     <string name="help_need_to_do_body">MaeÃ¢â‚¬â„¢n rhaid i chi gofnodi pob dalfa oni bai bod eithriad yn berthnasol.\n\nByddwn yn gofyn a wnaethoch chi ddal unrhyw rywogaeth syÃ¢â‚¬â„¢n destun terfynau dal (cwota).</string>
     <string name="help_when_create">Pryd i greu eich cofnod</string>
@@ -48,6 +50,13 @@
     <string name="nav_notifications">Hysbysiadau</string>
     <string name="nav_settings">Gosodiadau</string>
     <string name="sign_out">Allgofnodi</string>
+    <string name="settings_title">Eich gosodiadau</string>
+    <string name="settings_analytics_heading">Data dadansoddeg dewisol</string>
+    <string name="settings_analytics_body">Rydym yn defnyddio hyn i wella profiad a sefydlogrwydd yr ap. Darllenwch fwy am sut rydym yn defnyddio eich data yn ein hysbysiad preifatrwydd.</string>
+    <string name="settings_how_we_use_your_data">Sut rydym yn defnyddio eich data</string>
+    <string name="settings_my_account">Fy nghyfrif</string>
+    <string name="settings_privacy_notice">Hysbysiad preifatrwydd</string>
+    <string name="settings_support_information">Gwybodaeth gymorth</string>
     <string name="signin_title">Mewngofnodi</string>
     <string name="email_address">Cyfeiriad e-bost</string>
     <string name="password">Cyfrinair</string>

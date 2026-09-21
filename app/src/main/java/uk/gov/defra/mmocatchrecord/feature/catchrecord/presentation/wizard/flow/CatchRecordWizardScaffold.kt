@@ -44,8 +44,10 @@ import uk.gov.defra.mmocatchrecord.common.design.AppLanguageProvider
 import uk.gov.defra.mmocatchrecord.common.design.CustomWarningIcon
 import uk.gov.defra.mmocatchrecord.common.design.GdsTopAppBar
 import uk.gov.defra.mmocatchrecord.common.design.MmoColors
+import uk.gov.defra.mmocatchrecord.common.design.OfflineBanner
 import uk.gov.defra.mmocatchrecord.common.design.SecondaryActionButton
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
+import uk.gov.defra.mmocatchrecord.core.connectivity.ConnectivityViewModel
 import uk.gov.defra.mmocatchrecord.core.language.AppLanguage
 import uk.gov.defra.mmocatchrecord.core.language.AppLanguageViewModel
 
@@ -54,11 +56,48 @@ data class WizardErrorSummaryItem(
     val onClick: () -> Unit,
 )
 
+/** Resolved language/connectivity state a wizard screen needs, from either Hilt or a preview default. */
+private data class WizardScaffoldState(
+    val currentLanguage: String,
+    val onLanguageToggle: () -> Unit,
+    val isOffline: Boolean,
+)
+
+/**
+ * Resolves [WizardScaffoldState] from the real Hilt-backed [AppLanguageViewModel]/[ConnectivityViewModel],
+ * or safe preview defaults when composed inside `@Preview`/inspection mode (see [CatchRecordWizardScaffold]
+ * doc comment on `hiltViewModel()` availability).
+ */
+@Composable
+private fun rememberWizardScaffoldState(): WizardScaffoldState {
+    if (LocalInspectionMode.current) {
+        return WizardScaffoldState(
+            currentLanguage = AppLanguage.ENGLISH,
+            onLanguageToggle = {},
+            isOffline = false,
+        )
+    }
+    val languageViewModel: AppLanguageViewModel = hiltViewModel()
+    val connectivityViewModel: ConnectivityViewModel = hiltViewModel()
+    return WizardScaffoldState(
+        currentLanguage = languageViewModel.language.collectAsStateWithLifecycle().value,
+        onLanguageToggle = languageViewModel::toggleLanguage,
+        isOffline = connectivityViewModel.isOffline.collectAsStateWithLifecycle().value,
+    )
+}
+
 /**
  * [title] renders as the page's `headlineLarge` heading — pass a blank string only for the (rare) Phase 8
  * submission-result screens whose own coloured [uk.gov.defra.mmocatchrecord.common.design.GdsResultBanner]
  * *is* the page heading (that banner's own text carries the `heading()` semantics instead), so no separate
  * duplicate heading is rendered above it.
+ *
+ * [referenceNumber], when non-null, is rendered as a small grey caption directly above [title] — the
+ * catch-record reference (see [uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.catchRecordReference])
+ * shown on every wizard screen once the draft exists, matching the confirmed screenshots. It is only shown
+ * alongside a non-blank [title]: the Phase 8 submission-result screens (blank title, per above) already
+ * surface the same reference inside their own [uk.gov.defra.mmocatchrecord.common.design.GdsResultBanner],
+ * so showing it again here would duplicate it.
  */
 @Suppress("FunctionNaming")
 @Composable
@@ -67,31 +106,22 @@ fun CatchRecordWizardScaffold(
     title: String,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    referenceNumber: String? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     // hiltViewModel() is unavailable in @Preview/inspection composition (no Hilt component present) — see
     // every wizard screen's *_Preview composable, which already renders via the state-based overload rather
     // than a real Hilt ViewModel, for the same reason. ADR 0012: the language preference itself is
     // app-wide/DataStore-persisted; this is purely "how does a preview safely opt out of Hilt".
-    val isPreview = LocalInspectionMode.current
-    val currentLanguage: String
-    val onLanguageToggle: () -> Unit
-    if (isPreview) {
-        currentLanguage = AppLanguage.ENGLISH
-        onLanguageToggle = {}
-    } else {
-        val languageViewModel: AppLanguageViewModel = hiltViewModel()
-        currentLanguage = languageViewModel.language.collectAsStateWithLifecycle().value
-        onLanguageToggle = languageViewModel::toggleLanguage
-    }
+    val scaffoldState = rememberWizardScaffoldState()
     val scrollState = rememberScrollState()
 
-    AppLanguageProvider(language = currentLanguage) {
+    AppLanguageProvider(language = scaffoldState.currentLanguage) {
         Scaffold(
             topBar = {
                 GdsTopAppBar(
-                    currentLanguage = currentLanguage,
-                    onLanguageToggle = onLanguageToggle,
+                    currentLanguage = scaffoldState.currentLanguage,
+                    onLanguageToggle = scaffoldState.onLanguageToggle,
                     onBackClick = onBack,
                 )
             },
@@ -108,7 +138,18 @@ fun CatchRecordWizardScaffold(
                         .padding(Spacing.m),
                 verticalArrangement = Arrangement.spacedBy(Spacing.m),
             ) {
+                if (scaffoldState.isOffline) {
+                    OfflineBanner()
+                }
                 if (title.isNotBlank()) {
+                    if (referenceNumber != null) {
+                        Text(
+                            text = referenceNumber,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MmoColors.Grey1,
+                            modifier = Modifier.testTag("${screenTestTag}_reference_number"),
+                        )
+                    }
                     Text(
                         text = title,
                         style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
