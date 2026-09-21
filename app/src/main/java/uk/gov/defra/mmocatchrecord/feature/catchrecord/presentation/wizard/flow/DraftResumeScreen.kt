@@ -51,6 +51,7 @@ fun DraftResumeScreen(
         title = stringResource(R.string.draft_resume_title),
         onBack = onBack,
         modifier = modifier,
+        referenceNumber = state.catchRecordReference,
     ) {
         when (val status = state.status) {
             UiStatus.Loading -> WizardLoadingState()

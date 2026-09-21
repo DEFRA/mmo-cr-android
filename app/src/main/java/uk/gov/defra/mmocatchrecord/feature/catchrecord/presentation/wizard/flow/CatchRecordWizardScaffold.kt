@@ -59,6 +59,13 @@ data class WizardErrorSummaryItem(
  * submission-result screens whose own coloured [uk.gov.defra.mmocatchrecord.common.design.GdsResultBanner]
  * *is* the page heading (that banner's own text carries the `heading()` semantics instead), so no separate
  * duplicate heading is rendered above it.
+ *
+ * [referenceNumber], when non-null, is rendered as a small grey caption directly above [title] — the
+ * catch-record reference (see [uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.catchRecordReference])
+ * shown on every wizard screen once the draft exists, matching the confirmed screenshots. It is only shown
+ * alongside a non-blank [title]: the Phase 8 submission-result screens (blank title, per above) already
+ * surface the same reference inside their own [uk.gov.defra.mmocatchrecord.common.design.GdsResultBanner],
+ * so showing it again here would duplicate it.
  */
 @Suppress("FunctionNaming")
 @Composable
@@ -67,6 +74,7 @@ fun CatchRecordWizardScaffold(
     title: String,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    referenceNumber: String? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     // hiltViewModel() is unavailable in @Preview/inspection composition (no Hilt component present) — see
@@ -109,6 +117,14 @@ fun CatchRecordWizardScaffold(
                 verticalArrangement = Arrangement.spacedBy(Spacing.m),
             ) {
                 if (title.isNotBlank()) {
+                    if (referenceNumber != null) {
+                        Text(
+                            text = referenceNumber,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MmoColors.Grey1,
+                            modifier = Modifier.testTag("${screenTestTag}_reference_number"),
+                        )
+                    }
                     Text(
                         text = title,
                         style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),

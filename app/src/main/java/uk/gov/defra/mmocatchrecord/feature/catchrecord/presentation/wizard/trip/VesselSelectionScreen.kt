@@ -23,6 +23,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordFlowViewModel
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordWizardScaffold
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardStep
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.catchRecordReference
 
 object VesselSelectionScreenTestTags {
     const val SCREEN = "vessel_selection_screen"
@@ -44,6 +45,7 @@ fun VesselSelectionScreen(
         title = stringResource(R.string.vessel_selection_title),
         onBack = onBack,
         modifier = modifier,
+        referenceNumber = state.catchRecordReference,
     ) {
         VesselSelectionScreenContent(
             vessels = state.vessels,

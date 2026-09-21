@@ -52,6 +52,7 @@ fun CatchRecordFlowEntryScreen(
         screenTestTag = CatchRecordFlowEntryScreenTestTags.SCREEN,
         title = stringResource(R.string.create_catch_record),
         onBack = {},
+        referenceNumber = state.catchRecordReference,
     ) {
         when (val status = state.status) {
             UiStatus.Idle, UiStatus.Loading -> WizardLoadingState()
@@ -78,6 +79,7 @@ fun PhaseThreeCompleteScreen(
         screenTestTag = PhaseThreeCompleteScreenTestTags.SCREEN,
         title = stringResource(R.string.phase_three_complete_title),
         onBack = onBack,
+        referenceNumber = state.catchRecordReference,
     ) {
         when (val status = state.status) {
             UiStatus.Loading -> WizardLoadingState()
