@@ -74,16 +74,17 @@ jobs:
           path: build/sonar/test-execution.xml
           retention-days: 14
 
-      - name: Upload lint/ktlint/detekt reports
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v7.0.1
-        with:
-          name: static-analysis-reports
-          path: |
-            app/build/reports/lint-results-debug.html
-            app/build/reports/ktlint
-            app/build/reports/detekt
-          retention-days: 14
+          # COMMENTED FOR TESTING PURPOSE
+      # - name: Upload lint/ktlint/detekt reports
+      #   if: ${{ !cancelled() }}
+      #   uses: actions/upload-artifact@v7.0.1
+      #   with:
+      #     name: static-analysis-reports
+      #     path: |
+      #       app/build/reports/lint-results-debug.html
+      #       app/build/reports/ktlint
+      #       app/build/reports/detekt
+      #     retention-days: 14
 
       # SonarCloud is configured in sonar-project.properties but disabled until the
       # DEFRA_mmo-cr-android project and MMO_CR_SONAR_TOKEN secret exist — see README "CI".
@@ -98,6 +99,9 @@ jobs:
   instrumented-tests:
     name: Instrumented tests (incl. accessibility)
     runs-on: ubuntu-latest
+    # Emulator runs cost ~20 min, so gate them on validate rather than burn a runner on
+    # code that does not lint, compile or pass unit tests.
+    needs: validate
     timeout-minutes: 45
     steps:
       - name: Checkout
@@ -118,17 +122,21 @@ jobs:
           ruby-version: '3.3'
           bundler-cache: true
 
+      # /dev/kvm is not accessible to the runner user by default; without it the x86_64
+      # emulator falls back to software emulation and is far too slow for CI.
       - name: Enable KVM (hardware acceleration for the emulator)
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      # No official Google/GitHub emulator action exists; this wraps the official SDK tools
+      # (sdkmanager/avdmanager/emulator) and handles boot detection — see README "CI".
       - name: Run instrumented tests (Compose UI + WCAG 2.2 AA semantics)
         uses: reactivecircus/android-emulator-runner@v2.38.0
         with:
-          api-level: 29
-          target: default
+          api-level: 35
+          target: aosp_atd
           arch: x86_64
           profile: pixel_6
           disable-animations: true

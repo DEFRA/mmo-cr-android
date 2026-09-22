@@ -120,6 +120,40 @@ SonarCloud analysis is configured in `sonar-project.properties` but the scan ste
 exist. Actions are currently pinned by version tag rather than commit SHA for readability; they must be
 re-hardened to SHAs (a DEFRA supply-chain requirement) before this workflow gates production releases.
 
+### Job ordering
+
+`instrumented-tests` declares `needs: validate`, so it only starts once lint, build and unit tests pass.
+GitHub Actions dependencies are job-level — a job cannot be made to start after an individual *step* of
+another job — so gating on the whole `validate` job is the closest expressible equivalent. This trades a
+little wall-clock time for not spending ~20 minutes of emulator runner on code that does not compile.
+
+### Emulator: why a third-party action
+
+`reactivecircus/android-emulator-runner` is used because **no official Google or GitHub action exists for
+running Android emulators**. It is not a replacement for the official tooling — it is a wrapper around it,
+which per run:
+
+1. installs `platform-tools`, `platform`, `emulator` and `system-images` via `sdkmanager`
+2. creates the AVD via `avdmanager`
+3. boots `emulator`, then polls until `sys.boot_completed` is set
+4. runs the supplied script, then tears the emulator down
+
+Steps 3 and 4 (boot detection, timeouts, reliable teardown) are the parts that are genuinely awkward to
+hand-roll in shell, and are the main reason for using it. It is the de-facto standard on Android CI and is
+used by Google's own repositories (`android/compose-samples`, `google/accompanist`, `google/android-fhir`).
+
+**KVM is required.** The x86_64 emulator depends on VM acceleration; without it the emulator falls back to
+software emulation and is far too slow for CI. `/dev/kvm` is not accessible to the runner user by default,
+so the workflow installs a `udev` rule granting access before the emulator starts. This is the approach
+documented by the action itself.
+
+**Target configuration:** the emulator runs API 35 with the headless-optimised `aosp_atd` system image on
+a `pixel_6` device profile, matching the app's `targetSdk 35`.
+
+**Alternative under consideration:** [Gradle Managed Devices](https://developer.android.com/studio/test/gradle-managed-devices)
+would move device definitions into `app/build.gradle.kts` and let AGP provision and tear down emulators,
+removing the third-party action entirely. Not yet adopted.
+
 ## Governance notes / DEFRA standard deviations
 
 The following are recorded exceptions/deviations that must be logged with Delivery Architecture
