@@ -14,6 +14,10 @@ import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    // Main-thread only (read by the platform inside setKeepOnScreenCondition's poll, written once by
+    // RootNavigation's first-frame callback below) — see the field's use for why this exists.
+    private var isFirstComposeFrameRendered = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // Install the GOV.UK-blue cold-start splash background (AndroidX SplashScreen API) before the
         // first frame. It shows no logo/icon of its own (see Theme.MMOCatchRecord.Starting in
@@ -22,6 +26,19 @@ class MainActivity : ComponentActivity() {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Root-cause fix for the wordmark/crown never appearing on some cold starts: keep the *system*
+        // splash on screen until Compose has actually rendered its first real frame, instead of letting
+        // the platform dismiss it as soon as it merely detects the window is "drawn" (confirmed by
+        // instrumented testing to happen while the Activity window itself still had NO_SURFACE/no frame —
+        // a cold, JIT-cold Hilt + Compose start can take several hundred ms to a second before the window
+        // gets its first real surface). Without this gate, [RootNavigation]'s own minimum-visible-duration
+        // floor for [SplashScreen] — timed from Compose *composition*, which happens well before that
+        // first real frame — had already elapsed by the time anything was actually painted on screen, so
+        // the resolved phase (sign-in/app-lock/home) was already showing on the very first visible frame
+        // and the branded splash was silently skipped. Gating the system splash's release on
+        // isFirstComposeFrameRendered guarantees the in-app SplashScreen is the first thing ever painted.
+        splashScreen.setKeepOnScreenCondition { !isFirstComposeFrameRendered }
 
         // The system splash's default exit transition is a ~200ms fade-out of its own (blue,
         // logo-less) view, played on top of the Activity content already drawing underneath. Removing
@@ -32,7 +49,10 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MmoTheme {
-                RootNavigation(sessionCoordinator = hiltViewModel())
+                RootNavigation(
+                    sessionCoordinator = hiltViewModel(),
+                    onFirstFrameRendered = { isFirstComposeFrameRendered = true },
+                )
             }
         }
     }

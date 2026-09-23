@@ -32,6 +32,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardErrorState
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardLoadingState
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardStep
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.catchRecordReference
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.nextGearUsePendingSpecies
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.species.SpeciesSearch
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.species.SpeciesSearchInputError
@@ -110,6 +111,7 @@ internal fun GearSpeciesSearchScreen(
                 ?: stringResource(R.string.gear_species_search_title_fallback),
         onBack = onBack,
         modifier = modifier,
+        referenceNumber = state.catchRecordReference,
     ) {
         when (val status = state.status) {
             UiStatus.Idle, UiStatus.Loading -> WizardLoadingState()

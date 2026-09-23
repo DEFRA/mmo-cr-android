@@ -15,6 +15,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardErrorState
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardLoadingState
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardStep
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.catchRecordReference
 
 object DepartureDateScreenTestTags {
     const val SCREEN = "departure_date_screen"
@@ -40,6 +41,7 @@ fun DepartureDateScreen(
         title = stringResource(R.string.departure_date_title),
         onBack = onBack,
         modifier = modifier,
+        referenceNumber = state.catchRecordReference,
     ) {
         when (val status = state.status) {
             UiStatus.Idle, UiStatus.Loading -> WizardLoadingState()

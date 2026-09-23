@@ -6,7 +6,9 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import uk.gov.defra.mmocatchrecord.core.connectivity.AndroidConnectivityObserver
 import uk.gov.defra.mmocatchrecord.core.connectivity.AndroidNetworkConnectivityChecker
+import uk.gov.defra.mmocatchrecord.core.connectivity.ConnectivityObserver
 import uk.gov.defra.mmocatchrecord.core.connectivity.NetworkConnectivityChecker
 import uk.gov.defra.mmocatchrecord.core.language.AppLanguageRepository
 import uk.gov.defra.mmocatchrecord.core.language.DataStoreAppLanguageRepository
@@ -72,6 +74,12 @@ object RepositoryModule {
     fun provideNetworkConnectivityChecker(
         @ApplicationContext context: Context,
     ): NetworkConnectivityChecker = AndroidNetworkConnectivityChecker(context)
+
+    @Provides
+    @Singleton
+    fun provideConnectivityObserver(
+        @ApplicationContext context: Context,
+    ): ConnectivityObserver = AndroidConnectivityObserver(context)
 
     @Provides
     @Singleton

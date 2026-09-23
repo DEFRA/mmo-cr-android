@@ -23,21 +23,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
-/** Which confirmation banner colour/icon to show — see [GdsResultBanner]. */
+/** Which confirmation banner colour to show — see [GdsResultBanner]. */
 enum class GdsResultBannerVariant {
     /** Green header, text-only — the record was submitted online successfully. */
     Success,
 
-    /** Blue header + info-circle icon — the record was recorded and is queued for background sync. */
+    /** Blue header, text-only — the record was recorded and is queued for background sync. */
     PendingSync,
 }
 
 /**
  * GOV.UK-style confirmation banner (coloured header + white body), used by the Phase 8 submission-result
  * screens. The [title] text itself differs between variants ("submitted" vs "recorded"), so meaning is
- * never conveyed by colour alone even though only [GdsResultBannerVariant.PendingSync] pairs its text
- * with an icon — per WCAG 2.2 AA, the banner still reads correctly to a colour-blind user or when
- * rendered in greyscale.
+ * never conveyed by colour alone — per WCAG 2.2 AA, the banner still reads correctly to a colour-blind
+ * user or when rendered in greyscale.
  *
  * [content], when supplied, renders additional white text inside the same coloured panel below the title
  * (e.g. the catch record reference on the pending-sync screen) rather than as separate black body copy —
@@ -62,33 +61,15 @@ fun GdsResultBanner(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Spacing.m),
     ) {
-        if (variant == GdsResultBannerVariant.Success) {
-            Text(
-                text = title,
-                style =
-                    MaterialTheme.typography.headlineMedium.copy(
-                        color = MmoColors.White,
-                        textAlign = TextAlign.Center,
-                    ),
-                modifier = Modifier.semantics { heading() },
-            )
-        } else {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                CustomInfoCircleIcon(tint = MmoColors.White, modifier = Modifier.size(Spacing.m))
-                Text(
-                    text = title,
-                    style =
-                        MaterialTheme.typography.headlineMedium.copy(
-                            color = MmoColors.White,
-                            textAlign = TextAlign.Center,
-                        ),
-                    modifier = Modifier.semantics { heading() },
-                )
-            }
-        }
+        Text(
+            text = title,
+            style =
+                MaterialTheme.typography.headlineMedium.copy(
+                    color = MmoColors.White,
+                    textAlign = TextAlign.Center,
+                ),
+            modifier = Modifier.semantics { heading() },
+        )
         content?.invoke(this)
     }
 }

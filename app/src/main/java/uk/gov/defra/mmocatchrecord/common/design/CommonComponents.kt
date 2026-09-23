@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -40,7 +41,12 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -96,6 +102,59 @@ fun ImportantNotificationBanner(
                 modifier = Modifier.fillMaxWidth(),
             )
         }
+    }
+}
+
+/**
+ * Persistent "Offline" banner shown on every catch-record wizard screen (see
+ * [uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordWizardScaffold])
+ * while the device has no connectivity — see the confirmed screenshot. State is never conveyed by colour
+ * alone: the red tag carries the word "Offline" as well as its colour, alongside a plain-English message.
+ * The two are merged into a single semantics node with a polite live region so TalkBack announces the
+ * change once, without the assertive interruption used for genuine errors (see `WizardErrorState`) — going
+ * offline is expected/recoverable, not a failure the user needs to act on immediately.
+ */
+@Suppress("FunctionNaming")
+@Composable
+fun OfflineBanner(modifier: Modifier = Modifier) {
+    val label = stringResource(R.string.offline_banner_label)
+    val message = stringResource(R.string.offline_banner_message)
+    Column(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .testTag("offline_banner")
+                .semantics(mergeDescendants = true) {
+                    liveRegion = LiveRegionMode.Polite
+                },
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.s),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.s),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Surface(
+                color = MmoColors.ErrorRed,
+                shape = RoundedCornerShape(2.dp),
+                modifier = Modifier.clearAndSetSemantics {},
+            ) {
+                Text(
+                    text = label,
+                    style =
+                        MaterialTheme.typography.bodyLarge.copy(
+                            color = MmoColors.White,
+                            fontWeight = FontWeight.Bold,
+                        ),
+                    modifier = Modifier.padding(horizontal = Spacing.s, vertical = Spacing.xs),
+                )
+            }
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyLarge.copy(color = MmoColors.Text),
+                modifier = Modifier.weight(1f),
+            )
+        }
+        HorizontalDivider(color = MmoColors.Grey2)
     }
 }
 
