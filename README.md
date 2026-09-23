@@ -6,7 +6,8 @@ why this is a native app (a governed exception to the DEFRA mobile standard's de
 
 ## Quick start
 
-Prerequisites: JDK 17, Android Studio (latest stable), an Android device/emulator running API 26+.
+Prerequisites: JDK 21, Android Studio (latest stable), an Android device/emulator running API 26+.
+Fastlane (optional locally, used by CI) additionally needs Ruby 3.3+ and Bundler.
 
 ```powershell
 git clone <this-repo-url>
@@ -19,13 +20,23 @@ cd mmo-cr-android
 ./gradlew testDebugUnitTest
 
 # Run unit tests + generate coverage report (Kover)
-./gradlew testDebugUnitTest koverXmlReport
+./gradlew testDebugUnitTest koverXmlReportDebug
 
 # Lint / static analysis
-./gradlew ktlintCheck detekt lint
+./gradlew ktlintCheck detekt lintDebug --continue
 
 # Install & run on a connected device/emulator
 ./gradlew installDebug
+```
+
+The same steps are also exposed as Fastlane lanes, which is exactly what CI runs:
+
+```powershell
+bundle install
+bundle exec fastlane lint              # ktlintCheck + detekt + lintDebug (--continue)
+bundle exec fastlane build             # assembleDebug
+bundle exec fastlane test              # testDebugUnitTest + koverXmlReportDebug
+bundle exec fastlane instrumented_test # connectedDebugAndroidTest
 ```
 
 Or open the project in Android Studio and use the standard Run/Debug configurations.
@@ -97,9 +108,51 @@ split per feature package, per
 
 ## CI
 
-`.github/workflows/android-ci.yml` runs lightweight **PR validation only** (lint, unit tests, debug
-assemble, coverage report). It does **not** perform release signing or Play Store publishing — that is a
-separate release-engineering/DevOps responsibility, out of scope for this workflow.
+`.github/workflows/android-ci.yml` runs lightweight **PR validation only** (static analysis, debug
+assemble, unit tests with coverage, and emulator-based instrumented/accessibility tests). Every Gradle
+invocation goes through a Fastlane lane in `fastlane/Fastfile`, so CI and local runs are identical.
+
+It does **not** perform release signing or Play Store publishing — that is a separate
+release-engineering/DevOps responsibility, out of scope for this workflow.
+
+SonarCloud analysis is configured in `sonar-project.properties` but the scan step in the workflow is
+**commented out** until the `DEFRA_mmo-cr-android` SonarCloud project and the `MMO_CR_SONAR_TOKEN` secret
+exist. Actions are currently pinned by version tag rather than commit SHA for readability; they must be
+re-hardened to SHAs (a DEFRA supply-chain requirement) before this workflow gates production releases.
+
+### Job ordering
+
+`instrumented-tests` declares `needs: validate`, so it only starts once lint, build and unit tests pass.
+GitHub Actions dependencies are job-level — a job cannot be made to start after an individual *step* of
+another job — so gating on the whole `validate` job is the closest expressible equivalent. This trades a
+little wall-clock time for not spending ~20 minutes of emulator runner on code that does not compile.
+
+### Emulator: why a third-party action
+
+`reactivecircus/android-emulator-runner` is used because **no official Google or GitHub action exists for
+running Android emulators**. It is not a replacement for the official tooling — it is a wrapper around it,
+which per run:
+
+1. installs `platform-tools`, `platform`, `emulator` and `system-images` via `sdkmanager`
+2. creates the AVD via `avdmanager`
+3. boots `emulator`, then polls until `sys.boot_completed` is set
+4. runs the supplied script, then tears the emulator down
+
+Steps 3 and 4 (boot detection, timeouts, reliable teardown) are the parts that are genuinely awkward to
+hand-roll in shell, and are the main reason for using it. It is the de-facto standard on Android CI and is
+used by Google's own repositories (`android/compose-samples`, `google/accompanist`, `google/android-fhir`).
+
+**KVM is required.** The x86_64 emulator depends on VM acceleration; without it the emulator falls back to
+software emulation and is far too slow for CI. `/dev/kvm` is not accessible to the runner user by default,
+so the workflow installs a `udev` rule granting access before the emulator starts. This is the approach
+documented by the action itself.
+
+**Target configuration:** the emulator runs API 35 with the headless-optimised `aosp_atd` system image on
+a `pixel_6` device profile, matching the app's `targetSdk 35`.
+
+**Alternative under consideration:** [Gradle Managed Devices](https://developer.android.com/studio/test/gradle-managed-devices)
+would move device definitions into `app/build.gradle.kts` and let AGP provision and tear down emulators,
+removing the third-party action entirely. Not yet adopted.
 
 ## Governance notes / DEFRA standard deviations
 
