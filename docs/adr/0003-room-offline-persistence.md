@@ -25,6 +25,16 @@ adds SQLCipher-based at-rest encryption of the database file. This ADR's choice 
 layer stands unchanged; only the "stub" scope note is updated. Other features may still be Room stubs until
 their own persistence needs are designed.
 
+## Update (2026-09-18)
+
+The offline statistical sub-area map feature ([ADR 0013](0013-offline-statistical-area-map.md)) bundles a
+precomputed geometry dataset (`assets/map_geometry.bin`) as a **build-time-generated asset**, decoded directly
+from the APK/AAB assets folder at runtime. This is explicitly **not a Room concern**: the geometry data is
+static, read-only, and derived at build time from source GeoJSON — it has no need for SQL queries,
+migrations, or transactional writes, so it is not modelled as Room entities/DAOs. Room remains the
+persistence layer for the catch-record draft aggregate (per this ADR and ADR 0006) and any other feature
+needing structured, queryable, mutable local storage.
+
 ## Consequences
 
 - Room's compile-time verified SQL and schema export give safer migrations than a hand-rolled SQLite

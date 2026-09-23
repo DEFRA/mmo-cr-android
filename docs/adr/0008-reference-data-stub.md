@@ -40,3 +40,15 @@ vessels, ports, gear types, species, statistical sub-rectangles, and the port→
   mistaken for real MMO reference data when the feature moves to a real API.
 - When a real reference-data API is introduced, this ADR should be revisited/superseded rather than
   silently replaced, so the swap is visible in governance history.
+
+## Update (2026-09-18)
+
+This drop-in-replaceable stub pattern now also has a sibling for map geometry: the statistical sub-area map
+feature ([ADR 0013](0013-offline-statistical-area-map.md)) introduces a dedicated `MapGeometryRepository`
+interface, backed by `AssetMapGeometryRepository` — a **bundled, build-time-precomputed binary asset stub**,
+following exactly this ADR's principle (interface-first, callers never see the underlying data-source shape,
+swap is a one-line DI change). It is a **separate repository/interface** from `ReferenceDataRepository` (the
+existing `StatisticalSubRectangle` domain model — id/code/statisticalAreaId — is unchanged), not a
+replacement for it; the two repositories serve different concerns (reference lookup data vs. renderable
+geometry) but share the same "drop-in-replaceable stub, no network yet" governance posture.
+

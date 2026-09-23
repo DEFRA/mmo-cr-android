@@ -36,6 +36,8 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementV
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelection
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectionMode
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.map.MapGeometryDataset
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.map.MapGeometryRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldKeys
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.submission.CheckYourAnswersScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.submission.CheckYourAnswersScreenTestTags
@@ -181,6 +183,7 @@ class SubmissionFlowNavigationTest {
         CatchRecordFlowViewModel(
             draftRepository,
             StubReferenceDataRepository(),
+            StubMapGeometryRepository(),
             submissionRepository,
             connectivityChecker,
             syncScheduler,
@@ -361,4 +364,14 @@ class SubmissionFlowNavigationTest {
         assertEquals(DraftStatus.PendingSync, draftRepository.statusOf(seedDraft.id))
         assertEquals(listOf(seedDraft.id), syncScheduler.scheduledDraftIds)
     }
+}
+
+/**
+ * Not exercised by this file's map/list-free submission scenarios — a trivial always-empty-success stub is
+ * enough to satisfy [CatchRecordFlowViewModel]'s constructor (mirrors [StubReferenceDataRepository]'s role
+ * for the other reference-data slice).
+ */
+private class StubMapGeometryRepository : MapGeometryRepository {
+    override suspend fun getMapGeometry(): Result<MapGeometryDataset> =
+        Result.success(MapGeometryDataset(landPolygons = emptyList(), subRectangles = emptyList(), ports = emptyList()))
 }

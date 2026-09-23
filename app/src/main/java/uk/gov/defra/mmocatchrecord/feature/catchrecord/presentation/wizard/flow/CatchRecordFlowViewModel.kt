@@ -28,6 +28,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementV
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelection
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectionMode
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.map.MapGeometryRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.ReferenceDataRepository
 import java.time.Instant
@@ -45,6 +46,7 @@ class CatchRecordFlowViewModel
     constructor(
         private val draftRepository: CatchRecordDraftRepository,
         private val referenceDataRepository: ReferenceDataRepository,
+        private val mapGeometryRepository: MapGeometryRepository,
         private val submissionRepository: CatchRecordSubmissionRepository,
         private val connectivityChecker: NetworkConnectivityChecker,
         private val syncScheduler: CatchRecordSyncScheduler,
@@ -85,6 +87,7 @@ class CatchRecordFlowViewModel
                 is CatchRecordFlowEvent.EditGearStatRectangle -> editGearStatRectangle(event)
                 is CatchRecordFlowEvent.SpeciesAddedToGearUse -> speciesAddedToGearUse(event)
                 is CatchRecordFlowEvent.EditGearSpeciesWeights -> editGearSpeciesWeights(event)
+                CatchRecordFlowEvent.LoadMapGeometry -> loadMapGeometry()
             }
         }
 
@@ -471,6 +474,41 @@ class CatchRecordFlowViewModel
             val event = lastFailedEvent ?: return
             lastFailedEvent = null
             dispatch(event)
+        }
+
+        /**
+         * Loads the offline statistical-sub-area map dataset (ADR 0013) into its own independent
+         * [CatchRecordFlowViewState.mapGeometryStatus] slice (see that field's doc comment for why this is
+         * deliberately not folded into [enterFlow]). Guards against redundant re-loads while already
+         * [UiStatus.Loading] or once already [UiStatus.Content] loaded — but *does* allow a fresh attempt
+         * from [UiStatus.Idle] (first load) or [UiStatus.Error] (explicit Retry), matching the same
+         * "retry a real failure, don't restart a real success" semantics as [retryLastFailedEvent] elsewhere
+         * in this ViewModel, without sharing its single-slot [lastFailedEvent]/[status]-only bookkeeping —
+         * this event is dispatched directly by the map screen's own Retry control, not the shared one.
+         */
+        private fun loadMapGeometry() {
+            when (currentState.mapGeometryStatus) {
+                is UiStatus.Loading, is UiStatus.Content -> return
+                UiStatus.Idle, is UiStatus.Error -> Unit
+            }
+            updateState { it.copy(mapGeometryStatus = UiStatus.Loading) }
+            launchInViewModelScope {
+                mapGeometryRepository.getMapGeometry().fold(
+                    onSuccess = { dataset ->
+                        updateState { it.copy(mapGeometryStatus = UiStatus.Content(dataset)) }
+                    },
+                    onFailure = { throwable ->
+                        Timber.w(throwable, "CatchRecordFlowViewModel map geometry load failed")
+                        val safeError = SafeErrorMapper.map(throwable)
+                        updateState {
+                            it.copy(
+                                mapGeometryStatus =
+                                    UiStatus.Error(message = safeError.message, isRetryable = safeError.isRetryable),
+                            )
+                        }
+                    },
+                )
+            }
         }
 
         /**

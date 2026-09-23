@@ -154,14 +154,15 @@ fun SubmissionSuccessScreenContent(
 fun SubmissionSuccessScreenPreview() {
     MmoTheme {
         SubmissionSuccessScreen(
-            status = UiStatus.Content(
-                CatchRecordDraft(
-                    id = "draft-1",
-                    vesselId = "vessel-1",
-                    modifiedAtEpochMillis = 0L,
-                    catchRecordReference = "A1234520260727150815",
-                )
-            ),
+            status =
+                UiStatus.Content(
+                    CatchRecordDraft(
+                        id = "draft-1",
+                        vesselId = "vessel-1",
+                        modifiedAtEpochMillis = 0L,
+                        catchRecordReference = "A1234520260727150815",
+                    ),
+                ),
             onRetry = {},
             onViewRecords = {},
             onBack = {},

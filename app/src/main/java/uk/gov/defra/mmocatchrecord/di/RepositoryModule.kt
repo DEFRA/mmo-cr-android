@@ -14,12 +14,14 @@ import uk.gov.defra.mmocatchrecord.core.language.AppLanguageRepository
 import uk.gov.defra.mmocatchrecord.core.language.DataStoreAppLanguageRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.CatchRecordDraftDao
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.RoomCatchRecordDraftRepository
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.map.AssetMapGeometryRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.StubReferenceDataRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission.StubCatchRecordSubmissionRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.sync.WorkManagerCatchRecordSyncScheduler
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordSubmissionRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordSyncScheduler
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.map.MapGeometryRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.ReferenceDataRepository
 import uk.gov.defra.mmocatchrecord.feature.home.data.FakeHomeRepository
 import uk.gov.defra.mmocatchrecord.feature.home.domain.HomeRepository
@@ -32,6 +34,7 @@ import javax.inject.Singleton
 /**
  * Hilt module for repository dependencies.
  */
+@Suppress("TooManyFunctions") // Hilt module: one small @Provides function per repository/dependency binding.
 @Module
 @InstallIn(SingletonComponent::class)
 object RepositoryModule {
@@ -63,6 +66,12 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideReferenceDataRepository(): ReferenceDataRepository = StubReferenceDataRepository()
+
+    @Provides
+    @Singleton
+    fun provideMapGeometryRepository(
+        @ApplicationContext context: Context,
+    ): MapGeometryRepository = AssetMapGeometryRepository(context)
 
     @Provides
     @Singleton

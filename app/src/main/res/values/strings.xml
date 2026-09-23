@@ -138,12 +138,16 @@
     <string name="gear_stat_rectangle_body_nearby">The statistical areas nearest to your departure port are shown below.</string>
     <string name="gear_stat_rectangle_body_select_grid">Select the area where most of your catch was caught.</string>
     <string name="gear_stat_rectangle_body_other_hint">If it is not listed, select Other to enter it.</string>
-    <string name="gear_stat_rectangle_body_select_other">Select the area where most of your catch was caught. If it is not listed, select Other to enter it.</string>
     <string name="gear_stat_rectangle_other_option">Other</string>
     <string name="gear_stat_rectangle_autocomplete_label">Type to search (minimum 2 characters)</string>
     <string name="gear_stat_rectangle_no_matches_found">No matching statistical sub-rectangles found</string>
     <string name="gear_stat_rectangle_error_required">Select a statistical subrectangle</string>
     <string name="gear_stat_rectangle_error_format">Enter a statistical subrectangle in the correct format, for example 38E84</string>
+    <string name="gear_stat_rectangle_map_list_body">Tap an area on the map or select it from the list below.</string>
+    <string name="gear_stat_rectangle_map_content_description">Map of statistical sub areas. Use the list below to select an area.</string>
+    <string name="gear_stat_rectangle_map_selected_announcement">Selected statistical sub area %1$s</string>
+    <string name="gear_stat_rectangle_map_cant_find">Can\'t find it on the map?</string>
+    <string name="gear_stat_rectangle_map_error_required">Select the statistical sub area where the majority of your catch was caught.</string>
     <string name="gear_species_search_title">Which species did you catch with %1$s?</string>
     <string name="gear_species_search_title_fallback">Which species did you catch?</string>
     <string name="gear_species_search_autocomplete_label">Type to search (minimum 2 characters)</string>

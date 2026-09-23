@@ -1,4 +1,4 @@
-@file:Suppress("detekt.MaxLineLength")
+@file:Suppress("detekt.MaxLineLength", "detekt.LargeClass")
 
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow
 
@@ -43,6 +43,7 @@ class CatchRecordFlowViewModelTests {
     private fun buildViewModel(
         repository: FakeCatchRecordDraftRepository,
         referenceDataRepository: FakeReferenceDataRepository = FakeReferenceDataRepository(),
+        mapGeometryRepository: FakeMapGeometryRepository = FakeMapGeometryRepository(),
         submissionRepository: FakeCatchRecordSubmissionRepository = FakeCatchRecordSubmissionRepository(),
         connectivityChecker: FakeNetworkConnectivityChecker = FakeNetworkConnectivityChecker(),
         syncScheduler: FakeCatchRecordSyncScheduler = FakeCatchRecordSyncScheduler(),
@@ -52,6 +53,7 @@ class CatchRecordFlowViewModelTests {
     ) = CatchRecordFlowViewModel(
         repository,
         referenceDataRepository,
+        mapGeometryRepository,
         submissionRepository,
         connectivityChecker,
         syncScheduler,
@@ -87,7 +89,10 @@ class CatchRecordFlowViewModelTests {
                         gearTypeId = "gear-seine-nets",
                         statisticalSubRectangleCode = "38E95",
                         confirmedUsedOnTrip = true,
-                        speciesWeights = listOf(SpeciesWeightEntry(id = "species-1", speciesId = "species-cod", confirmedCaught = true)),
+                        speciesWeights =
+                            listOf(
+                                SpeciesWeightEntry(id = "species-1", speciesId = "species-cod", confirmedCaught = true),
+                            ),
                     ),
                 ),
             notLandedStraightAway = false,
@@ -721,5 +726,102 @@ class CatchRecordFlowViewModelTests {
             }
             assertTrue(submissionRepository.submittedDrafts.isEmpty())
             assertEquals(listOf(started.id), syncScheduler.scheduledDraftIds)
+        }
+
+    @Test
+    fun `load map geometry success transitions idle to loading to content`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository()
+            val mapGeometryRepository = FakeMapGeometryRepository()
+            val viewModel =
+                buildViewModel(
+                    repository = repository,
+                    mapGeometryRepository = mapGeometryRepository,
+                    dispatcher = dispatcher,
+                )
+
+            viewModel.state.test {
+                assertEquals(UiStatus.Idle, awaitItem().mapGeometryStatus)
+                viewModel.dispatch(CatchRecordFlowEvent.LoadMapGeometry)
+                assertEquals(UiStatus.Loading, awaitItem().mapGeometryStatus)
+                val loaded = awaitItem()
+                val content = loaded.mapGeometryStatus as UiStatus.Content
+                assertEquals(1, content.value.subRectangles.size)
+            }
+            assertEquals(1, mapGeometryRepository.callCount)
+        }
+
+    @Test
+    fun `load map geometry failure surfaces a retryable error without touching draft status`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository()
+            val mapGeometryRepository = FakeMapGeometryRepository(result = Result.failure(java.io.IOException("boom")))
+            val viewModel =
+                buildViewModel(
+                    repository = repository,
+                    mapGeometryRepository = mapGeometryRepository,
+                    dispatcher = dispatcher,
+                )
+
+            viewModel.state.test {
+                val initial = awaitItem()
+                assertEquals(UiStatus.Idle, initial.mapGeometryStatus)
+                assertEquals(UiStatus.Idle, initial.status)
+                viewModel.dispatch(CatchRecordFlowEvent.LoadMapGeometry)
+                assertEquals(UiStatus.Loading, awaitItem().mapGeometryStatus)
+                val failed = awaitItem()
+                assertTrue(failed.mapGeometryStatus is UiStatus.Error)
+                // The unrelated draft-loading `status` slice must never be touched by a geometry failure.
+                assertEquals(UiStatus.Idle, failed.status)
+            }
+        }
+
+    @Test
+    fun `load map geometry does not re-load while already loading or once content is loaded`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository()
+            val mapGeometryRepository = FakeMapGeometryRepository()
+            val viewModel =
+                buildViewModel(
+                    repository = repository,
+                    mapGeometryRepository = mapGeometryRepository,
+                    dispatcher = dispatcher,
+                )
+
+            viewModel.dispatch(CatchRecordFlowEvent.LoadMapGeometry)
+            viewModel.dispatch(CatchRecordFlowEvent.LoadMapGeometry)
+            testScheduler.advanceUntilIdle()
+            viewModel.dispatch(CatchRecordFlowEvent.LoadMapGeometry)
+            testScheduler.advanceUntilIdle()
+
+            assertEquals(1, mapGeometryRepository.callCount)
+            assertTrue(viewModel.state.value.mapGeometryStatus is UiStatus.Content)
+        }
+
+    @Test
+    fun `retrying a failed map geometry load re-attempts and can succeed`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository()
+            val mapGeometryRepository = FakeMapGeometryRepository(result = Result.failure(java.io.IOException("boom")))
+            val viewModel =
+                buildViewModel(
+                    repository = repository,
+                    mapGeometryRepository = mapGeometryRepository,
+                    dispatcher = dispatcher,
+                )
+
+            viewModel.dispatch(CatchRecordFlowEvent.LoadMapGeometry)
+            testScheduler.advanceUntilIdle()
+            assertTrue(viewModel.state.value.mapGeometryStatus is UiStatus.Error)
+
+            viewModel.dispatch(CatchRecordFlowEvent.LoadMapGeometry)
+            testScheduler.advanceUntilIdle()
+
+            assertEquals(2, mapGeometryRepository.callCount)
+            assertTrue(viewModel.state.value.mapGeometryStatus is UiStatus.Error)
         }
 }

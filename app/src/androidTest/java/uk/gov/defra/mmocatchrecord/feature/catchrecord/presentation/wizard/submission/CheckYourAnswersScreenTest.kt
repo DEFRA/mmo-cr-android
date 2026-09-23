@@ -192,8 +192,9 @@ class CheckYourAnswersScreenTest {
         setContent(onChangeRow = { changed = it })
 
         composeTestRule
-            .onNodeWithTag("${CheckYourAnswersScreenTestTags.CHANGE_ACTION_PREFIX}_${CheckYourAnswersFieldKind.Measurement}")
-            .performScrollTo()
+            .onNodeWithTag(
+                "${CheckYourAnswersScreenTestTags.CHANGE_ACTION_PREFIX}_${CheckYourAnswersFieldKind.Measurement}",
+            ).performScrollTo()
             .performClick()
 
         assertEquals(WizardStep.GearMeasurement, changed?.changeStep)

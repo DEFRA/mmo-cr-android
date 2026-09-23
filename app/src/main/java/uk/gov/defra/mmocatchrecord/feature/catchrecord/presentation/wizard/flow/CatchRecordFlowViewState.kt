@@ -5,6 +5,7 @@ import uk.gov.defra.mmocatchrecord.core.architecture.ViewState
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementValue
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.map.MapGeometryDataset
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Species
@@ -47,6 +48,15 @@ data class CatchRecordFlowViewState(
      * entry the user simply re-picks the gear type; no captured data is lost since nothing was saved yet.
      */
     val pendingGearTypeId: String? = null,
+    /**
+     * Screen-owned async state for the offline statistical-sub-area map (ADR 0013), loaded on demand via
+     * [CatchRecordFlowEvent.LoadMapGeometry] rather than eagerly alongside [statisticalSubRectangles] —
+     * kept as an independent slice so its [UiStatus.Loading]/[UiStatus.Error] transitions never interleave
+     * with (and cannot break) the existing draft-loading Turbine assertions. Per ADR 0007, this replaces
+     * the screen's own direct Hilt `EntryPoint` + `produceState` access — the ViewModel now owns this async
+     * load like every other sibling slice.
+     */
+    val mapGeometryStatus: UiStatus<MapGeometryDataset> = UiStatus.Idle,
 ) : ViewState
 
 /**
@@ -191,4 +201,13 @@ sealed interface CatchRecordFlowEvent {
         val gearUseId: String,
         val speciesWeights: List<SpeciesWeightEntry>,
     ) : CatchRecordFlowEvent
+
+    /**
+     * Loads (or retries) the offline statistical-sub-area map dataset (ADR 0013) into
+     * [CatchRecordFlowViewState.mapGeometryStatus], dispatched by the map/list screen itself on first
+     * composition (`LaunchedEffect(Unit)`, mirroring [EnterFlow]'s idiom in `CatchRecordFlowScreen`) and
+     * again by its accessible Retry control on failure. Per ADR 0007 this replaces the screen's own direct
+     * Hilt `EntryPoint` access.
+     */
+    data object LoadMapGeometry : CatchRecordFlowEvent
 }

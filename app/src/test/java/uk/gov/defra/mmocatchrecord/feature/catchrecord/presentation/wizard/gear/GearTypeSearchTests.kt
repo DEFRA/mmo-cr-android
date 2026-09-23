@@ -17,8 +17,16 @@ class GearTypeSearchTests {
 
     private val gearTypes =
         listOf(
-            GearType(id = "gear-seine-nets", name = "Seine nets (not specified)", measurementFields = listOf(meshSizeField)),
-            GearType(id = "gear-beam-trawls-tbb", name = "Beam trawls (TBB)", measurementFields = listOf(meshSizeField)),
+            GearType(
+                id = "gear-seine-nets",
+                name = "Seine nets (not specified)",
+                measurementFields = listOf(meshSizeField),
+            ),
+            GearType(
+                id = "gear-beam-trawls-tbb",
+                name = "Beam trawls (TBB)",
+                measurementFields = listOf(meshSizeField),
+            ),
             GearType(
                 id = "gear-bottom-pair-trawls-ptb",
                 name = "Bottom pair trawls (PTB)",

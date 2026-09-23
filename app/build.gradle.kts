@@ -1,3 +1,5 @@
+import geopipeline.GeoPrecomputeTask
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -53,6 +55,15 @@ android {
             isReturnDefaultValues = true
         }
     }
+    // Reuse the exact same build-time GeoJSON parse/reproject/sea-overlap/binary-write pipeline logic
+    // (`shared-geopipeline/`, also compiled into buildSrc) at app runtime for the offline map-geometry
+    // GeoJSON fallback (see ADR 0013 / AssetMapGeometryRepository) — one shared source directory rather
+    // than a duplicated copy of the parsing logic.
+    sourceSets {
+        getByName("main") {
+            kotlin.srcDir("../shared-geopipeline/src/main/kotlin")
+        }
+    }
 }
 
 kotlin {
@@ -61,6 +72,28 @@ kotlin {
 
 room {
     schemaDirectory("$projectDir/schemas")
+}
+
+// Offline map-geometry precompute pipeline (ADR 0013): turns the unshipped app/geo-source/ GeoJSON files
+// into one compact derived binary asset consumed at runtime by MapGeometryBinaryDecoder. Registered via a
+// task Provider (not a plain File path) so AGP's merge-assets task automatically depends on this task and
+// Gradle's own up-to-date checking makes it a no-op when app/geo-source/ is unchanged.
+val geoGeneratedAssetsDir = layout.buildDirectory.dir("generated/geoAssets")
+val precomputeMapGeometry =
+    tasks.register<GeoPrecomputeTask>("precomputeMapGeometry") {
+        group = "build"
+        description = "Precomputes the offline map-geometry binary asset from app/geo-source/*.geojson (ADR 0013)."
+        sourceDir.set(layout.projectDirectory.dir("geo-source"))
+        outputDir.set(geoGeneratedAssetsDir)
+    }
+
+androidComponents {
+    onVariants { variant ->
+        variant.sources.assets?.addGeneratedSourceDirectory(
+            precomputeMapGeometry,
+            GeoPrecomputeTask::outputDir,
+        )
+    }
 }
 
 detekt {

@@ -116,7 +116,13 @@ fun CheckYourAnswersScreen(
                     species = state.species,
                     onChangeRow = { row ->
                         val gearUseId = row.changeGearUseId
-                        if (gearUseId != null) onNavigateToEdit(row.changeStep, gearUseId) else onNavigate(row.changeStep)
+                        if (gearUseId !=
+                            null
+                        ) {
+                            onNavigateToEdit(row.changeStep, gearUseId)
+                        } else {
+                            onNavigate(row.changeStep)
+                        }
                     },
                     onSubmit = { viewModel.dispatch(CatchRecordFlowEvent.AcceptDeclarationAndSubmit) },
                 )

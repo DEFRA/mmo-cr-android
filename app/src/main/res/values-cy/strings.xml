@@ -138,12 +138,16 @@
     <string name="gear_stat_rectangle_body_nearby">Dangosir yr ardaloedd ystadegol agosaf at eich porthladd ymadael isod.</string>
     <string name="gear_stat_rectangle_body_select_grid">Dewiswch yr ardal lle cafodd y rhan fwyaf o\'ch dalfa ei dal.</string>
     <string name="gear_stat_rectangle_body_other_hint">Os nad yw wedi\'i restru, dewiswch Arall i\'w nodi.</string>
-    <string name="gear_stat_rectangle_body_select_other">Dewiswch yr ardal lle cafodd y rhan fwyaf o\'ch dalfa ei dal. Os nad yw wedi\'i restru, dewiswch Arall i\'w nodi.</string>
     <string name="gear_stat_rectangle_other_option">Arall</string>
     <string name="gear_stat_rectangle_autocomplete_label">Teipiwch i chwilio (isafswm 2 nod)</string>
     <string name="gear_stat_rectangle_no_matches_found">Ni chanfuwyd is-barthau ystadegol cyfatebol</string>
     <string name="gear_stat_rectangle_error_required">Dewiswch is-barth ystadegol</string>
     <string name="gear_stat_rectangle_error_format">Nodwch is-barth ystadegol yn y fformat cywir, er enghraifft 38E84</string>
+    <string name="gear_stat_rectangle_map_list_body">Tapiwch ardal ar y map neu dewiswch hi o\'r rhestr isod.</string>
+    <string name="gear_stat_rectangle_map_content_description">Map o is-ardaloedd ystadegol. Defnyddiwch y rhestr isod i ddewis ardal.</string>
+    <string name="gear_stat_rectangle_map_selected_announcement">Dewiswyd is-ardal ystadegol %1$s</string>
+    <string name="gear_stat_rectangle_map_cant_find">Methu dod o hyd iddo ar y map?</string>
+    <string name="gear_stat_rectangle_map_error_required">Dewiswch yr is-ardal ystadegol lle cafodd y rhan fwyaf o\'ch dalfa ei dal.</string>
     <string name="gear_species_search_title">Pa rywogaethau wnaethoch chi ddal gyda %1$s?</string>
     <string name="gear_species_search_title_fallback">Pa rywogaethau wnaethoch chi ddal?</string>
     <string name="gear_species_search_autocomplete_label">Teipiwch i chwilio (o leiaf 2 nod)</string>
