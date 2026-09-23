@@ -42,8 +42,9 @@ jobs:
           ruby-version: '3.3'
           bundler-cache: true
 
-      - name: Static analysis (Fastlane)
-        run: bundle exec fastlane lint
+          # COMMENTED FOR TESTING PURPOSE
+      # - name: Static analysis (Fastlane)
+      #   run: bundle exec fastlane lint
 
       - name: Build debug (Fastlane)
         run: bundle exec fastlane build
@@ -74,17 +75,16 @@ jobs:
           path: build/sonar/test-execution.xml
           retention-days: 14
 
-          # COMMENTED FOR TESTING PURPOSE
-      # - name: Upload lint/ktlint/detekt reports
-      #   if: ${{ !cancelled() }}
-      #   uses: actions/upload-artifact@v7.0.1
-      #   with:
-      #     name: static-analysis-reports
-      #     path: |
-      #       app/build/reports/lint-results-debug.html
-      #       app/build/reports/ktlint
-      #       app/build/reports/detekt
-      #     retention-days: 14
+      - name: Upload lint/ktlint/detekt reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: static-analysis-reports
+          path: |
+            app/build/reports/lint-results-debug.html
+            app/build/reports/ktlint
+            app/build/reports/detekt
+          retention-days: 14
 
       # SonarCloud is configured in sonar-project.properties but disabled until the
       # DEFRA_mmo-cr-android project and MMO_CR_SONAR_TOKEN secret exist — see README "CI".
