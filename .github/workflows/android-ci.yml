@@ -24,14 +24,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7.0.1
         with:
-          # Full history so SonarCloud can attribute new code accurately once enabled.
           fetch-depth: 0
 
       - name: Set up JDK 21 (Temurin)
         uses: actions/setup-java@v6.0.1
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: "21"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6.3.0
@@ -39,12 +38,11 @@ jobs:
       - name: Set up Ruby and Fastlane
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.3'
+          ruby-version: "3.3"
           bundler-cache: true
 
-          # COMMENTED FOR TESTING PURPOSE
-      # - name: Static analysis (Fastlane)
-      #   run: bundle exec fastlane lint
+      - name: Static analysis (Fastlane)
+        run: bundle exec fastlane lint
 
       - name: Build debug (Fastlane)
         run: bundle exec fastlane build
@@ -52,13 +50,10 @@ jobs:
       - name: Run unit tests with coverage (Fastlane)
         run: bundle exec fastlane test
 
-      # Kotlin has no native JUnit importer in Sonar, so results are converted to the
-      # generic testExecutions format. Runs on failure too so failing tests are reported.
       - name: Convert test results for SonarCloud
         if: ${{ !cancelled() }}
         run: bash .github/workflows/scripts/junit-to-sonar-execution.sh
 
-      # Reports still upload when an earlier step fails, so blocking violations stay diagnosable.
       - name: Upload coverage report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7.0.1
@@ -86,21 +81,17 @@ jobs:
             app/build/reports/detekt
           retention-days: 14
 
-      # SonarCloud is configured in sonar-project.properties but disabled until the
-      # DEFRA_mmo-cr-android project and MMO_CR_SONAR_TOKEN secret exist — see README "CI".
-      # - name: SonarQube Cloud scan
-      #   uses: SonarSource/sonarqube-scan-action@v8.2.2
-      #   env:
-      #     SONAR_TOKEN: ${{ secrets.MMO_CR_SONAR_TOKEN }}
-      #     SONAR_HOST_URL: https://sonarcloud.io
-      #   with:
-      #     args: ${{ github.event_name != 'pull_request' && format('-Dsonar.branch.name={0}', github.ref_name) || '' }}
+      - name: SonarQube Cloud scan
+        uses: SonarSource/sonarqube-scan-action@v8.2.2
+        env:
+          SONAR_TOKEN: ${{ secrets.MMO_CR_SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+        with:
+          args: ${{ github.event_name != 'pull_request' && format('-Dsonar.branch.name={0}', github.ref_name) || '' }}
 
   instrumented-tests:
-    name: Instrumented tests (incl. accessibility)
+    name: Instrumented tests
     runs-on: ubuntu-latest
-    # Emulator runs cost ~20 min, so gate them on validate rather than burn a runner on
-    # code that does not lint, compile or pass unit tests.
     needs: validate
     timeout-minutes: 45
     steps:
@@ -111,7 +102,7 @@ jobs:
         uses: actions/setup-java@v6.0.1
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: "21"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6.3.0
@@ -119,7 +110,7 @@ jobs:
       - name: Set up Ruby and Fastlane
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.3'
+          ruby-version: "3.3"
           bundler-cache: true
 
       # /dev/kvm is not accessible to the runner user by default; without it the x86_64
@@ -130,8 +121,6 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      # No official Google/GitHub emulator action exists; this wraps the official SDK tools
-      # (sdkmanager/avdmanager/emulator) and handles boot detection — see README "CI".
       - name: Run instrumented tests (Compose UI + WCAG 2.2 AA semantics)
         uses: reactivecircus/android-emulator-runner@v2.38.0
         with:
@@ -149,4 +138,3 @@ jobs:
           name: instrumented-test-report
           path: app/build/reports/androidTests/connected
           retention-days: 14
-
