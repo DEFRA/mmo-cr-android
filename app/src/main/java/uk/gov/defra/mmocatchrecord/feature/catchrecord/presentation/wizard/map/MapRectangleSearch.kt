@@ -1,4 +1,4 @@
-package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear
+package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map
 
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.StatisticalSubRectangle
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip.PortSearch
@@ -7,9 +7,9 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip.
  * Pure autocomplete filtering rules for the "Other" free-text statistical sub-rectangle search (Phase 4,
  * screen 3) — mirrors [PortSearch]/[GearTypeSearch]. Unlike the "nearby" grid/radio-list, this searches the
  * full/global rectangle code list, since the local reference-data stub only supplies a placeholder subset
- * and a real code entered here need not be present in it (see [StatisticalSubRectangleFormatValidator]).
+ * and a real code entered here need not be present in it (see [MapRectangleFormatValidator]).
  */
-object StatisticalSubRectangleSearch {
+object MapRectangleSearch {
     const val MIN_QUERY_LENGTH = PortSearch.MIN_QUERY_LENGTH
 
     fun filterSuggestions(

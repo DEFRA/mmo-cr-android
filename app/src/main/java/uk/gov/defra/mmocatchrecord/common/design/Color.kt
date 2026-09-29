@@ -34,7 +34,7 @@ object MmoColors {
     val Grey3 = Color(0xFFD8DDE0)
     val Grey4 = Color(0xFFF3F2F1)
 
-    // Selection (statistical sub-rectangle schematic grid — see GearStatRectangleScreen)
+    // Selection (statistical sub-rectangle schematic grid — see MapScreen)
 
     /** Pale tint of [GovBlue] used as a selected grid cell's fill, per the confirmed screenshot. */
     val SelectedTint = Color(0xFFD2E2F1)

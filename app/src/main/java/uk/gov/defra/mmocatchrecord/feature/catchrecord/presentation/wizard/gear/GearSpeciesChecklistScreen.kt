@@ -54,6 +54,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.catchRecordReference
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.nextGearUsePendingSpecies
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.nextWizardStepForDraft
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map.MapSupport
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.species.SpeciesSupport
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.species.SpeciesWeightEntryValidationResult
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.species.SpeciesWeightFieldError
@@ -144,7 +145,7 @@ private fun GearSpeciesChecklistScreen(
         }
     val gearType = currentGearUse?.let { gearUse -> state.gearTypes.firstOrNull { it.id == gearUse.gearTypeId } }
     val gearNameWithMeasurement =
-        currentGearUse?.let { GearStatRectangleSupport.gearNameWithIdentifyingMeasurementFor(gearType, it) }
+        currentGearUse?.let { MapSupport.gearNameWithIdentifyingMeasurementFor(gearType, it) }
 
     CatchRecordWizardScaffold(
         screenTestTag = GearSpeciesChecklistScreenTestTags.SCREEN,

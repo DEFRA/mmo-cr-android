@@ -1,19 +1,18 @@
-package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear
+package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map
 
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementValue
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.map.MapGeometryDataset
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.map.StatisticalSubRectangleGeometry
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldKeys
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.StatisticalSubRectangle
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearMeasurementSupport
 
 /**
  * Pure (no Android/Compose dependency) helpers for the Phase 4 per-gear statistical sub-rectangle step —
- * see `GearStatRectangleScreen`.
+ * see `MapScreen`.
  */
-object GearStatRectangleSupport {
+object MapSupport {
     /**
      * The `%1$s` argument plugged into the "Where was the majority of your catch caught using %1$s?" /
      * "Select the statistical sub area where the majority of your catch was caught using %1$s?" title
@@ -36,9 +35,9 @@ object GearStatRectangleSupport {
 
     /**
      * Statistical sub-rectangles nearest [departurePort]'s statistical area (i.e. sharing its
-     * [Port.statisticalAreaId]), or empty if the port or its area is unknown. Feeds the nearby map (screen
-     * 1, via [nearbyGeometryFor]) and the global map+list (screen 2, reached via "Other"); the autocomplete
-     * search (screen 3) instead searches [allRectangles] unfiltered.
+     * [Port.statisticalAreaId]), or empty if the port or its area is unknown. Feeds the grid (screen 1) and
+     * radio-list (screen 2); the "Other" autocomplete search (screen 3) instead searches [allRectangles]
+     * unfiltered.
      */
     fun nearbyRectanglesFor(
         departurePort: Port?,
@@ -47,19 +46,4 @@ object GearStatRectangleSupport {
         departurePort
             ?.let { port -> allRectangles.filter { it.statisticalAreaId == port.statisticalAreaId } }
             .orEmpty()
-
-    /**
-     * Joins the nearby reference-data [StatisticalSubRectangle.code]s onto the loaded map geometry
-     * ([MapGeometryDataset.subRectangles]), restricted to sea-overlapping geometry only — a wholly-landlocked
-     * or unmapped nearby code cannot be a real, tappable catch location, so it is simply omitted from the
-     * nearby map's selectable set (it remains reachable via the "Other" -> global search fallback). Feeds
-     * the nearby map screen (see `GearStatRectangleNearbyMapContent`/`AccessibleStatisticalAreaMap`).
-     */
-    fun nearbyGeometryFor(
-        nearbyCodes: List<String>,
-        dataset: MapGeometryDataset,
-    ): List<StatisticalSubRectangleGeometry> {
-        val codes = nearbyCodes.toSet()
-        return dataset.subRectangles.filter { it.seaOverlapping && it.subCode in codes }
-    }
 }

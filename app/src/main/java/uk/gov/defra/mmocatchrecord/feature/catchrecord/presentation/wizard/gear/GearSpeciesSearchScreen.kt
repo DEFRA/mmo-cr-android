@@ -42,6 +42,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardStep
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.catchRecordReference
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.nextGearUsePendingSpecies
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map.MapSupport
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.species.SpeciesSearch
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.species.SpeciesSearchInputError
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.species.SpeciesSearchValidator
@@ -61,7 +62,7 @@ object GearSpeciesSearchScreenTestTags {
  * gear/port search. The current gear (and its display title) is derived from [nextGearUsePendingSpecies]
  * for the normal add-species flow, or explicitly from [editGearUseId] when editing an already-completed
  * gear's species via a check-your-answers "Change" link (finding: "Completed gear measurement/stat/species
- * must be editable through Change and back flows") — mirroring [GearStatRectangleScreen]'s own "current
+ * must be editable through Change and back flows") — mirroring [MapScreen]'s own "current
  * gear" derivation.
  */
 @Suppress("FunctionNaming")
@@ -110,7 +111,7 @@ internal fun GearSpeciesSearchScreen(
         }
     val gearType = currentGearUse?.let { gearUse -> state.gearTypes.firstOrNull { it.id == gearUse.gearTypeId } }
     val gearNameWithMeasurement =
-        currentGearUse?.let { GearStatRectangleSupport.gearNameWithIdentifyingMeasurementFor(gearType, it) }
+        currentGearUse?.let { MapSupport.gearNameWithIdentifyingMeasurementFor(gearType, it) }
 
     CatchRecordWizardScaffold(
         screenTestTag = GearSpeciesSearchScreenTestTags.SCREEN,
