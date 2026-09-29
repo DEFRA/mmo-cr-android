@@ -33,7 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.AppLanguageProvider
 import uk.gov.defra.mmocatchrecord.common.design.CrownLogo

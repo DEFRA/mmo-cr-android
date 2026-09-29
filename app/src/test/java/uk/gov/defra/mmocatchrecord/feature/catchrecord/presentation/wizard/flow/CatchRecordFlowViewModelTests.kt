@@ -1,4 +1,4 @@
-@file:Suppress("detekt.MaxLineLength")
+@file:Suppress("detekt.MaxLineLength", "detekt.LargeClass")
 
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow
 

@@ -51,8 +51,8 @@ data class CatchRecordFlowViewState(
 
 /**
  * The user-facing catch-record reference (see [CatchRecordDraft.catchRecordReference]), shown as a caption
- * on every wizard screen once the draft exists (see [uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordWizardScaffold]'s
- * `referenceNumber` parameter) — `null` before a draft has been created (e.g. vessel selection).
+ * on every wizard screen once the draft exists (see [CatchRecordWizardScaffold]'s `referenceNumber`
+ * parameter) — `null` before a draft has been created (e.g. vessel selection).
  */
 val CatchRecordFlowViewState.catchRecordReference: String?
     get() = (status as? UiStatus.Content<CatchRecordDraft>)?.value?.catchRecordReference
@@ -152,8 +152,9 @@ sealed interface CatchRecordFlowEvent {
 
     /**
      * Check-your-answers "Change" edit flow (finding: "Completed gear measurement/stat/species must be
-     * editable through Change and back flows"): updates the *existing* [uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse]
-     * identified by [gearUseId]'s measurements in place, then returns to [uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardStep.CheckYourAnswers].
+     * editable through Change and back flows"): updates the *existing*
+     * [uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse] identified by [gearUseId]'s
+     * measurements in place, then returns to [WizardStep.CheckYourAnswers].
      */
     data class EditGearMeasurements(
         val gearUseId: String,
