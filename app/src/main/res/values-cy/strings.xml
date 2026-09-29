@@ -144,6 +144,10 @@
     <string name="gear_stat_rectangle_no_matches_found">Ni chanfuwyd is-barthau ystadegol cyfatebol</string>
     <string name="gear_stat_rectangle_error_required">Dewiswch is-barth ystadegol</string>
     <string name="gear_stat_rectangle_error_format">Nodwch is-barth ystadegol yn y fformat cywir, er enghraifft 38E84</string>
+    <string name="gear_stat_rectangle_selected_area">Ardal a ddewiswyd: %1$s</string>
+    <string name="gear_stat_rectangle_selected_area_none">Dim ardal wedi\'i dewis</string>
+    <string name="gear_stat_rectangle_map_unavailable">Ni ellid llwytho\'r map. Dewiswch Arall i ddewis is-barth ystadegol o restr yn lle hynny.</string>
+    <string name="gear_stat_rectangle_map_content_description">Map o is-barthau ystadegol pysgodfeydd ger eich porthladd ymadael. %1$s Llusgwch i banio a phinsiwch i chwyddo. Dewiswch Arall am restr y gallwch chwilio ynddi heb ddefnyddio\'r map.</string>
     <string name="gear_species_search_title">Pa rywogaethau wnaethoch chi ddal gyda %1$s?</string>
     <string name="gear_species_search_title_fallback">Pa rywogaethau wnaethoch chi ddal?</string>
     <string name="gear_species_search_autocomplete_label">Teipiwch i chwilio (o leiaf 2 nod)</string>

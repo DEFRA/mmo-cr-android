@@ -38,4 +38,19 @@ object MmoColors {
 
     /** Pale tint of [GovBlue] used as a selected grid cell's fill, per the confirmed screenshot. */
     val SelectedTint = Color(0xFFD2E2F1)
+
+    // Offline fisheries map (Canvas-rendered statistical sub-rectangle map — see MapScreen/MapCanvas.kt).
+    // Colours per the confirmed iOS screenshot; not GDS palette colours, so kept in their own named group.
+
+    /** Land fill. */
+    val MapLand = Color(0xFF0B4143)
+
+    /** Sub-rectangle grid line stroke and (at low alpha) fill, and sub_code label text. */
+    val MapGridLine = Color(0xFF0B6B3A)
+
+    /** Selected sub-rectangle fill/stroke and its label "pill" background. */
+    val MapSelectedFill = Color(0xFFE8A63A)
+
+    /** Port marker dot fill. */
+    val MapPortDot = Color(0xFF01FEE2)
 }

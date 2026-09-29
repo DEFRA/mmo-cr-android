@@ -3,11 +3,13 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTouchInput
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Rule
@@ -25,6 +27,13 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Gear
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.StatisticalSubRectangle
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordFlowViewState
+import uk.gov.defra.mmocatchrecord.mapdata.MapDataset
+import uk.gov.defra.mmocatchrecord.mapdata.SerializableBBox
+import uk.gov.defra.mmocatchrecord.mapdata.SerializableMultiPolygon
+import uk.gov.defra.mmocatchrecord.mapdata.SerializablePoint
+import uk.gov.defra.mmocatchrecord.mapdata.SerializablePolygon
+import uk.gov.defra.mmocatchrecord.mapdata.SerializableRing
+import uk.gov.defra.mmocatchrecord.mapdata.SerializableSubRectangle
 
 class MapScreenTest {
     @get:Rule
@@ -69,7 +78,43 @@ class MapScreenTest {
         )
     }
 
-    // --- Screen 1: schematic grid ---------------------------------------------------------------------
+    /**
+     * A minimal, synthetic [MapDataset] for Canvas Grid-mode interaction tests — one huge sea-overlapping
+     * sub-rectangle spanning the whole of [MapCameraSupport]'s UK-waters default centre (and any
+     * port-match/nearby-bbox centre this fixture's [samplePort]/[sampleRectangles] could resolve to), so a
+     * tap at the centre of the rendered [MapCanvas] always lands inside it regardless of which of the three
+     * initial-camera strategies applies — see [MapCameraSupport.initialCameraFor].
+     */
+    private fun mapDatasetFixture(code: String = "38E95"): MapDataset {
+        val ring =
+            SerializableRing(
+                listOf(
+                    SerializablePoint(-20.0, 30.0),
+                    SerializablePoint(20.0, 30.0),
+                    SerializablePoint(20.0, 75.0),
+                    SerializablePoint(-20.0, 75.0),
+                    SerializablePoint(-20.0, 30.0),
+                ),
+            )
+        val subRectangle =
+            SerializableSubRectangle(
+                code = code,
+                icesName = "Test area",
+                areaKm2 = 1.0,
+                bbox = SerializableBBox(minLon = -20.0, minLat = 30.0, maxLon = 20.0, maxLat = 75.0),
+                centroid = SerializablePoint(0.0, 55.0),
+                geometry = SerializableMultiPolygon(listOf(SerializablePolygon(ring, emptyList()))),
+                isSeaOverlapping = true,
+            )
+        return MapDataset(
+            formatVersion = MapDataset.CURRENT_FORMAT_VERSION,
+            land = emptyList(),
+            subRectangles = listOf(subRectangle),
+            ports = emptyList(),
+        )
+    }
+
+    // --- Screen 1: the offline Canvas map --------------------------------------------------------------
 
     @Test
     fun gridScreenShowsIdentifyingMeasurementInTitleAndSubmitsTappedCell() {
@@ -80,6 +125,7 @@ class MapScreenTest {
                     state = stateWith(pendingGearUse()),
                     onSubmit = { submittedDraft = it },
                     onBack = {},
+                    mapStatus = UiStatus.Content(mapDatasetFixture("38E95")),
                 )
             }
         }
@@ -87,7 +133,8 @@ class MapScreenTest {
         composeTestRule
             .onNodeWithText("Where was the majority of your catch caught using seine nets (mesh size 100mm)?")
             .assertIsDisplayed()
-        composeTestRule.onNodeWithTag("${MapScreenTestTags.GRID_CELL_PREFIX}_0").performClick()
+        composeTestRule.onNodeWithTag(MapScreenTestTags.MAP).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(MapScreenTestTags.MAP).performTouchInput { click() }
         composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_SAVE_ACTION).performClick()
 
         assertEquals("38E95", submittedDraft?.gearUses?.single()?.statisticalSubRectangleCode)
@@ -200,6 +247,27 @@ class MapScreenTest {
         composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_SAVE_ACTION).performClick()
         composeTestRule.onNodeWithTag(MapScreenTestTags.ERROR_MESSAGE).assertIsDisplayed()
         assertNull(submittedDraft)
+    }
+
+    /**
+     * Requirement: "if the map data fails to load, Grid mode must still work: show an accessible message
+     * and keep 'Other' (→ RadioList) available; never crash" — see [MapGridContent].
+     */
+    @Test
+    fun gridScreenWhenMapDataFailsToLoadStillShowsOtherAndAccessibleError() {
+        composeTestRule.setContent {
+            MmoTheme {
+                MapScreen(
+                    state = stateWith(pendingGearUse()),
+                    onSubmit = {},
+                    onBack = {},
+                    mapStatus = UiStatus.Error(message = "Unable to load the offline map data", isRetryable = true),
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag(MapScreenTestTags.MAP_ERROR).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).assertIsDisplayed()
     }
 
     // --- Screen 2: "Other" -> radio list ---------------------------------------------------------------

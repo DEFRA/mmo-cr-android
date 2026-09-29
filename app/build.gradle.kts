@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.kover)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.detekt)
+    id("uk.gov.defra.mmocatchrecord.mapdata.generator")
 }
 
 android {
@@ -104,6 +105,10 @@ dependencies {
 
     // Type-safe Navigation Compose routes (ADR 0007) — @Serializable route classes/objects.
     implementation(libs.kotlinx.serialization.json)
+
+    // Shared offline-map pure parsing/geometry/generator code (build-time preprocessing task + on-device
+    // runtime fallback parser) — see docs/adr/0013-offline-fisheries-map-rendering.md.
+    implementation("uk.gov.defra.mmocatchrecord.mapdata:map-data-core")
 
     // Structured, redacted logging (see ADR 0011 / security instructions "no PII/secrets in logs").
     implementation(libs.timber)

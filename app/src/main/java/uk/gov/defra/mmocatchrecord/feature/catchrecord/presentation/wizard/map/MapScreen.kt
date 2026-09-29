@@ -2,8 +2,12 @@
 
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -12,12 +16,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.AppLanguageProvider
@@ -25,7 +31,6 @@ import uk.gov.defra.mmocatchrecord.common.design.GdsAutocompleteField
 import uk.gov.defra.mmocatchrecord.common.design.GdsAutocompleteOption
 import uk.gov.defra.mmocatchrecord.common.design.GdsRadioGroup
 import uk.gov.defra.mmocatchrecord.common.design.GdsRadioOption
-import uk.gov.defra.mmocatchrecord.common.design.GdsStatisticalRectangleGrid
 import uk.gov.defra.mmocatchrecord.common.design.MmoColors
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
@@ -55,6 +60,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.nextGearUsePendingStatRectangle
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.nextWizardStepForDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip.DeparturePortScreen
+import uk.gov.defra.mmocatchrecord.mapdata.MapDataset
 
 /** Which sub-screen of the [WizardStep.GearStatRectangle] step is currently shown — see [MapScreenContent]. */
 enum class MapEntryMode {
@@ -67,8 +73,9 @@ object MapScreenTestTags {
     const val SCREEN = "gear_stat_rectangle_screen"
     const val ERROR_SUMMARY = "gear_stat_rectangle_error_summary"
     const val ERROR_MESSAGE = "gear_stat_rectangle_error_message"
-    const val GRID = "gear_stat_rectangle_grid"
-    const val GRID_CELL_PREFIX = "gear_stat_rectangle_grid_cell"
+    const val MAP = "gear_stat_rectangle_map"
+    const val MAP_ERROR = "gear_stat_rectangle_map_error"
+    const val MAP_SELECTED_TEXT = "gear_stat_rectangle_map_selected_text"
     const val GRID_OTHER_ACTION = "gear_stat_rectangle_grid_other_action"
     const val GRID_SAVE_ACTION = "gear_stat_rectangle_grid_save_action"
     const val RADIO_OPTION_PREFIX = "gear_stat_rectangle_radio_option"
@@ -91,7 +98,7 @@ private const val OTHER_OPTION_ID = "other"
  * with the same [WizardStep.GearStatRectangle]) while another confirmed gear remains, exactly like every
  * other screen's generic [CatchRecordFlowEvent.SaveAndContinue] dispatch — no bespoke "next gear" event.
  *
- * Three sub-screens (Grid/RadioList/Autocomplete) are modelled as one step with local, non-ViewModel state
+ * Three sub-screens (Grid/RadioList/Autocomplete) are modeled as one step with local, non-ViewModel state
  * — mirroring [DeparturePortScreen]'s `DeparturePortEntryMode` pattern — rather than three separate
  * [WizardStep]s, since which sub-screen is showing is pure UI navigation, not draft state.
  */
@@ -105,6 +112,8 @@ fun MapScreen(
     editGearUseId: String? = null,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val mapDataViewModel: MapDataViewModel = hiltViewModel()
+    val mapStatus by mapDataViewModel.status.collectAsStateWithLifecycle()
     MapScreen(
         state = state,
         editGearUseId = editGearUseId,
@@ -125,6 +134,8 @@ fun MapScreen(
         onRetry = { viewModel.dispatch(CatchRecordFlowEvent.Retry) },
         onBack = onBack,
         modifier = modifier,
+        mapStatus = mapStatus,
+        onRetryMapData = mapDataViewModel::retry,
     )
 }
 
@@ -137,6 +148,8 @@ internal fun MapScreen(
     modifier: Modifier = Modifier,
     editGearUseId: String? = null,
     onRetry: () -> Unit = {},
+    mapStatus: UiStatus<MapDataset> = UiStatus.Loading,
+    onRetryMapData: () -> Unit = {},
 ) {
     val draft = (state.status as? UiStatus.Content<CatchRecordDraft>)?.value
     val currentGearUse =
@@ -188,6 +201,7 @@ internal fun MapScreen(
                     val departurePort = state.ports.firstOrNull { it.id == draft.departurePort?.portId }
                     MapScreenContent(
                         gearUse = currentGearUse,
+                        departurePort = departurePort,
                         nearbyRectangles =
                             MapSupport.nearbyRectanglesFor(departurePort, state.statisticalSubRectangles),
                         allRectangles = state.statisticalSubRectangles,
@@ -204,6 +218,8 @@ internal fun MapScreen(
                                 )
                             onSubmit(updatedDraft)
                         },
+                        mapStatus = mapStatus,
+                        onRetryMapData = onRetryMapData,
                     )
                 }
         }
@@ -214,18 +230,24 @@ internal fun MapScreen(
 @Composable
 fun MapScreenContent(
     gearUse: GearUse,
+    departurePort: Port?,
     nearbyRectangles: List<StatisticalSubRectangle>,
     allRectangles: List<StatisticalSubRectangle>,
     entryMode: MapEntryMode,
     onEntryModeChange: (MapEntryMode) -> Unit,
     onSubmit: (String) -> Unit,
     modifier: Modifier = Modifier,
+    mapStatus: UiStatus<MapDataset> = UiStatus.Loading,
+    onRetryMapData: () -> Unit = {},
 ) {
     when (entryMode) {
         MapEntryMode.Grid ->
             MapGridContent(
                 gearUse = gearUse,
+                departurePort = departurePort,
                 nearbyRectangles = nearbyRectangles,
+                mapStatus = mapStatus,
+                onRetryMapData = onRetryMapData,
                 onOtherSelected = { onEntryModeChange(MapEntryMode.RadioList) },
                 onSubmit = onSubmit,
                 modifier = modifier,
@@ -251,17 +273,20 @@ fun MapScreenContent(
 }
 
 /**
- * Screen 1: the schematic grid (see [GdsStatisticalRectangleGrid]). The confirmed screenshots show no
- * explicit "Save and continue" button here (just "tap to select" + an "Other" link) — a Save action is
- * added anyway as a deliberate, flagged deviation: auto-navigating on tap is a poor pattern for
- * screen-reader/switch-access users, and every other selection screen in this wizard requires an explicit
- * confirm action.
+ * Screen 1: the real offline fisheries map (see [MapCanvas]) — replaces the previous schematic
+ * [uk.gov.defra.mmocatchrecord.common.design.GdsStatisticalRectangleGrid]. The confirmed screenshots show no explicit "Save and continue" button here
+ * (just "tap to select" + an "Other" link) — a Save action is added anyway as a deliberate, flagged
+ * deviation: auto-navigating on tap is a poor pattern for screen-reader/switch-access users, and every
+ * other selection screen in this wizard requires an explicit confirmation action.
  */
 @Suppress("FunctionNaming")
 @Composable
 private fun MapGridContent(
     gearUse: GearUse,
+    departurePort: Port?,
     nearbyRectangles: List<StatisticalSubRectangle>,
+    mapStatus: UiStatus<MapDataset>,
+    onRetryMapData: () -> Unit,
     onOtherSelected: () -> Unit,
     onSubmit: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -291,21 +316,68 @@ private fun MapGridContent(
                 modifier = Modifier.testTag(MapScreenTestTags.ERROR_MESSAGE),
             )
         }
-        GdsStatisticalRectangleGrid(
-            codes = nearbyRectangles.map { it.code },
-            selectedCode = selectedCode,
-            onCodeSelected = {
-                selectedCode = it
-                showError = false
-            },
-            cellTestTagPrefix = MapScreenTestTags.GRID_CELL_PREFIX,
-            modifier = Modifier.testTag(MapScreenTestTags.GRID),
-        )
-        SecondaryActionButton(
-            text = stringResource(R.string.gear_stat_rectangle_other_option),
-            onClick = onOtherSelected,
-            modifier = Modifier.testTag(MapScreenTestTags.GRID_OTHER_ACTION),
-        )
+        when (mapStatus) {
+            UiStatus.Idle, UiStatus.Loading -> WizardLoadingState()
+            is UiStatus.Error ->
+                // Never crash: the map data failed to load. The "Other" button below (rendered
+                // unconditionally, outside this `when`) still lets the user continue via the fully
+                // keyboard/TalkBack-accessible radio-list/autocomplete path.
+                WizardErrorState(
+                    message = stringResource(R.string.gear_stat_rectangle_map_unavailable),
+                    testTag = MapScreenTestTags.MAP_ERROR,
+                    isRetryable = mapStatus.isRetryable,
+                    onRetry = onRetryMapData,
+                )
+            is UiStatus.Content -> {
+                val dataset = mapStatus.value
+                val initialCamera =
+                    remember(gearUse.id, dataset) {
+                        MapCameraSupport.initialCameraFor(departurePort, dataset, nearbyRectangles)
+                    }
+                var camera by
+                    rememberSaveable(gearUse.id, stateSaver = MapCamera.Saver) { mutableStateOf(initialCamera) }
+
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    MapCanvas(
+                        dataset = dataset,
+                        camera = camera,
+                        onCameraChange = { camera = it },
+                        selectedCode = selectedCode,
+                        onCodeSelected = {
+                            selectedCode = it
+                            showError = false
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    SecondaryActionButton(
+                        text = stringResource(R.string.gear_stat_rectangle_other_option),
+                        onClick = onOtherSelected,
+                        modifier =
+                            Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(Spacing.s)
+                                .background(MmoColors.White)
+                                .testTag(MapScreenTestTags.GRID_OTHER_ACTION),
+                    )
+                }
+                Text(
+                    text =
+                        selectedCode?.let { stringResource(R.string.gear_stat_rectangle_selected_area, it) }
+                            ?: stringResource(R.string.gear_stat_rectangle_selected_area_none),
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.testTag(MapScreenTestTags.MAP_SELECTED_TEXT),
+                )
+            }
+        }
+        if (mapStatus !is UiStatus.Content) {
+            // Fallback path (map data still loading, or failed to load): "Other" must remain reachable —
+            // see [MapCanvas]/docs/development/offline-map.md "never crash".
+            SecondaryActionButton(
+                text = stringResource(R.string.gear_stat_rectangle_other_option),
+                onClick = onOtherSelected,
+                modifier = Modifier.testTag(MapScreenTestTags.GRID_OTHER_ACTION),
+            )
+        }
         PrimaryActionButton(
             text = stringResource(R.string.save_and_continue),
             onClick = {
@@ -384,7 +456,8 @@ private fun MapRadioListContent(
 /**
  * Screen 3: free-text search over the full/global rectangle code list. Unlike the grid/radio-list, this
  * validates the raw typed text against [MapRectangleFormatValidator] (required + format) via
- * [WizardErrorSummary] — matching [GearMeasurementScreenContent]'s pattern for free-text/numeric input,
+ * [WizardErrorSummary] — matching
+ * [uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearMeasurementScreenContent]'s pattern for free-text/numeric input,
  * since a typed code need not appear in the (locally stubbed, non-exhaustive) suggestion list to be valid.
  */
 @Suppress("FunctionNaming")
@@ -549,6 +622,7 @@ fun MapScreen_RadioListPreview() {
         AppLanguageProvider(language = "en") {
             MapScreenContent(
                 gearUse = fixture.gearUse,
+                departurePort = null,
                 nearbyRectangles = fixture.nearbyRectangles,
                 allRectangles = fixture.allRectangles,
                 entryMode = MapEntryMode.RadioList,
@@ -568,6 +642,7 @@ fun MapScreen_AutocompletePreview() {
         AppLanguageProvider(language = "en") {
             MapScreenContent(
                 gearUse = fixture.gearUse,
+                departurePort = null,
                 nearbyRectangles = fixture.nearbyRectangles,
                 allRectangles = fixture.allRectangles,
                 entryMode = MapEntryMode.Autocomplete,

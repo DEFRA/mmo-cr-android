@@ -1,4 +1,5 @@
 pluginManagement {
+    includeBuild("build-logic")
     repositories {
         google {
             content {
@@ -23,5 +24,9 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "MMO Catch Record"
+// Included a second time (not just under pluginManagement above) so `:app` can also depend on
+// `map-data-core` as an ordinary project dependency for its runtime fallback parser — see
+// build-logic/settings.gradle.kts and docs/adr/0013-offline-fisheries-map-rendering.md.
+includeBuild("build-logic")
 include(":app")
  

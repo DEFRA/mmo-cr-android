@@ -24,6 +24,9 @@ cd mmo-cr-android
 # Lint / static analysis
 ./gradlew ktlintCheck detekt lint
 
+# Regenerate the offline map data (also runs automatically before assembleDebug/Release)
+./gradlew :app:generateDebugMapData
+
 # Install & run on a connected device/emulator
 ./gradlew installDebug
 ```
@@ -63,6 +66,9 @@ split per feature package, per
   Stage 1 ships interfaces and in-memory fakes only. Real implementations must use Android Keystore
   (+ Tink) for data-at-rest, never plain `EncryptedSharedPreferences`, and must never log biometric/session
   state or PII — see the KDoc on each interface in `core/security/`.
+- **Offline fisheries statistical sub-rectangle map** — a fully offline, custom Compose `Canvas`-rendered
+  map (no map SDK/tiles/API key/network) with a build-time GeoJSON preprocessing task in the `build-logic/`
+  composite Gradle build — see ADR 0013 and [`docs/development/offline-map.md`](docs/development/offline-map.md).
 - Full list of ADRs: [`docs/adr/`](docs/adr/).
 
 ## Developer guidelines
@@ -93,6 +99,7 @@ split per feature package, per
 | [0003](docs/adr/0003-room-offline-persistence.md) | Room for offline-first persistence |
 | [0004](docs/adr/0004-koin-dependency-injection.md) | Koin for dependency injection (superseded) |
 | [0005](docs/adr/0005-hilt-dependency-injection.md) | Hilt for dependency injection |
+| [0013](docs/adr/0013-offline-fisheries-map-rendering.md) | Offline fisheries statistical sub-rectangle map rendering |
 | [0000](docs/adr/0000-ios-adr-references-TBC.md) | iOS ADR references — TBC |
 
 ## CI

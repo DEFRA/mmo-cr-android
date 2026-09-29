@@ -39,9 +39,12 @@ work, or delegate to the **Android Planner** for **Complex** work — then obtai
 > this supersedes/clarifies ADR-0003's "Room stub" and confirms **`androidx.security-crypto` (Jetpack
 > Security Crypto) is explicitly NOT used** (deprecated upstream; see
 > [ADR-0006](../../docs/adr/0006-catch-record-draft-persistence-and-encryption.md)). The offline
-> statistical sub-area map feature (previously ADR-0013) was reverted in full for a rebuild; its
-> map-rendering approach is **not currently confirmed** and must go back through this gate before that
-> feature is reimplemented. Stack: Kotlin +
+> statistical sub-area map feature was reverted in full for a rebuild (commit `95201b9`, reverted at HEAD
+> `09515d1`) and has now been **rebuilt fresh (not restored) on 2026-09-29** — map rendering: **custom
+> Compose `Canvas` rendering with build-time preprocessing of the bundled GeoJSON (land / subrectangles /
+> ports) into a compact generated asset via a `build-logic` included-build Gradle task, plus an on-device
+> runtime fallback parser — no map SDK, no tiles, no API key, no network** — confirmed by explicit user
+> direction (see [ADR-0013](../../docs/adr/0013-offline-fisheries-map-rendering.md)). Stack: Kotlin +
 > Jetpack Compose, Material 3 light-only GOV.UK theme, MVVM + Clean Architecture, Hilt (DI, §5 default —
 > reverts the earlier Koin deviation, see ADR 0005), Navigation Compose, Room (now real entities for the
 > catch-record draft aggregate, SQLCipher-encrypted — see ADR-0006), androidx.biometric (Stage-1
