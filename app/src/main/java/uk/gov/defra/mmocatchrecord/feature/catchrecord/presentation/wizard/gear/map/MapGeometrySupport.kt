@@ -5,6 +5,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.map.GeoPoint
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.map.MapPort
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.map.StatisticalSubRectangleGeometry
 import kotlin.math.cos
+import kotlin.math.sqrt
 
 /**
  * Pure (no Android/Compose dependency) camera/projection/hit-testing helpers for the statistical-sub-area
@@ -41,6 +42,17 @@ object MapProjection {
     private const val BASE_PIXELS_PER_DEGREE = 120f
     private const val MIN_COS_LATITUDE = 0.15f
 
+    /**
+     * `cos(latitude)`, clamped away from zero — shared by [worldToScreen]/[screenToWorld] (equirectangular
+     * longitude scaling) and by [MapZoomBounds] (deriving zoom bounds from a cell's real-world lng/lat
+     * span), so both use the exact same latitude-scaling maths.
+     */
+    internal fun cosLatitudeFor(latDeg: Double): Float =
+        cos(Math.toRadians(latDeg)).toFloat().coerceAtLeast(MIN_COS_LATITUDE)
+
+    /** Pixels drawn per degree of longitude at `zoom == 1f` — see [MapZoomBounds] for its other use. */
+    internal const val PIXELS_PER_DEGREE_AT_ZOOM_1 = BASE_PIXELS_PER_DEGREE
+
     fun worldToScreen(
         point: GeoPoint,
         camera: CameraState,
@@ -48,7 +60,7 @@ object MapProjection {
         viewportHeightPx: Float,
     ): ScreenPoint {
         val scale = BASE_PIXELS_PER_DEGREE * camera.zoom
-        val cosLat = cos(Math.toRadians(camera.centre.lat)).toFloat().coerceAtLeast(MIN_COS_LATITUDE)
+        val cosLat = cosLatitudeFor(camera.centre.lat)
         val dx = (point.lng - camera.centre.lng).toFloat() * cosLat * scale
         val dy = (camera.centre.lat - point.lat).toFloat() * scale // screen y grows downward; north is up
         return ScreenPoint(
@@ -64,12 +76,139 @@ object MapProjection {
         viewportHeightPx: Float,
     ): GeoPoint {
         val scale = BASE_PIXELS_PER_DEGREE * camera.zoom
-        val cosLat = cos(Math.toRadians(camera.centre.lat)).toFloat().coerceAtLeast(MIN_COS_LATITUDE)
+        val cosLat = cosLatitudeFor(camera.centre.lat)
         val dx = screen.x - viewportWidthPx / 2f - camera.panOffsetPx.x
         val dy = screen.y - viewportHeightPx / 2f - camera.panOffsetPx.y
         val lng = camera.centre.lng + (dx / scale / cosLat)
         val lat = camera.centre.lat - (dy / scale)
         return GeoPoint(lat = lat, lng = lng)
+    }
+
+    /**
+     * Projects a [GeoBoundingBox]'s four corners to screen space and returns their axis-aligned screen
+     * bounds — used by [uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.map.AccessibleStatisticalAreaMap]
+     * to position an accessible overlay element over each nearby sub-rectangle cell, using the exact same
+     * camera/projection maths [StatisticalAreaMapCanvas] itself draws with — so the overlay never drifts
+     * from what is actually drawn, including during pan/zoom.
+     */
+    fun projectedBounds(
+        box: GeoBoundingBox,
+        camera: CameraState,
+        viewportWidthPx: Float,
+        viewportHeightPx: Float,
+    ): ScreenRect {
+        val corners =
+            listOf(
+                worldToScreen(GeoPoint(box.minLat, box.minLng), camera, viewportWidthPx, viewportHeightPx),
+                worldToScreen(GeoPoint(box.minLat, box.maxLng), camera, viewportWidthPx, viewportHeightPx),
+                worldToScreen(GeoPoint(box.maxLat, box.minLng), camera, viewportWidthPx, viewportHeightPx),
+                worldToScreen(GeoPoint(box.maxLat, box.maxLng), camera, viewportWidthPx, viewportHeightPx),
+            )
+        return ScreenRect(
+            left = corners.minOf { it.x },
+            top = corners.minOf { it.y },
+            right = corners.maxOf { it.x },
+            bottom = corners.maxOf { it.y },
+        )
+    }
+
+    /** An axis-aligned screen-space rectangle (pixels), Compose-free for testability — see [projectedBounds]. */
+    data class ScreenRect(
+        val left: Float,
+        val top: Float,
+        val right: Float,
+        val bottom: Float,
+    ) {
+        val width: Float get() = right - left
+        val height: Float get() = bottom - top
+
+        /** True when this rectangle has no overlap at all with a viewport of the given pixel size. */
+        fun isOutside(
+            viewportWidthPx: Float,
+            viewportHeightPx: Float,
+        ): Boolean = right < 0f || bottom < 0f || left > viewportWidthPx || top > viewportHeightPx
+    }
+}
+
+/**
+ * Derives the nearby map's zoom bounds/initial zoom from the **actual** nearby cell dimensions and viewport
+ * size — replacing fixed, geography-unrelated magic-number constants (the previous flat `MIN_ZOOM = 0.4f`/
+ * `MAX_ZOOM = 8f`) with values that genuinely keep the number of visible statistical sub-rectangle boxes
+ * within the approved bounds: **no more than 16** visible at maximum zoom-out, **no fewer than 9** visible
+ * at maximum zoom-in, with an initial (default) zoom chosen to show roughly a 3-wide arrangement of
+ * columns, matching the confirmed reference screenshot's grid density.
+ *
+ * Derivation: statistical sub-rectangles are (approximately) a uniform lat/lng grid, so the *mean* lng/lat
+ * span across the loaded [StatisticalSubRectangleGeometry.boundingBox] set is a faithful stand-in for "one
+ * cell"'s real-world size (see [representativeCellSizeDegrees]). [MapProjection.worldToScreen]'s own scale
+ * (`PIXELS_PER_DEGREE_AT_ZOOM_1 * zoom`, longitude additionally scaled by `cos(latitude)`) means the number
+ * of cells visible across a `viewportWidthPx` × `viewportHeightPx` viewport at a given `zoom` is
+ * `(viewportWidthPx * viewportHeightPx) /
+ * (cellWidthDeg * cellHeightDeg * cosLat * PIXELS_PER_DEGREE_AT_ZOOM_1^2 * zoom^2)`
+ * — i.e. inversely proportional to `zoom^2`. Solving that for `zoom` at the two required cell-count bounds
+ * (16 and 9) gives [ZoomBounds.minZoom]/[ZoomBounds.maxZoom] directly; the initial zoom instead solves for
+ * `zoom` at "3 cells fit across the viewport width", then is clamped into `[minZoom, maxZoom]` so it can
+ * never itself violate the 9–16 bound.
+ */
+object MapZoomBounds {
+    private const val MIN_VISIBLE_CELLS = 9.0
+    private const val MAX_VISIBLE_CELLS = 16.0
+    private const val INITIAL_CELLS_ACROSS = 3.0
+
+    /** A sensible, geography-unrelated fallback for when there is no nearby geometry to derive bounds from. */
+    val fallback = ZoomBounds(minZoom = 0.4f, maxZoom = 8f, initialZoom = 1f)
+
+    data class ZoomBounds(
+        val minZoom: Float,
+        val maxZoom: Float,
+        val initialZoom: Float,
+    )
+
+    /**
+     * The mean lng/lat span, in degrees, across [geometry]'s bounding boxes — `null` if [geometry] is
+     * empty (there is then no real cell size to derive bounds from; see [fallback]).
+     */
+    fun representativeCellSizeDegrees(geometry: List<StatisticalSubRectangleGeometry>): Pair<Double, Double>? {
+        if (geometry.isEmpty()) return null
+        val widthDeg = geometry.map { it.boundingBox.maxLng - it.boundingBox.minLng }.average()
+        val heightDeg = geometry.map { it.boundingBox.maxLat - it.boundingBox.minLat }.average()
+        return widthDeg to heightDeg
+    }
+
+    /** See the class doc comment above for the full derivation. */
+    fun forCells(
+        cellWidthDeg: Double,
+        cellHeightDeg: Double,
+        centreLatDeg: Double,
+        viewportWidthPx: Float,
+        viewportHeightPx: Float,
+    ): ZoomBounds {
+        if (!hasPositiveInputs(cellWidthDeg, cellHeightDeg, viewportWidthPx, viewportHeightPx)) return fallback
+        val cosLat = MapProjection.cosLatitudeFor(centreLatDeg)
+        val pixelsPerDegree = MapProjection.PIXELS_PER_DEGREE_AT_ZOOM_1.toDouble()
+        val cellsVisibleAtZoom1 =
+            (viewportWidthPx.toDouble() * viewportHeightPx.toDouble()) /
+                (cellWidthDeg * cellHeightDeg * cosLat * pixelsPerDegree * pixelsPerDegree)
+        val minZoom = sqrt(cellsVisibleAtZoom1 / MAX_VISIBLE_CELLS).toFloat()
+        val maxZoom = sqrt(cellsVisibleAtZoom1 / MIN_VISIBLE_CELLS).toFloat()
+        val unclampedInitialZoom =
+            (viewportWidthPx / (INITIAL_CELLS_ACROSS * cellWidthDeg * cosLat * pixelsPerDegree)).toFloat()
+        return ZoomBounds(
+            minZoom = minZoom,
+            maxZoom = maxZoom,
+            initialZoom = unclampedInitialZoom.coerceIn(minZoom, maxZoom),
+        )
+    }
+
+    private fun hasPositiveInputs(
+        cellWidthDeg: Double,
+        cellHeightDeg: Double,
+        viewportWidthPx: Float,
+        viewportHeightPx: Float,
+    ): Boolean {
+        val cellSizeIsPositive = cellWidthDeg > 0.0 && cellHeightDeg > 0.0
+        val viewportIsPositive = viewportWidthPx > 0f && viewportHeightPx > 0f
+        return cellSizeIsPositive && viewportIsPositive
     }
 }
 

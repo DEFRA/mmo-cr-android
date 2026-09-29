@@ -126,6 +126,37 @@ never touches the map at all, can complete the flow entirely through the list, r
 elsewhere in `GearStatRectangleScreen.kt`. This mirrors the plan's decision that the map is a **non-exclusive
 enhanced input** layered on top of an always-fully-functional accessible list, not a replacement for it.
 
+**Amendment (map-default plan, approved):** this remains the accessible model for the **full/global**
+map+list screen (`GearStatRectangleMapListContent`, ~2,857 sea-overlapping sub-rectangles, reached via
+"Other") — its visible synchronised list is unchanged and stays the authoritative WCAG 2.2 AA path for
+that unbounded set, for exactly the reason above (thousands of exposed polygon semantics nodes is
+infeasible/unusable for TalkBack and the semantics tree).
+
+A **second, small/bounded** map now exists as the step's **default** screen: the *nearby* map
+(`AccessibleStatisticalAreaMap`, wrapping the same `StatisticalAreaMapCanvas`), scoped to the sub-rectangles
+nearest the user's departure port (typically single-digit-to-low-teens, since it is filtered by
+`Port.statisticalAreaId`). Because this set is always small and bounded — never the ~2,857-cell full
+set — exposing **one accessibility node per cell** does not carry the "thousands of nodes" risk this
+decision identified: each nearby cell is a transparent, positioned, focusable overlay element with
+`Role.RadioButton` semantics, a content description, and `selected` state, inside a `selectableGroup()`,
+with a visible `govukFocusIndicator()` ring on keyboard focus and a 48×48dp minimum touch target — the
+same accessible conventions already used by the list this decision established, just exposed per-map-cell
+instead of per-list-row. A live-region text announces selection changes exactly as the list-backed screen
+already does. There is deliberately **no visible list** on the nearby screen: for this bounded set, the
+per-cell overlay *is* the authoritative accessible path, not a secondary enhancement over a hidden list.
+A nearby code with no matching sea-overlapping geometry in the loaded dataset is simply omitted from the
+nearby map (it remains reachable via "Other" → the free-text Autocomplete screen), so this amendment never
+needs to introduce per-cell semantics for an unbounded set.
+
+**Further amendment (bug-fix plan, approved):** the intermediate full/global map+list screen
+(`GearStatRectangleMapListContent`, described above) has since been **removed** — "Other" on the nearby map
+now jumps straight to the free-text Autocomplete screen (`GearStatRectangleAutocompleteContent`, over the
+full/global rectangle code list, unfiltered) per the confirmed reference screenshot, rather than via an
+intermediate visible radio list over the ~2,857-cell full/global sea-overlapping set. The decision-3
+concerns above (thousands of exposed polygon semantics nodes being infeasible for TalkBack) no longer apply
+to any screen actually reachable in the flow, since only the small/bounded nearby map (decision 3's
+amendment, above) and the plain free-text search remain.
+
 ### 4. Hand-rolled versioned binary format, not protobuf/flatbuffers
 
 The derived asset uses a small hand-rolled `DataOutputStream`/`DataInputStream`-based binary format (magic +

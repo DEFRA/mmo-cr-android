@@ -9,6 +9,7 @@ import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,6 +29,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import uk.gov.defra.mmocatchrecord.common.design.MmoColors
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.map.GeoBoundingBox
@@ -46,6 +49,10 @@ private val SelectedStroke = Color(0xFFE8A63A)
 private val SelectedFill = SelectedStroke.copy(alpha = 0.35f)
 private val PortColor = Color(0xFF01FEE2)
 
+// Fallback-only defaults (used by previews/tests and any caller that does not pass its own dynamically
+// derived minZoom/maxZoom) — the nearby map itself now derives real minZoom/maxZoom bounds from the actual
+// cell geometry and viewport size via MapZoomBounds.forCells, so these two fixed values are no longer the
+// production bound; see MapZoomBounds's doc comment for the full derivation.
 private const val MIN_ZOOM = 0.4f
 private const val MAX_ZOOM = 8f
 private const val LABEL_ZOOM_THRESHOLD = 1.5f
@@ -99,11 +106,22 @@ internal val CameraStateSaver: Saver<CameraState, List<Any>> =
  * iOS-parity requirement. It survives process death / configuration change via `rememberSaveable` (see
  * [CameraStateSaver]) exactly like the selection state ([selectedCode], owned by the caller) already does.
  *
- * Accessibility: this composable exposes a **single** summarised semantics node ([contentDescription]) —
- * it does not expose per-polygon semantics — because the synchronised radio list beneath it (see
- * `GearStatRectangleMapListContent`) is the authoritative WCAG 2.2 AA accessible/keyboard/TalkBack path.
+ * Accessibility: by default this composable exposes a **single** summarised semantics node
+ * ([contentDescription]) — it does not expose per-polygon semantics of its own. The nearby map is this
+ * canvas's only caller (`AccessibleStatisticalAreaMap`), which lays an accessible per-cell overlay directly
+ * over the canvas instead — see [cameraState]/[onViewportSizeChanged] below, which exist to let that
+ * overlay track this canvas's camera/pan/zoom exactly. (The previous full/global map+list screen —
+ * `GearStatRectangleMapListContent`, a separate visible radio list beneath this same canvas — was removed
+ * once "Other" was changed to jump straight to the free-text Autocomplete screen instead; see
+ * `GearStatRectangleScreen`'s doc comment.)
+ *
+ * [cameraState] and [onViewportSizeChanged] are optional, purely additive hooks: when [cameraState] is
+ * `null` (previews/tests) this composable behaves exactly as before, owning its own private
+ * `rememberSaveable` camera. When a caller hoists a [MutableState] of [CameraState] in (the nearby map, via
+ * `AccessibleStatisticalAreaMap`), this canvas reads and writes that same state instead, so a sibling
+ * accessible overlay positioned from the same state never drifts from what is actually drawn.
  */
-@Suppress("FunctionNaming", "detekt.CyclomaticComplexMethod")
+@Suppress("FunctionNaming", "detekt.CyclomaticComplexMethod", "detekt.LongParameterList")
 @Composable
 fun StatisticalAreaMapCanvas(
     subRectangles: List<StatisticalSubRectangleGeometry>,
@@ -115,13 +133,21 @@ fun StatisticalAreaMapCanvas(
     contentDescription: String,
     modifier: Modifier = Modifier,
     initialZoom: Float = 1f,
+    minZoom: Float = MIN_ZOOM,
+    maxZoom: Float = MAX_ZOOM,
     cameraResetKey: Any? = null,
     testTag: String = "",
+    cameraState: MutableState<CameraState>? = null,
+    onViewportSizeChanged: (IntSize) -> Unit = {},
+    selectedFill: Color = SelectedFill,
+    selectedStroke: Color = SelectedStroke,
 ) {
-    var camera by
-        rememberSaveable(cameraResetKey, stateSaver = CameraStateSaver) {
-            mutableStateOf(CameraState(centre = initialCentre, zoom = initialZoom))
-        }
+    val ownedCamera =
+        cameraState
+            ?: rememberSaveable(cameraResetKey, stateSaver = CameraStateSaver) {
+                mutableStateOf(CameraState(centre = initialCentre, zoom = initialZoom))
+            }
+    var camera by ownedCamera
     var viewportWidthPx by remember { mutableStateOf(0f) }
     var viewportHeightPx by remember { mutableStateOf(0f) }
 
@@ -134,11 +160,12 @@ fun StatisticalAreaMapCanvas(
                 .onSizeChanged {
                     viewportWidthPx = it.width.toFloat()
                     viewportHeightPx = it.height.toFloat()
+                    onViewportSizeChanged(it)
                 }.pointerInput(Unit) {
                     detectTransformGestures { _, pan, zoomChange, _ ->
                         camera =
                             camera.copy(
-                                zoom = (camera.zoom * zoomChange).coerceIn(MIN_ZOOM, MAX_ZOOM),
+                                zoom = (camera.zoom * zoomChange).coerceIn(minZoom, maxZoom),
                                 panOffsetPx =
                                     ScreenPoint(
                                         x = camera.panOffsetPx.x + pan.x,
@@ -197,8 +224,8 @@ fun StatisticalAreaMapCanvas(
                 rectangle.rings,
                 camera,
                 size,
-                fill = if (selected) SelectedFill else SubRectangleFill,
-                stroke = if (selected) SelectedStroke else SubRectangleStroke,
+                fill = if (selected) selectedFill else SubRectangleFill,
+                stroke = if (selected) selectedStroke else SubRectangleStroke,
                 strokeWidthPx = if (selected) SELECTED_STROKE_WIDTH_DP * GRID_STROKE_WIDTH_PX else GRID_STROKE_WIDTH_PX,
             )
         }
@@ -209,7 +236,15 @@ fun StatisticalAreaMapCanvas(
                 if (!rectangle.boundingBox.intersects(viewport)) return@forEach
                 val screenPoint =
                     MapProjection.worldToScreen(rectangle.bboxCentroid, camera, size.width, size.height)
-                drawCentredText(rectangle.subCode, screenPoint, LABEL_TEXT_SIZE_SP, MmoColors.Text)
+                if (rectangle.subCode == selectedCode) {
+                    // The selected cell's code is shown on a solid, rounded-rect pill (white bold text on the
+                    // same amber used for the cell's own selected fill/stroke) rather than plain text — see
+                    // the confirmed reference screenshot. Only the selected cell gets a pill; every other
+                    // (unselected) label stays plain text, unchanged.
+                    drawPillLabel(rectangle.subCode, screenPoint, LABEL_TEXT_SIZE_SP, selectedStroke, Color.White)
+                } else {
+                    drawCentredText(rectangle.subCode, screenPoint, LABEL_TEXT_SIZE_SP, MmoColors.Text)
+                }
             }
         }
 
@@ -233,7 +268,12 @@ fun StatisticalAreaMapCanvas(
 }
 
 private const val PORT_LABEL_OFFSET_PX = 14f
-private val MAP_HEIGHT = 320.dp
+
+/**
+ * The nearby map's fixed viewport height — see MapZoomBounds's doc comment for how this and the screen's
+ * available width are used as an approximate viewport size to derive zoom bounds ahead of first layout.
+ */
+internal val MAP_HEIGHT = 320.dp
 
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawRings(
     rings: List<List<GeoPoint>>,
@@ -277,6 +317,54 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawCentredText(
     }
 }
 
+/**
+ * Draws [text] centred at [at] on a solid, rounded-rect pill filled with [pillColor] — the selected cell's
+ * code label, matching the confirmed reference screenshot's white-on-amber "pill" badge (as distinct from
+ * every other, unselected cell's plain [drawCentredText] label).
+ */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPillLabel(
+    text: String,
+    at: ScreenPoint,
+    sizeSp: Int,
+    pillColor: Color,
+    textColor: Color,
+) {
+    drawContext.canvas.nativeCanvas.apply {
+        val paint =
+            android.graphics.Paint().apply {
+                this.color = textColor.toArgbCompat()
+                textSize = sizeSp.toFloat() * density
+                textAlign = android.graphics.Paint.Align.CENTER
+                isAntiAlias = true
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+            }
+        val textBounds = android.graphics.Rect()
+        paint.getTextBounds(text, 0, text.length, textBounds)
+        val pillWidth = textBounds.width() + PILL_HORIZONTAL_PADDING_PX * 2
+        val pillHeight = textBounds.height() + PILL_VERTICAL_PADDING_PX * 2
+        val pillPaint =
+            android.graphics.Paint().apply {
+                this.color = pillColor.toArgbCompat()
+                isAntiAlias = true
+            }
+        val pillRect =
+            android.graphics.RectF(
+                at.x - pillWidth / 2f,
+                at.y - pillHeight / 2f,
+                at.x + pillWidth / 2f,
+                at.y + pillHeight / 2f,
+            )
+        drawRoundRect(pillRect, PILL_CORNER_RADIUS_PX, PILL_CORNER_RADIUS_PX, pillPaint)
+        // android.graphics.Paint's baseline is the text's bottom, not its vertical centre, so nudge by half
+        // the measured text height to genuinely centre the glyphs within the pill.
+        drawText(text, at.x, at.y + textBounds.height() / 2f, paint)
+    }
+}
+
+private const val PILL_HORIZONTAL_PADDING_PX = 12f
+private const val PILL_VERTICAL_PADDING_PX = 6f
+private const val PILL_CORNER_RADIUS_PX = 6f
+
 private fun Color.toArgbCompat(): Int {
     val a = (alpha * MAX_BYTE).toInt()
     val r = (red * MAX_BYTE).toInt()
@@ -289,3 +377,47 @@ private const val MAX_BYTE = 255f
 private const val SHIFT_24 = 24
 private const val SHIFT_16 = 16
 private const val SHIFT_8 = 8
+
+@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Suppress("FunctionNaming")
+@Composable
+fun StatisticalAreaMapCanvasPreview() {
+    val subRectangle =
+        StatisticalSubRectangleGeometry(
+            subCode = "38E9",
+            parentIcesName = "38E9",
+            rings =
+                listOf(
+                    listOf(
+                        GeoPoint(lat = 50.5, lng = 0.0),
+                        GeoPoint(lat = 50.5, lng = 0.5),
+                        GeoPoint(lat = 50.0, lng = 0.5),
+                        GeoPoint(lat = 50.0, lng = 0.0),
+                    ),
+                ),
+            bboxCentroid = GeoPoint(lat = 50.25, lng = 0.25),
+            boundingBox = GeoBoundingBox(minLat = 50.0, maxLat = 50.5, minLng = 0.0, maxLng = 0.5),
+            seaOverlapping = true,
+        )
+    val landPolygon =
+        LandPolygon(
+            rings =
+                listOf(
+                    listOf(
+                        GeoPoint(lat = 50.5, lng = 0.0),
+                        GeoPoint(lat = 50.5, lng = 0.15),
+                        GeoPoint(lat = 50.0, lng = 0.1),
+                        GeoPoint(lat = 50.0, lng = 0.0),
+                    ),
+                ),
+        )
+    StatisticalAreaMapCanvas(
+        subRectangles = listOf(subRectangle),
+        landPolygons = listOf(landPolygon),
+        ports = listOf(MapPort(name = "Hastings", location = GeoPoint(lat = 50.85, lng = 0.57))),
+        selectedCode = "38E9",
+        onCodeSelected = {},
+        initialCentre = GeoPoint(lat = 50.25, lng = 0.25),
+        contentDescription = "Statistical sub-area map preview",
+    )
+}

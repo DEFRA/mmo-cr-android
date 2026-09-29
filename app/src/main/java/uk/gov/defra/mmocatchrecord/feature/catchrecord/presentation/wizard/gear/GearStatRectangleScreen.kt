@@ -24,8 +24,6 @@ import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.AppLanguageProvider
 import uk.gov.defra.mmocatchrecord.common.design.GdsAutocompleteField
 import uk.gov.defra.mmocatchrecord.common.design.GdsAutocompleteOption
-import uk.gov.defra.mmocatchrecord.common.design.GdsStatisticalRectangleGrid
-import uk.gov.defra.mmocatchrecord.common.design.MmoColors
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
 import uk.gov.defra.mmocatchrecord.common.design.SecondaryActionButton
@@ -37,7 +35,11 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementValue
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelection
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectionMode
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.map.GeoBoundingBox
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.map.GeoPoint
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.map.MapGeometryDataset
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.map.MapPort
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.map.StatisticalSubRectangleGeometry
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldKeys
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
@@ -54,13 +56,13 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.catchRecordReference
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.nextGearUsePendingStatRectangle
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.nextWizardStepForDraft
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.map.GearStatRectangleMapListContent
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.map.AccessibleStatisticalAreaMap
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.map.MapCentring
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip.DeparturePortScreen
 
 /** Which sub-screen of the [WizardStep.GearStatRectangle] step is currently shown — see [GearStatRectangleScreenContent]. */
 enum class GearStatRectangleEntryMode {
-    Grid,
-    RadioList,
+    NearbyMap,
     Autocomplete,
 }
 
@@ -68,14 +70,10 @@ object GearStatRectangleScreenTestTags {
     const val SCREEN = "gear_stat_rectangle_screen"
     const val ERROR_SUMMARY = "gear_stat_rectangle_error_summary"
     const val ERROR_MESSAGE = "gear_stat_rectangle_error_message"
-    const val GRID = "gear_stat_rectangle_grid"
-    const val GRID_CELL_PREFIX = "gear_stat_rectangle_grid_cell"
-    const val GRID_OTHER_ACTION = "gear_stat_rectangle_grid_other_action"
-    const val GRID_SAVE_ACTION = "gear_stat_rectangle_grid_save_action"
-    const val MAP_CANVAS = "gear_stat_rectangle_map_canvas"
-    const val MAP_LIST_OPTION_PREFIX = "gear_stat_rectangle_map_list_option"
-    const val MAP_CANT_FIND_ACTION = "gear_stat_rectangle_map_cant_find_action"
-    const val MAP_SAVE_ACTION = "gear_stat_rectangle_map_save_action"
+    const val NEARBY_MAP_CANVAS = "gear_stat_rectangle_nearby_map_canvas"
+    const val NEARBY_MAP_CELL_PREFIX = "gear_stat_rectangle_nearby_map_cell"
+    const val NEARBY_OTHER_ACTION = "gear_stat_rectangle_nearby_other_action"
+    const val NEARBY_SAVE_ACTION = "gear_stat_rectangle_nearby_save_action"
     const val AUTOCOMPLETE_FIELD = "gear_stat_rectangle_autocomplete_field"
     const val LIVE_REGION = "gear_stat_rectangle_live_region"
     const val SUGGESTION_PREFIX = "gear_stat_rectangle_suggestion"
@@ -91,9 +89,12 @@ object GearStatRectangleScreenTestTags {
  * with the same [WizardStep.GearStatRectangle]) while another confirmed gear remains, exactly like every
  * other screen's generic [CatchRecordFlowEvent.SaveAndContinue] dispatch — no bespoke "next gear" event.
  *
- * Three sub-screens (Grid/RadioList/Autocomplete) are modelled as one step with local, non-ViewModel state
- * — mirroring [DeparturePortScreen]'s `DeparturePortEntryMode` pattern — rather than three separate
- * [WizardStep]s, since which sub-screen is showing is pure UI navigation, not draft state.
+ * Two sub-screens (NearbyMap/Autocomplete) are modelled as one step with local, non-ViewModel state —
+ * mirroring [DeparturePortScreen]'s `DeparturePortEntryMode` pattern — rather than two separate
+ * [WizardStep]s, since which sub-screen is showing is pure UI navigation, not draft state. "Other" on the
+ * nearby map jumps straight to the manual-entry Autocomplete screen — there is no intermediate visible
+ * radio-list screen (removed per the confirmed design; see [AccessibleStatisticalAreaMap]'s doc comment for
+ * why the nearby map alone already meets WCAG 2.2 AA without one).
  */
 @Suppress("FunctionNaming")
 @Composable
@@ -156,15 +157,15 @@ internal fun GearStatRectangleScreen(
     val gearNameWithMeasurement =
         currentGearUse?.let { GearStatRectangleSupport.gearNameWithIdentifyingMeasurementFor(gearType, it) }
     var entryMode by
-        rememberSaveable(currentGearUse?.id) { mutableStateOf(GearStatRectangleEntryMode.Grid) }
+        rememberSaveable(currentGearUse?.id) { mutableStateOf(GearStatRectangleEntryMode.NearbyMap) }
 
     CatchRecordWizardScaffold(
         screenTestTag = GearStatRectangleScreenTestTags.SCREEN,
         title =
             when {
                 gearNameWithMeasurement == null -> stringResource(R.string.gear_stat_rectangle_title_fallback)
-                entryMode == GearStatRectangleEntryMode.Grid ->
-                    stringResource(R.string.gear_stat_rectangle_grid_title, gearNameWithMeasurement)
+                entryMode == GearStatRectangleEntryMode.NearbyMap ->
+                    stringResource(R.string.gear_stat_rectangle_nearby_title, gearNameWithMeasurement)
 
                 else -> stringResource(R.string.gear_stat_rectangle_other_title, gearNameWithMeasurement)
             },
@@ -235,21 +236,13 @@ fun GearStatRectangleScreenContent(
     departurePortName: String? = null,
 ) {
     when (entryMode) {
-        GearStatRectangleEntryMode.Grid ->
-            GearStatRectangleGridContent(
+        GearStatRectangleEntryMode.NearbyMap ->
+            GearStatRectangleNearbyMapContent(
                 gearUse = gearUse,
                 nearbyRectangles = nearbyRectangles,
-                onOtherSelected = { onEntryModeChange(GearStatRectangleEntryMode.RadioList) },
-                onSubmit = onSubmit,
-                modifier = modifier,
-            )
-
-        GearStatRectangleEntryMode.RadioList ->
-            GearStatRectangleMapListContent(
-                gearUse = gearUse,
                 geometryStatus = mapGeometryStatus,
                 departurePortName = departurePortName,
-                onCantFindOnMap = { onEntryModeChange(GearStatRectangleEntryMode.Autocomplete) },
+                onOtherSelected = { onEntryModeChange(GearStatRectangleEntryMode.Autocomplete) },
                 onSubmit = onSubmit,
                 modifier = modifier,
                 onRetryGeometry = onRetryGeometry,
@@ -266,24 +259,41 @@ fun GearStatRectangleScreenContent(
 }
 
 /**
- * Screen 1: the schematic grid (see [GdsStatisticalRectangleGrid]). The confirmed screenshots show no
- * explicit "Save and continue" button here (just "tap to select" + an "Other" link) — a Save action is
- * added anyway as a deliberate, flagged deviation: auto-navigating on tap is a poor pattern for
- * screen-reader/switch-access users, and every other selection screen in this wizard requires an explicit
- * confirm action.
+ * Screen 1 (default, and only, map screen): the real interactive map ([AccessibleStatisticalAreaMap]),
+ * scoped to the small, bounded set of sub-rectangles nearest the departure port ([nearbyRectangles] joined
+ * onto the loaded [geometryStatus] via [GearStatRectangleSupport.nearbyGeometryFor]). The map is the
+ * **sole** selection UI here — there is no separate visible radio list — see
+ * [AccessibleStatisticalAreaMap]'s doc comment for why this is safe (a small, bounded cell count) and how
+ * it still meets WCAG 2.2 AA (per-cell accessible overlay + live-region announcement, in place of a visible
+ * list). "Other" ([onOtherSelected]) jumps straight to the free-text [GearStatRectangleAutocompleteContent]
+ * screen — there is no intermediate visible radio-list screen.
  */
-@Suppress("FunctionNaming")
+@Suppress("FunctionNaming", "LongMethod")
 @Composable
-private fun GearStatRectangleGridContent(
+private fun GearStatRectangleNearbyMapContent(
     gearUse: GearUse,
     nearbyRectangles: List<StatisticalSubRectangle>,
+    geometryStatus: UiStatus<MapGeometryDataset>,
     onOtherSelected: () -> Unit,
     onSubmit: (String) -> Unit,
     modifier: Modifier = Modifier,
+    onRetryGeometry: () -> Unit = {},
+    departurePortName: String? = null,
 ) {
     var selectedCode by
         rememberSaveable(gearUse.id) { mutableStateOf(gearUse.statisticalSubRectangleCode) }
     var showError by rememberSaveable(gearUse.id) { mutableStateOf(false) }
+    var focusSummary by remember { mutableStateOf(false) }
+    val summaryFocusRequester = remember { FocusRequester() }
+
+    // Accessible focus/announcement on a failed validation — matches every other sub-screen's
+    // summaryFocusRequester + LaunchedEffect(focusSummary) convention (see GearStatRectangleAutocompleteContent).
+    LaunchedEffect(focusSummary) {
+        if (focusSummary) {
+            summaryFocusRequester.requestFocus()
+            focusSummary = false
+        }
+    }
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
         Text(
@@ -291,7 +301,7 @@ private fun GearStatRectangleGridContent(
             style = MaterialTheme.typography.bodyLarge,
         )
         Text(
-            text = stringResource(R.string.gear_stat_rectangle_body_select_grid),
+            text = stringResource(R.string.gear_stat_rectangle_body_select),
             style = MaterialTheme.typography.bodyLarge,
         )
         Text(
@@ -299,27 +309,73 @@ private fun GearStatRectangleGridContent(
             style = MaterialTheme.typography.bodyLarge,
         )
         if (showError) {
-            Text(
-                text = stringResource(R.string.gear_stat_rectangle_error_required),
-                color = MmoColors.ErrorRed,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.testTag(GearStatRectangleScreenTestTags.ERROR_MESSAGE),
+            WizardErrorSummary(
+                title = stringResource(R.string.error_summary_title),
+                items =
+                    listOf(
+                        WizardErrorSummaryItem(
+                            message = stringResource(R.string.gear_stat_rectangle_map_error_required),
+                            onClick = {},
+                        ),
+                    ),
+                focusRequester = summaryFocusRequester,
+                testTag = GearStatRectangleScreenTestTags.ERROR_SUMMARY,
             )
         }
-        GdsStatisticalRectangleGrid(
-            codes = nearbyRectangles.map { it.code },
-            selectedCode = selectedCode,
-            onCodeSelected = {
-                selectedCode = it
-                showError = false
-            },
-            cellTestTagPrefix = GearStatRectangleScreenTestTags.GRID_CELL_PREFIX,
-            modifier = Modifier.testTag(GearStatRectangleScreenTestTags.GRID),
+
+        // Live-region announcement of selection changes — independent of the map's own single summarised
+        // semantics node.
+        Text(
+            text =
+                selectedCode
+                    ?.let { stringResource(R.string.gear_stat_rectangle_map_selected_announcement, it) }
+                    .orEmpty(),
+            modifier = Modifier.testTag(GearStatRectangleScreenTestTags.LIVE_REGION),
+            style = MaterialTheme.typography.labelSmall,
         )
+
+        when (geometryStatus) {
+            UiStatus.Idle, UiStatus.Loading -> WizardLoadingState()
+            is UiStatus.Error ->
+                WizardErrorState(
+                    message = geometryStatus.message,
+                    testTag = GearStatRectangleScreenTestTags.ERROR_MESSAGE,
+                    isRetryable = geometryStatus.isRetryable,
+                    onRetry = onRetryGeometry,
+                )
+            is UiStatus.Content -> {
+                val geometry = geometryStatus.value
+                val nearbyGeometry =
+                    remember(geometry, nearbyRectangles) {
+                        GearStatRectangleSupport.nearbyGeometryFor(nearbyRectangles.map { it.code }, geometry)
+                    }
+                val initialCentre =
+                    remember(geometry, departurePortName) {
+                        MapCentring.initialCentreFor(departurePortName, geometry.ports)
+                    }
+
+                AccessibleStatisticalAreaMap(
+                    nearbyGeometry = nearbyGeometry,
+                    landPolygons = geometry.landPolygons,
+                    ports = geometry.ports,
+                    selectedCode = selectedCode,
+                    onCodeSelected = { code ->
+                        selectedCode = code
+                        showError = false
+                    },
+                    initialCentre = initialCentre,
+                    contentDescription = stringResource(R.string.gear_stat_rectangle_nearby_map_content_description),
+                    cameraResetKey = gearUse.id,
+                    cellTestTagPrefix = GearStatRectangleScreenTestTags.NEARBY_MAP_CELL_PREFIX,
+                    canvasTestTag = GearStatRectangleScreenTestTags.NEARBY_MAP_CANVAS,
+                )
+            }
+        }
+
         SecondaryActionButton(
             text = stringResource(R.string.gear_stat_rectangle_other_option),
             onClick = onOtherSelected,
-            modifier = Modifier.testTag(GearStatRectangleScreenTestTags.GRID_OTHER_ACTION),
+            modifier = Modifier.testTag(GearStatRectangleScreenTestTags.NEARBY_OTHER_ACTION),
         )
         PrimaryActionButton(
             text = stringResource(R.string.save_and_continue),
@@ -327,17 +383,18 @@ private fun GearStatRectangleGridContent(
                 val code = selectedCode
                 if (code == null) {
                     showError = true
+                    focusSummary = true
                 } else {
                     onSubmit(code)
                 }
             },
-            modifier = Modifier.testTag(GearStatRectangleScreenTestTags.GRID_SAVE_ACTION),
+            modifier = Modifier.testTag(GearStatRectangleScreenTestTags.NEARBY_SAVE_ACTION),
         )
     }
 }
 
 /**
- * Screen 3: free-text search over the full/global rectangle code list. Unlike the grid/radio-list, this
+ * Screen 2: free-text search over the full/global rectangle code list. Unlike the nearby map, this
  * validates the raw typed text against [StatisticalSubRectangleFormatValidator] (required + format) via
  * [WizardErrorSummary] — matching [GearMeasurementScreenContent]'s pattern for free-text/numeric input,
  * since a typed code need not appear in the (locally stubbed, non-exhaustive) suggestion list to be valid.
@@ -421,7 +478,7 @@ private fun GearStatRectangleAutocompleteContent(
 @Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
 @Suppress("FunctionNaming")
 @Composable
-fun GearStatRectangleScreen_GridPreview() {
+fun GearStatRectangleScreen_NearbyMapPreview() {
     val gearType =
         GearType(
             id = "gear-seine-nets",
@@ -451,12 +508,46 @@ fun GearStatRectangleScreen_GridPreview() {
             modifiedAtEpochMillis = 1605830400000L,
             status = DraftStatus.Draft,
         )
+
+    fun previewRectangle(
+        code: String,
+        minLat: Double,
+        maxLat: Double,
+        minLng: Double,
+        maxLng: Double,
+    ) = StatisticalSubRectangleGeometry(
+        subCode = code,
+        parentIcesName = "ICES-$code",
+        rings =
+            listOf(
+                listOf(
+                    GeoPoint(minLat, minLng),
+                    GeoPoint(minLat, maxLng),
+                    GeoPoint(maxLat, maxLng),
+                    GeoPoint(maxLat, minLng),
+                ),
+            ),
+        bboxCentroid = GeoPoint((minLat + maxLat) / 2, (minLng + maxLng) / 2),
+        boundingBox = GeoBoundingBox(minLat, maxLat, minLng, maxLng),
+        seaOverlapping = true,
+    )
+    val sampleGeometry =
+        MapGeometryDataset(
+            landPolygons = emptyList(),
+            subRectangles =
+                listOf(
+                    previewRectangle("38E95", 50.0, 51.0, 0.0, 1.0),
+                    previewRectangle("38E98", 51.0, 52.0, 0.0, 1.0),
+                ),
+            ports = listOf(MapPort("Hastings", GeoPoint(50.855, 0.573))),
+        )
     val state =
         CatchRecordFlowViewState(
             status = UiStatus.Content(sampleDraft),
             gearTypes = listOf(gearType),
             ports = listOf(samplePort),
             statisticalSubRectangles = sampleRectangles,
+            mapGeometryStatus = UiStatus.Content(sampleGeometry),
         )
     MmoTheme {
         AppLanguageProvider(language = "en") {

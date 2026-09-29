@@ -53,6 +53,23 @@ class StubReferenceDataRepositoryTests {
             )
         }
 
+    /**
+     * Regression coverage for the "title always shows Seine nets" bug fix: this gear type must be genuinely
+     * selectable (a non-empty schema), or it can never actually be chosen on the gear-search screen and any
+     * stale `pendingGearTypeId` silently carries through instead — see `GearTypeSearch.selectableGearTypes`.
+     */
+    @Test
+    fun `bottom pair trawls gear type has a single mesh size measurement field`() =
+        runTest {
+            val gearTypes = repository.getGearTypes().getOrThrow()
+            val bottomPairTrawls = gearTypes.first { it.id == "gear-bottom-pair-trawls-ptb" }
+            assertEquals("Bottom pair trawls (PTB)", bottomPairTrawls.name)
+            assertEquals(
+                listOf(GearMeasurementFieldKeys.MESH_SIZE_MM),
+                bottomPairTrawls.measurementFields.map { it.key },
+            )
+        }
+
     @Test
     fun `bottom otter trawls gear type has trawl net count then mesh size measurement fields`() =
         runTest {
@@ -72,7 +89,6 @@ class StubReferenceDataRepositoryTests {
             val namesConfirmedFieldsPending =
                 listOf(
                     "gear-beam-trawls-tbb",
-                    "gear-bottom-pair-trawls-ptb",
                     "gear-diving",
                     "gear-dredge",
                     "gear-nets-gillnets-trammels",

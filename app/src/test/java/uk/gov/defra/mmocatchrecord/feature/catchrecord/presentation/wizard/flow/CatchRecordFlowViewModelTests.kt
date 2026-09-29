@@ -396,6 +396,37 @@ class CatchRecordFlowViewModelTests {
             assertTrue(activeDraft?.gearUses.orEmpty().isEmpty())
         }
 
+    /**
+     * Regression test for the reported "title always shows Seine nets" bug (see
+     * `gearTypeSelected`'s doc comment): a subsequent invalid/unselectable gear-type id (e.g. bypassing the
+     * gear-search screen's own UI-level filtering) must *clear* any existing `pendingGearTypeId` rather than
+     * silently leaving the previous, now-stale selection in place.
+     */
+    @Test
+    fun `gear type selected with an invalid id clears any previous pending gear type`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            val viewModel = buildViewModel(repository = repository, dispatcher = dispatcher)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            testScheduler.advanceUntilIdle()
+            viewModel.dispatch(CatchRecordFlowEvent.VesselSelected("vessel-achilles"))
+            testScheduler.advanceUntilIdle()
+            viewModel.dispatch(CatchRecordFlowEvent.GearTypeSelected("gear-seine-nets"))
+            testScheduler.advanceUntilIdle()
+            assertEquals("gear-seine-nets", viewModel.state.value.pendingGearTypeId)
+
+            viewModel.state.test {
+                skipItems(1)
+                // An id absent from the loaded reference data — exactly like a bypassed/invalid selection,
+                // or a real TBC placeholder gear type with an empty measurementFields schema (see
+                // StubReferenceDataRepository) reached via a direct event dispatch.
+                viewModel.dispatch(CatchRecordFlowEvent.GearTypeSelected("gear-unknown"))
+                val updated = awaitItem()
+                assertNull(updated.pendingGearTypeId)
+            }
+        }
+
     @Test
     fun `gear measurements submitted appends a new gear use and advances to gear summary`() =
         runTest {

@@ -2,20 +2,13 @@
 
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear
 
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
-import androidx.compose.ui.test.assertIsSelected
-import androidx.compose.ui.test.assertValueEquals
-import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
-import androidx.compose.ui.test.performTouchInput
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Rule
@@ -38,7 +31,6 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Gear
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.StatisticalSubRectangle
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordFlowViewState
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.map.MapProjection
 
 class GearStatRectangleScreenTest {
     @get:Rule
@@ -129,10 +121,10 @@ class GearStatRectangleScreenTest {
         )
     }
 
-    // --- Screen 1: schematic grid ---------------------------------------------------------------------
+    // --- Screen 1: nearby map (default, no visible radio list) -----------------------------------------
 
     @Test
-    fun gridScreenShowsIdentifyingMeasurementInTitleAndSubmitsTappedCell() {
+    fun nearbyMapScreenShowsIdentifyingMeasurementInTitleAndSubmitsTappedCell() {
         var submittedDraft: CatchRecordDraft? = null
         composeTestRule.setContent {
             MmoTheme {
@@ -147,14 +139,17 @@ class GearStatRectangleScreenTest {
         composeTestRule
             .onNodeWithText("Where was the majority of your catch caught using seine nets (mesh size 100mm)?")
             .assertIsDisplayed()
-        composeTestRule.onNodeWithTag("${GearStatRectangleScreenTestTags.GRID_CELL_PREFIX}_0").performClick()
-        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.GRID_SAVE_ACTION).performClick()
+        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.NEARBY_MAP_CANVAS).assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag("${GearStatRectangleScreenTestTags.NEARBY_MAP_CELL_PREFIX}_38E95")
+            .performClick()
+        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.NEARBY_SAVE_ACTION).performClick()
 
         assertEquals("38E95", submittedDraft?.gearUses?.single()?.statisticalSubRectangleCode)
     }
 
     @Test
-    fun gridScreenWithNoIdentifyingMeasurementOmitsParenthetical() {
+    fun nearbyMapScreenWithNoIdentifyingMeasurementOmitsParenthetical() {
         val handlines =
             GearType(
                 id = "gear-handlines",
@@ -195,148 +190,57 @@ class GearStatRectangleScreenTest {
             .assertIsDisplayed()
     }
 
+    /**
+     * Regression test for the reported "title always shows Seine nets" bug: a confirmed gear use for a
+     * *different*, non-default gear type ("Bottom pair trawls (PTB)" — the exact gear named in the reported
+     * bug/reference screenshot) must show its own name in the title, not "Seine nets". Root cause (see
+     * `StubReferenceDataRepository`/`CatchRecordFlowViewModel.gearTypeSelected`'s doc comments): this gear
+     * type previously had an empty `measurementFields` schema, making it silently unselectable, and an
+     * invalid/unselectable selection left a *stale* `pendingGearTypeId` (typically "Seine nets", the
+     * commonly-tried first search result) rather than clearing it — both are now fixed.
+     */
     @Test
-    fun gridScreenWithNoSelectionShowsRequiredErrorAndDoesNotSubmit() {
-        var submittedDraft: CatchRecordDraft? = null
-        composeTestRule.setContent {
-            MmoTheme {
-                GearStatRectangleScreen(
-                    state = stateWith(pendingGearUse()),
-                    onSubmit = { submittedDraft = it },
-                    onBack = {},
-                )
-            }
-        }
-
-        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.GRID_SAVE_ACTION).performClick()
-        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.ERROR_MESSAGE).assertIsDisplayed()
-        assertNull(submittedDraft)
-    }
-
-    // --- Screen 2: "Other" -> map + synced list ----------------------------------------------------------
-    // Ticket acceptance scenarios: Other -> map+list nav, map-tap -> list-sync, list-select -> map-sync,
-    // save-with-selection advances, save-without-selection shows the exact required copy and stays.
-
-    @Test
-    fun gridOtherLinkNavigatesToTheMapAndListScreenShowingTheGlobalSeaOverlappingSet() {
-        composeTestRule.setContent {
-            MmoTheme {
-                GearStatRectangleScreen(
-                    state = stateWith(pendingGearUse()),
-                    onSubmit = {},
-                    onBack = {},
-                )
-            }
-        }
-
-        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.GRID_OTHER_ACTION).performClick()
-
-        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.MAP_CANVAS).assertIsDisplayed()
-        // Both sea-overlapping codes are listed; the landlocked one is excluded from the selectable list.
-        composeTestRule
-            .onNodeWithTag(
-                "${GearStatRectangleScreenTestTags.MAP_LIST_OPTION_PREFIX}_38E95",
-            ).assertIsDisplayed()
-        composeTestRule
-            .onNodeWithTag(
-                "${GearStatRectangleScreenTestTags.MAP_LIST_OPTION_PREFIX}_38E98",
-            ).assertIsDisplayed()
-    }
-
-    @Test
-    fun selectingAnOptionInTheSyncedListSubmitsTheChosenCode() {
-        var submittedDraft: CatchRecordDraft? = null
-        composeTestRule.setContent {
-            MmoTheme {
-                GearStatRectangleScreen(
-                    state = stateWith(pendingGearUse()),
-                    onSubmit = { submittedDraft = it },
-                    onBack = {},
-                )
-            }
-        }
-
-        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.GRID_OTHER_ACTION).performClick()
-        composeTestRule.onNodeWithTag("${GearStatRectangleScreenTestTags.MAP_LIST_OPTION_PREFIX}_38E98").performClick()
-        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.MAP_SAVE_ACTION).performClick()
-
-        assertEquals("38E98", submittedDraft?.gearUses?.single()?.statisticalSubRectangleCode)
-    }
-
-    @Test
-    fun selectingAnOptionInTheSyncedListAlsoUpdatesTheMapsOwnSelectionState() {
-        composeTestRule.setContent {
-            MmoTheme {
-                GearStatRectangleScreen(
-                    state = stateWith(pendingGearUse()),
-                    onSubmit = {},
-                    onBack = {},
-                )
-            }
-        }
-
-        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.GRID_OTHER_ACTION).performClick()
-
-        // Reverse direction (list-select -> map highlights): asserted against the map canvas's own
-        // semantics state (StatisticalAreaMapCanvas exposes `stateDescription` for its currently selected
-        // sub-code), not merely the shared `selectedCode` local variable — genuinely proving the map's own
-        // selection state (and not just some parallel local UI state) tracks the list selection.
-        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.MAP_CANVAS).assertValueEquals("No area selected")
-
-        composeTestRule.onNodeWithTag("${GearStatRectangleScreenTestTags.MAP_LIST_OPTION_PREFIX}_38E98").performClick()
-
-        composeTestRule
-            .onNodeWithTag(GearStatRectangleScreenTestTags.MAP_CANVAS)
-            .assertValueEquals("Selected: 38E98")
-    }
-
-    @Test
-    fun tappingTheMapAtAKnownScreenPositionSelectsAndSubmitsTheCorrespondingSubCode() {
-        var submittedDraft: CatchRecordDraft? = null
-        composeTestRule.setContent {
-            MmoTheme {
-                GearStatRectangleScreen(
-                    state = stateWith(pendingGearUse()),
-                    onSubmit = { submittedDraft = it },
-                    onBack = {},
-                )
-            }
-        }
-
-        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.GRID_OTHER_ACTION).performClick()
-
-        // The map's initial camera centre is Hastings (the departure port, injected via
-        // MapCentring.initialCentreFor) — inside 38E95's box. 38E98 shares the same longitude range but sits
-        // directly north of it, so the required tap position is derivable purely from the map canvas's own
-        // real measured pixel size and the exact same MapProjection maths StatisticalAreaMapCanvas itself
-        // uses (zoom defaults to 1f, no pan yet) — a genuine, deterministic map-tap, not a guessed pixel.
-        val mapNode = composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.MAP_CANVAS).fetchSemanticsNode()
-        val camera = MapProjection.CameraState(centre = GeoPoint(lat = 50.855, lng = 0.573), zoom = 1f)
-        val targetWorldPoint = GeoPoint(lat = 51.5, lng = 0.573) // 38E98's bbox centroid
-        val tapScreenPoint =
-            MapProjection.worldToScreen(
-                point = targetWorldPoint,
-                camera = camera,
-                viewportWidthPx = mapNode.size.width.toFloat(),
-                viewportHeightPx = mapNode.size.height.toFloat(),
+    fun nearbyMapScreenShowsANonDefaultConfirmedGearTitleNotSeineNets() {
+        val bottomPairTrawls = GearType(id = "gear-bottom-pair-trawls-ptb", name = "Bottom pair trawls (PTB)")
+        val gearUse =
+            GearUse(
+                id = "gear-use-1",
+                gearTypeId = bottomPairTrawls.id,
+                statisticalSubRectangleCode = null,
+                confirmedUsedOnTrip = true,
             )
-
-        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.MAP_CANVAS).performTouchInput {
-            click(Offset(tapScreenPoint.x, tapScreenPoint.y))
+        val draft =
+            CatchRecordDraft(
+                id = "draft-1",
+                vesselId = "vessel-1",
+                departurePort = PortSelection(samplePort.id, PortSelectionMode.FirstTime),
+                gearUses = listOf(gearUse),
+                modifiedAtEpochMillis = 0L,
+                status = DraftStatus.Draft,
+            )
+        val state =
+            CatchRecordFlowViewState(
+                status = UiStatus.Content(draft),
+                gearTypes = listOf(bottomPairTrawls, seineNets),
+                ports = listOf(samplePort),
+                statisticalSubRectangles = sampleRectangles,
+            )
+        composeTestRule.setContent {
+            MmoTheme {
+                GearStatRectangleScreen(state = state, onSubmit = {}, onBack = {})
+            }
         }
 
-        // (a) the tap syncs the corresponding list radio option to selected.
         composeTestRule
-            .onNodeWithTag("${GearStatRectangleScreenTestTags.MAP_LIST_OPTION_PREFIX}_38E98")
-            .assertIsSelected()
-
-        // (b) Save and Continue submits that exact sub_code onto the draft.
-        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.MAP_SAVE_ACTION).performClick()
-        assertEquals("38E98", submittedDraft?.gearUses?.single()?.statisticalSubRectangleCode)
+            .onNodeWithText("Where was the majority of your catch caught using bottom pair trawls (PTB)?")
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText("Where was the majority of your catch caught using seine nets?")
+            .assertDoesNotExist()
     }
 
     @Test
-    fun mapAndListSelectionWithNoChoiceShowsTheExactRequiredCopyAndMovesFocusToTheErrorSummary() {
+    fun nearbyMapScreenWithNoSelectionShowsRequiredErrorAndDoesNotSubmit() {
         var submittedDraft: CatchRecordDraft? = null
         composeTestRule.setContent {
             MmoTheme {
@@ -348,11 +252,7 @@ class GearStatRectangleScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.GRID_OTHER_ACTION).performClick()
-        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.MAP_SAVE_ACTION).performClick()
-
-        // Accessible focus/announcement (finding: "Validation error lacks accessible focus/announcement") —
-        // the same WizardErrorSummary + summaryFocusRequester convention as the Autocomplete sub-screen.
+        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.NEARBY_SAVE_ACTION).performClick()
         composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.ERROR_SUMMARY).assertIsDisplayed()
         composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.ERROR_SUMMARY).assertIsFocused()
         composeTestRule
@@ -362,7 +262,7 @@ class GearStatRectangleScreenTest {
     }
 
     @Test
-    fun mapAndListScreenShowsALoadingStateWhileGeometryIsStillLoading() {
+    fun nearbyMapScreenShowsALoadingStateWhileGeometryIsStillLoading() {
         composeTestRule.setContent {
             MmoTheme {
                 GearStatRectangleScreen(
@@ -373,15 +273,13 @@ class GearStatRectangleScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.GRID_OTHER_ACTION).performClick()
-
-        // No map canvas / list rendered while geometry is still loading — a loading state is shown instead
-        // (no endless spinner without any indication — WizardLoadingState provides an accessible label).
-        composeTestRule.onAllNodesWithTag(GearStatRectangleScreenTestTags.MAP_CANVAS).assertCountEquals(0)
+        // No map canvas rendered while geometry is still loading — a loading state is shown instead (no
+        // endless spinner without any indication — WizardLoadingState provides an accessible label).
+        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.NEARBY_MAP_CANVAS).assertDoesNotExist()
     }
 
     @Test
-    fun mapAndListScreenShowsARetryableErrorWhenGeometryFailsToLoad() {
+    fun nearbyMapScreenShowsARetryableErrorWhenGeometryFailsToLoad() {
         var retried = false
         composeTestRule.setContent {
             MmoTheme {
@@ -398,18 +296,18 @@ class GearStatRectangleScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.GRID_OTHER_ACTION).performClick()
-
         composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.ERROR_MESSAGE).assertIsDisplayed()
         composeTestRule.onNodeWithTag("${GearStatRectangleScreenTestTags.ERROR_MESSAGE}_retry_action").performClick()
 
         assertEquals(true, retried)
     }
 
-    // --- Screen 3: "Can't find it on the map?" -> autocomplete search (kept as a fallback) --------------
+    // --- Screen 2: "Other" -> free-text manual code entry (Autocomplete) --------------------------------
+    // Ticket acceptance scenario: "Other" now jumps straight to the manual-entry search screen — there is
+    // no intermediate visible map+list screen (removed; see GearStatRectangleScreen's doc comment).
 
     @Test
-    fun cantFindOnMapNavigatesToAutocompleteSearch() {
+    fun otherLinkNavigatesDirectlyToAutocompleteSearch() {
         composeTestRule.setContent {
             MmoTheme {
                 GearStatRectangleScreen(
@@ -420,8 +318,7 @@ class GearStatRectangleScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.GRID_OTHER_ACTION).performClick()
-        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.MAP_CANT_FIND_ACTION).performClick()
+        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.NEARBY_OTHER_ACTION).performClick()
 
         composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.AUTOCOMPLETE_FIELD).assertIsDisplayed()
     }
@@ -439,8 +336,7 @@ class GearStatRectangleScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.GRID_OTHER_ACTION).performClick()
-        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.MAP_CANT_FIND_ACTION).performClick()
+        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.NEARBY_OTHER_ACTION).performClick()
 
         // A code not present in the local nearby/stub list, entered via free text.
         composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.AUTOCOMPLETE_FIELD).performTextInput("99Z99")
@@ -461,8 +357,7 @@ class GearStatRectangleScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.GRID_OTHER_ACTION).performClick()
-        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.MAP_CANT_FIND_ACTION).performClick()
+        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.NEARBY_OTHER_ACTION).performClick()
 
         composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.AUTOCOMPLETE_SAVE_ACTION).performClick()
 
@@ -482,8 +377,7 @@ class GearStatRectangleScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.GRID_OTHER_ACTION).performClick()
-        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.MAP_CANT_FIND_ACTION).performClick()
+        composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.NEARBY_OTHER_ACTION).performClick()
 
         composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.AUTOCOMPLETE_FIELD).performTextInput("not-a-code")
         composeTestRule.onNodeWithTag(GearStatRectangleScreenTestTags.AUTOCOMPLETE_SAVE_ACTION).performClick()

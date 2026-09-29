@@ -84,9 +84,33 @@ class StubReferenceDataRepository : ReferenceDataRepository {
                     ),
             ),
             // TODO(Phase 3 follow-up): measurement fields TBC, pending screenshots beyond mesh-size/
-            // trawl-net-count (only Seine nets and Bottom otter trawls are confirmed so far).
+            // trawl-net-count (only Seine nets and Bottom otter trawls were confirmed at that phase).
             GearType(id = "gear-beam-trawls-tbb", name = "Beam trawls (TBB)"),
-            GearType(id = "gear-bottom-pair-trawls-ptb", name = "Bottom pair trawls (PTB)"),
+            // Bug fix (per confirmed screenshot showing "Bottom pair trawl" reachable as a real per-gear
+            // stat-rectangle selection): this gear type previously had an empty `measurementFields` list,
+            // which silently excluded it from `GearTypeSearch.selectableGearTypes` — it could never actually
+            // be chosen on the gear-search screen. Combined with `CatchRecordFlowViewModel.gearTypeSelected`
+            // silently no-op'ing (rather than clearing) `pendingGearTypeId` for an unselectable id, any stale
+            // `pendingGearTypeId` left over from an earlier, valid gear selection in the same session (most
+            // commonly "Seine nets", the first/most-often-tried search result) would silently carry through
+            // to the measurement screen and the resulting `GearUse.gearTypeId` — surfacing as the reported
+            // "title always shows Seine nets" bug on the per-gear statistical sub-rectangle screen. Giving
+            // this gear type a real (mesh-size-only, matching Seine nets') schema makes it genuinely
+            // selectable; `gearTypeSelected` is also hardened below to clear rather than ignore an invalid
+            // selection, so this class of stale-state bug cannot recur even for a future TBC placeholder.
+            GearType(
+                id = "gear-bottom-pair-trawls-ptb",
+                name = "Bottom pair trawls (PTB)",
+                measurementFields =
+                    listOf(
+                        GearMeasurementField(
+                            key = GearMeasurementFieldKeys.MESH_SIZE_MM,
+                            label = "Mesh size (mm)",
+                            type = GearMeasurementFieldType.Integer,
+                            unit = "mm",
+                        ),
+                    ),
+            ),
             GearType(
                 id = "gear-bottom-otter-trawls-tb",
                 name = "Bottom otter trawls (TB)",
