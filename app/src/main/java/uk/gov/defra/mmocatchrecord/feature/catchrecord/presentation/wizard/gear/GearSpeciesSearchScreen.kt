@@ -15,15 +15,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.gov.defra.mmocatchrecord.R
+import uk.gov.defra.mmocatchrecord.common.design.AppLanguageProvider
 import uk.gov.defra.mmocatchrecord.common.design.GdsAutocompleteField
 import uk.gov.defra.mmocatchrecord.common.design.GdsAutocompleteOption
 import uk.gov.defra.mmocatchrecord.common.design.MmoColors
+import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementValue
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldKeys
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Species
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordFlowEvent
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordFlowViewModel
@@ -197,5 +205,44 @@ fun GearSpeciesSearchScreenContent(
             },
             modifier = Modifier.testTag(GearSpeciesSearchScreenTestTags.SAVE_ACTION),
         )
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Suppress("FunctionNaming")
+@Composable
+fun GearSpeciesSearchScreen_Preview() {
+    val gearType = GearType(id = "gear-seine-nets", name = "Seine nets (not specified)")
+    val gearUse =
+        GearUse(
+            id = "gear-use-1",
+            gearTypeId = gearType.id,
+            statisticalSubRectangleCode = "38E95",
+            measurements = mapOf(GearMeasurementFieldKeys.MESH_SIZE_MM to MeasurementValue.Numeric(100.0, "mm")),
+            confirmedUsedOnTrip = true,
+        )
+    val sampleSpecies =
+        listOf(
+            Species(id = "species-cod", name = "Atlantic cod (COD)", faoCode = "COD"),
+            Species(id = "species-plaice", name = "Plaice (TBC)", faoCode = "PLE"),
+        )
+    val sampleDraft =
+        CatchRecordDraft(
+            id = "draft-1",
+            vesselId = "vessel-1",
+            gearUses = listOf(gearUse),
+            modifiedAtEpochMillis = 1605830400000L,
+            status = DraftStatus.Draft,
+        )
+    val state =
+        CatchRecordFlowViewState(
+            status = UiStatus.Content(sampleDraft),
+            gearTypes = listOf(gearType),
+            species = sampleSpecies,
+        )
+    MmoTheme {
+        AppLanguageProvider(language = "en") {
+            GearSpeciesSearchScreen(state = state, onSubmit = {}, onBack = {})
+        }
     }
 }

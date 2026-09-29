@@ -18,20 +18,28 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.gov.defra.mmocatchrecord.R
+import uk.gov.defra.mmocatchrecord.common.design.AppLanguageProvider
 import uk.gov.defra.mmocatchrecord.common.design.GdsCheckboxGroup
 import uk.gov.defra.mmocatchrecord.common.design.GdsCheckboxOption
 import uk.gov.defra.mmocatchrecord.common.design.GdsLinkAction
 import uk.gov.defra.mmocatchrecord.common.design.GdsNumericField
 import uk.gov.defra.mmocatchrecord.common.design.GdsNumericFieldKind
 import uk.gov.defra.mmocatchrecord.common.design.MmoColors
+import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
 import uk.gov.defra.mmocatchrecord.common.design.SecondaryActionButton
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementValue
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldKeys
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Species
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.SpeciesWeightPrecision
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordFlowEvent
@@ -559,5 +567,67 @@ internal fun speciesWeightErrorMessage(
             }
         SpeciesWeightFieldError.MonthlyQuotaExceeded -> stringResource(R.string.species_weight_error_monthly_quota)
         SpeciesWeightFieldError.AnnualQuotaExceeded -> stringResource(R.string.species_weight_error_annual_quota)
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Suppress("FunctionNaming")
+@Composable
+fun GearSpeciesChecklistScreen_Preview() {
+    val gearType = GearType(id = "gear-seine-nets", name = "Seine nets (not specified)")
+    val sampleSpecies =
+        listOf(
+            Species(
+                id = "species-cod",
+                name = "Atlantic cod (COD)",
+                faoCode = "COD",
+                weightPrecision = SpeciesWeightPrecision.OneDecimalPlace,
+                weightAboveMinimumSizeMandatory = true,
+                monthlyQuotaKg = 50.0,
+                annualQuotaKg = 500.0,
+            ),
+            Species(id = "species-plaice", name = "Plaice (TBC)", faoCode = "PLE"),
+        )
+    val gearUse =
+        GearUse(
+            id = "gear-use-1",
+            gearTypeId = gearType.id,
+            statisticalSubRectangleCode = "38E95",
+            measurements = mapOf(GearMeasurementFieldKeys.MESH_SIZE_MM to MeasurementValue.Numeric(100.0, "mm")),
+            confirmedUsedOnTrip = true,
+            speciesWeights =
+                listOf(
+                    SpeciesWeightEntry(
+                        id = "weight-1",
+                        speciesId = "species-cod",
+                        weightAboveMinimumSizeKg = 12.5,
+                        confirmedCaught = true,
+                    ),
+                ),
+        )
+    val sampleDraft =
+        CatchRecordDraft(
+            id = "draft-1",
+            vesselId = "vessel-1",
+            gearUses = listOf(gearUse),
+            modifiedAtEpochMillis = 1605830400000L,
+            status = DraftStatus.Draft,
+        )
+    val state =
+        CatchRecordFlowViewState(
+            status = UiStatus.Content(sampleDraft),
+            gearTypes = listOf(gearType),
+            species = sampleSpecies,
+        )
+    MmoTheme {
+        AppLanguageProvider(language = "en") {
+            GearSpeciesChecklistScreen(
+                state = state,
+                onRemoveSpecies = {},
+                onAddAnotherSpecies = {},
+                onSubmit = {},
+                onBack = {},
+            )
+        }
     }
 }
