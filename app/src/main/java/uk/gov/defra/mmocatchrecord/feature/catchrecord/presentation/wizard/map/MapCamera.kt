@@ -9,6 +9,7 @@ import uk.gov.defra.mmocatchrecord.mapdata.MapDataset
 import uk.gov.defra.mmocatchrecord.mapdata.Projection
 import uk.gov.defra.mmocatchrecord.mapdata.SerializableSubRectangle
 import uk.gov.defra.mmocatchrecord.mapdata.toBBox
+import kotlin.math.PI
 import kotlin.math.max
 import kotlin.math.min
 
@@ -25,8 +26,39 @@ data class MapCamera(
     val visibleWidthMetres: Double,
 ) {
     companion object {
-        const val MIN_VISIBLE_WIDTH_METRES = 2_000.0
-        const val MAX_VISIBLE_WIDTH_METRES = 4_000_000.0
+        /**
+         * The drawn/selectable grid cell on the map is the **statistical sub-rectangle**
+         * ([SerializableSubRectangle]/`sub_code`), not the larger 1°lon x 0.5°lat ICES rectangle it's carved
+         * from: each ICES rectangle is split into a 3x3 grid of 9 sub-rectangles, so one sub-rectangle is
+         * (1/3)° of longitude wide (see docs/development/offline-map.md and `sub_code`/`sub_str` in the bundled
+         * `subrectangles.geojson`, e.g. adjacent sub-rectangles' x-coordinates are exactly 37,106.4969 Web
+         * Mercator metres apart). Web Mercator's x-axis is a linear function of longitude only (see
+         * [Projection.wgs84ToMetres]) — unlike its y-axis, which is not linear in latitude — so this metre
+         * width is exact and latitude-independent, making it the only reliable basis for expressing
+         * "N sub-rectangles visible" as a [visibleWidthMetres].
+         */
+        private const val SUB_RECTANGLE_LON_DEGREES = 1.0 / 3.0
+        private const val DEGREES_TO_RADIANS = PI / 180.0
+        private const val SUB_RECTANGLE_WIDTH_METRES =
+            SUB_RECTANGLE_LON_DEGREES * DEGREES_TO_RADIANS * Projection.EARTH_RADIUS_METRES
+
+        // Camera zoom is expressed as the number of statistical sub-rectangles visible across the viewport
+        // width: 2 is the closest permitted zoom-in, 3 is the default view (~3-4 rows, given the canvas
+        // aspect ratio and sub-rectangles' near-square real-world shape), 4 is the furthest permitted
+        // zoom-out — the user cannot zoom out past that.
+        private const val MIN_RECTANGLES_ACROSS = 2
+        private const val DEFAULT_RECTANGLES_ACROSS = 3
+        private const val MAX_RECTANGLES_ACROSS = 4
+
+        /** Closest permitted zoom-in — 2 statistical sub-rectangles visible across the viewport width. */
+        const val MIN_VISIBLE_WIDTH_METRES = MIN_RECTANGLES_ACROSS * SUB_RECTANGLE_WIDTH_METRES
+
+        /** Default camera view — about 3 statistical sub-rectangles visible across the viewport width. */
+        const val DEFAULT_VISIBLE_WIDTH_METRES = DEFAULT_RECTANGLES_ACROSS * SUB_RECTANGLE_WIDTH_METRES
+
+        /** Furthest permitted zoom-out — 4 statistical sub-rectangles visible across the viewport width; the
+         * maximum. */
+        const val MAX_VISIBLE_WIDTH_METRES = MAX_RECTANGLES_ACROSS * SUB_RECTANGLE_WIDTH_METRES
 
         /** Saver for `rememberSaveable` — a flat `DoubleArray` survives config changes/process death. */
         val Saver: Saver<MapCamera, DoubleArray> =
@@ -101,9 +133,12 @@ object CameraMath {
 object MapCameraSupport {
     private const val DEFAULT_UK_WATERS_LON = -4.0
     private const val DEFAULT_UK_WATERS_LAT = 56.0
-    private const val DEFAULT_VISIBLE_WIDTH_METRES = 150_000.0
-    private const val NEARBY_VISIBLE_WIDTH_METRES = 90_000.0
-    private const val PORT_MATCH_VISIBLE_WIDTH_METRES = 60_000.0
+
+    // A specific port/nearby-rectangle match is the closest known context, so it opens at the closest
+    // permitted zoom (see MapCamera.MIN_VISIBLE_WIDTH_METRES) rather than an arbitrary tighter width that
+    // would now fall outside the enforced "4 rectangles" zoom-in limit.
+    private const val NEARBY_VISIBLE_WIDTH_METRES = MapCamera.MIN_VISIBLE_WIDTH_METRES
+    private const val PORT_MATCH_VISIBLE_WIDTH_METRES = MapCamera.MIN_VISIBLE_WIDTH_METRES
 
     fun initialCameraFor(
         departurePort: Port?,
@@ -129,7 +164,7 @@ object MapCameraSupport {
             return MapCamera(centroid.lon, centroid.lat, NEARBY_VISIBLE_WIDTH_METRES)
         }
 
-        return MapCamera(DEFAULT_UK_WATERS_LON, DEFAULT_UK_WATERS_LAT, DEFAULT_VISIBLE_WIDTH_METRES)
+        return MapCamera(DEFAULT_UK_WATERS_LON, DEFAULT_UK_WATERS_LAT, MapCamera.DEFAULT_VISIBLE_WIDTH_METRES)
     }
 
     private fun normalise(value: String) = value.trim().lowercase()
