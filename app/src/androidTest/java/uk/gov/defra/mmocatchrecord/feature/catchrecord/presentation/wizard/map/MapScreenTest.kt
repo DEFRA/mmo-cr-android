@@ -2,6 +2,10 @@
 
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -251,7 +255,7 @@ class MapScreenTest {
 
     /**
      * Requirement: "if the map data fails to load, Grid mode must still work: show an accessible message
-     * and keep 'Other' (→ autocomplete search) available; never crash" — see [MapGridContent].
+     * and keep 'Other' (→ RadioList) available; never crash" — see [MapGridContent].
      */
     @Test
     fun gridScreenWhenMapDataFailsToLoadStillShowsOtherAndAccessibleError() {
@@ -270,23 +274,88 @@ class MapScreenTest {
         composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).assertIsDisplayed()
     }
 
-    // --- Screen 2: "Other" -> autocomplete search ------------------------------------------------------
+    // --- Screen 2: "Other" -> radio list ---------------------------------------------------------------
 
-    @Test
-    fun gridOtherLinkNavigatesToAutocompleteSearch() {
+    /**
+     * Composes [MapScreenContent] directly with a hoisted [MapEntryMode] so the Grid → RadioList →
+     * Autocomplete sub-screen navigation runs without [MapScreen]'s Hilt-backed wizard scaffold (this
+     * suite's plain `ComponentActivity` has no Hilt component).
+     */
+    private fun setMapScreenContent(onSubmit: (String) -> Unit = {}) {
         composeTestRule.setContent {
+            var entryMode by remember { mutableStateOf(MapEntryMode.Grid) }
             MmoTheme {
-                MapScreen(state = stateWith(pendingGearUse()), onSubmit = {}, onBack = {})
+                MapScreenContent(
+                    gearUse = pendingGearUse(),
+                    departurePort = samplePort,
+                    nearbyRectangles = MapSupport.nearbyRectanglesFor(samplePort, sampleRectangles),
+                    allRectangles = sampleRectangles,
+                    entryMode = entryMode,
+                    onEntryModeChange = { entryMode = it },
+                    onSubmit = onSubmit,
+                )
             }
         }
+    }
+
+    @Test
+    fun gridOtherLinkNavigatesToRadioListWithNearbyCodesAndOtherOption() {
+        setMapScreenContent()
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
 
         composeTestRule
             .onNodeWithText(
-                "Select the statistical sub area where the majority of your catch was caught using seine nets (mesh size 100mm)?",
+                "Select the area where most of your catch was caught. If it is not listed, select Other to enter it.",
             ).assertIsDisplayed()
+        sampleRectangles.forEachIndexed { index, rectangle ->
+            composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_$index").assertIsDisplayed()
+            composeTestRule.onNodeWithText(rectangle.code).assertIsDisplayed()
+        }
+        composeTestRule
+            .onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_${sampleRectangles.size}")
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithText("Other").assertIsDisplayed()
+    }
+
+    @Test
+    fun radioListSelectionSubmitsTheChosenCode() {
+        var submittedCode: String? = null
+        setMapScreenContent(onSubmit = { submittedCode = it })
+
+        composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
+        composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_1").performClick()
+        composeTestRule.onNodeWithTag(MapScreenTestTags.RADIO_SAVE_ACTION).performClick()
+
+        assertEquals("38E98", submittedCode)
+    }
+
+    @Test
+    fun radioListWithNoSelectionShowsRequiredError() {
+        var submittedCode: String? = null
+        setMapScreenContent(onSubmit = { submittedCode = it })
+
+        composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
+        composeTestRule.onNodeWithTag(MapScreenTestTags.RADIO_SAVE_ACTION).performClick()
+
+        composeTestRule.onNodeWithTag(MapScreenTestTags.ERROR_MESSAGE).assertIsDisplayed()
+        assertNull(submittedCode)
+    }
+
+    // --- Screen 3: "Other" (again) -> autocomplete search ----------------------------------------------
+
+    @Test
+    fun selectingOtherOnRadioListNavigatesToAutocompleteSearch() {
+        var submittedCode: String? = null
+        setMapScreenContent(onSubmit = { submittedCode = it })
+
+        composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
+        // Radio option index 3 is the trailing "Other" entry (3 nearby codes at indices 0-2).
+        composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_3").performClick()
+        composeTestRule.onNodeWithTag(MapScreenTestTags.RADIO_SAVE_ACTION).performClick()
+
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).assertIsDisplayed()
+        assertNull(submittedCode)
     }
 
     @Test
@@ -303,6 +372,8 @@ class MapScreenTest {
         }
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
+        composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_3").performClick()
+        composeTestRule.onNodeWithTag(MapScreenTestTags.RADIO_SAVE_ACTION).performClick()
 
         // A code not present in the local nearby/stub list, entered via free text.
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).performTextInput("99Z99")
@@ -320,6 +391,8 @@ class MapScreenTest {
         }
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
+        composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_3").performClick()
+        composeTestRule.onNodeWithTag(MapScreenTestTags.RADIO_SAVE_ACTION).performClick()
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_SAVE_ACTION).performClick()
 
@@ -336,6 +409,8 @@ class MapScreenTest {
         }
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
+        composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_3").performClick()
+        composeTestRule.onNodeWithTag(MapScreenTestTags.RADIO_SAVE_ACTION).performClick()
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).performTextInput("not-a-code")
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_SAVE_ACTION).performClick()

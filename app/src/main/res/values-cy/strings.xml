@@ -138,6 +138,7 @@
     <string name="gear_stat_rectangle_body_nearby">Dangosir yr ardaloedd ystadegol agosaf at eich porthladd ymadael isod.</string>
     <string name="gear_stat_rectangle_body_select_grid">Dewiswch yr ardal lle cafodd y rhan fwyaf o\'ch dalfa ei dal.</string>
     <string name="gear_stat_rectangle_body_other_hint">Os nad yw wedi\'i restru, dewiswch Arall i\'w nodi.</string>
+    <string name="gear_stat_rectangle_body_select_other">Dewiswch yr ardal lle cafodd y rhan fwyaf o\'ch dalfa ei dal. Os nad yw wedi\'i restru, dewiswch Arall i\'w nodi.</string>
     <string name="gear_stat_rectangle_other_option">Arall</string>
     <string name="gear_stat_rectangle_autocomplete_label">Teipiwch i chwilio (isafswm 2 nod)</string>
     <string name="gear_stat_rectangle_no_matches_found">Ni chanfuwyd is-barthau ystadegol cyfatebol</string>

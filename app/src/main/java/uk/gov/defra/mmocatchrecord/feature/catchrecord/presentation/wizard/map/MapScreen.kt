@@ -29,6 +29,8 @@ import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.AppLanguageProvider
 import uk.gov.defra.mmocatchrecord.common.design.GdsAutocompleteField
 import uk.gov.defra.mmocatchrecord.common.design.GdsAutocompleteOption
+import uk.gov.defra.mmocatchrecord.common.design.GdsRadioGroup
+import uk.gov.defra.mmocatchrecord.common.design.GdsRadioOption
 import uk.gov.defra.mmocatchrecord.common.design.MmoColors
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
@@ -63,6 +65,7 @@ import uk.gov.defra.mmocatchrecord.mapdata.MapDataset
 /** Which sub-screen of the [WizardStep.GearStatRectangle] step is currently shown — see [MapScreenContent]. */
 enum class MapEntryMode {
     Grid,
+    RadioList,
     Autocomplete,
 }
 
@@ -75,12 +78,17 @@ object MapScreenTestTags {
     const val MAP_SELECTED_TEXT = "gear_stat_rectangle_map_selected_text"
     const val GRID_OTHER_ACTION = "gear_stat_rectangle_grid_other_action"
     const val GRID_SAVE_ACTION = "gear_stat_rectangle_grid_save_action"
+    const val RADIO_OPTION_PREFIX = "gear_stat_rectangle_radio_option"
+    const val RADIO_SAVE_ACTION = "gear_stat_rectangle_radio_save_action"
     const val AUTOCOMPLETE_FIELD = "gear_stat_rectangle_autocomplete_field"
     const val LIVE_REGION = "gear_stat_rectangle_live_region"
     const val SUGGESTION_PREFIX = "gear_stat_rectangle_suggestion"
     const val NO_MATCHES = "gear_stat_rectangle_no_matches"
     const val AUTOCOMPLETE_SAVE_ACTION = "gear_stat_rectangle_autocomplete_save_action"
 }
+
+/** The special "Other" radio option id on the radio-list sub-screen (screen 2) — not a real rectangle code. */
+private const val OTHER_OPTION_ID = "other"
 
 /**
  * Per-confirmed-gear "Where was the majority of your catch caught using {gear}?" statistical
@@ -90,7 +98,7 @@ object MapScreenTestTags {
  * with the same [WizardStep.GearStatRectangle]) while another confirmed gear remains, exactly like every
  * other screen's generic [CatchRecordFlowEvent.SaveAndContinue] dispatch — no bespoke "next gear" event.
  *
- * Two sub-screens (Grid/Autocomplete) are modeled as one step with local, non-ViewModel state
+ * Three sub-screens (Grid/RadioList/Autocomplete) are modeled as one step with local, non-ViewModel state
  * — mirroring [DeparturePortScreen]'s `DeparturePortEntryMode` pattern — rather than three separate
  * [WizardStep]s, since which sub-screen is showing is pure UI navigation, not draft state.
  */
@@ -240,6 +248,15 @@ fun MapScreenContent(
                 nearbyRectangles = nearbyRectangles,
                 mapStatus = mapStatus,
                 onRetryMapData = onRetryMapData,
+                onOtherSelected = { onEntryModeChange(MapEntryMode.RadioList) },
+                onSubmit = onSubmit,
+                modifier = modifier,
+            )
+
+        MapEntryMode.RadioList ->
+            MapRadioListContent(
+                gearUse = gearUse,
+                nearbyRectangles = nearbyRectangles,
                 onOtherSelected = { onEntryModeChange(MapEntryMode.Autocomplete) },
                 onSubmit = onSubmit,
                 modifier = modifier,
@@ -304,7 +321,7 @@ private fun MapGridContent(
             is UiStatus.Error ->
                 // Never crash: the map data failed to load. The "Other" button below (rendered
                 // unconditionally, outside this `when`) still lets the user continue via the fully
-                // keyboard/TalkBack-accessible autocomplete path.
+                // keyboard/TalkBack-accessible radio-list/autocomplete path.
                 WizardErrorState(
                     message = stringResource(R.string.gear_stat_rectangle_map_unavailable),
                     testTag = MapScreenTestTags.MAP_ERROR,
@@ -376,8 +393,68 @@ private fun MapGridContent(
     }
 }
 
+/** Screen 2: the same nearby codes as a vertical radio list, plus a final "Other" option. */
+@Suppress("FunctionNaming")
+@Composable
+private fun MapRadioListContent(
+    gearUse: GearUse,
+    nearbyRectangles: List<StatisticalSubRectangle>,
+    onOtherSelected: () -> Unit,
+    onSubmit: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var selectedOptionId by
+        rememberSaveable(gearUse.id) { mutableStateOf(gearUse.statisticalSubRectangleCode) }
+    var showError by rememberSaveable(gearUse.id) { mutableStateOf(false) }
+    val options =
+        remember(nearbyRectangles) {
+            nearbyRectangles.map { GdsRadioOption(it.code, it.code) } +
+                GdsRadioOption(OTHER_OPTION_ID, "")
+        }
+
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+        Text(
+            text = stringResource(R.string.gear_stat_rectangle_body_nearby),
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        Text(
+            text = stringResource(R.string.gear_stat_rectangle_body_select_other),
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        if (showError) {
+            Text(
+                text = stringResource(R.string.gear_stat_rectangle_error_required),
+                color = MmoColors.ErrorRed,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.testTag(MapScreenTestTags.ERROR_MESSAGE),
+            )
+        }
+        val otherLabel = stringResource(R.string.gear_stat_rectangle_other_option)
+        GdsRadioGroup(
+            options = options.map { if (it.id == OTHER_OPTION_ID) it.copy(label = otherLabel) else it },
+            selectedOptionId = selectedOptionId,
+            onOptionSelected = {
+                selectedOptionId = it
+                showError = false
+            },
+            optionTestTagPrefix = MapScreenTestTags.RADIO_OPTION_PREFIX,
+        )
+        PrimaryActionButton(
+            text = stringResource(R.string.save_and_continue),
+            onClick = {
+                when (val id = selectedOptionId) {
+                    null -> showError = true
+                    OTHER_OPTION_ID -> onOtherSelected()
+                    else -> onSubmit(id)
+                }
+            },
+            modifier = Modifier.testTag(MapScreenTestTags.RADIO_SAVE_ACTION),
+        )
+    }
+}
+
 /**
- * Screen 2: free-text search over the full/global rectangle code list. Unlike the grid, this
+ * Screen 3: free-text search over the full/global rectangle code list. Unlike the grid/radio-list, this
  * validates the raw typed text against [MapRectangleFormatValidator] (required + format) via
  * [WizardErrorSummary] — matching
  * [uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearMeasurementScreenContent]'s pattern for free-text/numeric input,
@@ -506,7 +583,7 @@ fun MapScreen_GridPreview() {
     }
 }
 
-/** Shared sample gear use/rectangles for the Autocomplete preview below (mirrors [MapScreen_GridPreview]). */
+/** Shared sample gear use/rectangles for the RadioList/Autocomplete previews below (mirrors [MapScreen_GridPreview]). */
 private data class MapPreviewFixture(
     val gearUse: GearUse,
     val nearbyRectangles: List<StatisticalSubRectangle>,
@@ -534,6 +611,26 @@ private fun mapPreviewFixture(): MapPreviewFixture {
         nearbyRectangles = sampleRectangles,
         allRectangles = sampleRectangles,
     )
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Suppress("FunctionNaming")
+@Composable
+fun MapScreen_RadioListPreview() {
+    val fixture = mapPreviewFixture()
+    MmoTheme {
+        AppLanguageProvider(language = "en") {
+            MapScreenContent(
+                gearUse = fixture.gearUse,
+                departurePort = null,
+                nearbyRectangles = fixture.nearbyRectangles,
+                allRectangles = fixture.allRectangles,
+                entryMode = MapEntryMode.RadioList,
+                onEntryModeChange = {},
+                onSubmit = {},
+            )
+        }
+    }
 }
 
 @Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
