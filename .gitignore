@@ -36,6 +36,13 @@ Thumbs.db
 /.idea/gradle.xml
 /.idea/runConfigurations.xml
 
+# Ruby / Bundler / Fastlane (Gemfile and Gemfile.lock ARE committed)
+.bundle/
+vendor/bundle/
+fastlane/README.md
+fastlane/report.xml
+fastlane/test_output/
+
    # Secrets & Env files
    *.env
    .env

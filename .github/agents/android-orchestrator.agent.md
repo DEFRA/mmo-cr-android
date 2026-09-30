@@ -15,7 +15,7 @@ description: >-
   it does not implement code itself and never fetches JIRA data directly.
 name: Android Orchestrator
 tools: ['read', 'search', 'web', 'todo', 'agent', 'fetch_webpage', 'file_search', 'grep_search', 'get_errors', 'get_terminal_output', 'list_dir', 'read_file', 'run_subagent', 'run_in_terminal', 'validate_cves']
-model: Claude Opus 4.8 (copilot)
+model: Claude Opus 5 (copilot)
 argument-hint: Describe the complex Android task, feature or change to plan and coordinate.
 agents:
   - Android Planner

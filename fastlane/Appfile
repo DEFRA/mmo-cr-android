@@ -1,0 +1,3 @@
+# Matches the applicationId in app/build.gradle.kts, which differs from the frozen three-identity
+# model in ci-cd.instructions.md — reconcile when flavors and the Play release lanes land.
+package_name("uk.gov.defra.mmocatchrecord")

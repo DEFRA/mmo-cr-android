@@ -11,7 +11,7 @@ description: >-
   delegate planning to the Android Planner.
 name: Android DevOps
 tools: ['read', 'edit', 'search', 'execute', 'web', 'todo', 'agent', 'apply_patch', 'create_file', 'insert_edit_into_file', 'fetch_webpage', 'file_search', 'grep_search', 'get_errors', 'list_dir', 'get_terminal_output', 'read_file', 'replace_string_in_file', 'run_subagent', 'run_in_terminal', 'validate_cves']
-model: Claude Opus 4.8 (copilot)
+model: Claude Opus 5 (copilot)
 argument-hint: Describe the CI/CD, signing, versioning, release or pipeline task you want.
 agents:
   - Explore
@@ -33,28 +33,39 @@ restate or fork it. Your primary standards reference is
 
 ## Tech-stack confirmation status (pipeline / identity / signing stack)
 
-> **Status: ❌ Not yet confirmed** — the pipeline/identity/signing decisions in
-> [copilot-instructions.md](../copilot-instructions.md) §5 and
-> [ci-cd.instructions.md](../instructions/ci-cd.instructions.md) (CI runner, Fastlane/Play tracks,
-> `applicationId` scheme, product flavors, Play App Signing + upload-key custody, `versionCode`/`versionName`
-> derivation, release tag prefix `android-v*`, six-environment topology) are **tentative proposed defaults**
-> and have **not** been confirmed by the Android developer / release owner.
+> **Status: ⚠️ Partially confirmed**
 >
-> _When confirmed, replace the line above with, e.g.:_
-> `Status: ✅ Confirmed on YYYY-MM-DD by <developer> — deviations from §5 defaults: <none / list>.`
+> **Confirmed (CI / build-and-test stack) — safe to build on, do not re-prompt:**
+> GitHub Actions as the orchestrator on `ubuntu-latest`; **Fastlane + Bundler** (`Gemfile`/`Gemfile.lock`,
+> Ruby 3.3) as the single entry point for every Gradle invocation, with `lint` / `build` / `test` /
+> `instrumented_test` lanes; **Temurin JDK 21** (matching `jvmToolchain(21)` and
+> `gradle/gradle-daemon-jvm.properties`); Kover for coverage (`koverXmlReportDebug`); emulator-based
+> instrumented tests via `reactivecircus/android-emulator-runner`.
+> _Deviations from §5 / ci-cd defaults:_ (1) JDK **21**, not the previously documented Temurin 17 — the
+> instruction has been corrected; (2) third-party Actions are pinned by **version tag, not full commit
+> SHA**, a knowingly accepted temporary deviation from DEFRA's supply-chain requirement, to be re-hardened
+> to SHAs before the pipeline gates production releases; (3) **SonarCloud is configured but disabled** —
+> `sonar-project.properties` exists and the scan step is commented out in `android-ci.yml` pending the
+> `DEFRA_mmo-cr-android` project and `MMO_CR_SONAR_TOKEN` secret.
+>
+> **NOT yet confirmed (release / identity / signing stack) — the gate below still applies:**
+> `applicationId` scheme and product flavors (the app currently ships a single
+> `uk.gov.defra.mmocatchrecord`, which conflicts with the frozen `mmo.catchrecording.android[.dev|.test]`
+> three-identity model), Play App Signing + upload-key custody, `versionCode`/`versionName` derivation,
+> the `android-v*` release tag prefix, and the six-environment gated topology.
 
 **You own the tech-stack confirmation gate for the pipeline/identity/signing stack (copilot-instructions
 §5.1).** Before you make **any** pipeline/config/signing change — including first-time pipeline scaffolding,
 and even if the user did not raise the tech stack — you MUST first check the status line above:
 
-- **If `❌ Not yet confirmed`:** **stop and prompt the developer / release owner** to confirm or amend the
-  proposed defaults (CI runner, Fastlane + Play tracks, `applicationId` + flavors, signing model,
-  versioning, tag prefix, environment/approval topology). Capture their confirmations and any changes,
-  record them as ADRs, then **edit this agent file** to flip the status line to `✅ Confirmed …` (with date,
+- **If an item is listed as NOT yet confirmed:** **stop and prompt the developer / release owner** to
+  confirm or amend the proposed defaults (`applicationId` + flavors, signing model, versioning, tag prefix,
+  environment/approval topology). Capture their confirmations and any changes,
+  record them as ADRs, then **edit this agent file** to move those items into the confirmed list (with date,
   who, and any deviations) and update §5 / ci-cd instructions if a default changed. Only then begin
   implementing. This gate is **separate from and precedes** the §4 plan-approval gate.
-- **If `✅ Confirmed …`:** do **not** re-prompt — proceed under the confirmed stack (honouring any recorded
-  deviations).
+- **If an item is listed as confirmed:** do **not** re-prompt — proceed under the confirmed stack
+  (honouring any recorded deviations).
 - **Trivial, non-code changes** (docs/comments) do not require this gate.
 
 ## You own the working framework loop yourself

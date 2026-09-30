@@ -9,7 +9,7 @@ description: >-
   full contract for Complex/architectural work.
 name: Android Planner
 tools: ['read', 'search', 'web', 'agent', 'fetch_webpage', 'file_search', 'grep_search', 'get_errors', 'get_terminal_output', 'list_dir', 'read_file', 'run_subagent', 'run_in_terminal', 'validate_cves']
-model: Claude Opus 4.8 (copilot)
+model: Claude Opus 5 (copilot)
 argument-hint: Planning handoff payload from a parent agent.
 agents:
   - Explore
