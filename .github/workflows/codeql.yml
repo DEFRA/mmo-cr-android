@@ -1,0 +1,82 @@
+name: CodeQL
+
+# Advanced-setup SAST workflow, kept deliberately separate from android-ci.yml and the release
+# workflow (ci-cd.instructions.md). Advanced setup is required because GitHub's default setup uses
+# `autobuild`, whose Gradle heuristic cannot build this Android + composite `build-logic` project;
+# `build-mode: manual` gives CodeQL an explicit, reproducible build instead.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly baseline scan so long-lived code is re-checked against new CodeQL queries.
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Kotlin must be compiled to be analysed, so it needs a real Gradle build.
+          - language: java-kotlin
+            build-mode: manual
+          # Interpreted/declarative languages need no build.
+          - language: actions
+            build-mode: none
+          - language: ruby
+            build-mode: none
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      # JAVA_HOME is set before CodeQL initialises so the tracer observes a stable toolchain.
+      # 21 matches jvmToolchain(21) and gradle/gradle-daemon-jvm.properties.
+      - name: Set up JDK 21 (Temurin)
+        if: matrix.build-mode == 'manual'
+        uses: actions/setup-java@v6.0.1
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        if: matrix.build-mode == 'manual'
+        uses: gradle/actions/setup-gradle@v6.3.0
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4.38.2
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      # CodeQL traces this build to construct the Kotlin/Java database. It calls Gradle directly
+      # rather than via the Fastlane `build` lane so the tracer wraps the Gradle process itself
+      # with no intervening Ruby/Bundler layer; the task is the same one `fastlane build` runs.
+      - name: Build debug variant for CodeQL
+        if: matrix.build-mode == 'manual'
+        run: ./gradlew assembleDebug --console=plain
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4.38.2
+        with:
+          category: "/language:${{ matrix.language }}"
