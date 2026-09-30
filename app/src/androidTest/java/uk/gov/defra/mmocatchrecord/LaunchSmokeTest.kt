@@ -4,9 +4,11 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -30,6 +32,21 @@ class LaunchSmokeTest {
     @get:Rule
     val composeTestRule = createAndroidComposeRule<MainActivity>()
 
+    /**
+     * The in-app splash deliberately stays up for a minimum wall-clock duration (see `RootNavigation`'s
+     * `SPLASH_MINIMUM_VISIBLE_DURATION_MILLIS`, timed with `SystemClock`, not the Compose test clock) before
+     * navigating to the resolved phase, so wait for the sign-in screen rather than asserting immediately.
+     */
+    @Before
+    fun waitForSignInScreen() {
+        composeTestRule.waitUntil(timeoutMillis = SIGN_IN_TIMEOUT_MILLIS) {
+            composeTestRule
+                .onAllNodesWithTag(SignInScreenTestTags.SCREEN)
+                .fetchSemanticsNodes()
+                .isNotEmpty()
+        }
+    }
+
     @Test
     fun launcherShowsSignInPlaceholder() {
         composeTestRule.onNodeWithTag(SignInScreenTestTags.SCREEN).assertExists()
@@ -50,5 +67,9 @@ class LaunchSmokeTest {
             .assertExists()
             .assertIsDisplayed()
             .assertHasClickAction()
+    }
+
+    private companion object {
+        const val SIGN_IN_TIMEOUT_MILLIS = 10_000L
     }
 }

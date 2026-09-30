@@ -4,7 +4,7 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -20,7 +20,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
-import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.common.navigation.CatchRecordGraphRoute
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.core.connectivity.NetworkConnectivityChecker
@@ -199,7 +198,7 @@ class SubmissionFlowNavigationTest {
         viewModel: CatchRecordFlowViewModel,
         navController: NavHostController,
     ) {
-        MmoTheme {
+        WizardTestTheme {
             NavHost(navController = navController, startDestination = CatchRecordGraphRoute) {
                 navigation<CatchRecordGraphRoute>(startDestination = CheckYourAnswersRoute) {
                     composable<CheckYourAnswersRoute> {

@@ -2,23 +2,20 @@
 
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
-import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
@@ -31,6 +28,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Gear
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.StatisticalSubRectangle
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordFlowViewState
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardTestTheme
 import uk.gov.defra.mmocatchrecord.mapdata.MapDataset
 import uk.gov.defra.mmocatchrecord.mapdata.SerializableBBox
 import uk.gov.defra.mmocatchrecord.mapdata.SerializableMultiPolygon
@@ -124,7 +122,7 @@ class MapScreenTest {
     fun gridScreenShowsIdentifyingMeasurementInTitleAndSubmitsTappedCell() {
         var submittedDraft: CatchRecordDraft? = null
         composeTestRule.setContent {
-            MmoTheme {
+            WizardTestTheme {
                 MapScreen(
                     state = stateWith(pendingGearUse()),
                     onSubmit = { submittedDraft = it },
@@ -139,7 +137,9 @@ class MapScreenTest {
             .assertIsDisplayed()
         composeTestRule.onNodeWithTag(MapScreenTestTags.MAP).assertIsDisplayed()
         composeTestRule.onNodeWithTag(MapScreenTestTags.MAP).performTouchInput { click() }
-        composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_SAVE_ACTION).performClick()
+        composeTestRule.onNodeWithTag(MapScreenTestTags.MAP_SELECTED_TEXT).assertTextContains("38E95", substring = true)
+        // With map data loaded the map pushes the Save action below the fold of the scrolling wizard column.
+        composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_SAVE_ACTION).performScrollTo().performClick()
 
         assertEquals("38E95", submittedDraft?.gearUses?.single()?.statisticalSubRectangleCode)
     }
@@ -176,7 +176,7 @@ class MapScreenTest {
                 statisticalSubRectangles = sampleRectangles,
             )
         composeTestRule.setContent {
-            MmoTheme {
+            WizardTestTheme {
                 MapScreen(state = state, onSubmit = {}, onBack = {})
             }
         }
@@ -222,13 +222,15 @@ class MapScreenTest {
                 statisticalSubRectangles = sampleRectangles,
             )
         composeTestRule.setContent {
-            MmoTheme {
+            WizardTestTheme {
                 MapScreen(state = state, onSubmit = {}, onBack = {})
             }
         }
 
+        // The title uses the lowercased display name, which strips the "(PTB)" reference-code suffix —
+        // see GearMeasurementSupport.titleGearNameFor/displayNameFor.
         composeTestRule
-            .onNodeWithText("Where was the majority of your catch caught using bottom pair trawls (PTB)?")
+            .onNodeWithText("Where was the majority of your catch caught using bottom pair trawls?")
             .assertIsDisplayed()
         composeTestRule
             .onNodeWithText("Where was the majority of your catch caught using seine nets?")
@@ -239,7 +241,7 @@ class MapScreenTest {
     fun gridScreenWithNoSelectionShowsRequiredErrorAndDoesNotSubmit() {
         var submittedDraft: CatchRecordDraft? = null
         composeTestRule.setContent {
-            MmoTheme {
+            WizardTestTheme {
                 MapScreen(
                     state = stateWith(pendingGearUse()),
                     onSubmit = { submittedDraft = it },
@@ -260,7 +262,7 @@ class MapScreenTest {
     @Test
     fun gridScreenWhenMapDataFailsToLoadStillShowsOtherAndAccessibleError() {
         composeTestRule.setContent {
-            MmoTheme {
+            WizardTestTheme {
                 MapScreen(
                     state = stateWith(pendingGearUse()),
                     onSubmit = {},
@@ -276,34 +278,24 @@ class MapScreenTest {
 
     // --- Screen 2: "Other" -> radio list ---------------------------------------------------------------
 
-    /**
-     * Composes [MapScreenContent] directly with a hoisted [MapEntryMode] so the Grid → RadioList →
-     * Autocomplete sub-screen navigation runs without [MapScreen]'s Hilt-backed wizard scaffold (this
-     * suite's plain `ComponentActivity` has no Hilt component).
-     */
-    private fun setMapScreenContent(onSubmit: (String) -> Unit = {}) {
+    private fun setMapScreen(onSubmit: (CatchRecordDraft) -> Unit = {}) {
         composeTestRule.setContent {
-            var entryMode by remember { mutableStateOf(MapEntryMode.Grid) }
-            MmoTheme {
-                MapScreenContent(
-                    gearUse = pendingGearUse(),
-                    departurePort = samplePort,
-                    nearbyRectangles = MapSupport.nearbyRectanglesFor(samplePort, sampleRectangles),
-                    allRectangles = sampleRectangles,
-                    entryMode = entryMode,
-                    onEntryModeChange = { entryMode = it },
-                    onSubmit = onSubmit,
-                )
+            WizardTestTheme {
+                MapScreen(state = stateWith(pendingGearUse()), onSubmit = onSubmit, onBack = {})
             }
         }
     }
 
     @Test
     fun gridOtherLinkNavigatesToRadioListWithNearbyCodesAndOtherOption() {
-        setMapScreenContent()
+        setMapScreen()
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
 
+        composeTestRule
+            .onNodeWithText(
+                "Select the statistical sub area where the majority of your catch was caught using seine nets (mesh size 100mm)?",
+            ).assertIsDisplayed()
         composeTestRule
             .onNodeWithText(
                 "Select the area where most of your catch was caught. If it is not listed, select Other to enter it.",
@@ -320,34 +312,34 @@ class MapScreenTest {
 
     @Test
     fun radioListSelectionSubmitsTheChosenCode() {
-        var submittedCode: String? = null
-        setMapScreenContent(onSubmit = { submittedCode = it })
+        var submittedDraft: CatchRecordDraft? = null
+        setMapScreen(onSubmit = { submittedDraft = it })
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
         composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_1").performClick()
         composeTestRule.onNodeWithTag(MapScreenTestTags.RADIO_SAVE_ACTION).performClick()
 
-        assertEquals("38E98", submittedCode)
+        assertEquals("38E98", submittedDraft?.gearUses?.single()?.statisticalSubRectangleCode)
     }
 
     @Test
     fun radioListWithNoSelectionShowsRequiredError() {
-        var submittedCode: String? = null
-        setMapScreenContent(onSubmit = { submittedCode = it })
+        var submittedDraft: CatchRecordDraft? = null
+        setMapScreen(onSubmit = { submittedDraft = it })
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
         composeTestRule.onNodeWithTag(MapScreenTestTags.RADIO_SAVE_ACTION).performClick()
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.ERROR_MESSAGE).assertIsDisplayed()
-        assertNull(submittedCode)
+        assertNull(submittedDraft)
     }
 
     // --- Screen 3: "Other" (again) -> autocomplete search ----------------------------------------------
 
     @Test
     fun selectingOtherOnRadioListNavigatesToAutocompleteSearch() {
-        var submittedCode: String? = null
-        setMapScreenContent(onSubmit = { submittedCode = it })
+        var submittedDraft: CatchRecordDraft? = null
+        setMapScreen(onSubmit = { submittedDraft = it })
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
         // Radio option index 3 is the trailing "Other" entry (3 nearby codes at indices 0-2).
@@ -355,14 +347,14 @@ class MapScreenTest {
         composeTestRule.onNodeWithTag(MapScreenTestTags.RADIO_SAVE_ACTION).performClick()
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).assertIsDisplayed()
-        assertNull(submittedCode)
+        assertNull(submittedDraft)
     }
 
     @Test
     fun autocompleteScreenSubmitsACorrectlyFormattedTypedCodeNotJustSuggestionListEntries() {
         var submittedDraft: CatchRecordDraft? = null
         composeTestRule.setContent {
-            MmoTheme {
+            WizardTestTheme {
                 MapScreen(
                     state = stateWith(pendingGearUse()),
                     onSubmit = { submittedDraft = it },
@@ -385,7 +377,7 @@ class MapScreenTest {
     @Test
     fun autocompleteScreenWithBlankInputShowsRequiredErrorSummary() {
         composeTestRule.setContent {
-            MmoTheme {
+            WizardTestTheme {
                 MapScreen(state = stateWith(pendingGearUse()), onSubmit = {}, onBack = {})
             }
         }
@@ -403,7 +395,7 @@ class MapScreenTest {
     @Test
     fun autocompleteScreenWithIncorrectlyFormattedInputShowsFormatErrorSummary() {
         composeTestRule.setContent {
-            MmoTheme {
+            WizardTestTheme {
                 MapScreen(state = stateWith(pendingGearUse()), onSubmit = {}, onBack = {})
             }
         }
@@ -434,7 +426,7 @@ class MapScreenTest {
             )
         val state = CatchRecordFlowViewState(status = UiStatus.Content(draft))
         composeTestRule.setContent {
-            MmoTheme {
+            WizardTestTheme {
                 MapScreen(state = state, onSubmit = {}, onBack = {})
             }
         }
