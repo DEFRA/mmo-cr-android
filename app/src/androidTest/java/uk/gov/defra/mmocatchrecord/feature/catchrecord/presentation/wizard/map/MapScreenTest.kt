@@ -4,7 +4,7 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.click
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -80,12 +80,12 @@ class MapScreenTest {
 
     /**
      * A minimal, synthetic [MapDataset] for Canvas Grid-mode interaction tests — one huge sea-overlapping
-     * sub-rectangle spanning the whole of [MapCameraSupport]'s UK-waters default centre (and any
-     * port-match/nearby-bbox centre this fixture's [samplePort]/[sampleRectangles] could resolve to), so a
-     * tap at the centre of the rendered [MapCanvas] always lands inside it regardless of which of the three
+     * sub-rectangle spanning the whole of [MapCameraSupport]'s UK-waters default center (and any
+     * port-match/nearby-bbox center this fixture's [samplePort]/[sampleRectangles] could resolve to), so a
+     * tap at the center of the rendered [MapCanvas] always lands inside it regardless of which of the three
      * initial-camera strategies applies — see [MapCameraSupport.initialCameraFor].
      */
-    private fun mapDatasetFixture(code: String = "38E95"): MapDataset {
+    private fun mapDatasetFixture(): MapDataset {
         val ring =
             SerializableRing(
                 listOf(
@@ -98,7 +98,7 @@ class MapScreenTest {
             )
         val subRectangle =
             SerializableSubRectangle(
-                code = code,
+                code = "38E95",
                 icesName = "Test area",
                 areaKm2 = 1.0,
                 bbox = SerializableBBox(minLon = -20.0, minLat = 30.0, maxLon = 20.0, maxLat = 75.0),
@@ -125,7 +125,7 @@ class MapScreenTest {
                     state = stateWith(pendingGearUse()),
                     onSubmit = { submittedDraft = it },
                     onBack = {},
-                    mapStatus = UiStatus.Content(mapDatasetFixture("38E95")),
+                    mapStatus = UiStatus.Content(mapDatasetFixture()),
                 )
             }
         }
@@ -251,7 +251,7 @@ class MapScreenTest {
 
     /**
      * Requirement: "if the map data fails to load, Grid mode must still work: show an accessible message
-     * and keep 'Other' (→ RadioList) available; never crash" — see [MapGridContent].
+     * and keep 'Other' (→ autocomplete search) available; never crash" — see [MapGridContent].
      */
     @Test
     fun gridScreenWhenMapDataFailsToLoadStillShowsOtherAndAccessibleError() {
@@ -270,10 +270,10 @@ class MapScreenTest {
         composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).assertIsDisplayed()
     }
 
-    // --- Screen 2: "Other" -> radio list ---------------------------------------------------------------
+    // --- Screen 2: "Other" -> autocomplete search ------------------------------------------------------
 
     @Test
-    fun gridOtherLinkNavigatesToRadioListWithNearbyCodesAndOtherOption() {
+    fun gridOtherLinkNavigatesToAutocompleteSearch() {
         composeTestRule.setContent {
             MmoTheme {
                 MapScreen(state = stateWith(pendingGearUse()), onSubmit = {}, onBack = {})
@@ -286,58 +286,6 @@ class MapScreenTest {
             .onNodeWithText(
                 "Select the statistical sub area where the majority of your catch was caught using seine nets (mesh size 100mm)?",
             ).assertIsDisplayed()
-        composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_0").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Other").assertIsDisplayed()
-    }
-
-    @Test
-    fun radioListSelectionSubmitsTheChosenCode() {
-        var submittedDraft: CatchRecordDraft? = null
-        composeTestRule.setContent {
-            MmoTheme {
-                MapScreen(
-                    state = stateWith(pendingGearUse()),
-                    onSubmit = { submittedDraft = it },
-                    onBack = {},
-                )
-            }
-        }
-
-        composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
-        composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_1").performClick()
-        composeTestRule.onNodeWithTag(MapScreenTestTags.RADIO_SAVE_ACTION).performClick()
-
-        assertEquals("38E98", submittedDraft?.gearUses?.single()?.statisticalSubRectangleCode)
-    }
-
-    @Test
-    fun radioListWithNoSelectionShowsRequiredError() {
-        composeTestRule.setContent {
-            MmoTheme {
-                MapScreen(state = stateWith(pendingGearUse()), onSubmit = {}, onBack = {})
-            }
-        }
-
-        composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
-        composeTestRule.onNodeWithTag(MapScreenTestTags.RADIO_SAVE_ACTION).performClick()
-        composeTestRule.onNodeWithTag(MapScreenTestTags.ERROR_MESSAGE).assertIsDisplayed()
-    }
-
-    // --- Screen 3: "Other" (again) -> autocomplete search ----------------------------------------------
-
-    @Test
-    fun selectingOtherOnRadioListNavigatesToAutocompleteSearch() {
-        composeTestRule.setContent {
-            MmoTheme {
-                MapScreen(state = stateWith(pendingGearUse()), onSubmit = {}, onBack = {})
-            }
-        }
-
-        composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
-        // Radio option index 3 is the trailing "Other" entry (3 nearby codes at indices 0-2).
-        composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_3").performClick()
-        composeTestRule.onNodeWithTag(MapScreenTestTags.RADIO_SAVE_ACTION).performClick()
-
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).assertIsDisplayed()
     }
 
@@ -355,8 +303,6 @@ class MapScreenTest {
         }
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
-        composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_3").performClick()
-        composeTestRule.onNodeWithTag(MapScreenTestTags.RADIO_SAVE_ACTION).performClick()
 
         // A code not present in the local nearby/stub list, entered via free text.
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).performTextInput("99Z99")
@@ -374,8 +320,6 @@ class MapScreenTest {
         }
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
-        composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_3").performClick()
-        composeTestRule.onNodeWithTag(MapScreenTestTags.RADIO_SAVE_ACTION).performClick()
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_SAVE_ACTION).performClick()
 
@@ -392,8 +336,6 @@ class MapScreenTest {
         }
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
-        composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_3").performClick()
-        composeTestRule.onNodeWithTag(MapScreenTestTags.RADIO_SAVE_ACTION).performClick()
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).performTextInput("not-a-code")
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_SAVE_ACTION).performClick()

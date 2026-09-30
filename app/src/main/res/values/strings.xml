@@ -138,7 +138,6 @@
     <string name="gear_stat_rectangle_body_nearby">The statistical areas nearest to your departure port are shown below.</string>
     <string name="gear_stat_rectangle_body_select_grid">Select the area where most of your catch was caught.</string>
     <string name="gear_stat_rectangle_body_other_hint">If it is not listed, select Other to enter it.</string>
-    <string name="gear_stat_rectangle_body_select_other">Select the area where most of your catch was caught. If it is not listed, select Other to enter it.</string>
     <string name="gear_stat_rectangle_other_option">Other</string>
     <string name="gear_stat_rectangle_autocomplete_label">Type to search (minimum 2 characters)</string>
     <string name="gear_stat_rectangle_no_matches_found">No matching statistical sub-rectangles found</string>
