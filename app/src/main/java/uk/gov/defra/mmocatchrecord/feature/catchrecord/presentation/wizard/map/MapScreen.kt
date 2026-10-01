@@ -349,6 +349,7 @@ private fun MapGridContent(
                             showError = false
                         },
                         modifier = Modifier.fillMaxWidth(),
+                        onChooseFromListRequested = onOtherSelected,
                     )
                     SecondaryActionButton(
                         text = stringResource(R.string.gear_stat_rectangle_other_option),

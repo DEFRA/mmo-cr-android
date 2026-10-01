@@ -122,10 +122,14 @@ invocation goes through a Fastlane lane in `fastlane/Fastfile`, so CI and local 
 It does **not** perform release signing or Play Store publishing — that is a separate
 release-engineering/DevOps responsibility, out of scope for this workflow.
 
-SonarCloud analysis is configured in `sonar-project.properties` but the scan step in the workflow is
-**commented out** until the `DEFRA_mmo-cr-android` SonarCloud project and the `MMO_CR_SONAR_TOKEN` secret
-exist. Actions are currently pinned by version tag rather than commit SHA for readability; they must be
-re-hardened to SHAs (a DEFRA supply-chain requirement) before this workflow gates production releases.
+Every third-party Action is pinned to a **full commit SHA** (a DEFRA supply-chain requirement) with the
+version in a trailing comment, and `.github/dependabot.yml` keeps those pins current via the
+`github-actions` ecosystem (weekly, grouped). Runners are pinned to **`ubuntu-24.04`** rather than
+`ubuntu-latest` for reproducibility — that pin must be bumped **manually** before GitHub retires the image.
+
+SonarCloud analysis is configured in `sonar-project.properties` and the scan step runs in the workflow, but
+it cannot pass until the `DEFRA_mmo-cr-android` SonarCloud project and the `MMO_CR_SONAR_TOKEN` secret
+exist.
 
 ### Job ordering
 

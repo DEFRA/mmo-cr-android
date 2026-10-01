@@ -31,14 +31,16 @@ class AssetMapDataRepository
         @ApplicationContext private val context: Context,
     ) : MapDataRepository {
         private val mutex = Mutex()
-        private var cached: Result<MapDataset>? = null
+
+        @Volatile
+        private var cached: MapDataset? = null
 
         override suspend fun loadDataset(): Result<MapDataset> {
-            cached?.let { return it }
+            cached?.let { return Result.success(it) }
             return mutex.withLock {
-                cached?.let { return it }
+                cached?.let { return@withLock Result.success(it) }
                 val result = withContext(Dispatchers.IO) { loadFromDisk() }
-                cached = result
+                result.onSuccess { cached = it }
                 result
             }
         }

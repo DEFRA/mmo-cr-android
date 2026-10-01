@@ -32,8 +32,10 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Density
@@ -86,6 +88,7 @@ fun MapCanvas(
     onCodeSelected: (String?) -> Unit,
     modifier: Modifier = Modifier,
     testTag: String = MapScreenTestTags.MAP,
+    onChooseFromListRequested: () -> Unit = {},
 ) {
     val density = LocalDensity.current
     val geometry = remember(dataset) { MapCanvasGeometry.from(dataset) }
@@ -94,11 +97,13 @@ fun MapCanvas(
     val currentCamera by rememberUpdatedState(camera)
     val currentOnCameraChange by rememberUpdatedState(onCameraChange)
     val currentOnCodeSelected by rememberUpdatedState(onCodeSelected)
+    val currentOnChooseFromListRequested by rememberUpdatedState(onChooseFromListRequested)
 
     val selectionClause =
         selectedCode?.let { stringResource(R.string.gear_stat_rectangle_selected_area, it) }
             ?: stringResource(R.string.gear_stat_rectangle_selected_area_none)
     val mapContentDescription = stringResource(R.string.gear_stat_rectangle_map_content_description, selectionClause)
+    val chooseFromListActionLabel = stringResource(R.string.gear_stat_rectangle_map_choose_from_list_action)
 
     Box(
         modifier =
@@ -107,6 +112,16 @@ fun MapCanvas(
                 .semantics {
                     contentDescription = mapContentDescription
                     liveRegion = LiveRegionMode.Polite
+                    customActions =
+                        listOf(
+                            CustomAccessibilityAction(
+                                label = chooseFromListActionLabel,
+                                action = {
+                                    currentOnChooseFromListRequested()
+                                    true
+                                },
+                            ),
+                        )
                 },
     ) {
         Canvas(

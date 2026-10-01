@@ -7,6 +7,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.map.MapDataUnavailableException
@@ -136,5 +137,46 @@ class AssetMapDataRepositoryTests {
             val second = repository.loadDataset()
 
             assertSame(first.getOrNull(), second.getOrNull())
+        }
+
+    /**
+     * Regression test: a transient failure (e.g. a momentary asset-read problem) must not be cached —
+     * only successes are cached — so calling `retry()`/[AssetMapDataRepository.loadDataset] again after a
+     * failure can succeed once the underlying read starts working, and that retried success is then
+     * itself cached for subsequent calls.
+     */
+    @Test
+    fun `retries after a failure and succeeds, caching the retried result`() =
+        runTest {
+            val assetManager = mock<AssetManager>()
+            listOf(
+                "map_data/dataset.json",
+                "map_data/fallback/map.geojson",
+                "map_data/fallback/subrectangles.geojson",
+                "map_data/fallback/ports.geojson",
+            ).forEach { path ->
+                whenever(assetManager.open(path)).thenThrow(IOException("missing: $path"))
+            }
+            val context = mock<Context>()
+            whenever(context.assets).thenReturn(assetManager)
+            val repository = AssetMapDataRepository(context)
+
+            val first = repository.loadDataset()
+
+            assertTrue(first.isFailure)
+            assertTrue(first.exceptionOrNull() is MapDataUnavailableException)
+
+            // The underlying read now succeeds — a fresh stream per call, as a real AssetManager would
+            // return. `doAnswer(...).whenever(...)` (rather than `whenever(...).thenAnswer { }`) avoids
+            // invoking the still-throwing existing stub while re-stubbing it.
+            doAnswer { ByteArrayInputStream(VALID_GENERATED_ASSET.toByteArray()) }
+                .whenever(assetManager)
+                .open("map_data/dataset.json")
+
+            val second = repository.loadDataset()
+            val third = repository.loadDataset()
+
+            assertTrue(second.isSuccess)
+            assertSame(second.getOrNull(), third.getOrNull())
         }
 }

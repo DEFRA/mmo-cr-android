@@ -2,6 +2,7 @@
 
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map
 
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.click
@@ -9,13 +10,16 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performCustomAccessibilityActionWithLabel
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
+import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
+import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
@@ -274,6 +278,37 @@ class MapScreenTest {
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.MAP_ERROR).assertIsDisplayed()
         composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).assertIsDisplayed()
+    }
+
+    /**
+     * Accessibility requirement: TalkBack/switch-access users who cannot perform the map's drag/pinch/tap
+     * gestures must have an equivalent route to the radio-list selection screen, exposed as a Compose
+     * custom accessibility action on the map's semantics node (see [MapCanvas]).
+     */
+    @Test
+    @OptIn(ExperimentalTestApi::class)
+    fun mapNodeExposesACustomAccessibilityActionToTheRadioList() {
+        composeTestRule.setContent {
+            WizardTestTheme {
+                MapScreen(
+                    state = stateWith(pendingGearUse()),
+                    onSubmit = {},
+                    onBack = {},
+                    mapStatus = UiStatus.Content(mapDatasetFixture()),
+                )
+            }
+        }
+        val actionLabel =
+            InstrumentationRegistry
+                .getInstrumentation()
+                .targetContext
+                .getString(R.string.gear_stat_rectangle_map_choose_from_list_action)
+
+        composeTestRule
+            .onNodeWithTag(MapScreenTestTags.MAP)
+            .performCustomAccessibilityActionWithLabel(actionLabel)
+
+        composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_0").assertIsDisplayed()
     }
 
     // --- Screen 2: "Other" -> radio list ---------------------------------------------------------------

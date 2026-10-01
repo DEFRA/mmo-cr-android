@@ -148,6 +148,7 @@
     <string name="gear_stat_rectangle_selected_area_none">No area selected</string>
     <string name="gear_stat_rectangle_map_unavailable">The map could not be loaded. Select Other to choose a statistical sub-rectangle from a list instead.</string>
     <string name="gear_stat_rectangle_map_content_description">Map of fisheries statistical sub-rectangles near your departure port. %1$s Drag to pan and pinch to zoom. Select Other for a list you can search without using the map.</string>
+    <string name="gear_stat_rectangle_map_choose_from_list_action">Choose a statistical sub-area from a list</string>
     <string name="gear_species_search_title">Which species did you catch with %1$s?</string>
     <string name="gear_species_search_title_fallback">Which species did you catch?</string>
     <string name="gear_species_search_autocomplete_label">Type to search (minimum 2 characters)</string>
