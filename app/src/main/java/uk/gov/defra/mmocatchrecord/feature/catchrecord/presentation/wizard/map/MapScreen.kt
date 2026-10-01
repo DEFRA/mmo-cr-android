@@ -89,6 +89,7 @@ object MapScreenTestTags {
 
 /** The special "Other" radio option id on the radio-list sub-screen (screen 2) — not a real rectangle code. */
 private const val OTHER_OPTION_ID = "other"
+private const val OTHER_BUTTON_WIDTH_FRACTION = 0.5f
 
 /**
  * Per-confirmed-gear "Where was the majority of your catch caught using {gear}?" statistical
@@ -356,6 +357,7 @@ private fun MapGridContent(
                             Modifier
                                 .align(Alignment.BottomStart)
                                 .padding(Spacing.s)
+                                .fillMaxWidth(OTHER_BUTTON_WIDTH_FRACTION)
                                 .background(MmoColors.White)
                                 .testTag(MapScreenTestTags.GRID_OTHER_ACTION),
                     )
@@ -375,7 +377,10 @@ private fun MapGridContent(
             SecondaryActionButton(
                 text = stringResource(R.string.gear_stat_rectangle_other_option),
                 onClick = onOtherSelected,
-                modifier = Modifier.testTag(MapScreenTestTags.GRID_OTHER_ACTION),
+                modifier =
+                    Modifier
+                        .fillMaxWidth(OTHER_BUTTON_WIDTH_FRACTION)
+                        .testTag(MapScreenTestTags.GRID_OTHER_ACTION),
             )
         }
         PrimaryActionButton(
