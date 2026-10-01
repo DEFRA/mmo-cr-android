@@ -137,11 +137,12 @@ class GearSpeciesSearchScreenTest {
                 modifiedAtEpochMillis = 0L,
                 status = DraftStatus.Draft,
             )
-        val state = CatchRecordFlowViewState(
-            status = UiStatus.Content(draft),
-            gearTypes = listOf(seineNets),
-            species = listOf(cod, haddock),
-        )
+        val state =
+            CatchRecordFlowViewState(
+                status = UiStatus.Content(draft),
+                gearTypes = listOf(seineNets),
+                species = listOf(cod, haddock),
+            )
         composeTestRule.setContent {
             WizardTestTheme {
                 GearSpeciesSearchScreen(state = state, onSubmit = {}, onBack = {})
