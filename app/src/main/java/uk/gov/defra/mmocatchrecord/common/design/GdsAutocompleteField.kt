@@ -17,6 +17,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,7 +34,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip.PortSearch
@@ -64,6 +67,13 @@ fun GdsAutocompleteField(
     noMatchesText: String = stringResource(R.string.port_search_no_matches_found),
 ) {
     var dismissedQuery by remember { mutableStateOf<String?>(null) }
+    // Holds the cursor/selection alongside the hoisted String. The String-based OutlinedTextField keeps
+    // the previous cursor offset when the text is replaced programmatically, which left the cursor
+    // mid-word after a suggestion was picked; any externally-driven text change now places it at the end.
+    var textFieldValueState by remember { mutableStateOf(value.withCursorAtEnd()) }
+    val textFieldValue = textFieldValueState.syncedWith(value)
+    // Structural-equality state: writing an unchanged value is a no-op, so no extra recomposition.
+    SideEffect { textFieldValueState = textFieldValue }
     val trimmedQuery = value.trim()
     val isQueryLongEnough = trimmedQuery.length >= minQueryLength
     val showSuggestions = isQueryLongEnough && dismissedQuery != value && options.isNotEmpty()
@@ -87,10 +97,14 @@ fun GdsAutocompleteField(
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         Text(text = label, style = MaterialTheme.typography.bodyLarge)
         OutlinedTextField(
-            value = value,
-            onValueChange = {
-                dismissedQuery = null
-                onValueChange(it)
+            value = textFieldValue,
+            onValueChange = { newValue ->
+                val hasTextChanged = newValue.text != textFieldValueState.text
+                textFieldValueState = newValue
+                // Cursor/selection-only changes must not re-open dismissed suggestions or reset callers.
+                if (hasTextChanged) {
+                    onValueChange(newValue.text)
+                }
             },
             singleLine = true,
             isError = errorText != null,
@@ -133,7 +147,9 @@ fun GdsAutocompleteField(
                                 .fillMaxWidth()
                                 .heightIn(min = Spacing.minTouchTarget)
                                 .clickable {
+                                    // Also covers picking an option whose label equals the typed text.
                                     dismissedQuery = option.label
+                                    textFieldValueState = option.label.withCursorAtEnd()
                                     onValueChange(option.label)
                                     onOptionSelected(option)
                                 }.padding(
@@ -160,3 +176,9 @@ fun GdsAutocompleteField(
         }
     }
 }
+
+private fun String.withCursorAtEnd(): TextFieldValue = TextFieldValue(text = this, selection = TextRange(length))
+
+/** Keeps the user's cursor/selection while the text is unchanged; otherwise places the cursor at the end of [text]. */
+private fun TextFieldValue.syncedWith(text: String): TextFieldValue =
+    if (this.text == text) this else text.withCursorAtEnd()

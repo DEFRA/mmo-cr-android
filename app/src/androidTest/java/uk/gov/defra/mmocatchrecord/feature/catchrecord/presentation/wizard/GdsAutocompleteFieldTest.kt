@@ -4,12 +4,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextInputSelection
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextRange
 import org.junit.Rule
 import org.junit.Test
 import uk.gov.defra.mmocatchrecord.common.design.GdsAutocompleteField
@@ -24,6 +30,48 @@ class GdsAutocompleteFieldTest {
 
     @Test
     fun autocompleteGatesSuggestionsUntilTwoCharactersAndUpdatesLiveRegion() {
+        setPortAutocompleteContent()
+
+        composeTestRule.onAllNodesWithTag("port_suggestion_0").assertCountEquals(0)
+        composeTestRule.onNodeWithTag("port_field").performTextInput("H")
+        composeTestRule.onAllNodesWithTag("port_suggestion_0").assertCountEquals(0)
+        composeTestRule.onNodeWithTag("port_field").performTextInput("a")
+        composeTestRule.onNodeWithTag("port_live_region")
+        composeTestRule.onAllNodesWithTag("port_suggestion_0").assertCountEquals(1)
+        composeTestRule.onNodeWithTag("port_suggestion_0").performClick()
+        composeTestRule.onAllNodesWithTag("port_suggestion_0").assertCountEquals(0)
+    }
+
+    @Test
+    fun selectingSuggestionAfterPartialInputPlacesCursorAtEndOfSelectedLabel() {
+        setPortAutocompleteContent()
+
+        composeTestRule.onNodeWithTag("port_field").performTextInput("Ha")
+        composeTestRule.onNodeWithTag("port_suggestion_0").performClick()
+
+        composeTestRule
+            .onNodeWithTag("port_field")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText, AnnotatedString("Hastings")))
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.TextSelectionRange, TextRange("Hastings".length)))
+    }
+
+    @Test
+    fun selectingSuggestionMatchingTypedTextMovesCursorFromMiddleToEnd() {
+        setPortAutocompleteContent()
+
+        composeTestRule.onNodeWithTag("port_field").performTextInput("Dover")
+        composeTestRule.onNodeWithTag("port_field").performTextInputSelection(TextRange(2))
+        // A cursor-only move must not dismiss or reset the open suggestion list.
+        composeTestRule.onAllNodesWithTag("port_suggestion_0").assertCountEquals(1)
+        composeTestRule.onNodeWithTag("port_suggestion_0").performClick()
+
+        composeTestRule
+            .onNodeWithTag("port_field")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.TextSelectionRange, TextRange("Dover".length)))
+        composeTestRule.onAllNodesWithTag("port_suggestion_0").assertCountEquals(0)
+    }
+
+    private fun setPortAutocompleteContent() {
         composeTestRule.setContent {
             MmoTheme {
                 var value by remember { mutableStateOf("") }
@@ -49,14 +97,5 @@ class GdsAutocompleteFieldTest {
                 )
             }
         }
-
-        composeTestRule.onAllNodesWithTag("port_suggestion_0").assertCountEquals(0)
-        composeTestRule.onNodeWithTag("port_field").performTextInput("H")
-        composeTestRule.onAllNodesWithTag("port_suggestion_0").assertCountEquals(0)
-        composeTestRule.onNodeWithTag("port_field").performTextInput("a")
-        composeTestRule.onAllNodesWithTag("port_live_region").assertCountEquals(1)
-        composeTestRule.onAllNodesWithTag("port_suggestion_0").assertCountEquals(1)
-        composeTestRule.onNodeWithTag("port_suggestion_0").performClick()
-        composeTestRule.onAllNodesWithTag("port_suggestion_0").assertCountEquals(0)
     }
 }
