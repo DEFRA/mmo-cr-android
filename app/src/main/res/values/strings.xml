@@ -100,7 +100,10 @@
     <string name="return_port_autocomplete_label">Enter the port or closest port you returned to</string>
     <string name="add_port">Add port</string>
     <string name="port_selection_error">Select a port or choose one from the list</string>
-    <string name="port_search_type_more_characters">Type at least %1$d characters for suggestions</string>
+    <plurals name="port_search_type_more_characters">
+        <item quantity="one">Type at least %1$d character for suggestions</item>
+        <item quantity="other">Type at least %1$d characters for suggestions</item>
+    </plurals>
     <string name="port_search_no_matches_found">No matching ports found</string>
     <string name="same_port_shortcut_question">Was %1$s the port or the closest port you set off from and returned to?</string>
     <string name="same_port_shortcut_error">Select whether you used the same port for departure and return</string>
@@ -144,6 +147,11 @@
     <string name="gear_stat_rectangle_no_matches_found">No matching statistical sub-rectangles found</string>
     <string name="gear_stat_rectangle_error_required">Select a statistical subrectangle</string>
     <string name="gear_stat_rectangle_error_format">Enter a statistical subrectangle in the correct format, for example 38E84</string>
+    <string name="gear_stat_rectangle_selected_area">Selected area: %1$s</string>
+    <string name="gear_stat_rectangle_selected_area_none">No area selected</string>
+    <string name="gear_stat_rectangle_map_unavailable">The map could not be loaded. Select Other to choose a statistical sub-rectangle from a list instead.</string>
+    <string name="gear_stat_rectangle_map_content_description">Map of fisheries statistical sub-rectangles near your departure port. %1$s Drag to pan and pinch to zoom. Select Other for a list you can search without using the map.</string>
+    <string name="gear_stat_rectangle_map_choose_from_list_action">Choose a statistical sub-area from a list</string>
     <string name="gear_species_search_title">Which species did you catch with %1$s?</string>
     <string name="gear_species_search_title_fallback">Which species did you catch?</string>
     <string name="gear_species_search_autocomplete_label">Type to search (minimum 2 characters)</string>

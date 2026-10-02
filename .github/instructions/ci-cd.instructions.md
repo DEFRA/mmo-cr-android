@@ -27,7 +27,9 @@ release engineering. Any deviation from a DEFRA standard must be raised as a gov
   lanes (the AAB itself is built by Gradle). Do **not** introduce a second deployment mechanism.
 - **Build system:** **Gradle (Kotlin DSL)** with a version catalog (`gradle/libs.versions.toml`). Build an
   **Android App Bundle (AAB)** for release (`bundleRelease`), never a bare APK for Play upload.
-- **Build infrastructure:** **GitHub-hosted Ubuntu runners** (e.g. `ubuntu-latest`). Pin the JDK
+- **Build infrastructure:** **GitHub-hosted Ubuntu runners**, pinned to a specific image
+  (e.g. `ubuntu-24.04`) rather than the floating `ubuntu-latest`, so builds stay reproducible; bump the
+  pin manually before GitHub retires the image. Pin the JDK
   (Temurin 21, matching `jvmToolchain(21)` and `gradle/gradle-daemon-jvm.properties`), the Android
   SDK/command-line-tools and build-tools versions, and cache Gradle so builds are
   reproducible. Instrumented tests run on an emulator (e.g. `reactivecircus/android-emulator-runner`) or a

@@ -60,7 +60,7 @@ sealed interface WizardStep {
      * true`, in `draft.gearUses` order, until every confirmed gear has recorded a
      * `statisticalSubRectangleCode`. A single step (not one per gear or per sub-screen): which gear is
      * "current" and whether the grid/radio-list/autocomplete sub-screen is shown is derived from the draft
-     * and local screen state respectively — see `GearStatRectangleScreen` and [nextWizardStepForDraft].
+     * and local screen state respectively — see `MapScreen` and [nextWizardStepForDraft].
      */
     data object GearStatRectangle : WizardStep
 

@@ -40,3 +40,4 @@ vessels, ports, gear types, species, statistical sub-rectangles, and the port→
   mistaken for real MMO reference data when the feature moves to a real API.
 - When a real reference-data API is introduced, this ADR should be revisited/superseded rather than
   silently replaced, so the swap is visible in governance history.
+

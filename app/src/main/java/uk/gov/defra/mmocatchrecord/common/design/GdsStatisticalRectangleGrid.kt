@@ -31,7 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 /**
- * A schematic, Compose-drawn grid of labelled statistical sub-rectangle cells — see `GearStatRectangleScreen`
+ * A schematic, Compose-drawn grid of labelled statistical sub-rectangle cells — see `MapScreen`
  * (Phase 4). Deliberately **not** a real map: no map tiles, no coastline imagery, and no external mapping
  * SDK (e.g. Google Maps/Mapbox) is used, which also avoids any device location-permission surface. Codes
  * are laid out in reading-order rows of [columns] cells; the reference-data stub currently only supplies a

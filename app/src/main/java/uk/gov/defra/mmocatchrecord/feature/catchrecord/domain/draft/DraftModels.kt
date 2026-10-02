@@ -104,7 +104,7 @@ data class GearUse(
     /**
      * The statistical sub-rectangle **code** (e.g. `"38E95"`) recorded for this gear use (Phase 4), `null`
      * until the per-gear "Where was the majority of your catch caught using {gear}?" step has been
-     * completed for it — see `GearStatRectangleScreen`, driven only for gear uses where
+     * completed for it — see `MapScreen`, driven only for gear uses where
      * [confirmedUsedOnTrip] is true (FR7/FR8). Deliberately a plain code string, not a foreign-key id into
      * [uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.StatisticalSubRectangle] — the
      * "Other" free-text search path accepts any correctly formatted code, including ones not present in the

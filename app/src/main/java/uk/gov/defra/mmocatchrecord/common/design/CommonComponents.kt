@@ -3,6 +3,7 @@
 package uk.gov.defra.mmocatchrecord.common.design
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -44,7 +45,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -136,7 +136,6 @@ fun OfflineBanner(modifier: Modifier = Modifier) {
             Surface(
                 color = MmoColors.ErrorRed,
                 shape = RoundedCornerShape(2.dp),
-                modifier = Modifier.clearAndSetSemantics {},
             ) {
                 Text(
                     text = label,
@@ -218,7 +217,11 @@ fun SecondaryActionButton(
         onClick = onClick,
         enabled = enabled,
         shape = RoundedCornerShape(0.dp),
-        border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp),
+        border =
+            BorderStroke(
+                width = 1.dp,
+                color = if (enabled) MmoColors.Text else MmoColors.Grey1,
+            ),
         colors =
             ButtonDefaults.outlinedButtonColors(
                 containerColor = MmoColors.White,

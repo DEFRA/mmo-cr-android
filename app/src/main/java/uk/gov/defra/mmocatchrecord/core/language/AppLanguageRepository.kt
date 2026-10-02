@@ -11,7 +11,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
-/** English/Welsh language codes supported by [AppLanguageProvider][uk.gov.defra.mmocatchrecord.common.design.AppLanguageProvider]. */
+/**
+ * English/Welsh language codes supported by
+ * [AppLanguageProvider][uk.gov.defra.mmocatchrecord.common.design.AppLanguageProvider].
+ */
 object AppLanguage {
     const val ENGLISH = "en"
     const val WELSH = "cy"

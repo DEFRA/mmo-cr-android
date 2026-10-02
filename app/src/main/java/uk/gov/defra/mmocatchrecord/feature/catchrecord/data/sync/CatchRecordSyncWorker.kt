@@ -32,8 +32,8 @@ class CatchRecordSyncWorker
         private val submissionRepository: CatchRecordSubmissionRepository,
     ) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result {
-            val draftId = inputData.getString(KEY_DRAFT_ID) ?: return Result.failure()
-            val draft = draftRepository.getDraftById(draftId).getOrNull() ?: return Result.failure()
+            val draftId = inputData.getString(KEY_DRAFT_ID)
+            val draft = draftId?.let { draftRepository.getDraftById(it).getOrNull() } ?: return Result.failure()
 
             // Already handled (e.g. a previous run of this same work succeeded before a process death, or
             // the draft was discarded) — nothing left to do, and re-submitting would not be idempotent.

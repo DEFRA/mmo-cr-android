@@ -5,7 +5,7 @@ package uk.gov.defra.mmocatchrecord.common.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -47,10 +47,10 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearSearchScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearSpeciesChecklistScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearSpeciesSearchScreen
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearStatRectangleScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearSummaryScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.landing.NotLandedStraightAwayDecisionScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.landing.NotLandedStraightAwaySpeciesScreen
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map.MapScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.submission.CheckYourAnswersScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.submission.LateSubmissionWarningScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.submission.SubmissionPendingSyncScreen
@@ -183,7 +183,7 @@ fun MmoNavHost(
             }
             composable<GearStatRectangleRoute> { backStackEntry ->
                 val editGearUseId = backStackEntry.toRoute<GearStatRectangleRoute>().editGearUseId
-                GearStatRectangleScreen(
+                MapScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
                     editGearUseId = editGearUseId,
                     onNavigate = { navController.navigate(routeFor(it)) },

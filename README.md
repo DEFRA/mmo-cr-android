@@ -25,6 +25,9 @@ cd mmo-cr-android
 # Lint / static analysis
 ./gradlew ktlintCheck detekt lintDebug --continue
 
+# Regenerate the offline map data (also runs automatically before assembleDebug/Release)
+./gradlew :app:generateDebugMapData
+
 # Install & run on a connected device/emulator
 ./gradlew installDebug
 ```
@@ -74,6 +77,9 @@ split per feature package, per
   Stage 1 ships interfaces and in-memory fakes only. Real implementations must use Android Keystore
   (+ Tink) for data-at-rest, never plain `EncryptedSharedPreferences`, and must never log biometric/session
   state or PII — see the KDoc on each interface in `core/security/`.
+- **Offline fisheries statistical sub-rectangle map** — a fully offline, custom Compose `Canvas`-rendered
+  map (no map SDK/tiles/API key/network) with a build-time GeoJSON preprocessing task in the `build-logic/`
+  composite Gradle build — see ADR 0013 and [`docs/development/offline-map.md`](docs/development/offline-map.md).
 - Full list of ADRs: [`docs/adr/`](docs/adr/).
 
 ## Developer guidelines
@@ -104,6 +110,7 @@ split per feature package, per
 | [0003](docs/adr/0003-room-offline-persistence.md) | Room for offline-first persistence |
 | [0004](docs/adr/0004-koin-dependency-injection.md) | Koin for dependency injection (superseded) |
 | [0005](docs/adr/0005-hilt-dependency-injection.md) | Hilt for dependency injection |
+| [0013](docs/adr/0013-offline-fisheries-map-rendering.md) | Offline fisheries statistical sub-rectangle map rendering |
 | [0000](docs/adr/0000-ios-adr-references-TBC.md) | iOS ADR references — TBC |
 
 ## CI
@@ -115,10 +122,14 @@ invocation goes through a Fastlane lane in `fastlane/Fastfile`, so CI and local 
 It does **not** perform release signing or Play Store publishing — that is a separate
 release-engineering/DevOps responsibility, out of scope for this workflow.
 
-SonarCloud analysis is configured in `sonar-project.properties` but the scan step in the workflow is
-**commented out** until the `DEFRA_mmo-cr-android` SonarCloud project and the `MMO_CR_SONAR_TOKEN` secret
-exist. Actions are currently pinned by version tag rather than commit SHA for readability; they must be
-re-hardened to SHAs (a DEFRA supply-chain requirement) before this workflow gates production releases.
+Every third-party Action is pinned to a **full commit SHA** (a DEFRA supply-chain requirement) with the
+version in a trailing comment, and `.github/dependabot.yml` keeps those pins current via the
+`github-actions` ecosystem (weekly, grouped). Runners are pinned to **`ubuntu-24.04`** rather than
+`ubuntu-latest` for reproducibility — that pin must be bumped **manually** before GitHub retires the image.
+
+SonarCloud analysis is configured in `sonar-project.properties` and the scan step runs in the workflow, but
+it cannot pass until the `DEFRA_mmo-cr-android` SonarCloud project and the `MMO_CR_SONAR_TOKEN` secret
+exist.
 
 ### Job ordering
 

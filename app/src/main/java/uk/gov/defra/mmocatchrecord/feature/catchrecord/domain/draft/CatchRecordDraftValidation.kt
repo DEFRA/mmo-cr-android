@@ -23,7 +23,10 @@ enum class DraftSubmissionIssue {
     /** [CatchRecordDraft.notLandedStraightAway] is `true` but [CatchRecordDraft.notLandedSpeciesEntries] is empty. */
     NotLandedSpeciesIncomplete,
 
-    /** [CatchRecordDraft.status] is already terminal ([DraftStatus.Submitted]/[DraftStatus.Discarded]) — this draft must never be (re-)submitted. */
+    /**
+     * [CatchRecordDraft.status] is already terminal ([DraftStatus.Submitted]/[DraftStatus.Discarded]) — this
+     * draft must never be (re-)submitted.
+     */
     DraftNotInSubmittableStatus,
 }
 
@@ -66,24 +69,28 @@ object CatchRecordDraftValidation {
             issues += DraftSubmissionIssue.PortsIncomplete
         }
 
-        val confirmedGearUses = draft.gearUses.filter { it.confirmedUsedOnTrip }
-        if (confirmedGearUses.isEmpty()) {
-            issues += DraftSubmissionIssue.NoConfirmedGear
-        } else {
-            if (confirmedGearUses.any { it.statisticalSubRectangleCode == null }) {
-                issues += DraftSubmissionIssue.GearMissingStatisticalSubRectangle
-            }
-            if (confirmedGearUses.any { gearUse -> gearUse.speciesWeights.none { it.confirmedCaught } }) {
-                issues += DraftSubmissionIssue.GearMissingConfirmedSpecies
-            }
-            if (draft.notLandedStraightAway == null) {
-                issues += DraftSubmissionIssue.NotLandedDecisionUnanswered
-            }
-            if (draft.notLandedStraightAway == true && draft.notLandedSpeciesEntries.isEmpty()) {
-                issues += DraftSubmissionIssue.NotLandedSpeciesIncomplete
-            }
-        }
+        issues += gearAndLandingIssues(draft)
 
         return if (issues.isEmpty()) DraftSubmissionValidation.Valid else DraftSubmissionValidation.Invalid(issues)
+    }
+
+    private fun gearAndLandingIssues(draft: CatchRecordDraft): List<DraftSubmissionIssue> {
+        val confirmedGearUses = draft.gearUses.filter { it.confirmedUsedOnTrip }
+        if (confirmedGearUses.isEmpty()) return listOf(DraftSubmissionIssue.NoConfirmedGear)
+
+        val issues = mutableListOf<DraftSubmissionIssue>()
+        if (confirmedGearUses.any { it.statisticalSubRectangleCode == null }) {
+            issues += DraftSubmissionIssue.GearMissingStatisticalSubRectangle
+        }
+        if (confirmedGearUses.any { gearUse -> gearUse.speciesWeights.none { it.confirmedCaught } }) {
+            issues += DraftSubmissionIssue.GearMissingConfirmedSpecies
+        }
+        if (draft.notLandedStraightAway == null) {
+            issues += DraftSubmissionIssue.NotLandedDecisionUnanswered
+        }
+        if (draft.notLandedStraightAway == true && draft.notLandedSpeciesEntries.isEmpty()) {
+            issues += DraftSubmissionIssue.NotLandedSpeciesIncomplete
+        }
+        return issues
     }
 }

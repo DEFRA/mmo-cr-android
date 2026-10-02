@@ -22,8 +22,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -37,7 +37,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.AppLanguageProvider
@@ -56,20 +56,29 @@ data class WizardErrorSummaryItem(
     val onClick: () -> Unit,
 )
 
-/** Resolved language/connectivity state a wizard screen needs, from either Hilt or a preview default. */
-private data class WizardScaffoldState(
+/** Resolved language/connectivity state a wizard screen needs, from Hilt, [LocalWizardScaffoldState] or a preview default. */
+data class WizardScaffoldState(
     val currentLanguage: String,
     val onLanguageToggle: () -> Unit,
     val isOffline: Boolean,
 )
 
 /**
- * Resolves [WizardScaffoldState] from the real Hilt-backed [AppLanguageViewModel]/[ConnectivityViewModel],
- * or safe preview defaults when composed inside `@Preview`/inspection mode (see [CatchRecordWizardScaffold]
- * doc comment on `hiltViewModel()` availability).
+ * Optional explicit [WizardScaffoldState] for [CatchRecordWizardScaffold]. `null` (the default, and always
+ * the case in the running app) resolves it from the Hilt-backed view models. Instrumented tests that compose
+ * a wizard screen inside a plain, non-Hilt `ComponentActivity` provide a fixed state here instead, since
+ * `hiltViewModel()` requires an `@AndroidEntryPoint` host.
+ */
+val LocalWizardScaffoldState = staticCompositionLocalOf<WizardScaffoldState?> { null }
+
+/**
+ * Resolves [WizardScaffoldState] from [LocalWizardScaffoldState] when provided, otherwise from the real
+ * Hilt-backed [AppLanguageViewModel]/[ConnectivityViewModel], or safe preview defaults when composed inside
+ * `@Preview`/inspection mode (see [CatchRecordWizardScaffold] doc comment on `hiltViewModel()` availability).
  */
 @Composable
 private fun rememberWizardScaffoldState(): WizardScaffoldState {
+    LocalWizardScaffoldState.current?.let { return it }
     if (LocalInspectionMode.current) {
         return WizardScaffoldState(
             currentLanguage = AppLanguage.ENGLISH,

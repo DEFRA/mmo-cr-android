@@ -36,17 +36,23 @@ restate or fork it. Your primary standards reference is
 > **Status: ⚠️ Partially confirmed**
 >
 > **Confirmed (CI / build-and-test stack) — safe to build on, do not re-prompt:**
-> GitHub Actions as the orchestrator on `ubuntu-latest`; **Fastlane + Bundler** (`Gemfile`/`Gemfile.lock`,
+> GitHub Actions as the orchestrator on a **pinned `ubuntu-24.04`** runner image (confirmed 2026-10-01 by
+> the user via the Android Orchestrator; bump the pin manually before image retirement); **Fastlane +
+> Bundler** (`Gemfile`/`Gemfile.lock`,
 > Ruby 3.3) as the single entry point for every Gradle invocation, with `lint` / `build` / `test` /
 > `instrumented_test` lanes; **Temurin JDK 21** (matching `jvmToolchain(21)` and
 > `gradle/gradle-daemon-jvm.properties`); Kover for coverage (`koverXmlReportDebug`); emulator-based
-> instrumented tests via `reactivecircus/android-emulator-runner`.
+> instrumented tests via `reactivecircus/android-emulator-runner`; **every third-party Action pinned to a
+> full 40-char commit SHA** with a trailing `# vX.Y.Z` comment, kept current by Dependabot
+> (`github-actions` ecosystem) — confirmed 2026-10-01 by the user via the Android Orchestrator, which
+> **revoked** the former "pinned by version tag" deviation.
 > _Deviations from §5 / ci-cd defaults:_ (1) JDK **21**, not the previously documented Temurin 17 — the
-> instruction has been corrected; (2) third-party Actions are pinned by **version tag, not full commit
-> SHA**, a knowingly accepted temporary deviation from DEFRA's supply-chain requirement, to be re-hardened
-> to SHAs before the pipeline gates production releases; (3) **SonarCloud is configured but disabled** —
-> `sonar-project.properties` exists and the scan step is commented out in `android-ci.yml` pending the
-> `DEFRA_mmo-cr-android` project and `MMO_CR_SONAR_TOKEN` secret.
+> instruction has been corrected; (2) **SonarCloud is operational** — `sonar-project.properties` exists,
+> the scan step is live in `android-ci.yml`, and the `DEFRA_mmo-cr-android` project plus the
+> `MMO_CR_SONAR_TOKEN` secret now exist; analysis uploads successfully (first green upload observed
+> 2026-10-02 on PR #7). The gate enforces **≥90% coverage on new code**, so a PR that adds code without
+> tests will fail `new_coverage` even when every Fastlane lane passes — that is an app-test gap for the
+> **Android Developer**, not a pipeline defect.
 >
 > **NOT yet confirmed (release / identity / signing stack) — the gate below still applies:**
 > `applicationId` scheme and product flavors (the app currently ships a single

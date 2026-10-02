@@ -14,17 +14,17 @@ import uk.gov.defra.mmocatchrecord.core.language.AppLanguageRepository
 import uk.gov.defra.mmocatchrecord.core.language.DataStoreAppLanguageRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.CatchRecordDraftDao
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.RoomCatchRecordDraftRepository
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.map.AssetMapDataRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.StubReferenceDataRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission.StubCatchRecordSubmissionRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.sync.WorkManagerCatchRecordSyncScheduler
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordSubmissionRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordSyncScheduler
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.map.MapDataRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.ReferenceDataRepository
 import uk.gov.defra.mmocatchrecord.feature.home.data.FakeHomeRepository
 import uk.gov.defra.mmocatchrecord.feature.home.domain.HomeRepository
-import uk.gov.defra.mmocatchrecord.feature.map.data.FakeMapRepository
-import uk.gov.defra.mmocatchrecord.feature.map.domain.MapRepository
 import uk.gov.defra.mmocatchrecord.feature.signin.data.FakeSignInRepository
 import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInRepository
 import javax.inject.Singleton
@@ -42,10 +42,6 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideHomeRepository(): HomeRepository = FakeHomeRepository()
-
-    @Provides
-    @Singleton
-    fun provideMapRepository(): MapRepository = FakeMapRepository()
 
     @Provides
     @Singleton
@@ -92,4 +88,10 @@ object RepositoryModule {
     fun provideAppLanguageRepository(
         @ApplicationContext context: Context,
     ): AppLanguageRepository = DataStoreAppLanguageRepository(context)
+
+    @Provides
+    @Singleton
+    fun provideMapDataRepository(
+        @ApplicationContext context: Context,
+    ): MapDataRepository = AssetMapDataRepository(context)
 }

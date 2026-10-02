@@ -236,13 +236,26 @@ class CatchRecordFlowViewModel
          * pending gear-type selection: a gear type with no confirmed measurement schema
          * (`GearType.measurementFields` empty) must never be accepted, even via a direct event dispatch that
          * bypassed [uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearTypeSearch.selectableGearTypes]'s
-         * UI-level filtering (which already hides such gear types from the search screen's suggestions). An
-         * invalid selection is silently ignored rather than surfaced as an error: the UI-level filtering is
-         * the primary defence and already prevents a real user from ever reaching this with an invalid id.
+         * UI-level filtering (which already hides such gear types from the search screen's suggestions).
+         *
+         * Bug fix: an invalid selection now *clears* any existing [CatchRecordFlowViewState.pendingGearTypeId]
+         * rather than silently leaving it untouched. Previously, silently ignoring an invalid id meant a
+         * *stale* `pendingGearTypeId` left over from an earlier, valid selection in the same session (e.g.
+         * "Seine nets", commonly the first gear type a user tries) would carry straight through to the
+         * measurement screen and the resulting `GearUse.gearTypeId` — the wrong gear silently "wins" instead
+         * of the invalid selection being surfaced. The UI-level filtering
+         * ([uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearTypeSearch.selectableGearTypes])
+         * remains the primary defence and already prevents a real user from ever reaching this with an
+         * invalid id, but this is now defensive-in-depth: an invalid/bypassed id results in a *cleared*
+         * pending selection (surfaced by [uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearMeasurementScreen]'s
+         * existing "missing gear type" defensive error state), never a stale one.
          */
         private fun gearTypeSelected(gearTypeId: String) {
-            val gearType = currentState.gearTypes.firstOrNull { it.id == gearTypeId } ?: return
-            if (gearType.measurementFields.isEmpty()) return
+            val gearType = currentState.gearTypes.firstOrNull { it.id == gearTypeId }
+            if (gearType == null || gearType.measurementFields.isEmpty()) {
+                updateState { it.copy(pendingGearTypeId = null) }
+                return
+            }
             updateState { it.copy(pendingGearTypeId = gearTypeId) }
         }
 

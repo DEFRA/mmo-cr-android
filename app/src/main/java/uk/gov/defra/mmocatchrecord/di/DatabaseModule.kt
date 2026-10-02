@@ -29,6 +29,8 @@ object DatabaseModule {
         @ApplicationContext context: Context,
     ): CatchRecordPassphraseProvider = CatchRecordPassphraseProvider(context)
 
+    // Room's addMigrations only accepts varargs; the one-off array copy at startup is negligible.
+    @Suppress("SpreadOperator")
     @Provides
     @Singleton
     fun provideCatchRecordDatabase(
