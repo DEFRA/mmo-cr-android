@@ -1,4 +1,4 @@
-@file:Suppress("detekt.LongMethod", "detekt.LongParameterList", "detekt.TooManyFunctions")
+@file:Suppress("detekt.LongMethod", "detekt.TooManyFunctions")
 
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map
 
@@ -72,6 +72,30 @@ private const val PILL_PADDING_DP = 6f
 private const val HALO_STROKE_WIDTH_DP = 3f
 private const val PILL_TEXT_BASELINE_OFFSET_DIVISOR = 3f
 
+/** Groups [camera] with its change callback — keeps [MapCanvas]'s parameter count within the kotlin:S107
+ * limit instead of passing both separately. */
+data class MapCameraState(
+    val camera: MapCamera,
+    val onCameraChange: (MapCamera) -> Unit,
+)
+
+/** Groups the selected statistical sub-rectangle code with its change callback — see [MapCameraState]. */
+data class MapSelectionState(
+    val selectedCode: String?,
+    val onCodeSelected: (String?) -> Unit,
+)
+
+/**
+ * The latest camera/selection/accessibility-action callbacks — read by the long-lived gesture coroutine
+ * below on every recomposition rather than the values captured when `pointerInput` first started (see
+ * [MapCanvas]'s single `rememberUpdatedState` call).
+ */
+private data class MapCanvasLatest(
+    val cameraState: MapCameraState,
+    val selection: MapSelectionState,
+    val onChooseFromListRequested: () -> Unit,
+)
+
 /**
  * Renders the offline fisheries statistical sub-rectangle map (see docs/development/offline-map.md) using
  * `Canvas` only — no map SDK/tiles. Draw order bottom-to-top: sea background, land, sub-rectangle grid,
@@ -82,10 +106,8 @@ private const val PILL_TEXT_BASELINE_OFFSET_DIVISOR = 3f
 @Suppress("FunctionNaming")
 fun MapCanvas(
     dataset: MapDataset,
-    camera: MapCamera,
-    onCameraChange: (MapCamera) -> Unit,
-    selectedCode: String?,
-    onCodeSelected: (String?) -> Unit,
+    cameraState: MapCameraState,
+    selection: MapSelectionState,
     modifier: Modifier = Modifier,
     testTag: String = MapScreenTestTags.MAP,
     onChooseFromListRequested: () -> Unit = {},
@@ -94,13 +116,10 @@ fun MapCanvas(
     val geometry = remember(dataset) { MapCanvasGeometry.from(dataset) }
     // The gesture coroutine outlives recompositions; read the latest camera/callbacks rather than the
     // values captured when pointerInput first started.
-    val currentCamera by rememberUpdatedState(camera)
-    val currentOnCameraChange by rememberUpdatedState(onCameraChange)
-    val currentOnCodeSelected by rememberUpdatedState(onCodeSelected)
-    val currentOnChooseFromListRequested by rememberUpdatedState(onChooseFromListRequested)
+    val latest by rememberUpdatedState(MapCanvasLatest(cameraState, selection, onChooseFromListRequested))
 
     val selectionClause =
-        selectedCode?.let { stringResource(R.string.gear_stat_rectangle_selected_area, it) }
+        selection.selectedCode?.let { stringResource(R.string.gear_stat_rectangle_selected_area, it) }
             ?: stringResource(R.string.gear_stat_rectangle_selected_area_none)
     val mapContentDescription = stringResource(R.string.gear_stat_rectangle_map_content_description, selectionClause)
     val chooseFromListActionLabel = stringResource(R.string.gear_stat_rectangle_map_choose_from_list_action)
@@ -117,7 +136,7 @@ fun MapCanvas(
                             CustomAccessibilityAction(
                                 label = chooseFromListActionLabel,
                                 action = {
-                                    currentOnChooseFromListRequested()
+                                    latest.onChooseFromListRequested()
                                     true
                                 },
                             ),
@@ -136,25 +155,23 @@ fun MapCanvas(
                     .pointerInput(geometry) {
                         handleMapGestures(
                             onTap = { x, y ->
-                                currentOnCodeSelected(
-                                    hitTest(
-                                        geometry,
-                                        currentCamera,
-                                        x,
-                                        y,
+                                val projection =
+                                    MapProjection(
+                                        latest.cameraState.camera,
                                         size.width.toFloat(),
                                         size.height.toFloat(),
-                                    ),
-                                )
+                                    )
+                                latest.selection.onCodeSelected(hitTest(geometry, projection, x, y))
                             },
                             onTransform = { pan, zoom ->
-                                val panned = CameraMath.pan(currentCamera, pan.x, pan.y, size.width.toFloat())
-                                currentOnCameraChange(CameraMath.zoom(panned, zoom))
+                                val panned =
+                                    CameraMath.pan(latest.cameraState.camera, pan.x, pan.y, size.width.toFloat())
+                                latest.cameraState.onCameraChange(CameraMath.zoom(panned, zoom))
                             },
                         )
                     },
         ) {
-            drawMap(geometry, camera, selectedCode, density)
+            drawMap(geometry, cameraState.camera, selection.selectedCode, density)
         }
     }
 }
@@ -206,15 +223,21 @@ private suspend fun PointerInputScope.handleMapGestures(
     }
 }
 
+/** Camera plus the canvas pixel dimensions it's projecting into — bundled since nearly every draw/hit-test
+ * helper below needs all three together (see kotlin:S107 parameter-count limit). */
+private data class MapProjection(
+    val camera: MapCamera,
+    val widthPx: Float,
+    val heightPx: Float,
+)
+
 private fun hitTest(
     geometry: MapCanvasGeometry,
-    camera: MapCamera,
+    projection: MapProjection,
     x: Float,
     y: Float,
-    widthPx: Float,
-    heightPx: Float,
 ): String? {
-    val geoPoint = CameraMath.screenToGeo(x, y, camera, widthPx, heightPx)
+    val geoPoint = CameraMath.screenToGeo(x, y, projection.camera, projection.widthPx, projection.heightPx)
     val hit =
         geometry.subRectangles.firstOrNull { (subRect, multiPolygon) ->
             subRect.isSeaOverlapping &&
@@ -235,29 +258,24 @@ private fun DrawScope.drawMap(
     selectedCode: String?,
     density: Density,
 ) {
-    val widthPx = size.width
-    val heightPx = size.height
-    val viewport = viewportBBox(camera, widthPx, heightPx)
+    val projection = MapProjection(camera, size.width, size.height)
+    val viewport = viewportBBox(projection.camera, projection.widthPx, projection.heightPx)
 
-    drawLand(geometry, camera, widthPx, heightPx, density)
-    drawGridAndSelection(geometry, camera, widthPx, heightPx, viewport, selectedCode, density)
-    drawPorts(geometry, camera, widthPx, heightPx, viewport, density)
+    drawLand(geometry, projection, density)
+    drawGridAndSelection(geometry, projection, viewport, selectedCode, density)
+    drawPorts(geometry, projection, viewport, density)
 }
 
 private fun DrawScope.drawLand(
     geometry: MapCanvasGeometry,
-    camera: MapCamera,
-    widthPx: Float,
-    heightPx: Float,
+    projection: MapProjection,
     density: Density,
 ) {
     geometry.land.forEach { multiPolygon ->
-        drawMultiPolygon(multiPolygon, camera, widthPx, heightPx, MmoColors.MapLand, filled = true)
+        drawMultiPolygon(multiPolygon, projection, MmoColors.MapLand, filled = true)
         drawMultiPolygon(
             multiPolygon,
-            camera,
-            widthPx,
-            heightPx,
+            projection,
             Color.Black,
             filled = false,
             strokeWidthDp = LAND_STROKE_DP,
@@ -270,9 +288,7 @@ private fun DrawScope.drawLand(
  * pill label — see requirement #6's draw order (grid, then selected, then labels). */
 private fun DrawScope.drawGridAndSelection(
     geometry: MapCanvasGeometry,
-    camera: MapCamera,
-    widthPx: Float,
-    heightPx: Float,
+    projection: MapProjection,
     viewport: BBox,
     selectedCode: String?,
     density: Density,
@@ -287,12 +303,10 @@ private fun DrawScope.drawGridAndSelection(
         val strokeWidthDp = if (isSelected) GRID_STROKE_DP * SELECTED_STROKE_MULTIPLIER else GRID_STROKE_DP
         val colour = if (isSelected) MmoColors.MapSelectedFill else MmoColors.MapGridLine
         val fillAlpha = if (isSelected) SELECTED_FILL_ALPHA else GRID_FILL_ALPHA
-        drawMultiPolygon(multiPolygon, camera, widthPx, heightPx, colour, filled = true, fillAlpha = fillAlpha)
+        drawMultiPolygon(multiPolygon, projection, colour, filled = true, fillAlpha = fillAlpha)
         drawMultiPolygon(
             multiPolygon,
-            camera,
-            widthPx,
-            heightPx,
+            projection,
             colour,
             filled = false,
             strokeWidthDp = strokeWidthDp,
@@ -300,23 +314,21 @@ private fun DrawScope.drawGridAndSelection(
         )
 
         if (!isSelected && subRect.isSeaOverlapping && visibleLabels < MAX_VISIBLE_LABELS) {
-            drawSubRectangleLabel(subRect, camera, widthPx, heightPx, density, isSelected = false)
+            drawSubRectangleLabel(subRect, projection, density, isSelected = false)
             visibleLabels++
         }
     }
     // Selected label drawn last (on top) as the amber "pill".
     selectedCode?.let { code ->
         geometry.subRectangles.firstOrNull { it.first.code == code }?.let { (subRect, _) ->
-            drawSubRectangleLabel(subRect, camera, widthPx, heightPx, density, isSelected = true)
+            drawSubRectangleLabel(subRect, projection, density, isSelected = true)
         }
     }
 }
 
 private fun DrawScope.drawPorts(
     geometry: MapCanvasGeometry,
-    camera: MapCamera,
-    widthPx: Float,
-    heightPx: Float,
+    projection: MapProjection,
     viewport: BBox,
     density: Density,
 ) {
@@ -326,7 +338,7 @@ private fun DrawScope.drawPorts(
         .filter { (_, point) -> viewport.contains(point) }
         .take(MAX_VISIBLE_PORTS)
         .forEach { (port, point) ->
-            val screen = CameraMath.geoToScreen(point, camera, widthPx, heightPx)
+            val screen = CameraMath.geoToScreen(point, projection.camera, projection.widthPx, projection.heightPx)
             drawCircle(
                 color = MmoColors.MapPortDot,
                 radius = with(density) { PORT_DOT_RADIUS_DP.dp.toPx() },
@@ -347,9 +359,7 @@ private fun SerializablePoint.toGeoPointLocal() = GeoPoint(lon, lat)
 
 private fun DrawScope.drawMultiPolygon(
     multiPolygon: MultiPolygon,
-    camera: MapCamera,
-    widthPx: Float,
-    heightPx: Float,
+    projection: MapProjection,
     color: Color,
     filled: Boolean,
     fillAlpha: Float = 1f,
@@ -358,7 +368,7 @@ private fun DrawScope.drawMultiPolygon(
 ) {
     val strokeWidthPx = strokeWidthPxFor(strokeWidthDp, density)
     multiPolygon.polygons.forEach { polygon ->
-        val path = polygonPath(polygon, camera, widthPx, heightPx)
+        val path = polygonPath(polygon, projection)
         if (filled) {
             drawPath(path, color = color.copy(alpha = fillAlpha))
         } else {
@@ -374,13 +384,11 @@ private fun strokeWidthPxFor(
 
 private fun polygonPath(
     polygon: GeoPolygon,
-    camera: MapCamera,
-    widthPx: Float,
-    heightPx: Float,
+    projection: MapProjection,
 ): Path {
     val path = Path()
-    appendRing(path, polygon.shell, camera, widthPx, heightPx)
-    polygon.holes.forEach { appendRing(path, it, camera, widthPx, heightPx) }
+    appendRing(path, polygon.shell, projection)
+    polygon.holes.forEach { appendRing(path, it, projection) }
     path.fillType = PathFillType.EvenOdd
     return path
 }
@@ -388,12 +396,10 @@ private fun polygonPath(
 private fun appendRing(
     path: Path,
     ring: Ring,
-    camera: MapCamera,
-    widthPx: Float,
-    heightPx: Float,
+    projection: MapProjection,
 ) {
     ring.points.forEachIndexed { index, point ->
-        val screen = CameraMath.geoToScreen(point, camera, widthPx, heightPx)
+        val screen = CameraMath.geoToScreen(point, projection.camera, projection.widthPx, projection.heightPx)
         if (index == 0) path.moveTo(screen[0], screen[1]) else path.lineTo(screen[0], screen[1])
     }
     path.close()
@@ -401,13 +407,17 @@ private fun appendRing(
 
 private fun DrawScope.drawSubRectangleLabel(
     subRect: SerializableSubRectangle,
-    camera: MapCamera,
-    widthPx: Float,
-    heightPx: Float,
+    projection: MapProjection,
     density: Density,
     isSelected: Boolean,
 ) {
-    val screen = CameraMath.geoToScreen(subRect.centroid.toGeoPointLocal(), camera, widthPx, heightPx)
+    val screen =
+        CameraMath.geoToScreen(
+            subRect.centroid.toGeoPointLocal(),
+            projection.camera,
+            projection.widthPx,
+            projection.heightPx,
+        )
     if (isSelected) {
         drawSelectedPillLabel(subRect.code, screen[0], screen[1], density)
     } else {

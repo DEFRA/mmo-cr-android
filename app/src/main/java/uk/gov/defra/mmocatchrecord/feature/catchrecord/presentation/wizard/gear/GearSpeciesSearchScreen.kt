@@ -212,7 +212,7 @@ fun GearSpeciesSearchScreenContent(
 @Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
 @Suppress("FunctionNaming")
 @Composable
-fun GearSpeciesSearchScreen_Preview() {
+fun GearSpeciesSearchScreenPreview() {
     val gearType = GearType(id = "gear-seine-nets", name = "Seine nets (not specified)")
     val gearUse =
         GearUse(

@@ -574,7 +574,7 @@ internal fun speciesWeightErrorMessage(
 @Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
 @Suppress("FunctionNaming")
 @Composable
-fun GearSpeciesChecklistScreen_Preview() {
+fun GearSpeciesChecklistScreenPreview() {
     val gearType = GearType(id = "gear-seine-nets", name = "Seine nets (not specified)")
     val sampleSpecies =
         listOf(

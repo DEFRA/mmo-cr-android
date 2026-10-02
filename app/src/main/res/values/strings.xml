@@ -100,7 +100,10 @@
     <string name="return_port_autocomplete_label">Enter the port or closest port you returned to</string>
     <string name="add_port">Add port</string>
     <string name="port_selection_error">Select a port or choose one from the list</string>
-    <string name="port_search_type_more_characters">Type at least %1$d characters for suggestions</string>
+    <plurals name="port_search_type_more_characters">
+        <item quantity="one">Type at least %1$d character for suggestions</item>
+        <item quantity="other">Type at least %1$d characters for suggestions</item>
+    </plurals>
     <string name="port_search_no_matches_found">No matching ports found</string>
     <string name="same_port_shortcut_question">Was %1$s the port or the closest port you set off from and returned to?</string>
     <string name="same_port_shortcut_error">Select whether you used the same port for departure and return</string>

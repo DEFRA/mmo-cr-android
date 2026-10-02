@@ -8,7 +8,7 @@ import uk.gov.defra.mmocatchrecord.mapdata.MapDataset
  * fallback parse of the bundled source GeoJSON if that asset is missing, corrupt, or a stale format
  * version; never throws — failures are returned as a typed [Result] failure for the UI to handle.
  */
-interface MapDataRepository {
+fun interface MapDataRepository {
     suspend fun loadDataset(): Result<MapDataset>
 }
 

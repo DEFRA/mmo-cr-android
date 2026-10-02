@@ -1,4 +1,4 @@
-@file:Suppress("detekt.FunctionNaming", "detekt.LongMethod", "detekt.LongParameterList", "detekt.MaxLineLength")
+@file:Suppress("detekt.FunctionNaming", "detekt.LongMethod", "detekt.MaxLineLength")
 
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map
 
@@ -68,6 +68,26 @@ enum class MapEntryMode {
     Autocomplete,
 }
 
+/** Groups the current [MapEntryMode] sub-screen with its change callback — keeps composable parameter
+ * counts within the kotlin:S107 limit instead of passing both separately. */
+data class MapEntryModeState(
+    val entryMode: MapEntryMode,
+    val onEntryModeChange: (MapEntryMode) -> Unit,
+)
+
+/** Groups the offline map dataset's [UiStatus] with its retry callback — see [MapEntryModeState]. */
+data class MapDataUiState(
+    val mapStatus: UiStatus<MapDataset>,
+    val onRetryMapData: () -> Unit,
+)
+
+/** Groups the nearby (departure-port-matched) and full/global statistical sub-rectangle lists passed to
+ * [MapScreenContent]'s three sub-screens — see [MapEntryModeState]. */
+data class StatRectangleOptions(
+    val nearby: List<StatisticalSubRectangle>,
+    val all: List<StatisticalSubRectangle>,
+)
+
 object MapScreenTestTags {
     const val SCREEN = "gear_stat_rectangle_screen"
     const val ERROR_SUMMARY = "gear_stat_rectangle_error_summary"
@@ -134,8 +154,7 @@ fun MapScreen(
         onRetry = { viewModel.dispatch(CatchRecordFlowEvent.Retry) },
         onBack = onBack,
         modifier = modifier,
-        mapStatus = mapStatus,
-        onRetryMapData = mapDataViewModel::retry,
+        mapDataState = MapDataUiState(mapStatus, mapDataViewModel::retry),
     )
 }
 
@@ -148,8 +167,7 @@ internal fun MapScreen(
     modifier: Modifier = Modifier,
     editGearUseId: String? = null,
     onRetry: () -> Unit = {},
-    mapStatus: UiStatus<MapDataset> = UiStatus.Loading,
-    onRetryMapData: () -> Unit = {},
+    mapDataState: MapDataUiState = MapDataUiState(UiStatus.Loading, {}),
 ) {
     val draft = (state.status as? UiStatus.Content<CatchRecordDraft>)?.value
     val currentGearUse = MapSupport.currentGearUseFor(draft, editGearUseId)
@@ -174,16 +192,13 @@ internal fun MapScreen(
         referenceNumber = state.catchRecordReference,
     ) {
         MapScreenStatusContent(
-            status = state.status,
             draft = draft,
             currentGearUse = currentGearUse,
             state = state,
-            entryMode = entryMode,
-            onEntryModeChange = { entryMode = it },
+            entryModeState = MapEntryModeState(entryMode) { entryMode = it },
             onSubmit = onSubmit,
             onRetry = onRetry,
-            mapStatus = mapStatus,
-            onRetryMapData = onRetryMapData,
+            mapDataState = mapDataState,
         )
     }
 }
@@ -193,24 +208,20 @@ internal fun MapScreen(
 fun MapScreenContent(
     gearUse: GearUse,
     departurePort: Port?,
-    nearbyRectangles: List<StatisticalSubRectangle>,
-    allRectangles: List<StatisticalSubRectangle>,
-    entryMode: MapEntryMode,
-    onEntryModeChange: (MapEntryMode) -> Unit,
+    rectangleOptions: StatRectangleOptions,
+    entryModeState: MapEntryModeState,
     onSubmit: (String) -> Unit,
     modifier: Modifier = Modifier,
-    mapStatus: UiStatus<MapDataset> = UiStatus.Loading,
-    onRetryMapData: () -> Unit = {},
+    mapDataState: MapDataUiState = MapDataUiState(UiStatus.Loading, {}),
 ) {
-    when (entryMode) {
+    when (entryModeState.entryMode) {
         MapEntryMode.Grid ->
             MapGridContent(
                 gearUse = gearUse,
                 departurePort = departurePort,
-                nearbyRectangles = nearbyRectangles,
-                mapStatus = mapStatus,
-                onRetryMapData = onRetryMapData,
-                onOtherSelected = { onEntryModeChange(MapEntryMode.RadioList) },
+                nearbyRectangles = rectangleOptions.nearby,
+                mapDataState = mapDataState,
+                onOtherSelected = { entryModeState.onEntryModeChange(MapEntryMode.RadioList) },
                 onSubmit = onSubmit,
                 modifier = modifier,
             )
@@ -218,8 +229,8 @@ fun MapScreenContent(
         MapEntryMode.RadioList ->
             MapRadioListContent(
                 gearUse = gearUse,
-                nearbyRectangles = nearbyRectangles,
-                onOtherSelected = { onEntryModeChange(MapEntryMode.Autocomplete) },
+                nearbyRectangles = rectangleOptions.nearby,
+                onOtherSelected = { entryModeState.onEntryModeChange(MapEntryMode.Autocomplete) },
                 onSubmit = onSubmit,
                 modifier = modifier,
             )
@@ -227,7 +238,7 @@ fun MapScreenContent(
         MapEntryMode.Autocomplete ->
             MapAutocompleteContent(
                 gearUse = gearUse,
-                allRectangles = allRectangles,
+                allRectangles = rectangleOptions.all,
                 onSubmit = onSubmit,
                 modifier = modifier,
             )
@@ -247,8 +258,7 @@ private fun MapGridContent(
     gearUse: GearUse,
     departurePort: Port?,
     nearbyRectangles: List<StatisticalSubRectangle>,
-    mapStatus: UiStatus<MapDataset>,
-    onRetryMapData: () -> Unit,
+    mapDataState: MapDataUiState,
     onOtherSelected: () -> Unit,
     onSubmit: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -278,7 +288,7 @@ private fun MapGridContent(
                 modifier = Modifier.testTag(MapScreenTestTags.ERROR_MESSAGE),
             )
         }
-        when (mapStatus) {
+        when (mapDataState.mapStatus) {
             UiStatus.Idle, UiStatus.Loading -> WizardLoadingState()
             is UiStatus.Error ->
                 // Never crash: the map data failed to load. The "Other" button below (rendered
@@ -287,11 +297,11 @@ private fun MapGridContent(
                 WizardErrorState(
                     message = stringResource(R.string.gear_stat_rectangle_map_unavailable),
                     testTag = MapScreenTestTags.MAP_ERROR,
-                    isRetryable = mapStatus.isRetryable,
-                    onRetry = onRetryMapData,
+                    isRetryable = mapDataState.mapStatus.isRetryable,
+                    onRetry = mapDataState.onRetryMapData,
                 )
             is UiStatus.Content -> {
-                val dataset = mapStatus.value
+                val dataset = mapDataState.mapStatus.value
                 val initialCamera =
                     remember(gearUse.id, dataset) {
                         MapCameraSupport.initialCameraFor(departurePort, dataset, nearbyRectangles)
@@ -302,13 +312,12 @@ private fun MapGridContent(
                 Box(modifier = Modifier.fillMaxWidth()) {
                     MapCanvas(
                         dataset = dataset,
-                        camera = camera,
-                        onCameraChange = { camera = it },
-                        selectedCode = selectedCode,
-                        onCodeSelected = {
-                            selectedCode = it
-                            showError = false
-                        },
+                        cameraState = MapCameraState(camera) { camera = it },
+                        selection =
+                            MapSelectionState(selectedCode) {
+                                selectedCode = it
+                                showError = false
+                            },
                         modifier = Modifier.fillMaxWidth(),
                         onChooseFromListRequested = onOtherSelected,
                     )
@@ -333,7 +342,7 @@ private fun MapGridContent(
                 )
             }
         }
-        if (mapStatus !is UiStatus.Content) {
+        if (mapDataState.mapStatus !is UiStatus.Content) {
             // Fallback path (map data still loading, or failed to load): "Other" must remain reachable —
             // see [MapCanvas]/docs/development/offline-map.md "never crash".
             SecondaryActionButton(
@@ -506,7 +515,7 @@ private fun MapAutocompleteContent(
 @Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
 @Suppress("FunctionNaming")
 @Composable
-fun MapScreen_GridPreview() {
+fun MapScreenGridPreview() {
     val gearType =
         GearType(
             id = "gear-seine-nets",
@@ -550,7 +559,7 @@ fun MapScreen_GridPreview() {
     }
 }
 
-/** Shared sample gear use/rectangles for the RadioList/Autocomplete previews below (mirrors [MapScreen_GridPreview]). */
+/** Shared sample gear use/rectangles for the RadioList/Autocomplete previews below (mirrors [MapScreenGridPreview]). */
 private data class MapPreviewFixture(
     val gearUse: GearUse,
     val nearbyRectangles: List<StatisticalSubRectangle>,
@@ -585,17 +594,15 @@ private fun mapPreviewFixture(): MapPreviewFixture {
 @Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
 @Suppress("FunctionNaming")
 @Composable
-fun MapScreen_RadioListPreview() {
+fun MapScreenRadioListPreview() {
     val fixture = mapPreviewFixture()
     MmoTheme {
         AppLanguageProvider(language = "en") {
             MapScreenContent(
                 gearUse = fixture.gearUse,
                 departurePort = null,
-                nearbyRectangles = fixture.nearbyRectangles,
-                allRectangles = fixture.allRectangles,
-                entryMode = MapEntryMode.RadioList,
-                onEntryModeChange = {},
+                rectangleOptions = StatRectangleOptions(fixture.nearbyRectangles, fixture.allRectangles),
+                entryModeState = MapEntryModeState(MapEntryMode.RadioList) {},
                 onSubmit = {},
             )
         }
@@ -605,17 +612,15 @@ fun MapScreen_RadioListPreview() {
 @Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
 @Suppress("FunctionNaming")
 @Composable
-fun MapScreen_AutocompletePreview() {
+fun MapScreenAutocompletePreview() {
     val fixture = mapPreviewFixture()
     MmoTheme {
         AppLanguageProvider(language = "en") {
             MapScreenContent(
                 gearUse = fixture.gearUse,
                 departurePort = null,
-                nearbyRectangles = fixture.nearbyRectangles,
-                allRectangles = fixture.allRectangles,
-                entryMode = MapEntryMode.Autocomplete,
-                onEntryModeChange = {},
+                rectangleOptions = StatRectangleOptions(fixture.nearbyRectangles, fixture.allRectangles),
+                entryModeState = MapEntryModeState(MapEntryMode.Autocomplete) {},
                 onSubmit = {},
             )
         }

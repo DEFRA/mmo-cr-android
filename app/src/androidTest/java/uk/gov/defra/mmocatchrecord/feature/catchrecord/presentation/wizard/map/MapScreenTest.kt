@@ -131,7 +131,7 @@ class MapScreenTest {
                     state = stateWith(pendingGearUse()),
                     onSubmit = { submittedDraft = it },
                     onBack = {},
-                    mapStatus = UiStatus.Content(mapDatasetFixture()),
+                    mapDataState = MapDataUiState(UiStatus.Content(mapDatasetFixture()), onRetryMapData = {}),
                 )
             }
         }
@@ -271,7 +271,11 @@ class MapScreenTest {
                     state = stateWith(pendingGearUse()),
                     onSubmit = {},
                     onBack = {},
-                    mapStatus = UiStatus.Error(message = "Unable to load the offline map data", isRetryable = true),
+                    mapDataState =
+                        MapDataUiState(
+                            UiStatus.Error(message = "Unable to load the offline map data", isRetryable = true),
+                            onRetryMapData = {},
+                        ),
                 )
             }
         }
@@ -294,7 +298,7 @@ class MapScreenTest {
                     state = stateWith(pendingGearUse()),
                     onSubmit = {},
                     onBack = {},
-                    mapStatus = UiStatus.Content(mapDatasetFixture()),
+                    mapDataState = MapDataUiState(UiStatus.Content(mapDatasetFixture()), onRetryMapData = {}),
                 )
             }
         }

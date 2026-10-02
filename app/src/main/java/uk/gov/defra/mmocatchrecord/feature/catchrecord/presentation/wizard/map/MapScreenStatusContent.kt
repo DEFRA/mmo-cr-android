@@ -1,5 +1,3 @@
-@file:Suppress("detekt.LongParameterList")
-
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map
 
 import androidx.compose.runtime.Composable
@@ -11,28 +9,24 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordFlowViewState
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardErrorState
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardLoadingState
-import uk.gov.defra.mmocatchrecord.mapdata.MapDataset
 
 /**
- * Renders the loading/error/content body for [MapScreen] based on [status] — pulled out of [MapScreen]
- * itself to keep its cognitive complexity low (see `MapSupport.currentGearUseFor`/`withStatRectangleCode`
- * for the other extracted helpers).
+ * Renders the loading/error/content body for [MapScreen] based on [state]'s status — pulled out of
+ * [MapScreen] itself to keep its cognitive complexity low (see `MapSupport.currentGearUseFor`/
+ * `withStatRectangleCode` for the other extracted helpers).
  */
 @Suppress("FunctionNaming")
 @Composable
 internal fun MapScreenStatusContent(
-    status: UiStatus<CatchRecordDraft>,
     draft: CatchRecordDraft?,
     currentGearUse: GearUse?,
     state: CatchRecordFlowViewState,
-    entryMode: MapEntryMode,
-    onEntryModeChange: (MapEntryMode) -> Unit,
+    entryModeState: MapEntryModeState,
     onSubmit: (CatchRecordDraft) -> Unit,
     onRetry: () -> Unit,
-    mapStatus: UiStatus<MapDataset>,
-    onRetryMapData: () -> Unit,
+    mapDataState: MapDataUiState,
 ) {
-    when (status) {
+    when (val status = state.status) {
         UiStatus.Idle, UiStatus.Loading -> WizardLoadingState()
         is UiStatus.Error ->
             WizardErrorState(
@@ -56,13 +50,14 @@ internal fun MapScreenStatusContent(
                 MapScreenContent(
                     gearUse = currentGearUse,
                     departurePort = departurePort,
-                    nearbyRectangles = MapSupport.nearbyRectanglesFor(departurePort, state.statisticalSubRectangles),
-                    allRectangles = state.statisticalSubRectangles,
-                    entryMode = entryMode,
-                    onEntryModeChange = onEntryModeChange,
+                    rectangleOptions =
+                        StatRectangleOptions(
+                            nearby = MapSupport.nearbyRectanglesFor(departurePort, state.statisticalSubRectangles),
+                            all = state.statisticalSubRectangles,
+                        ),
+                    entryModeState = entryModeState,
                     onSubmit = { code -> onSubmit(MapSupport.withStatRectangleCode(draft, currentGearUse, code)) },
-                    mapStatus = mapStatus,
-                    onRetryMapData = onRetryMapData,
+                    mapDataState = mapDataState,
                 )
             }
     }

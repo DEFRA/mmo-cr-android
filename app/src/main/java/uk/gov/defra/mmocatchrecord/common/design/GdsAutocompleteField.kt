@@ -156,7 +156,8 @@ private fun autocompleteAnnouncementFor(
     noMatchesText: String,
 ): String =
     when {
-        !isQueryLongEnough -> stringResource(R.string.port_search_type_more_characters, minQueryLength)
+        !isQueryLongEnough ->
+            pluralStringResource(R.plurals.port_search_type_more_characters, minQueryLength, minQueryLength)
         showSuggestions -> pluralStringResource(R.plurals.port_search_suggestions_available, optionCount, optionCount)
         else -> noMatchesText
     }
