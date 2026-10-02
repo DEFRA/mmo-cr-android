@@ -135,6 +135,14 @@ dependencies {
     testImplementation(libs.androidx.room.testing)
     testImplementation(libs.androidx.work.testing)
 
+    // Compose UI testing on the JVM via Robolectric: coverage from `testDebugUnitTest` is what
+    // Kover reports and SonarCloud imports, whereas `connectedDebugAndroidTest` coverage is not
+    // merged in. Compose screens therefore need Robolectric unit tests under `src/test` to count
+    // towards the quality gate. The BoM keeps these aligned with the implementation Compose
+    // artifacts; `ui-test-manifest` is already supplied via `debugImplementation` below.
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
