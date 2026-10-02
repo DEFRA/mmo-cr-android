@@ -57,7 +57,6 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardLoadingState
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardStep
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.catchRecordReference
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.nextGearUsePendingStatRectangle
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.nextWizardStepForDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip.DeparturePortScreen
 import uk.gov.defra.mmocatchrecord.mapdata.MapDataset
@@ -153,12 +152,7 @@ internal fun MapScreen(
     onRetryMapData: () -> Unit = {},
 ) {
     val draft = (state.status as? UiStatus.Content<CatchRecordDraft>)?.value
-    val currentGearUse =
-        if (editGearUseId != null) {
-            draft?.gearUses?.firstOrNull { it.id == editGearUseId }
-        } else {
-            draft?.let(::nextGearUsePendingStatRectangle)
-        }
+    val currentGearUse = MapSupport.currentGearUseFor(draft, editGearUseId)
     val gearType = currentGearUse?.let { gearUse -> state.gearTypes.firstOrNull { it.id == gearUse.gearTypeId } }
     val gearNameWithMeasurement =
         currentGearUse?.let { MapSupport.gearNameWithIdentifyingMeasurementFor(gearType, it) }
@@ -179,51 +173,18 @@ internal fun MapScreen(
         modifier = modifier,
         referenceNumber = state.catchRecordReference,
     ) {
-        when (val status = state.status) {
-            UiStatus.Idle, UiStatus.Loading -> WizardLoadingState()
-            is UiStatus.Error ->
-                WizardErrorState(
-                    message = status.message,
-                    testTag = MapScreenTestTags.ERROR_MESSAGE,
-                    isRetryable = status.isRetryable,
-                    onRetry = onRetry,
-                )
-            is UiStatus.Content ->
-                if (draft == null || currentGearUse == null) {
-                    // Defensive only: normal navigation only reaches this screen while
-                    // nextGearUsePendingStatRectangle(draft) is non-null (add path), or editGearUseId
-                    // resolves to a real gear use (check-your-answers edit path) — see
-                    // nextWizardStepForDraft / editRouteFor.
-                    WizardErrorState(
-                        stringResource(R.string.gear_stat_rectangle_missing_gear),
-                        MapScreenTestTags.ERROR_MESSAGE,
-                    )
-                } else {
-                    val departurePort = state.ports.firstOrNull { it.id == draft.departurePort?.portId }
-                    MapScreenContent(
-                        gearUse = currentGearUse,
-                        departurePort = departurePort,
-                        nearbyRectangles =
-                            MapSupport.nearbyRectanglesFor(departurePort, state.statisticalSubRectangles),
-                        allRectangles = state.statisticalSubRectangles,
-                        entryMode = entryMode,
-                        onEntryModeChange = { entryMode = it },
-                        onSubmit = { code ->
-                            val updatedGearUse = currentGearUse.copy(statisticalSubRectangleCode = code)
-                            val updatedDraft =
-                                draft.copy(
-                                    gearUses =
-                                        draft.gearUses.map {
-                                            if (it.id == updatedGearUse.id) updatedGearUse else it
-                                        },
-                                )
-                            onSubmit(updatedDraft)
-                        },
-                        mapStatus = mapStatus,
-                        onRetryMapData = onRetryMapData,
-                    )
-                }
-        }
+        MapScreenStatusContent(
+            status = state.status,
+            draft = draft,
+            currentGearUse = currentGearUse,
+            state = state,
+            entryMode = entryMode,
+            onEntryModeChange = { entryMode = it },
+            onSubmit = onSubmit,
+            onRetry = onRetry,
+            mapStatus = mapStatus,
+            onRetryMapData = onRetryMapData,
+        )
     }
 }
 
@@ -559,12 +520,12 @@ fun MapScreen_GridPreview() {
             measurements = mapOf(GearMeasurementFieldKeys.MESH_SIZE_MM to MeasurementValue.Numeric(100.0, "mm")),
             confirmedUsedOnTrip = true,
         )
-    val samplePort = Port("port-hastings", "Hastings", "AREA-HASTINGS")
+    val samplePort = Port("port-hastings", "Hastings", PREVIEW_AREA_HASTINGS)
     val sampleRectangles =
         listOf(
-            StatisticalSubRectangle("rect-1", "38E95", "AREA-HASTINGS"),
-            StatisticalSubRectangle("rect-2", "38E98", "AREA-HASTINGS"),
-            StatisticalSubRectangle("rect-3", "38F02", "AREA-HASTINGS"),
+            StatisticalSubRectangle("rect-1", "38E95", PREVIEW_AREA_HASTINGS),
+            StatisticalSubRectangle("rect-2", "38E98", PREVIEW_AREA_HASTINGS),
+            StatisticalSubRectangle("rect-3", "38F02", PREVIEW_AREA_HASTINGS),
         )
     val sampleDraft =
         CatchRecordDraft(
@@ -596,6 +557,8 @@ private data class MapPreviewFixture(
     val allRectangles: List<StatisticalSubRectangle>,
 )
 
+private const val PREVIEW_AREA_HASTINGS = "AREA-HASTINGS"
+
 @Suppress("MagicNumber")
 private fun mapPreviewFixture(): MapPreviewFixture {
     val gearUse =
@@ -608,9 +571,9 @@ private fun mapPreviewFixture(): MapPreviewFixture {
         )
     val sampleRectangles =
         listOf(
-            StatisticalSubRectangle("rect-1", "38E95", "AREA-HASTINGS"),
-            StatisticalSubRectangle("rect-2", "38E98", "AREA-HASTINGS"),
-            StatisticalSubRectangle("rect-3", "38F02", "AREA-HASTINGS"),
+            StatisticalSubRectangle("rect-1", "38E95", PREVIEW_AREA_HASTINGS),
+            StatisticalSubRectangle("rect-2", "38E98", PREVIEW_AREA_HASTINGS),
+            StatisticalSubRectangle("rect-3", "38F02", PREVIEW_AREA_HASTINGS),
         )
     return MapPreviewFixture(
         gearUse = gearUse,

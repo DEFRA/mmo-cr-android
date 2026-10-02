@@ -1,11 +1,13 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map
 
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementValue
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldKeys
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.StatisticalSubRectangle
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.nextGearUsePendingStatRectangle
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearMeasurementSupport
 
 /**
@@ -46,4 +48,31 @@ object MapSupport {
         departurePort
             ?.let { port -> allRectangles.filter { it.statisticalAreaId == port.statisticalAreaId } }
             .orEmpty()
+
+    /**
+     * Resolves the gear use `MapScreen` is collecting a statistical sub-rectangle for: the gear use
+     * matching [editGearUseId] on the check-your-answers edit path, or the next confirmed gear use still
+     * missing a code (see [nextGearUsePendingStatRectangle]) on the normal add path.
+     */
+    fun currentGearUseFor(
+        draft: CatchRecordDraft?,
+        editGearUseId: String?,
+    ): GearUse? =
+        if (editGearUseId != null) {
+            draft?.gearUses?.firstOrNull { it.id == editGearUseId }
+        } else {
+            draft?.let(::nextGearUsePendingStatRectangle)
+        }
+
+    /** Returns [draft] with [gearUse]'s statistical sub-rectangle set to [code] — see `MapScreen`. */
+    fun withStatRectangleCode(
+        draft: CatchRecordDraft,
+        gearUse: GearUse,
+        code: String,
+    ): CatchRecordDraft {
+        val updatedGearUse = gearUse.copy(statisticalSubRectangleCode = code)
+        return draft.copy(
+            gearUses = draft.gearUses.map { if (it.id == updatedGearUse.id) updatedGearUse else it },
+        )
+    }
 }

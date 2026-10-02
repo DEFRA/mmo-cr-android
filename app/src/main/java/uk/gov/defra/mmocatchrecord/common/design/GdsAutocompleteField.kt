@@ -79,20 +79,13 @@ fun GdsAutocompleteField(
     val showSuggestions = isQueryLongEnough && dismissedQuery != value && options.isNotEmpty()
     val showNoMatches = isQueryLongEnough && dismissedQuery != value && options.isEmpty()
     val announcement =
-        when {
-            !isQueryLongEnough ->
-                stringResource(
-                    R.string.port_search_type_more_characters,
-                    minQueryLength,
-                )
-            showSuggestions ->
-                pluralStringResource(
-                    R.plurals.port_search_suggestions_available,
-                    options.size,
-                    options.size,
-                )
-            else -> noMatchesText
-        }
+        autocompleteAnnouncementFor(
+            isQueryLongEnough = isQueryLongEnough,
+            showSuggestions = showSuggestions,
+            minQueryLength = minQueryLength,
+            optionCount = options.size,
+            noMatchesText = noMatchesText,
+        )
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         Text(text = label, style = MaterialTheme.typography.bodyLarge)
@@ -131,41 +124,17 @@ fun GdsAutocompleteField(
             Text(text = errorText, color = MmoColors.ErrorRed, style = MaterialTheme.typography.bodyMedium)
         }
         if (showSuggestions) {
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .border(
-                            width = 1.dp,
-                            color = MmoColors.Grey2,
-                        ).background(MmoColors.White),
-            ) {
-                options.forEachIndexed { index, option ->
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = Spacing.minTouchTarget)
-                                .clickable {
-                                    // Also covers picking an option whose label equals the typed text.
-                                    dismissedQuery = option.label
-                                    textFieldValueState = option.label.withCursorAtEnd()
-                                    onValueChange(option.label)
-                                    onOptionSelected(option)
-                                }.padding(
-                                    horizontal = Spacing.s,
-                                    vertical = Spacing.xs,
-                                ).testTag("${suggestionTestTagPrefix}_$index")
-                                .semantics {
-                                    role =
-                                        Role.Button
-                                },
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(text = option.label, style = MaterialTheme.typography.bodyLarge)
-                    }
-                }
-            }
+            AutocompleteSuggestions(
+                options = options,
+                suggestionTestTagPrefix = suggestionTestTagPrefix,
+                onOptionSelected = { option ->
+                    // Also covers picking an option whose label equals the typed text.
+                    dismissedQuery = option.label
+                    textFieldValueState = option.label.withCursorAtEnd()
+                    onValueChange(option.label)
+                    onOptionSelected(option)
+                },
+            )
         }
         if (showNoMatches) {
             Text(
@@ -173,6 +142,59 @@ fun GdsAutocompleteField(
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.testTag(noMatchesTestTag),
             )
+        }
+    }
+}
+
+/** The polite live-region announcement for the current query/results state — see [GdsAutocompleteField]. */
+@Composable
+private fun autocompleteAnnouncementFor(
+    isQueryLongEnough: Boolean,
+    showSuggestions: Boolean,
+    minQueryLength: Int,
+    optionCount: Int,
+    noMatchesText: String,
+): String =
+    when {
+        !isQueryLongEnough -> stringResource(R.string.port_search_type_more_characters, minQueryLength)
+        showSuggestions -> pluralStringResource(R.plurals.port_search_suggestions_available, optionCount, optionCount)
+        else -> noMatchesText
+    }
+
+/** The suggestions dropdown list rendered below the field when matches are available — see [GdsAutocompleteField]. */
+@Composable
+private fun AutocompleteSuggestions(
+    options: List<GdsAutocompleteOption>,
+    suggestionTestTagPrefix: String,
+    onOptionSelected: (GdsAutocompleteOption) -> Unit,
+) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .border(
+                    width = 1.dp,
+                    color = MmoColors.Grey2,
+                ).background(MmoColors.White),
+    ) {
+        options.forEachIndexed { index, option ->
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = Spacing.minTouchTarget)
+                        .clickable { onOptionSelected(option) }
+                        .padding(
+                            horizontal = Spacing.s,
+                            vertical = Spacing.xs,
+                        ).testTag("${suggestionTestTagPrefix}_$index")
+                        .semantics {
+                            role = Role.Button
+                        },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(text = option.label, style = MaterialTheme.typography.bodyLarge)
+            }
         }
     }
 }
