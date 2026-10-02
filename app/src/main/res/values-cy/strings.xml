@@ -101,7 +101,11 @@
     <string name="add_port">Ychwanegu porthladd</string>
     <string name="port_selection_error">Dewiswch borthladd neu ddewiswch un oâ€™r rhestr</string>
     <plurals name="port_search_type_more_characters">
+        <item quantity="zero">Teipiwch o leiaf %1$d nod ar gyfer awgrymiadau</item>
         <item quantity="one">Teipiwch o leiaf %1$d nod ar gyfer awgrymiadau</item>
+        <item quantity="two">Teipiwch o leiaf %1$d nod ar gyfer awgrymiadau</item>
+        <item quantity="few">Teipiwch o leiaf %1$d nod ar gyfer awgrymiadau</item>
+        <item quantity="many">Teipiwch o leiaf %1$d nod ar gyfer awgrymiadau</item>
         <item quantity="other">Teipiwch o leiaf %1$d nod ar gyfer awgrymiadau</item>
     </plurals>
     <string name="port_search_no_matches_found">Ni chanfuwyd porthladdoedd cyfatebol</string>
