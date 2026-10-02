@@ -238,7 +238,11 @@ class CheckYourAnswersNavigationTests {
         lateinit var navController: NavHostController
         composeTestRule.setContent {
             navController = rememberNavController()
-            SubmissionFlowHarness(viewModel = viewModel, navController = navController, onChangeRowObserved = onChangeRowObserved)
+            SubmissionFlowHarness(
+                viewModel = viewModel,
+                navController = navController,
+                onChangeRowObserved = onChangeRowObserved,
+            )
         }
 
         viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
@@ -376,8 +380,9 @@ class CheckYourAnswersNavigationTests {
         val navController = launchHarnessAndReachCheckYourAnswers(viewModel) { editObserved = it }
 
         composeTestRule
-            .onNodeWithTag("${CheckYourAnswersScreenTestTags.CHANGE_ACTION_PREFIX}_${CheckYourAnswersFieldKind.Species}")
-            .performScrollTo()
+            .onNodeWithTag(
+                "${CheckYourAnswersScreenTestTags.CHANGE_ACTION_PREFIX}_${CheckYourAnswersFieldKind.Species}",
+            ).performScrollTo()
             .performClick()
 
         composeTestRule.waitUntil(timeoutMillis = 5_000) {

@@ -92,7 +92,10 @@ class MapCanvasTests {
             formatVersion = MapDataset.CURRENT_FORMAT_VERSION,
             land = listOf(square(-19.0, 60.0, -15.0, 65.0)),
             subRectangles = listOf(rectA, rectB),
-            ports = listOf(SerializablePort(portCode = "PORT1", name = "Test Port", point = SerializablePoint(-10.0, 55.0))),
+            ports =
+                listOf(
+                    SerializablePort(portCode = "PORT1", name = "Test Port", point = SerializablePoint(-10.0, 55.0)),
+                ),
         )
     }
 

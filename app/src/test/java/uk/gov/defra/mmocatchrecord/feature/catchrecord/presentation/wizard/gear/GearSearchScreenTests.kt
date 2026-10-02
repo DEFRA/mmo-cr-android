@@ -116,7 +116,8 @@ class GearSearchScreenTests {
 
     @Test
     fun outerStateErrorShowsRetryableWizardErrorAndInvokesOnRetry() {
-        val state = CatchRecordFlowViewState(status = UiStatus.Error(message = "Could not load gear", isRetryable = true))
+        val state =
+            CatchRecordFlowViewState(status = UiStatus.Error(message = "Could not load gear", isRetryable = true))
         var retried = false
         composeTestRule.setContent {
             WizardTestTheme {

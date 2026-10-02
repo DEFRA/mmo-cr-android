@@ -32,7 +32,8 @@ class CatchRecordDraftValidationTests {
 
     private fun confirmedCompleteGearUse(
         statisticalSubRectangleCode: String? = "38E95",
-        speciesWeights: List<SpeciesWeightEntry> = listOf(SpeciesWeightEntry(id = "sw-1", speciesId = "cod", confirmedCaught = true)),
+        speciesWeights: List<SpeciesWeightEntry> =
+            listOf(SpeciesWeightEntry(id = "sw-1", speciesId = "cod", confirmedCaught = true)),
     ) = GearUse(
         id = "gear-use-1",
         gearTypeId = "gear-seine-nets",
@@ -115,7 +116,10 @@ class CatchRecordDraftValidationTests {
                 gearUses =
                     listOf(
                         confirmedCompleteGearUse(
-                            speciesWeights = listOf(SpeciesWeightEntry(id = "sw-1", speciesId = "cod", confirmedCaught = false)),
+                            speciesWeights =
+                                listOf(
+                                    SpeciesWeightEntry(id = "sw-1", speciesId = "cod", confirmedCaught = false),
+                                ),
                         ),
                     ),
             )
@@ -142,7 +146,10 @@ class CatchRecordDraftValidationTests {
         val draft =
             completeDraft(
                 notLandedStraightAway = true,
-                notLandedSpeciesEntries = listOf(NotLandedSpeciesEntry(speciesId = "cod", weightAboveMinimumSizeKeptOnboardKg = 1.0)),
+                notLandedSpeciesEntries =
+                    listOf(
+                        NotLandedSpeciesEntry(speciesId = "cod", weightAboveMinimumSizeKeptOnboardKg = 1.0),
+                    ),
             )
 
         val result = CatchRecordDraftValidation.validateForSubmission(draft)

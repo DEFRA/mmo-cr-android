@@ -138,7 +138,8 @@ class DraftInvalidationTests {
 
     @Test
     fun `not landed species entries are cleared outright when not landing straight away is not true`() {
-        val entries = listOf(NotLandedSpeciesEntry(speciesId = "species-cod", weightAboveMinimumSizeKeptOnboardKg = 1.0))
+        val entries =
+            listOf(NotLandedSpeciesEntry(speciesId = "species-cod", weightAboveMinimumSizeKeptOnboardKg = 1.0))
         val next = draft(notLandedStraightAway = false, notLandedSpeciesEntries = entries)
 
         val result = DraftInvalidation.reconcile(previous = null, next = next)
@@ -147,7 +148,7 @@ class DraftInvalidationTests {
     }
 
     @Test
-    fun `an already-empty not landed species list is returned as the same draft instance when not landing straight away is false`() {
+    fun `an already-empty not landed species list is returned as the same instance when not landing straight away`() {
         val next = draft(notLandedStraightAway = false, notLandedSpeciesEntries = emptyList())
 
         val result = DraftInvalidation.reconcile(previous = null, next = next)
@@ -194,7 +195,8 @@ class DraftInvalidationTests {
                 speciesWeights =
                     listOf(SpeciesWeightEntry(id = "sw-1", speciesId = "species-cod", confirmedCaught = true)),
             )
-        val entries = listOf(NotLandedSpeciesEntry(speciesId = "species-cod", weightAboveMinimumSizeKeptOnboardKg = 1.0))
+        val entries =
+            listOf(NotLandedSpeciesEntry(speciesId = "species-cod", weightAboveMinimumSizeKeptOnboardKg = 1.0))
         val next =
             draft(
                 gearUses = listOf(confirmedGearUse),

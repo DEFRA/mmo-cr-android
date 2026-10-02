@@ -525,7 +525,11 @@ class MapScreenTests {
         composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_3").performScrollTo().performClick()
         composeTestRule.onNodeWithTag(MapScreenTestTags.RADIO_SAVE_ACTION).performScrollTo().performClick()
 
-        composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).performScrollTo().performTextInput("not-a-code")
+        composeTestRule
+            .onNodeWithTag(
+                MapScreenTestTags.AUTOCOMPLETE_FIELD,
+            ).performScrollTo()
+            .performTextInput("not-a-code")
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_SAVE_ACTION).performScrollTo().performClick()
 
         composeTestRule
