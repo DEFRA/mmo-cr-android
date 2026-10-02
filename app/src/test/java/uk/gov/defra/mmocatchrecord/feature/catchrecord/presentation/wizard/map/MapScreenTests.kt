@@ -346,6 +346,28 @@ class MapScreenTests {
     }
 
     @Test
+    fun contentStateWithAnEditGearUseIdNotFoundOnTheDraftShowsTheDefensiveMissingGearError() {
+        // Defensive-only branch (see MapScreenStatusContent's doc comment): normal navigation never reaches
+        // this screen with an editGearUseId that doesn't resolve to a real gear use on the draft.
+        composeTestRule.setContent {
+            WizardTestTheme {
+                MapScreen(
+                    state = stateWith(pendingGearUse()),
+                    onSubmit = {},
+                    onBack = {},
+                    editGearUseId = "no-such-gear-use",
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag(MapScreenTestTags.ERROR_MESSAGE).assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText("Unable to load this gear's statistical area. Please go back and try again.")
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithTag(MapScreenTestTags.MAP).assertDoesNotExist()
+    }
+
+    @Test
     @OptIn(ExperimentalTestApi::class)
     fun mapNodeExposesACustomAccessibilityActionToTheRadioList() {
         composeTestRule.setContent {

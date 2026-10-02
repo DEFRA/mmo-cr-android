@@ -23,7 +23,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.AppLanguageProvider
@@ -132,8 +131,7 @@ fun MapScreen(
     editGearUseId: String? = null,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val mapDataViewModel: MapDataViewModel = hiltViewModel()
-    val mapStatus by mapDataViewModel.status.collectAsStateWithLifecycle()
+    val mapDataState = rememberMapDataUiState()
     MapScreen(
         state = state,
         editGearUseId = editGearUseId,
@@ -154,7 +152,7 @@ fun MapScreen(
         onRetry = { viewModel.dispatch(CatchRecordFlowEvent.Retry) },
         onBack = onBack,
         modifier = modifier,
-        mapDataState = MapDataUiState(mapStatus, mapDataViewModel::retry),
+        mapDataState = mapDataState,
     )
 }
 
