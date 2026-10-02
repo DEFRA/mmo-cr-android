@@ -3,6 +3,7 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementValue
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldKeys
@@ -62,5 +63,74 @@ class MapSupportTests {
     fun `null departure port yields no nearby rectangles`() {
         val rectangles = listOf(StatisticalSubRectangle("rect-1", "38E95", "AREA-HASTINGS"))
         assertTrue(MapSupport.nearbyRectanglesFor(null, rectangles).isEmpty())
+    }
+
+    @Test
+    fun `currentGearUseFor resolves the matching gear use on the edit path`() {
+        val gearUse = GearUse(id = "gear-use-1", gearTypeId = seineNets.id, statisticalSubRectangleCode = null)
+        val otherGearUse = GearUse(id = "gear-use-2", gearTypeId = handlines.id, statisticalSubRectangleCode = null)
+        val draft =
+            CatchRecordDraft(
+                id = "draft-1",
+                vesselId = "vessel-1",
+                gearUses = listOf(gearUse, otherGearUse),
+                modifiedAtEpochMillis = 0L,
+            )
+        val resolved = MapSupport.currentGearUseFor(draft, editGearUseId = "gear-use-2")
+        assertEquals("gear-use-2", resolved?.id)
+    }
+
+    @Test
+    fun `currentGearUseFor returns null when editGearUseId does not match any gear use`() {
+        val gearUse = GearUse(id = "gear-use-1", gearTypeId = seineNets.id, statisticalSubRectangleCode = null)
+        val draft =
+            CatchRecordDraft(
+                id = "draft-1",
+                vesselId = "vessel-1",
+                gearUses = listOf(gearUse),
+                modifiedAtEpochMillis = 0L,
+            )
+        assertEquals(null, MapSupport.currentGearUseFor(draft, editGearUseId = "no-such-gear-use"))
+    }
+
+    @Test
+    fun `currentGearUseFor falls back to the next confirmed gear use pending a code on the add path`() {
+        val confirmedPending =
+            GearUse(
+                id = "gear-use-1",
+                gearTypeId = seineNets.id,
+                statisticalSubRectangleCode = null,
+                confirmedUsedOnTrip = true,
+            )
+        val draft =
+            CatchRecordDraft(
+                id = "draft-1",
+                vesselId = "vessel-1",
+                gearUses = listOf(confirmedPending),
+                modifiedAtEpochMillis = 0L,
+            )
+        val resolved = MapSupport.currentGearUseFor(draft, editGearUseId = null)
+        assertEquals("gear-use-1", resolved?.id)
+    }
+
+    @Test
+    fun `currentGearUseFor returns null for a null draft`() {
+        assertEquals(null, MapSupport.currentGearUseFor(null, editGearUseId = null))
+    }
+
+    @Test
+    fun `withStatRectangleCode sets the code on only the matching gear use`() {
+        val gearUse = GearUse(id = "gear-use-1", gearTypeId = seineNets.id, statisticalSubRectangleCode = null)
+        val otherGearUse = GearUse(id = "gear-use-2", gearTypeId = handlines.id, statisticalSubRectangleCode = "30F10")
+        val draft =
+            CatchRecordDraft(
+                id = "draft-1",
+                vesselId = "vessel-1",
+                gearUses = listOf(gearUse, otherGearUse),
+                modifiedAtEpochMillis = 0L,
+            )
+        val updated = MapSupport.withStatRectangleCode(draft, gearUse, "38E95")
+        assertEquals("38E95", updated.gearUses.first { it.id == "gear-use-1" }.statisticalSubRectangleCode)
+        assertEquals("30F10", updated.gearUses.first { it.id == "gear-use-2" }.statisticalSubRectangleCode)
     }
 }
