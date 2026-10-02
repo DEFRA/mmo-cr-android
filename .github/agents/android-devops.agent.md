@@ -47,9 +47,12 @@ restate or fork it. Your primary standards reference is
 > (`github-actions` ecosystem) — confirmed 2026-10-01 by the user via the Android Orchestrator, which
 > **revoked** the former "pinned by version tag" deviation.
 > _Deviations from §5 / ci-cd defaults:_ (1) JDK **21**, not the previously documented Temurin 17 — the
-> instruction has been corrected; (2) **SonarCloud is wired but not yet operational** —
-> `sonar-project.properties` exists and the scan step is live in `android-ci.yml`, but it cannot pass until
-> the `DEFRA_mmo-cr-android` project and the `MMO_CR_SONAR_TOKEN` secret exist.
+> instruction has been corrected; (2) **SonarCloud is operational** — `sonar-project.properties` exists,
+> the scan step is live in `android-ci.yml`, and the `DEFRA_mmo-cr-android` project plus the
+> `MMO_CR_SONAR_TOKEN` secret now exist; analysis uploads successfully (first green upload observed
+> 2026-10-02 on PR #7). The gate enforces **≥90% coverage on new code**, so a PR that adds code without
+> tests will fail `new_coverage` even when every Fastlane lane passes — that is an app-test gap for the
+> **Android Developer**, not a pipeline defect.
 >
 > **NOT yet confirmed (release / identity / signing stack) — the gate below still applies:**
 > `applicationId` scheme and product flavors (the app currently ships a single
