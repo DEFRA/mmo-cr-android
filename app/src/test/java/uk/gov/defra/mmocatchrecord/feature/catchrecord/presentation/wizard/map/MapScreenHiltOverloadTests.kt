@@ -243,6 +243,16 @@ class MapScreenHiltOverloadTests {
 
         composeTestRule.waitUntil(timeoutMillis = 5_000) { navigatedStep == WizardStep.CheckYourAnswers }
         assertEquals(WizardStep.CheckYourAnswers, navigatedStep)
+        // onNavigate fires synchronously on click, but EditGearStatRectangle persists via
+        // viewModelScope asynchronously (see persistGearEdit) — wait for it rather than racing it,
+        // mirroring the add-path test above.
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            draftRepository
+                .draftOrNull("draft-1")
+                ?.gearUses
+                ?.single()
+                ?.statisticalSubRectangleCode != null
+        }
         assertEquals(
             "38E95",
             draftRepository
