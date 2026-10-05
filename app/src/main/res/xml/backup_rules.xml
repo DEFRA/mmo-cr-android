@@ -11,25 +11,21 @@
    <exclude domain="sharedpref" path="device.xml"/>
 -->
     <!--
-   Forward-safety: Stage 1 has no persisted session/preference data (in-memory fakes only), but the
-   planned real implementation (core/security/SessionStore, BiometricPreferenceStore) will persist via
-   Jetpack DataStore under files/datastore/. Exclude it up front so security-relevant session/biometric
-   state can never be included in a legacy (pre-API 31) full backup — see security.instructions.md
-   "Data at rest". The app-language preference (ADR 0012) is deliberately carved back in below: it holds
-   no sensitive data and restoring a user's language choice on backup/restore is desirable.
+   ALLOWLIST: once any <include> is present, Android backs up ONLY the included paths — everything else
+   is excluded by default. Only the app-language preference (ADR 0012) is backed up: it holds no
+   sensitive data and restoring a user's language choice is desirable.
+
+   Consequently the following are never part of a legacy (pre-API 31) full backup — see
+   security.instructions.md "Data at rest":
+   - any other Jetpack DataStore file under files/datastore/ (e.g. the planned
+     core/security/SessionStore, BiometricPreferenceStore session/biometric state);
+   - the SQLCipher-encrypted catch-record draft database (ADR 0006) and its `-wal`/`-shm` sidecar files;
+   - its Android-Keystore-wrapped passphrase file (catch_record_draft.passphrase), which is bound to a
+     device-specific, non-exportable Keystore key and could not be decrypted after restore anyway.
+
+   Do NOT remove this <include> without adding explicit <exclude>s for the above, or everything would
+   become eligible for backup. (Explicit <exclude>s outside an included path are rejected by lint's
+   FullBackupContent check, and an <exclude> of datastore/ would override this <include>.)
 -->
-    <exclude domain="file" path="datastore/" />
     <include domain="file" path="datastore/app_language.preferences_pb" />
-    <!--
-   The SQLCipher-encrypted catch-record draft database (ADR 0006) and its Android-Keystore-wrapped
-   passphrase file must never leave the device via a legacy (pre-API 31) full backup/device transfer: a
-   restored backup on a different device cannot decrypt data whose passphrase is wrapped by a
-   device-bound, non-exportable Android Keystore key, and the encrypted bytes are operational fishing
-   data that should not be duplicated onto a backup medium regardless. `-wal`/`-shm` are SQLite's
-   write-ahead-log/shared-memory sidecar files for the same database and must be excluded alongside it.
--->
-    <exclude domain="database" path="catch_record_draft.db" />
-    <exclude domain="database" path="catch_record_draft.db-wal" />
-    <exclude domain="database" path="catch_record_draft.db-shm" />
-    <exclude domain="file" path="catch_record_draft.passphrase" />
 </full-backup-content>

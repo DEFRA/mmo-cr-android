@@ -60,7 +60,13 @@ object DraftInvalidation {
 
     private fun pruneOrphanNotLandedSpecies(draft: CatchRecordDraft): CatchRecordDraft {
         if (draft.notLandedStraightAway != true) {
-            return if (draft.notLandedSpeciesEntries.isEmpty()) draft else draft.copy(notLandedSpeciesEntries = emptyList())
+            return if (draft.notLandedSpeciesEntries.isEmpty()) {
+                draft
+            } else {
+                draft.copy(
+                    notLandedSpeciesEntries = emptyList(),
+                )
+            }
         }
 
         val confirmedSpeciesIds =
@@ -71,6 +77,12 @@ object DraftInvalidation {
                 .map { it.speciesId }
                 .toSet()
         val prunedEntries = draft.notLandedSpeciesEntries.filter { it.speciesId in confirmedSpeciesIds }
-        return if (prunedEntries.size == draft.notLandedSpeciesEntries.size) draft else draft.copy(notLandedSpeciesEntries = prunedEntries)
+        return if (prunedEntries.size ==
+            draft.notLandedSpeciesEntries.size
+        ) {
+            draft
+        } else {
+            draft.copy(notLandedSpeciesEntries = prunedEntries)
+        }
     }
 }

@@ -131,7 +131,10 @@ fun GearSearchScreenContent(
     // also prevents an exact-name match resolving to a hidden gear type's id via free-text entry.
     val selectableGearTypes = remember(gearTypes) { GearTypeSearch.selectableGearTypes(gearTypes) }
     val suggestions =
-        remember(searchQuery, selectableGearTypes) { GearTypeSearch.filterSuggestions(searchQuery, selectableGearTypes) }
+        remember(
+            searchQuery,
+            selectableGearTypes,
+        ) { GearTypeSearch.filterSuggestions(searchQuery, selectableGearTypes) }
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
         GdsAutocompleteField(

@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.kover)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.detekt)
+    id("uk.gov.defra.mmocatchrecord.mapdata.generator")
 }
 
 android {
@@ -20,8 +21,8 @@ android {
         applicationId = "uk.gov.defra.mmocatchrecord"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -110,6 +111,10 @@ dependencies {
     // Type-safe Navigation Compose routes (ADR 0007) — @Serializable route classes/objects.
     implementation(libs.kotlinx.serialization.json)
 
+    // Shared offline-map pure parsing/geometry/generator code (build-time preprocessing task + on-device
+    // runtime fallback parser) — see docs/adr/0013-offline-fisheries-map-rendering.md.
+    implementation("uk.gov.defra.mmocatchrecord.mapdata:map-data-core")
+
     // Structured, redacted logging (see ADR 0011 / security instructions "no PII/secrets in logs").
     implementation(libs.timber)
 
@@ -129,6 +134,14 @@ dependencies {
     testImplementation(libs.androidx.room.runtime)
     testImplementation(libs.androidx.room.testing)
     testImplementation(libs.androidx.work.testing)
+
+    // Compose UI testing on the JVM via Robolectric: coverage from `testDebugUnitTest` is what
+    // Kover reports and SonarCloud imports, whereas `connectedDebugAndroidTest` coverage is not
+    // merged in. Compose screens therefore need Robolectric unit tests under `src/test` to count
+    // towards the quality gate. The BoM keeps these aligned with the implementation Compose
+    // artifacts; `ui-test-manifest` is already supplied via `debugImplementation` below.
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

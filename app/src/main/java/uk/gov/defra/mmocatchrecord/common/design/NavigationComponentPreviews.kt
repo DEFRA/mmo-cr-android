@@ -32,3 +32,25 @@ fun MmoBottomNavigationBarPreview() {
         }
     }
 }
+
+@Suppress("FunctionNaming")
+@Preview(name = "Bottom navigation bar (Notifications selected)", showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Composable
+fun MmoBottomNavigationBarNotificationsPreview() {
+    MmoTheme {
+        Column(modifier = Modifier.fillMaxWidth().background(MmoColors.White)) {
+            MmoBottomNavigationBar(selectedItem = 1, onItemClick = {})
+        }
+    }
+}
+
+@Suppress("FunctionNaming")
+@Preview(name = "Bottom navigation bar (Settings selected)", showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Composable
+fun MmoBottomNavigationBarSettingsPreview() {
+    MmoTheme {
+        Column(modifier = Modifier.fillMaxWidth().background(MmoColors.White)) {
+            MmoBottomNavigationBar(selectedItem = 2, onItemClick = {})
+        }
+    }
+}

@@ -1,12 +1,15 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip
 
 import androidx.compose.material3.Text
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
@@ -19,6 +22,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Vess
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordWizardScaffold
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.DraftResumeScreenContent
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.DraftResumeScreenTestTags
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardTestTheme
 
 class WizardSelectionScreensTest {
     @get:Rule
@@ -27,7 +31,7 @@ class WizardSelectionScreensTest {
     @Test
     fun wizardScaffoldExposesHeadingSemantics() {
         composeTestRule.setContent {
-            MmoTheme {
+            WizardTestTheme {
                 CatchRecordWizardScaffold(
                     screenTestTag = "scaffold",
                     title = "Which vessel did you use?",
@@ -41,6 +45,28 @@ class WizardSelectionScreensTest {
         composeTestRule
             .onNode(SemanticsMatcher.expectValue(SemanticsProperties.Heading, Unit))
             .assertIsDisplayed()
+    }
+
+    @Test
+    fun wizardScaffoldShowsOfflineBannerOnlyWhenOffline() {
+        var isOffline by mutableStateOf(false)
+        composeTestRule.setContent {
+            WizardTestTheme(isOffline = isOffline) {
+                CatchRecordWizardScaffold(
+                    screenTestTag = "scaffold",
+                    title = "Which vessel did you use?",
+                    onBack = {},
+                ) {
+                    Text("Body")
+                }
+            }
+        }
+
+        composeTestRule.onNodeWithTag("offline_banner").assertDoesNotExist()
+
+        isOffline = true
+
+        composeTestRule.onNodeWithTag("offline_banner").assertIsDisplayed()
     }
 
     @Test

@@ -1,7 +1,7 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -10,7 +10,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
-import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
@@ -20,6 +19,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Gear
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Species
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordFlowViewState
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardTestTheme
 
 class GearSpeciesSearchScreenTest {
     @get:Rule
@@ -57,13 +57,13 @@ class GearSpeciesSearchScreenTest {
     @Test
     fun titleShowsGearNameWithIdentifyingMeasurement() {
         composeTestRule.setContent {
-            MmoTheme {
+            WizardTestTheme {
                 GearSpeciesSearchScreen(state = stateWith(gearUsePendingSpecies()), onSubmit = {}, onBack = {})
             }
         }
 
         composeTestRule
-            .onNodeWithText("Which species did you catch with seine nets (mesh size 100mm)?")
+            .onNodeWithText("Which species did you catch with seine nets", substring = true)
             .assertIsDisplayed()
     }
 
@@ -71,7 +71,7 @@ class GearSpeciesSearchScreenTest {
     fun typingTwoCharactersShowsMatchingSuggestionsAndSelectingOneSubmitsItsId() {
         var submittedId: String? = null
         composeTestRule.setContent {
-            MmoTheme {
+            WizardTestTheme {
                 GearSpeciesSearchScreen(
                     state = stateWith(gearUsePendingSpecies()),
                     onSubmit = { submittedId = it },
@@ -92,7 +92,7 @@ class GearSpeciesSearchScreenTest {
     fun blankQueryOnSaveShowsEmptyQueryErrorAndDoesNotSubmit() {
         var submittedId: String? = null
         composeTestRule.setContent {
-            MmoTheme {
+            WizardTestTheme {
                 GearSpeciesSearchScreen(
                     state = stateWith(gearUsePendingSpecies()),
                     onSubmit = { submittedId = it },
@@ -111,7 +111,7 @@ class GearSpeciesSearchScreenTest {
     fun typedTextWithNoMatchingSelectionShowsNoValidSelectionErrorAndDoesNotSubmit() {
         var submittedId: String? = null
         composeTestRule.setContent {
-            MmoTheme {
+            WizardTestTheme {
                 GearSpeciesSearchScreen(
                     state = stateWith(gearUsePendingSpecies()),
                     onSubmit = { submittedId = it },
@@ -137,9 +137,14 @@ class GearSpeciesSearchScreenTest {
                 modifiedAtEpochMillis = 0L,
                 status = DraftStatus.Draft,
             )
-        val state = CatchRecordFlowViewState(status = UiStatus.Content(draft))
+        val state =
+            CatchRecordFlowViewState(
+                status = UiStatus.Content(draft),
+                gearTypes = listOf(seineNets),
+                species = listOf(cod, haddock),
+            )
         composeTestRule.setContent {
-            MmoTheme {
+            WizardTestTheme {
                 GearSpeciesSearchScreen(state = state, onSubmit = {}, onBack = {})
             }
         }

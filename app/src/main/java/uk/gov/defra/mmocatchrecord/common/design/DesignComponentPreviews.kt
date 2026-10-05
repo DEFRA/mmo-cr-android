@@ -32,6 +32,33 @@ fun ImportantNotificationBannerPreview() {
     }
 }
 
+@Preview(name = "Offline banner", showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Suppress("FunctionNaming")
+@Composable
+fun OfflineBannerPreview() {
+    MmoTheme {
+        OfflineBanner(modifier = Modifier.padding(horizontal = Spacing.m))
+    }
+}
+
+@Preview(name = "Offline banner (Welsh)", showBackground = true, backgroundColor = 0xFFFFFFFF, locale = "cy")
+@Suppress("FunctionNaming")
+@Composable
+fun OfflineBannerWelshPreview() {
+    MmoTheme {
+        OfflineBanner(modifier = Modifier.padding(horizontal = Spacing.m))
+    }
+}
+
+@Preview(name = "Offline banner (200% font)", showBackground = true, backgroundColor = 0xFFFFFFFF, fontScale = 2f)
+@Suppress("FunctionNaming")
+@Composable
+fun OfflineBannerLargeFontPreview() {
+    MmoTheme {
+        OfflineBanner(modifier = Modifier.padding(horizontal = Spacing.m))
+    }
+}
+
 @Preview(name = "Primary action button", showBackground = true, backgroundColor = 0xFFFFFFFF)
 @Suppress("FunctionNaming")
 @Composable
@@ -55,6 +82,21 @@ fun SecondaryActionButtonPreview() {
             onClick = {},
             modifier = Modifier.padding(Spacing.m),
         )
+    }
+}
+
+@Preview(name = "Action buttons (disabled)", showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Suppress("FunctionNaming")
+@Composable
+fun ActionButtonsDisabledPreview() {
+    MmoTheme {
+        Column(
+            modifier = Modifier.padding(Spacing.m),
+            verticalArrangement = Arrangement.spacedBy(Spacing.s),
+        ) {
+            PrimaryActionButton(text = "Continue", onClick = {}, enabled = false)
+            SecondaryActionButton(text = "Add port", onClick = {}, enabled = false)
+        }
     }
 }
 

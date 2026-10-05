@@ -8,7 +8,7 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -30,6 +30,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Gear
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordFlowViewState
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardTestTheme
 
 class GearScreensTest {
     @get:Rule
@@ -167,7 +168,7 @@ class GearScreensTest {
         val draft = sampleDraft(emptyList())
         val state = CatchRecordFlowViewState(status = UiStatus.Content(draft), gearTypes = gearTypes)
         composeTestRule.setContent {
-            MmoTheme {
+            WizardTestTheme {
                 GearSearchScreen(state = state, onSubmit = {}, onBack = {})
             }
         }
@@ -180,7 +181,7 @@ class GearScreensTest {
         val draft = sampleDraft(listOf(gearUseSeineNets))
         val state = CatchRecordFlowViewState(status = UiStatus.Content(draft), gearTypes = gearTypes)
         composeTestRule.setContent {
-            MmoTheme {
+            WizardTestTheme {
                 GearSearchScreen(state = state, onSubmit = {}, onBack = {})
             }
         }
@@ -386,7 +387,7 @@ class GearScreensTest {
     }
 
     /**
-     * [GdsNumericField] filters out non-digit/non-decimal-point characters as they are typed — in reality
+     * The numeric field filters out non-digit/non-decimal-point characters as they are typed — in reality
      * this path is not reachable via a real device keyboard at all, since the field requests
      * [androidx.compose.ui.text.input.KeyboardType.Number] and the on-screen keyboard never offers letter
      * keys; [performTextInput] injects raw text directly via semantics, bypassing the IME. Injecting a
@@ -395,7 +396,7 @@ class GearScreensTest {
      * Compose/IME interaction unrelated to app logic, so this test only asserts the filtering outcome
      * itself — the field's raw value — rather than driving a further Save-click + error-summary assertion
      * on top of it (that combination is what proved flaky here). The "Required"-vs-"Numeric" error paths
-     * are exercised deterministically at the pure-validator level in [GearMeasurementInputValidatorTests],
+     * are exercised deterministically at the pure-validator level in the validator tests,
      * and the "Numeric" error path is exercised through a real, reachable UI input (a lone decimal point)
      * in [measurementScreenWithALoneDecimalPointShowsErrorSummaryAndDoesNotSubmit] below.
      */
@@ -415,7 +416,7 @@ class GearScreensTest {
     }
 
     /**
-     * A lone decimal point is the one value [GdsNumericField]'s character-level filtering still lets
+     * A lone decimal point is the one value the numeric field's character-level filtering still lets
      * through for a [GearMeasurementFieldType.Decimal] field (it permits a single '.' so the user can keep
      * typing a decimal), but it does not parse as a valid number — this reaches the validator's "Numeric"
      * error path via real UI input, rather than the "Required" path exercised above. No currently-confirmed
