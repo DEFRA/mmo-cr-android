@@ -16,6 +16,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -42,6 +44,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.submi
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.submission.SubmissionPendingSyncScreenTestTags
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.submission.SubmissionSuccessScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.submission.SubmissionSuccessScreenTestTags
+import uk.gov.defra.mmocatchrecord.feature.home.domain.CatchRecordSummary
 
 /**
  * Exercises the **real production navigation wiring** for Phase 8's "Accept and submit trip details"
@@ -94,6 +97,8 @@ class SubmissionFlowNavigationTest {
 
         override suspend fun markReadyToSubmit(draftId: String): Result<CatchRecordDraft> =
             Result.failure(UnsupportedOperationException("Not exercised by this test"))
+
+        override fun observeRecordSummaries(): Flow<List<CatchRecordSummary>> = flowOf(emptyList())
 
         fun statusOf(draftId: String): DraftStatus? = drafts[draftId]?.status
     }

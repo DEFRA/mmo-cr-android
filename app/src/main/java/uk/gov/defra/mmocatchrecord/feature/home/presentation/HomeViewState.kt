@@ -9,11 +9,5 @@ data class HomeViewState(
     val status: UiStatus<HomeSummary> = UiStatus.Idle,
 ) : ViewState
 
-/**
- * UI-originated events for the Home screen. Sign-out is intentionally not modelled here: it is a
- * root-level session concern owned by `core.root.SessionCoordinator` (`RootEvent.SignedOut`), invoked
- * directly by the composable via its `onSignOut` callback.
- */
-sealed interface HomeEvent {
-    data object Load : HomeEvent
-}
+/** UI-originated events for the Home screen; none needed yet — summary collection is reactive (ADR 0014 Phase B). */
+sealed interface HomeEvent

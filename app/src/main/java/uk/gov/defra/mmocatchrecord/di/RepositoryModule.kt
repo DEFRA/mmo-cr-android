@@ -23,7 +23,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordS
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordSyncScheduler
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.map.MapDataRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.ReferenceDataRepository
-import uk.gov.defra.mmocatchrecord.feature.home.data.FakeHomeRepository
+import uk.gov.defra.mmocatchrecord.feature.home.data.RoomHomeRepository
 import uk.gov.defra.mmocatchrecord.feature.home.domain.HomeRepository
 import uk.gov.defra.mmocatchrecord.feature.signin.data.FakeSignInRepository
 import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInRepository
@@ -41,7 +41,8 @@ object RepositoryModule {
 
     @Provides
     @Singleton
-    fun provideHomeRepository(): HomeRepository = FakeHomeRepository()
+    fun provideHomeRepository(draftRepository: CatchRecordDraftRepository): HomeRepository =
+        RoomHomeRepository(draftRepository)
 
     @Provides
     @Singleton

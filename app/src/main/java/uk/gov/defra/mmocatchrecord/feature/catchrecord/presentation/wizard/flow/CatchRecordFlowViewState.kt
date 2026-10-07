@@ -63,6 +63,11 @@ val CatchRecordFlowViewState.catchRecordReference: String?
 sealed interface CatchRecordFlowEvent {
     data object EnterFlow : CatchRecordFlowEvent
 
+    /** FR2: enter the flow resuming a specific, list-selected draft rather than "any active draft". */
+    data class EnterFlowForDraft(
+        val draftId: String,
+    ) : CatchRecordFlowEvent
+
     /** Resume the loaded active draft at its last-reached step. */
     data object ResumeDraft : CatchRecordFlowEvent
 

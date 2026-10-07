@@ -30,8 +30,12 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementV
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelection
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectionMode
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.ReferenceDataRepository
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Species
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.StatisticalSubRectangle
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Vessel
 import java.time.Instant
 import java.time.ZoneOffset
 import javax.inject.Inject
@@ -68,6 +72,7 @@ class CatchRecordFlowViewModel
         override fun dispatch(event: CatchRecordFlowEvent) {
             when (event) {
                 CatchRecordFlowEvent.EnterFlow -> enterFlow()
+                is CatchRecordFlowEvent.EnterFlowForDraft -> enterFlowForDraft(event.draftId)
                 CatchRecordFlowEvent.ResumeDraft -> resumeDraft()
                 CatchRecordFlowEvent.DeleteDraft -> deleteDraft()
                 is CatchRecordFlowEvent.VesselSelected -> vesselSelected(event.vesselId)
@@ -90,40 +95,44 @@ class CatchRecordFlowViewModel
             }
         }
 
+        private data class ReferenceDataBundle(
+            val vessels: List<Vessel>,
+            val ports: List<Port>,
+            val gearTypes: List<GearType>,
+            val statisticalSubRectangles: List<StatisticalSubRectangle>,
+            val species: List<Species>,
+        )
+
+        /** The five reference-data lists every wizard-entry path needs — shared by [enterFlow]/[enterFlowForDraft]. */
+        private suspend fun loadReferenceData(): ReferenceDataBundle =
+            ReferenceDataBundle(
+                vessels = referenceDataRepository.getVessels().getOrThrow(),
+                ports = referenceDataRepository.getPorts().getOrThrow(),
+                gearTypes = referenceDataRepository.getGearTypes().getOrThrow(),
+                statisticalSubRectangles = referenceDataRepository.getStatisticalSubRectangles().getOrThrow(),
+                species = referenceDataRepository.getSpecies().getOrThrow(),
+            )
+
+        private suspend fun previouslyUsedPortsFor(draft: CatchRecordDraft?): List<Port> =
+            draft?.let { referenceDataRepository.getPreviouslyUsedPorts(it.vesselId).getOrThrow() }.orEmpty()
+
         private fun enterFlow() {
             updateState { it.copy(status = UiStatus.Loading) }
             launchInViewModelScope {
                 runCatching {
-                    val vessels = referenceDataRepository.getVessels().getOrThrow()
-                    val ports = referenceDataRepository.getPorts().getOrThrow()
-                    val gearTypes = referenceDataRepository.getGearTypes().getOrThrow()
-                    val statisticalSubRectangles = referenceDataRepository.getStatisticalSubRectangles().getOrThrow()
-                    val species = referenceDataRepository.getSpecies().getOrThrow()
+                    val referenceData = loadReferenceData()
                     val existingDraft = draftRepository.getAnyActiveDraft().getOrThrow()
-                    val previouslyUsedPorts =
-                        existingDraft
-                            ?.let {
-                                referenceDataRepository
-                                    .getPreviouslyUsedPorts(
-                                        it.vesselId,
-                                    ).getOrThrow()
-                            }.orEmpty()
+                    val previouslyUsedPorts = previouslyUsedPortsFor(existingDraft)
                     updateState {
                         it.copy(
-                            status = existingDraft?.let { UiStatus.Content(it) } ?: UiStatus.Idle,
+                            status = existingDraft?.let { draft -> UiStatus.Content(draft) } ?: UiStatus.Idle,
                             currentStep =
-                                if (existingDraft ==
-                                    null
-                                ) {
-                                    WizardStep.VesselSelection
-                                } else {
-                                    WizardStep.DraftResume
-                                },
-                            vessels = vessels,
-                            ports = ports,
-                            gearTypes = gearTypes,
-                            statisticalSubRectangles = statisticalSubRectangles,
-                            species = species,
+                                if (existingDraft == null) WizardStep.VesselSelection else WizardStep.DraftResume,
+                            vessels = referenceData.vessels,
+                            ports = referenceData.ports,
+                            gearTypes = referenceData.gearTypes,
+                            statisticalSubRectangles = referenceData.statisticalSubRectangles,
+                            species = referenceData.species,
                             previouslyUsedPorts = previouslyUsedPorts,
                             departurePortEntryMode = deriveDeparturePortEntryMode(previouslyUsedPorts),
                             samePortCandidate = previouslyUsedPorts.firstOrNull(),
@@ -131,6 +140,35 @@ class CatchRecordFlowViewModel
                         )
                     }
                 }.onFailure { emitLoadError(CatchRecordFlowEvent.EnterFlow, it) }
+            }
+        }
+
+        /** FR2: as [enterFlow], but resumes the specific [draftId] chosen from the Home records list. */
+        private fun enterFlowForDraft(draftId: String) {
+            updateState { it.copy(status = UiStatus.Loading) }
+            launchInViewModelScope {
+                runCatching {
+                    val referenceData = loadReferenceData()
+                    val draft =
+                        draftRepository.getDraftById(draftId).getOrThrow()
+                            ?: error("Draft '$draftId' was not found")
+                    val previouslyUsedPorts = previouslyUsedPortsFor(draft)
+                    updateState {
+                        it.copy(
+                            status = UiStatus.Content(draft),
+                            currentStep = WizardStep.DraftResume,
+                            vessels = referenceData.vessels,
+                            ports = referenceData.ports,
+                            gearTypes = referenceData.gearTypes,
+                            statisticalSubRectangles = referenceData.statisticalSubRectangles,
+                            species = referenceData.species,
+                            previouslyUsedPorts = previouslyUsedPorts,
+                            departurePortEntryMode = deriveDeparturePortEntryMode(previouslyUsedPorts),
+                            samePortCandidate = previouslyUsedPorts.firstOrNull(),
+                            isDraftPersisted = true,
+                        )
+                    }
+                }.onFailure { emitLoadError(CatchRecordFlowEvent.EnterFlowForDraft(draftId), it) }
             }
         }
 

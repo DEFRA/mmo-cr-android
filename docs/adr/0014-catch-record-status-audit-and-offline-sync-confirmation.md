@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (Phase A).
+Accepted (Phase A and Phase B).
 
 ## Context
 
@@ -108,3 +108,92 @@ measuring ~10.42:1.
 - `RoomHomeRepository`/the records-list `Flow` DAO query remain out of scope for Phase A; `FakeHomeRepository`
   continues to stand in until a later phase wires the real repository.
 
+## Decision (Phase B)
+
+### Flat list projection, not the full aggregate
+
+`CatchRecordDraftDao.observeRecordSummaries()` is a single flat `@Query` (`DraftSummaryRow`), not the
+`@Transaction`/`@Relation` aggregate `getDraftWithChildren` uses. For N records that aggregate is N×5 queries
+plus full object-graph mapping on every emission, on an encrypted (SQLCipher) database, to render ~5 fields
+per row. `DraftSummaryMappers.toDomain` maps each row to a `CatchRecordSummary`, returning `null` (filtered
+by `mapNotNull`) for an unrecognised/`Discarded` status — belt-and-braces alongside the SQL
+`status != 'Discarded'` predicate. The full aggregate is still loaded on demand only when a draft is resumed
+(`getDraftById`). Sort is `modifiedAtEpochMillis DESC, id DESC`, the `id` tiebreak making test ordering
+deterministic when two rows share a timestamp.
+
+### `HomeRepository` becomes reactive; `HomeSummary` drops pagination
+
+`HomeRepository.observeSummary(): Flow<HomeSummary>` replaces the one-shot `suspend fun getSummary():
+Result<HomeSummary>` — a single read cannot reflect a background `CatchRecordSyncWorker` transition
+(`PendingSync` → `Submitted`) without the user manually refreshing, which defeats FR7/FR9. `HomeViewModel`
+collects this flow for its lifetime in `init` rather than exposing a one-shot `load()`. `HomeSummary` drops
+`totalCount`/`pageStart`/`pageEnd` (the list is local-only, bounded to one fisher's own device records — see
+`PaginationBar` removal below); `pendingCatchRecordCount` is now a derived getter
+(`count { status == AwaitingSync }`) rather than a stored field, so it can never drift from the list it
+summarises. `FakeHomeRepository` (`main`) is deleted; a hand-written, colocated `src/test` fake
+(`MutableSharedFlow<Result<HomeSummary>>(replay = 1)`) replaces it for `HomeViewModelTests`.
+
+### Stacked rows, not the 4-column table — recorded DesignSystem deviation
+
+`CatchRecordsTableSection` is replaced by `catchRecordsListSection`, rendering each record as a stacked
+GOV.UK-style row in a `LazyColumn` rather than a 4-column table. With a Retry button added for `AwaitingSync`
+rows, a fixed-column table cannot meet WCAG 1.4.4 (200% text reflow) or 1.4.10 (reflow at ~320dp) without
+clipping a column. There is no Figma reference for this screen; the stacked layout is a plan-approved,
+written-brief deviation from both the prior table and the DesignSystem's default table component — recorded
+here per the figma-design instructions' deviation-register requirement. The "Created by" column is dropped
+entirely (it never had real data behind stub sign-in); the catch record reference becomes the row's
+`heading()` instead.
+
+### `LazyColumn` replaces `Modifier.verticalScroll` (R14)
+
+`HomeTabContent` wrapped its content in `Modifier.verticalScroll`, which cannot contain a nested
+`LazyColumn` (it crashes at runtime). `HomeTabContent` is restructured into a single top-level `LazyColumn`
+with the banner/heading/accordions as `item {}` blocks and the records via `catchRecordsListSection`.
+
+### Touch targets: `LocalMinimumInteractiveComponentSize`, not `Spacing.minTouchTarget`
+
+Rows and the Retry button use `sizeIn(minWidth/minHeight = LocalMinimumInteractiveComponentSize.current)`
+per the approved brief, rather than the codebase's prevailing `Spacing.minTouchTarget` constant used
+elsewhere (e.g. `PrimaryActionButton`). Both currently resolve to 48dp; this is a flagged, minor
+inconsistency rather than a regression — a future cleanup could fold `Spacing.minTouchTarget` to delegate to
+the same Material3 local so there is one source of truth.
+
+### Draft recovery is list-selectable, not most-recent-only (FR2)
+
+`DraftResumeRoute` gains an optional `draftId`; `CatchRecordFlowViewModel.enterFlowForDraft(draftId)` loads
+the chosen draft via `getDraftById` (erroring, terminal/non-retryable, if not found) instead of always
+loading via `getAnyActiveDraft`. A row tap for a `Draft`/`ReadyToSubmit` record navigates straight into this
+route; `enterFlow()`'s existing-draft branch is unchanged (used only for the "resume whatever's active" entry
+point, e.g. the wizard's own re-entry). Both submission screens' "View your catch records" actions now land
+on the records list instead of plain Home.
+
+### Cross-package import: `data.local` → `home.domain`
+
+`DraftSummaryMappers` (in `feature.catchrecord.data.local`) imports `CatchRecordSummary` and
+`toRecordStatusTag` from `feature.home.domain`/`feature.home.presentation`. This mirrors the existing Phase A
+precedent of `common.design` depending on `feature.home` concepts being corrected the other way; here the
+catch-record data layer depends on the home feature's domain shape because the summary projection is
+inherently Home-screen-shaped. Flagged as a minor layering coupling, not reversed, because splitting
+`CatchRecordSummary` into a separate shared module was judged disproportionate for Phase B's scope.
+
+### `PaginationBar` removed; related dead strings cleaned up
+
+`PaginationBar(onNextClick = {})` was a visibly interactive control that did nothing — replaced by a plain
+count line (`catch_records_count`). `showing_x_to_y_of_z` and `next` are deleted per the brief; `col_created_by`
+and `col_status` are additionally deleted (beyond the brief's literal wording) since the table they belonged
+to no longer exists and Android Lint's unused-resource check would otherwise fail `lint`.
+
+### Offline banner promoted to the Home `Scaffold` (FR4)
+
+`OfflineBanner` itself is unchanged (its `liveRegion = Polite` semantics and `testTag("offline_banner")`
+already satisfied WCAG 4.1.3). It now renders once in `HomeScreenContent`'s `Scaffold` body, driven by
+`ConnectivityViewModel.isOffline`, covering all three Home tabs — previously it was wizard-only.
+
+## Consequences (Phase B)
+
+- Phase C's manual retry wires `catchRecordsListSection`/`CatchRecordRow`'s existing `onRetry: (String) ->
+  Unit` no-op parameter to real retry logic; no further UI changes to the row should be needed.
+- `HomeScreenRobolectricTests` is the Kover/SonarCloud-reachable Compose coverage for the records list and
+  offline banner, since `connectedDebugAndroidTest` coverage is not merged into that gate.
+- `RoomCatchRecordDraftRepository`/`RoomHomeRepository` are the shipped Phase B implementations;
+  `FakeHomeRepository` remains only in `src/test`.

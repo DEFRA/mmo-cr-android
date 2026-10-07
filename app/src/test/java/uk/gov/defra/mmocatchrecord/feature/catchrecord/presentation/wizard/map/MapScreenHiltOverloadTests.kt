@@ -13,6 +13,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -36,6 +38,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.FakeReferenceDataRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardStep
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardTestTheme
+import uk.gov.defra.mmocatchrecord.feature.home.domain.CatchRecordSummary
 import uk.gov.defra.mmocatchrecord.mapdata.MapDataset
 import uk.gov.defra.mmocatchrecord.mapdata.SerializableBBox
 import uk.gov.defra.mmocatchrecord.mapdata.SerializableMultiPolygon
@@ -103,6 +106,8 @@ class MapScreenHiltOverloadTests {
 
         override suspend fun markReadyToSubmit(draftId: String): Result<CatchRecordDraft> =
             Result.failure(UnsupportedOperationException("Not exercised by this test"))
+
+        override fun observeRecordSummaries(): Flow<List<CatchRecordSummary>> = flowOf(emptyList())
 
         fun draftOrNull(draftId: String): CatchRecordDraft? = drafts[draftId]
     }

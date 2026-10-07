@@ -12,6 +12,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -174,6 +175,47 @@ class CatchRecordFlowViewModelTests {
                 assertTrue(loaded.status is UiStatus.Content)
                 assertEquals(DeparturePortEntryMode.SamePortShortcut, loaded.departurePortEntryMode)
                 assertEquals("port-hastings", loaded.samePortCandidate?.id)
+            }
+        }
+
+    @Test
+    fun `enter flow for draft loads the chosen draft, not just the most recently modified one`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            var draftIdCounter = 0
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-${draftIdCounter++}" })
+            val chosen = repository.startDraft("vessel-achilles").getOrThrow()
+            repository.startDraft("vessel-hercules").getOrThrow()
+            val viewModel = buildViewModel(repository = repository, dispatcher = dispatcher)
+
+            viewModel.state.test {
+                awaitItem()
+                viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft(chosen.id))
+                assertEquals(UiStatus.Loading, awaitItem().status)
+                val loaded = awaitItem()
+                assertEquals(WizardStep.DraftResume, loaded.currentStep)
+                assertTrue(loaded.isDraftPersisted)
+                assertEquals(chosen.id, (loaded.status as UiStatus.Content).value.id)
+                assertEquals(2, loaded.vessels.size)
+                assertEquals(DeparturePortEntryMode.SamePortShortcut, loaded.departurePortEntryMode)
+                assertEquals("port-hastings", loaded.samePortCandidate?.id)
+            }
+        }
+
+    @Test
+    fun `enter flow for an unknown draft id surfaces a terminal non-retryable error`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository()
+            val viewModel = buildViewModel(repository = repository, dispatcher = dispatcher)
+
+            viewModel.state.test {
+                awaitItem()
+                viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("missing-draft"))
+                assertEquals(UiStatus.Loading, awaitItem().status)
+                val errored = awaitItem()
+                assertTrue(errored.status is UiStatus.Error)
+                assertFalse((errored.status as UiStatus.Error).isRetryable)
             }
         }
 

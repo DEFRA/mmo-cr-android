@@ -1,8 +1,11 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local
 
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
+import uk.gov.defra.mmocatchrecord.feature.home.domain.CatchRecordSummary
 import javax.inject.Inject
 
 /**
@@ -81,4 +84,7 @@ class RoomCatchRecordDraftRepository
                 notLandedSpecies = entities.notLandedSpecies,
             )
         }
+
+        override fun observeRecordSummaries(): Flow<List<CatchRecordSummary>> =
+            dao.observeRecordSummaries().map { rows -> rows.mapNotNull(DraftSummaryMappers::toDomain) }
     }

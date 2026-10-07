@@ -1,5 +1,8 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft
 
+import kotlinx.coroutines.flow.Flow
+import uk.gov.defra.mmocatchrecord.feature.home.domain.CatchRecordSummary
+
 /**
  * Repository abstraction over catch-record draft persistence. Offline-first: every write is accepted
  * locally first (no network dependency for this feature — see ADR 0006), and every function returns a
@@ -37,4 +40,7 @@ interface CatchRecordDraftRepository {
 
     /** Transitions the draft to [DraftStatus.ReadyToSubmit]. Fails if no draft with [draftId] exists. */
     suspend fun markReadyToSubmit(draftId: String): Result<CatchRecordDraft>
+
+    /** Reactive list-projection summaries for the Home records list (CRAR-152 Phase B); excludes Discarded. */
+    fun observeRecordSummaries(): Flow<List<CatchRecordSummary>>
 }

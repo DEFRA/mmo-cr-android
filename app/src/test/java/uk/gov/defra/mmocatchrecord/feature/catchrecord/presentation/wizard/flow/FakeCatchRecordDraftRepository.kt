@@ -2,16 +2,22 @@
 
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow
 
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftFactory
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
+import uk.gov.defra.mmocatchrecord.feature.home.domain.CatchRecordSummary
+import uk.gov.defra.mmocatchrecord.feature.home.presentation.toRecordStatusTag
 
 class FakeCatchRecordDraftRepository(
     private val idFactory: () -> String = { "draft-id" },
     private val clock: () -> Long = { 0L },
 ) : CatchRecordDraftRepository {
     private val drafts = mutableMapOf<String, CatchRecordDraft>()
+    private val draftsFlow = MutableStateFlow<List<CatchRecordDraft>>(emptyList())
     val deletedDraftIds = mutableListOf<String>()
     var failNextOperation: Boolean = false
 
@@ -46,6 +52,7 @@ class FakeCatchRecordDraftRepository(
                 modifiedAtEpochMillis = creationTime,
             )
         drafts[stamped.id] = stamped
+        publishDrafts()
         return Result.success(stamped)
     }
 
@@ -70,6 +77,7 @@ class FakeCatchRecordDraftRepository(
                 syncedAtEpochMillis = draft.syncedAtEpochMillis ?: now.takeIf { isSynced },
             )
         drafts[updated.id] = updated
+        publishDrafts()
         return Result.success(updated)
     }
 
@@ -77,6 +85,7 @@ class FakeCatchRecordDraftRepository(
         if (failNextOperation) return failure()
         drafts.remove(draftId)
         deletedDraftIds += draftId
+        publishDrafts()
         return Result.success(Unit)
     }
 
@@ -85,7 +94,26 @@ class FakeCatchRecordDraftRepository(
         val existing = drafts[draftId] ?: return Result.failure(NoSuchElementException("No draft $draftId"))
         val updated = existing.copy(status = DraftStatus.ReadyToSubmit)
         drafts[draftId] = updated
+        publishDrafts()
         return Result.success(updated)
+    }
+
+    override fun observeRecordSummaries(): Flow<List<CatchRecordSummary>> =
+        draftsFlow.map { snapshot ->
+            snapshot
+                .filter { it.status != DraftStatus.Discarded }
+                .sortedWith(
+                    compareByDescending<CatchRecordDraft> { it.modifiedAtEpochMillis }
+                        .thenByDescending { it.id },
+                ).mapNotNull { draft ->
+                    draft.status.toRecordStatusTag()?.let { tag ->
+                        CatchRecordSummary(draft.id, draft.catchRecordReference, draft.vesselId, draft.returnDate, tag)
+                    }
+                }
+        }
+
+    private fun publishDrafts() {
+        draftsFlow.value = drafts.values.toList()
     }
 
     private fun <T> failure(): Result<T> {

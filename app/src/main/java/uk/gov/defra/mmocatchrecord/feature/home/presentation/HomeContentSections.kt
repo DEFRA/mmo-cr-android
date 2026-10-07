@@ -2,33 +2,39 @@
 
 package uk.gov.defra.mmocatchrecord.feature.home.presentation
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.ExpandableDetails
 import uk.gov.defra.mmocatchrecord.common.design.ImportantNotificationBanner
 import uk.gov.defra.mmocatchrecord.common.design.MmoColors
-import uk.gov.defra.mmocatchrecord.common.design.PaginationBar
 import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
+import uk.gov.defra.mmocatchrecord.common.design.RecordStatusTag
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
 import uk.gov.defra.mmocatchrecord.common.design.StatusTag
-import uk.gov.defra.mmocatchrecord.feature.home.domain.HomeSummary
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DmyDate
+import uk.gov.defra.mmocatchrecord.feature.home.domain.CatchRecordSummary
 
 @Suppress("FunctionNaming")
 @Composable
@@ -71,100 +77,104 @@ fun LoadingIndicator() {
     }
 }
 
-@Suppress("FunctionNaming")
-@Composable
-fun CatchRecordsTableSection(summary: HomeSummary) {
-    Column(modifier = Modifier.fillMaxWidth().border(1.dp, MmoColors.Grey3)) {
-        TableHeaderRow()
-        TableContentRows(summary = summary)
-    }
+object CatchRecordsListSectionTestTags {
+    const val EMPTY_STATE = "catch_records_empty_state"
+    const val COUNT = "catch_records_count"
 
-    PaginationBar(
-        pageStart = summary.pageStart,
-        pageEnd = summary.pageEnd,
-        totalCount = summary.totalCount,
-        onNextClick = { },
-    )
+    fun row(id: String) = "catch_record_row_$id"
+
+    fun retry(id: String) = "catch_record_retry_$id"
 }
 
-@Suppress("FunctionNaming")
-@Composable
-private fun TableHeaderRow() {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .background(
-                    MmoColors.Background,
-                ).padding(vertical = Spacing.s, horizontal = Spacing.xs),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            stringResource(R.string.col_trip_end_date),
-            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-            modifier = Modifier.weight(0.28f),
-        )
-        Text(
-            stringResource(R.string.col_vessel),
-            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-            modifier = Modifier.weight(0.24f),
-        )
-        Text(
-            stringResource(R.string.col_status),
-            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-            modifier = Modifier.weight(0.28f),
-        )
-        Text(
-            stringResource(R.string.col_created_by),
-            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-            modifier = Modifier.weight(0.20f),
-        )
-    }
-}
-
-@Suppress("FunctionNaming")
-@Composable
-private fun TableContentRows(summary: HomeSummary) {
-    summary.catchRecords.forEach { record ->
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .drawBehind {
-                        drawLine(
-                            color = MmoColors.Grey3,
-                            start =
-                                androidx.compose.ui.geometry
-                                    .Offset(0f, size.height),
-                            end =
-                                androidx.compose.ui.geometry
-                                    .Offset(size.width, size.height),
-                            strokeWidth = 1.dp.toPx(),
-                        )
-                    }.padding(vertical = Spacing.s, horizontal = Spacing.xs),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+/**
+ * Stacked rows (ADR-0014 Phase B); must be called inside the caller's `LazyColumn` (R14). [onRetry] is
+ * wired to FR8 manual retry (Phase C); [retryingIds] disables a row's button while its retry is pending.
+ */
+fun LazyListScope.catchRecordsListSection(
+    records: List<CatchRecordSummary>,
+    onRecordClick: (String) -> Unit,
+    onRetry: (String) -> Unit = {},
+    retryingIds: Set<String> = emptySet(),
+) {
+    if (records.isEmpty()) {
+        item {
             Text(
-                text = record.tripEndDate,
-                style =
-                    MaterialTheme.typography.bodyMedium.copy(
-                        color = MmoColors.Link,
-                        textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline,
-                    ),
-                modifier = Modifier.weight(0.24f),
-            )
-            Text(
-                text = record.vesselName,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(0.24f),
-            )
-            Box(modifier = Modifier.weight(0.28f)) { StatusTag(status = record.status) }
-            Text(
-                text = record.createdBy,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(0.20f),
+                text = stringResource(R.string.no_catch_records_yet),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.testTag(CatchRecordsListSectionTestTags.EMPTY_STATE),
             )
         }
+        return
+    }
+    items(records, key = { it.id }) { record ->
+        CatchRecordRow(
+            record = record,
+            onClick = onRecordClick,
+            onRetry = onRetry,
+            isRetrying = record.id in retryingIds,
+        )
+    }
+    item {
+        Text(
+            text = stringResource(R.string.catch_records_count, records.size),
+            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+            modifier = Modifier.padding(vertical = Spacing.s).testTag(CatchRecordsListSectionTestTags.COUNT),
+        )
+    }
+}
+
+private fun formatDmyDate(date: DmyDate): String = "%02d/%02d/%04d".format(date.day, date.month, date.year)
+
+@Suppress("FunctionNaming")
+@Composable
+private fun CatchRecordRow(
+    record: CatchRecordSummary,
+    onClick: (String) -> Unit,
+    onRetry: (String) -> Unit,
+    isRetrying: Boolean,
+) {
+    val isResumable = record.status == RecordStatusTag.Draft || record.status == RecordStatusTag.ReadyToSubmit
+    val minTouchTarget = LocalMinimumInteractiveComponentSize.current
+    val reference = record.catchRecordReference ?: stringResource(R.string.records_reference_pending)
+    val tripEndDateText =
+        record.tripEndDate?.let(::formatDmyDate) ?: stringResource(R.string.records_trip_end_date_not_set)
+    val rowModifier =
+        Modifier
+            .fillMaxWidth()
+            .sizeIn(minWidth = minTouchTarget, minHeight = minTouchTarget)
+            .testTag(CatchRecordsListSectionTestTags.row(record.id))
+            .let { base -> if (isResumable) base.clickable { onClick(record.id) } else base }
+            .padding(vertical = Spacing.s)
+
+    Column(modifier = rowModifier, verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
+        Text(
+            text = reference,
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+            modifier = Modifier.semantics { heading() },
+        )
+        Text(
+            text = "${stringResource(R.string.col_vessel)}: ${record.vesselId}",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Text(
+            text = "${stringResource(R.string.col_trip_end_date)}: $tripEndDateText",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        StatusTag(status = record.status, modifier = Modifier.padding(top = Spacing.xxs))
+        if (record.status == RecordStatusTag.AwaitingSync) {
+            OutlinedButton(
+                onClick = { onRetry(record.id) },
+                enabled = !isRetrying,
+                modifier =
+                    Modifier
+                        .sizeIn(minWidth = minTouchTarget, minHeight = minTouchTarget)
+                        .testTag(CatchRecordsListSectionTestTags.retry(record.id)),
+            ) {
+                val label = if (isRetrying) R.string.records_retry_pending else R.string.records_retry_action
+                Text(stringResource(label))
+            }
+        }
+        HorizontalDivider(color = MmoColors.Grey3, modifier = Modifier.padding(top = Spacing.xs))
     }
 }
 
@@ -236,10 +246,16 @@ private fun HelpRecordingAccordion() {
 @Composable
 private fun CatchStatusesAccordion() {
     ExpandableDetails(title = stringResource(R.string.catch_record_statuses)) {
-        StatusHelpRow(stringResource(R.string.status_unsent_title), stringResource(R.string.status_unsent_desc))
+        StatusHelpRow(stringResource(R.string.status_draft_title), stringResource(R.string.status_draft_desc))
+        StatusHelpRow(
+            stringResource(R.string.status_ready_to_submit_title),
+            stringResource(R.string.status_ready_to_submit_desc),
+        )
+        StatusHelpRow(
+            stringResource(R.string.status_awaiting_sync_title),
+            stringResource(R.string.status_awaiting_sync_desc),
+        )
         StatusHelpRow(stringResource(R.string.status_submitted_title), stringResource(R.string.status_submitted_desc))
-        StatusHelpRow(stringResource(R.string.status_amended_title), stringResource(R.string.status_amended_desc))
-        StatusHelpRow(stringResource(R.string.status_late_title), stringResource(R.string.status_late_desc))
         Text(
             stringResource(R.string.status_check_tab),
             style = MaterialTheme.typography.bodyMedium,

@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
+import kotlinx.coroutines.flow.Flow
 
 private const val ACTIVE_STATUSES_CLAUSE = "status IN ('Draft', 'ReadyToSubmit')"
 
@@ -18,6 +19,15 @@ private const val ACTIVE_STATUSES_CLAUSE = "status IN ('Draft', 'ReadyToSubmit')
 interface CatchRecordDraftDao {
     @Query("SELECT * FROM catch_record_draft WHERE id = :draftId")
     suspend fun findDraftEntity(draftId: String): DraftEntity?
+
+    /** Flat list projection, not the full aggregate — excludes `Discarded` tombstones; see ADR 0014. */
+    @Query(
+        "SELECT id, vesselId, catchRecordReference, status, returnDay, returnMonth, returnYear, " +
+            "createdAtEpochMillis, modifiedAtEpochMillis, submittedAtEpochMillis, syncedAtEpochMillis " +
+            "FROM catch_record_draft WHERE status != 'Discarded' " +
+            "ORDER BY modifiedAtEpochMillis DESC, id DESC",
+    )
+    fun observeRecordSummaries(): Flow<List<DraftSummaryRow>>
 
     @Query("SELECT * FROM catch_record_draft WHERE vesselId = :vesselId AND $ACTIVE_STATUSES_CLAUSE LIMIT 1")
     suspend fun findActiveDraftEntity(vesselId: String): DraftEntity?
