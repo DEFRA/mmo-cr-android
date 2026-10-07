@@ -88,7 +88,7 @@ class MapScreenHiltOverloadTests {
 
         override suspend fun getDraftById(draftId: String): Result<CatchRecordDraft?> = Result.success(drafts[draftId])
 
-        override suspend fun startDraft(vesselId: String): Result<CatchRecordDraft> =
+        override suspend fun startDraft(candidate: CatchRecordDraft): Result<CatchRecordDraft> =
             Result.failure(UnsupportedOperationException("Not exercised by this test"))
 
         override suspend fun saveDraft(draft: CatchRecordDraft): Result<CatchRecordDraft> {

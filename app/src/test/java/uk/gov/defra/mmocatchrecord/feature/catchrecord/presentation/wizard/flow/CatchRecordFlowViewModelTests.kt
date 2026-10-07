@@ -235,7 +235,7 @@ class CatchRecordFlowViewModelTests {
         }
 
     @Test
-    fun `vessel selected persists draft and advances to trip today`() =
+    fun `vessel selected with no existing draft performs zero writes per BR-XX`() =
         runTest {
             val dispatcher = StandardTestDispatcher(testScheduler)
             val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
@@ -249,8 +249,37 @@ class CatchRecordFlowViewModelTests {
                 assertEquals(WizardStep.TripToday, loaded.currentStep)
                 assertEquals("vessel-hercules", (loaded.status as UiStatus.Content<CatchRecordDraft>).value.vesselId)
                 assertEquals(DeparturePortEntryMode.Search, loaded.departurePortEntryMode)
+                assertTrue(!loaded.isDraftPersisted)
             }
-            assertEquals("vessel-hercules", repository.getActiveDraft("vessel-hercules").getOrThrow()?.vesselId)
+            assertEquals(0, repository.startDraftCallCount)
+            assertNull(repository.getActiveDraft("vessel-hercules").getOrThrow())
+        }
+
+    @Test
+    fun `the first save and continue persists exactly one row and the second does not re-create`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            val viewModel =
+                buildViewModel(repository = repository, clock = { 1_725_811_200_000L }, dispatcher = dispatcher)
+            viewModel.dispatch(CatchRecordFlowEvent.VesselSelected("vessel-achilles"))
+            testScheduler.advanceUntilIdle()
+            assertEquals(0, repository.startDraftCallCount)
+
+            viewModel.state.test {
+                skipItems(1)
+                viewModel.dispatch(CatchRecordFlowEvent.TripTodayAnswered(true))
+                assertEquals(UiStatus.Loading, awaitItem().status)
+                val afterFirstSave = awaitItem()
+                assertTrue(afterFirstSave.isDraftPersisted)
+
+                viewModel.dispatch(CatchRecordFlowEvent.SamePortShortcutAccepted)
+                assertEquals(UiStatus.Loading, awaitItem().status)
+                val afterSecondSave = awaitItem()
+                assertTrue(afterSecondSave.isDraftPersisted)
+            }
+            assertEquals(1, repository.startDraftCallCount)
+            assertEquals("vessel-achilles", repository.getActiveDraft("vessel-achilles").getOrThrow()?.vesselId)
         }
 
     @Test
@@ -389,9 +418,8 @@ class CatchRecordFlowViewModelTests {
                 val updated = awaitItem()
                 assertEquals("gear-seine-nets", updated.pendingGearTypeId)
             }
-            // Not yet persisted: the draft in the repository has no gear uses until measurements submit.
-            val activeDraft = repository.getActiveDraft("vessel-achilles").getOrThrow()
-            assertTrue(activeDraft?.gearUses.orEmpty().isEmpty())
+            // Not yet persisted per BR-XX: no draft is written until the first "Save and continue".
+            assertNull(repository.getActiveDraft("vessel-achilles").getOrThrow())
         }
 
     /**

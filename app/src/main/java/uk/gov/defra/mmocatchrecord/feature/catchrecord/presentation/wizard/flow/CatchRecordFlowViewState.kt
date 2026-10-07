@@ -47,6 +47,8 @@ data class CatchRecordFlowViewState(
      * entry the user simply re-picks the gear type; no captured data is lost since nothing was saved yet.
      */
     val pendingGearTypeId: String? = null,
+    /** BR-XX: whether the draft currently in [status] has an actual Room row yet — see ADR 0014. */
+    val isDraftPersisted: Boolean = false,
 ) : ViewState
 
 /**

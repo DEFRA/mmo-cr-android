@@ -47,12 +47,10 @@ object RepositoryModule {
     @Singleton
     fun provideCatchRecordDraftRepository(
         dao: CatchRecordDraftDao,
-        idFactory: () -> String,
         clock: () -> Long,
     ): CatchRecordDraftRepository =
         RoomCatchRecordDraftRepository(
             dao = dao,
-            idFactory = idFactory,
             clock = clock,
         )
 

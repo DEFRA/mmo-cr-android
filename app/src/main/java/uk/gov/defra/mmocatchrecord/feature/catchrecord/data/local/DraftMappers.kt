@@ -73,6 +73,9 @@ private object DraftToEntityMapper {
             notLandedStraightAway = draft.notLandedStraightAway,
             catchRecordReference = draft.catchRecordReference,
             lateSubmissionWarningAcknowledged = draft.lateSubmissionWarningAcknowledged,
+            createdAtEpochMillis = draft.createdAtEpochMillis,
+            submittedAtEpochMillis = draft.submittedAtEpochMillis,
+            syncedAtEpochMillis = draft.syncedAtEpochMillis,
         )
 
     private fun toGearUseEntity(
@@ -162,6 +165,9 @@ private object EntityToDraftMapper {
             modifiedAtEpochMillis = draft.modifiedAtEpochMillis,
             catchRecordReference = draft.catchRecordReference,
             lateSubmissionWarningAcknowledged = draft.lateSubmissionWarningAcknowledged,
+            createdAtEpochMillis = draft.createdAtEpochMillis,
+            submittedAtEpochMillis = draft.submittedAtEpochMillis,
+            syncedAtEpochMillis = draft.syncedAtEpochMillis,
         )
     }
 

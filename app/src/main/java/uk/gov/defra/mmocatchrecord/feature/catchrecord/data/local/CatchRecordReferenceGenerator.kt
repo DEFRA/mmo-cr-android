@@ -6,8 +6,8 @@ import java.time.format.DateTimeFormatter
 
 /**
  * Generates the user-facing catch-record reference shown throughout the wizard and the Phase 8
- * submission-result screens (e.g. `"A1234520260727150815"`), once per draft at creation time — see
- * [RoomCatchRecordDraftRepository.startDraft].
+ * submission-result screens (e.g. `"A1234520260727150815"`), once per draft when its candidate is built
+ * — see `CatchRecordFlowViewModel.vesselSelected`/`CatchRecordDraftFactory`.
  *
  * **Deviation (flagged):** the confirmed screenshots show this exact format (a short alphanumeric prefix
  * followed by a 14-digit `yyyyMMddHHmmss` timestamp) but do not confirm what the prefix itself encodes

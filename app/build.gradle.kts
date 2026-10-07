@@ -37,6 +37,10 @@ android {
             )
         }
     }
+    sourceSets {
+        // Bundles the exported Room schema JSON into the test APK so MigrationTestHelper can read it.
+        getByName("androidTest").assets.srcDirs("$projectDir/schemas")
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
@@ -147,6 +151,9 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    // Needed for the CatchRecordMigrationTest instrumented migration test (CRAR-152 Phase C).
+    androidTestImplementation(libs.androidx.room.testing)
+    androidTestImplementation(libs.kotlinx.coroutines.test)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

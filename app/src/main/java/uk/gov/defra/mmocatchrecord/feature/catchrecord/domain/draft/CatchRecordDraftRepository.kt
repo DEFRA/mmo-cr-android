@@ -24,11 +24,10 @@ interface CatchRecordDraftRepository {
     suspend fun getDraftById(draftId: String): Result<CatchRecordDraft?>
 
     /**
-     * Returns the vessel's existing active draft if one exists, otherwise creates and persists a new
-     * empty draft for the vessel and returns it. Never creates a second concurrent active draft for the
-     * same vessel.
+     * Persists [candidate] unless the vessel already has an active draft (then returns that unchanged) —
+     * see ADR 0010 for race-safety and ADR 0014 for why callers build [candidate] (BR-XX).
      */
-    suspend fun startDraft(vesselId: String): Result<CatchRecordDraft>
+    suspend fun startDraft(candidate: CatchRecordDraft): Result<CatchRecordDraft>
 
     /** Persists the full current state of [draft] (an autosave "save and continue" step transition). */
     suspend fun saveDraft(draft: CatchRecordDraft): Result<CatchRecordDraft>
