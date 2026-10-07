@@ -1,4 +1,4 @@
-@file:Suppress("detekt.FunctionNaming", "detekt.MaxLineLength")
+@file:Suppress("detekt.FunctionNaming", "detekt.MaxLineLength", "detekt.TooManyFunctions")
 
 package uk.gov.defra.mmocatchrecord.feature.home.presentation
 
@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
@@ -25,10 +26,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.ExpandableDetails
 import uk.gov.defra.mmocatchrecord.common.design.ImportantNotificationBanner
 import uk.gov.defra.mmocatchrecord.common.design.MmoColors
+import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
 import uk.gov.defra.mmocatchrecord.common.design.RecordStatusTag
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
@@ -273,5 +276,115 @@ fun StatusHelpRow(
     Column(modifier = Modifier.padding(bottom = Spacing.xs)) {
         Text(text = title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold))
         Text(text = desc, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+private val previewCatchRecords =
+    listOf(
+        CatchRecordSummary("1", "MMO-REF-001", "ACHILLES", DmyDate(20, 11, 2020), RecordStatusTag.Submitted),
+        CatchRecordSummary("2", "MMO-REF-002", "ACHILLES", DmyDate(18, 11, 2020), RecordStatusTag.ReadyToSubmit),
+        CatchRecordSummary("3", null, "ACHILLES", null, RecordStatusTag.Draft),
+        CatchRecordSummary("4", "MMO-REF-004", "ACHILLES", DmyDate(15, 11, 2020), RecordStatusTag.AwaitingSync),
+    )
+
+@Preview(name = "Important banner section", showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Suppress("FunctionNaming")
+@Composable
+fun ImportantBannerSectionPreview() {
+    MmoTheme {
+        ImportantBannerSection()
+    }
+}
+
+@Preview(name = "Heading section", showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Suppress("FunctionNaming")
+@Composable
+fun HeadingSectionPreview() {
+    MmoTheme {
+        HeadingSection(onCreateCatchRecord = {})
+    }
+}
+
+@Preview(name = "Loading indicator", showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Suppress("FunctionNaming")
+@Composable
+fun LoadingIndicatorPreview() {
+    MmoTheme {
+        LoadingIndicator()
+    }
+}
+
+@Preview(name = "Catch records list", showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Suppress("FunctionNaming")
+@Composable
+fun CatchRecordsListSectionPreview() {
+    MmoTheme {
+        LazyColumn(modifier = Modifier.padding(Spacing.m)) {
+            catchRecordsListSection(records = previewCatchRecords, onRecordClick = {})
+        }
+    }
+}
+
+@Preview(name = "Catch records list (empty)", showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Suppress("FunctionNaming")
+@Composable
+fun CatchRecordsListSectionEmptyPreview() {
+    MmoTheme {
+        LazyColumn(modifier = Modifier.padding(Spacing.m)) {
+            catchRecordsListSection(records = emptyList(), onRecordClick = {})
+        }
+    }
+}
+
+@Preview(name = "Catch record row", showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Suppress("FunctionNaming")
+@Composable
+fun CatchRecordRowPreview() {
+    MmoTheme {
+        CatchRecordRow(
+            record = previewCatchRecords[3],
+            onClick = {},
+            onRetry = {},
+            isRetrying = false,
+        )
+    }
+}
+
+@Preview(name = "Help accordions section", showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Suppress("FunctionNaming")
+@Composable
+fun HelpAccordionsSectionPreview() {
+    MmoTheme {
+        HelpAccordionsSection()
+    }
+}
+
+@Preview(name = "Help recording accordion", showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Suppress("FunctionNaming")
+@Composable
+fun HelpRecordingAccordionPreview() {
+    MmoTheme {
+        HelpRecordingAccordion()
+    }
+}
+
+@Preview(name = "Catch statuses accordion", showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Suppress("FunctionNaming")
+@Composable
+fun CatchStatusesAccordionPreview() {
+    MmoTheme {
+        CatchStatusesAccordion()
+    }
+}
+
+@Preview(name = "Status help row", showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Suppress("FunctionNaming")
+@Composable
+fun StatusHelpRowPreview() {
+    MmoTheme {
+        StatusHelpRow(
+            title = stringResource(R.string.status_draft_title),
+            desc = stringResource(R.string.status_draft_desc),
+        )
     }
 }
