@@ -88,6 +88,7 @@ fun HomeScreen(
         onResumeDraft = onResumeDraft,
         onRetry = { draftId -> viewModel.dispatch(HomeEvent.RetrySubmission(draftId)) },
         onDismissOfflineMessage = { viewModel.dispatch(HomeEvent.OfflineRetryMessageShown) },
+        onDismissSyncConfirmationMessage = { viewModel.dispatch(HomeEvent.SyncConfirmationMessageShown) },
         debugSettingsSection = viewModel.debugSettingsSection,
         modifier = modifier,
     )
@@ -109,6 +110,7 @@ fun HomeScreenContent(
     modifier: Modifier = Modifier,
     onRetry: (String) -> Unit = {},
     onDismissOfflineMessage: () -> Unit = {},
+    onDismissSyncConfirmationMessage: () -> Unit = {},
     debugSettingsSection: DebugSettingsSection = NoOpDebugSettingsSectionPreview,
 ) {
     AppLanguageProvider(language = currentLanguage) {
@@ -141,6 +143,7 @@ fun HomeScreenContent(
                                     onResumeDraft = onResumeDraft,
                                     onRetry = onRetry,
                                     onDismissOfflineMessage = onDismissOfflineMessage,
+                                    onDismissSyncConfirmationMessage = onDismissSyncConfirmationMessage,
                                 )
                             1 -> NotificationsTabContent()
                             2 -> SettingsTabContent(onSignOut = onSignOut, debugSettingsSection = debugSettingsSection)
@@ -162,6 +165,7 @@ private fun HomeTabContent(
     onResumeDraft: (String) -> Unit,
     onRetry: (String) -> Unit,
     onDismissOfflineMessage: () -> Unit,
+    onDismissSyncConfirmationMessage: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(Spacing.m).testTag(HomeScreenTestTags.TAB_LIST),
@@ -170,6 +174,9 @@ private fun HomeTabContent(
         item { ImportantBannerSection() }
         state.offlineRetryMessage?.let { message ->
             item { OfflineRetryMessage(message = message, onDismissed = onDismissOfflineMessage) }
+        }
+        state.syncConfirmationMessage?.let { message ->
+            item { SyncConfirmationMessage(message = message, onDismissed = onDismissSyncConfirmationMessage) }
         }
         item { HeadingSection(onCreateCatchRecord = onCreateCatchRecord) }
         when (val status = state.status) {

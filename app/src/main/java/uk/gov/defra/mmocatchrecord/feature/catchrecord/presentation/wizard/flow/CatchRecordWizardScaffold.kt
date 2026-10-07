@@ -2,6 +2,7 @@
 
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
@@ -22,7 +23,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,6 +51,7 @@ import uk.gov.defra.mmocatchrecord.common.design.MmoColors
 import uk.gov.defra.mmocatchrecord.common.design.OfflineBanner
 import uk.gov.defra.mmocatchrecord.common.design.SecondaryActionButton
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
+import uk.gov.defra.mmocatchrecord.common.design.UnsavedChangesDialog
 import uk.gov.defra.mmocatchrecord.core.connectivity.ConnectivityViewModel
 import uk.gov.defra.mmocatchrecord.core.language.AppLanguage
 import uk.gov.defra.mmocatchrecord.core.language.AppLanguageViewModel
@@ -54,6 +59,12 @@ import uk.gov.defra.mmocatchrecord.core.language.AppLanguageViewModel
 data class WizardErrorSummaryItem(
     val message: String,
     val onClick: () -> Unit,
+)
+
+/** BR-XX (ADR 0014, Phase D) unsaved-changes guard config for [CatchRecordWizardScaffold], grouped to one parameter. */
+data class WizardUnsavedChangesConfig(
+    val hasUnsavedChanges: Boolean = false,
+    val onDiscardChanges: () -> Unit = {},
 )
 
 /** Resolved language/connectivity state a wizard screen needs, from Hilt, [LocalWizardScaffoldState] or a preview default. */
@@ -77,7 +88,7 @@ val LocalWizardScaffoldState = staticCompositionLocalOf<WizardScaffoldState?> { 
  * `@Preview`/inspection mode (see [CatchRecordWizardScaffold] doc comment on `hiltViewModel()` availability).
  */
 @Composable
-private fun rememberWizardScaffoldState(): WizardScaffoldState {
+internal fun rememberWizardScaffoldState(): WizardScaffoldState {
     LocalWizardScaffoldState.current?.let { return it }
     if (LocalInspectionMode.current) {
         return WizardScaffoldState(
@@ -116,6 +127,7 @@ fun CatchRecordWizardScaffold(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     referenceNumber: String? = null,
+    unsavedChanges: WizardUnsavedChangesConfig = WizardUnsavedChangesConfig(),
     content: @Composable ColumnScope.() -> Unit,
 ) {
     // hiltViewModel() is unavailable in @Preview/inspection composition (no Hilt component present) — see
@@ -124,6 +136,8 @@ fun CatchRecordWizardScaffold(
     // app-wide/DataStore-persisted; this is purely "how does a preview safely opt out of Hilt".
     val scaffoldState = rememberWizardScaffoldState()
     val scrollState = rememberScrollState()
+    val showUnsavedChangesDialog = rememberWizardBackHandlerDialogState(unsavedChanges.hasUnsavedChanges)
+    val attemptBack = { if (unsavedChanges.hasUnsavedChanges) showUnsavedChangesDialog.value = true else onBack() }
 
     AppLanguageProvider(language = scaffoldState.currentLanguage) {
         Scaffold(
@@ -131,7 +145,7 @@ fun CatchRecordWizardScaffold(
                 GdsTopAppBar(
                     currentLanguage = scaffoldState.currentLanguage,
                     onLanguageToggle = scaffoldState.onLanguageToggle,
-                    onBackClick = onBack,
+                    onBackClick = attemptBack,
                 )
             },
             modifier = modifier.fillMaxSize().testTag(screenTestTag),
@@ -168,7 +182,34 @@ fun CatchRecordWizardScaffold(
                 content()
             }
         }
+        WizardUnsavedChangesDialogHost(showUnsavedChangesDialog, unsavedChanges, onBack)
     }
+}
+
+/** BR-XX (ADR 0014, Phase D): [BackHandler] is called unconditionally, only `enabled` varies. */
+@Composable
+private fun rememberWizardBackHandlerDialogState(hasUnsavedChanges: Boolean): MutableState<Boolean> {
+    val showDialog = rememberSaveable { mutableStateOf(false) }
+    BackHandler(enabled = hasUnsavedChanges) { showDialog.value = true }
+    return showDialog
+}
+
+/** Renders [UnsavedChangesDialog] when [showDialog] is true, wired to discard-then-leave or stay. */
+@Composable
+private fun WizardUnsavedChangesDialogHost(
+    showDialog: MutableState<Boolean>,
+    unsavedChanges: WizardUnsavedChangesConfig,
+    onBack: () -> Unit,
+) {
+    if (!showDialog.value) return
+    UnsavedChangesDialog(
+        onStay = { showDialog.value = false },
+        onLeave = {
+            showDialog.value = false
+            unsavedChanges.onDiscardChanges()
+            onBack()
+        },
+    )
 }
 
 @Suppress("FunctionNaming")

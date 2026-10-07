@@ -20,6 +20,11 @@
     <string name="records_retry_action">Ailgynnig</string>
     <string name="records_retry_pending">Wrthi\'n ailgynnig…</string>
     <string name="records_retry_offline_message">Rydych all-lein. Mae\'r cofnod dalfa hwn wedi\'i gadw ar eich dyfais a bydd yn cael ei anfon yn awtomatig pan fyddwch ar-lein eto.</string>
+    <!-- FR9: sync-confirmation message (CRAR-152 Phase E) -->
+    <plurals name="sync_confirmation_message">
+        <item quantity="one">Mae cofnod dalfa %1$s wedi\'i gyflwyno</item>
+        <item quantity="other">Mae %1$d cofnod dalfa wedi\'u cyflwyno</item>
+    </plurals>
     <string name="home_summary_load_error">Ni allem lwytho eich cofnodion dalfa. Rhowch gynnig arall arni.</string>
     <string name="status_submitted">Wedi cyflwyno</string>
     <string name="status_draft">Drafft</string>
@@ -255,6 +260,11 @@
     <string name="submission_pending_sync_check_records_suffix">i wneud yn siŵr bod y statws yn newid i Wedi\'i Gyflwyno. Chi sy\'n gyfrifol am wneud yn siŵr ein bod yn ei dderbyn.</string>
     <string name="submission_pending_sync_warning">Rhaid i chi gofnodi eich dalfa o fewn 24 awr i lanio.</string>
     <string name="wizard_error_retry_action">Rhowch gynnig arall arni</string>
+    <string name="unsaved_changes_dialog_title">Mae gennych newidiadau heb eu cadw</string>
+    <string name="unsaved_changes_dialog_body">Os byddwch yn gadael y dudalen hon, ni fydd y wybodaeth rydych wedi\'i nodi yn cael ei chadw.</string>
+    <string name="unsaved_changes_leave_action">Gadael heb gadw</string>
+    <string name="unsaved_changes_stay_action">Aros ar y dudalen hon</string>
+    <string name="check_your_answers_offline_notice">Rydych all-lein. Os byddwch yn cyflwyno nawr, bydd eich cofnod dalfa yn cael ei gadw ar y ddyfais hon ac yn cael ei anfon yn awtomatig y tro nesaf y bydd gennych signal symudol neu gysylltiad Wi-Fi.</string>
 </resources>
 
 

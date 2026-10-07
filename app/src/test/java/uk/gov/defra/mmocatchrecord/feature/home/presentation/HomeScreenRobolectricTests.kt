@@ -40,8 +40,13 @@ class HomeScreenRobolectricTests {
     private fun setContent(
         records: List<CatchRecordSummary> = everyStatusRecords,
         isOffline: Boolean = false,
+        syncConfirmationMessage: String? = null,
     ) {
-        val state = HomeViewState(status = UiStatus.Content(HomeSummary("alice", records)))
+        val state =
+            HomeViewState(
+                status = UiStatus.Content(HomeSummary("alice", records)),
+                syncConfirmationMessage = syncConfirmationMessage,
+            )
         composeTestRule.setContent {
             MmoTheme {
                 HomeScreenContent(
@@ -100,5 +105,18 @@ class HomeScreenRobolectricTests {
     fun `offline banner is absent when connectivity is available`() {
         setContent(isOffline = false)
         composeTestRule.onNodeWithTag("offline_banner").assertDoesNotExist()
+    }
+
+    @Test
+    fun `FR9 sync confirmation message is shown when a record has just been submitted`() {
+        setContent(syncConfirmationMessage = "Catch record MMO-REF-004 has been submitted")
+        composeTestRule.onNodeWithTag(SyncConfirmationMessageTestTags.MESSAGE).assertIsDisplayed()
+        composeTestRule.onNodeWithText("Catch record MMO-REF-004 has been submitted").assertIsDisplayed()
+    }
+
+    @Test
+    fun `FR9 sync confirmation message is absent when there is nothing to confirm`() {
+        setContent(syncConfirmationMessage = null)
+        composeTestRule.onNodeWithTag(SyncConfirmationMessageTestTags.MESSAGE).assertDoesNotExist()
     }
 }

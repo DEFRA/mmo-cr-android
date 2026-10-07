@@ -44,6 +44,20 @@ private fun recordWithEveryStatus() =
         CatchRecordSummary("4", "MMO-REF-004", "vessel-1", DmyDate(4, 1, 2026), RecordStatusTag.AwaitingSync),
     )
 
+/** Stubs [Context.getResources] with a mock, since Mockito does not deep-stub a plain `mock<Context>()`. */
+private fun contextWithQuantityString(
+    quantity: Int,
+    vararg formatArgs: Any,
+    result: String,
+): Context {
+    val resources = mock<android.content.res.Resources>()
+    val pluralsRes = uk.gov.defra.mmocatchrecord.R.plurals.sync_confirmation_message
+    whenever(resources.getQuantityString(pluralsRes, quantity, *formatArgs)).thenReturn(result)
+    val context = mock<Context>()
+    whenever(context.resources).thenReturn(resources)
+    return context
+}
+
 @Suppress("LongParameterList")
 private fun buildViewModel(
     repository: FakeHomeRepository,
@@ -243,9 +257,11 @@ class HomeViewModelTests {
     @Test
     fun `retryingIds clears once the draft's status actually changes`() =
         runTest {
+            val context =
+                contextWithQuantityString(1, "MMO-REF-004", result = "Catch record MMO-REF-004 has been submitted")
             val repository = FakeHomeRepository()
             repository.emit(HomeSummary(signedInUserId = "alice", catchRecords = recordWithEveryStatus()))
-            val viewModel = buildViewModel(repository)
+            val viewModel = buildViewModel(repository, context = context)
 
             viewModel.state.test {
                 awaitItem()
@@ -262,4 +278,98 @@ class HomeViewModelTests {
             }
         }
 
+    @Test
+    fun `FR9 an AwaitingSync to Submitted transition surfaces a singular confirmation message`() =
+        runTest {
+            val context =
+                contextWithQuantityString(1, "MMO-REF-004", result = "Catch record MMO-REF-004 has been submitted")
+            val repository = FakeHomeRepository()
+            repository.emit(HomeSummary(signedInUserId = "alice", catchRecords = recordWithEveryStatus()))
+            val viewModel = buildViewModel(repository, context = context)
+
+            viewModel.state.test {
+                awaitItem()
+                awaitItem()
+
+                val synced =
+                    recordWithEveryStatus().map {
+                        if (it.id == "4") it.copy(status = RecordStatusTag.Submitted) else it
+                    }
+                repository.emit(HomeSummary(signedInUserId = "alice", catchRecords = synced))
+                assertEquals("Catch record MMO-REF-004 has been submitted", awaitItem().syncConfirmationMessage)
+            }
+        }
+
+    @Test
+    fun `FR9 multiple simultaneous transitions surface a plural confirmation message`() =
+        runTest {
+            val context = contextWithQuantityString(2, 2, result = "2 catch records have been submitted")
+            val repository = FakeHomeRepository()
+            val awaitingTwo =
+                listOf(
+                    CatchRecordSummary(
+                        "4",
+                        "MMO-REF-004",
+                        "vessel-1",
+                        DmyDate(4, 1, 2026),
+                        RecordStatusTag.AwaitingSync,
+                    ),
+                    CatchRecordSummary(
+                        "5",
+                        "MMO-REF-005",
+                        "vessel-1",
+                        DmyDate(5, 1, 2026),
+                        RecordStatusTag.AwaitingSync,
+                    ),
+                )
+            repository.emit(HomeSummary(signedInUserId = "alice", catchRecords = awaitingTwo))
+            val viewModel = buildViewModel(repository, context = context)
+
+            viewModel.state.test {
+                awaitItem()
+                awaitItem()
+
+                val synced = awaitingTwo.map { it.copy(status = RecordStatusTag.Submitted) }
+                repository.emit(HomeSummary(signedInUserId = "alice", catchRecords = synced))
+                assertEquals("2 catch records have been submitted", awaitItem().syncConfirmationMessage)
+            }
+        }
+
+    @Test
+    fun `FR9 cold start with an already-Submitted record does not surface a confirmation message`() =
+        runTest {
+            val repository = FakeHomeRepository()
+            repository.emit(HomeSummary(signedInUserId = "alice", catchRecords = recordWithEveryStatus()))
+            val viewModel = buildViewModel(repository)
+
+            viewModel.state.test {
+                awaitItem()
+                assertEquals(null, awaitItem().syncConfirmationMessage)
+            }
+        }
+
+    @Test
+    fun `FR9 dismissing the sync confirmation message clears it`() =
+        runTest {
+            val context =
+                contextWithQuantityString(1, "MMO-REF-004", result = "Catch record MMO-REF-004 has been submitted")
+            val repository = FakeHomeRepository()
+            repository.emit(HomeSummary(signedInUserId = "alice", catchRecords = recordWithEveryStatus()))
+            val viewModel = buildViewModel(repository, context = context)
+
+            viewModel.state.test {
+                awaitItem()
+                awaitItem()
+
+                val synced =
+                    recordWithEveryStatus().map {
+                        if (it.id == "4") it.copy(status = RecordStatusTag.Submitted) else it
+                    }
+                repository.emit(HomeSummary(signedInUserId = "alice", catchRecords = synced))
+                assertEquals("Catch record MMO-REF-004 has been submitted", awaitItem().syncConfirmationMessage)
+
+                viewModel.dispatch(HomeEvent.SyncConfirmationMessageShown)
+                assertEquals(null, awaitItem().syncConfirmationMessage)
+            }
+        }
 }

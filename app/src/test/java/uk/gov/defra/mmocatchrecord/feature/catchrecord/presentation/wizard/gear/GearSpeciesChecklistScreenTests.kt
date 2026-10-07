@@ -3,6 +3,10 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.test.assertIsDisplayed
@@ -13,8 +17,10 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -434,6 +440,171 @@ class GearSpeciesChecklistScreenTests {
                 ?.speciesWeights
                 ?.map { it.speciesId }
         assertEquals(listOf(plaice.id), remainingSpeciesIds)
+    }
+
+    private fun gearUseWithConfirmedWeight(weightKg: Double) =
+        GearUse(
+            id = "gear-use-1",
+            gearTypeId = seineNets.id,
+            statisticalSubRectangleCode = "38E95",
+            speciesWeights =
+                listOf(
+                    SpeciesWeightEntry(
+                        id = "sw-0",
+                        speciesId = cod.id,
+                        confirmedCaught = true,
+                        weightAboveMinimumSizeKg = weightKg,
+                    ),
+                ),
+            confirmedUsedOnTrip = true,
+        )
+
+    /** BR-XX (ADR 0014, Phase D) dirty-state coverage — weight fields only (checklist selection is excluded). */
+    @Test
+    fun openingWithAnExistingWeightNeverReportsDirty() {
+        var lastDirty = true
+        val gearUse = gearUseWithConfirmedWeight(5.5)
+        composeTestRule.setContent {
+            MmoTheme {
+                GearSpeciesChecklistScreenContent(
+                    draft = draftWith(gearUse),
+                    gearUse = gearUse,
+                    speciesList = speciesList,
+                    onRemoveSpecies = {},
+                    onAddAnotherSpecies = {},
+                    onSubmit = {},
+                    onDirtyChanged = { lastDirty = it },
+                )
+            }
+        }
+
+        assertFalse(lastDirty)
+    }
+
+    @Test
+    fun editingTheAboveMinimumWeightReportsDirty() {
+        var lastDirty = false
+        val gearUse = gearUseWithConfirmedWeight(5.5)
+        composeTestRule.setContent {
+            MmoTheme {
+                GearSpeciesChecklistScreenContent(
+                    draft = draftWith(gearUse),
+                    gearUse = gearUse,
+                    speciesList = speciesList,
+                    onRemoveSpecies = {},
+                    onAddAnotherSpecies = {},
+                    onSubmit = {},
+                    onDirtyChanged = { lastDirty = it },
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${cod.id}")
+            .performTextInput("6")
+        composeTestRule.waitForIdle()
+
+        assertTrue(lastDirty)
+    }
+
+    @Test
+    fun reclearingTheWeightBackToTheSavedValueReportsClean() {
+        var lastDirty = false
+        val gearUse = gearUseWithConfirmedWeight(5.5)
+        composeTestRule.setContent {
+            MmoTheme {
+                GearSpeciesChecklistScreenContent(
+                    draft = draftWith(gearUse),
+                    gearUse = gearUse,
+                    speciesList = speciesList,
+                    onRemoveSpecies = {},
+                    onAddAnotherSpecies = {},
+                    onSubmit = {},
+                    onDirtyChanged = { lastDirty = it },
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${cod.id}")
+            .performTextClearance()
+        composeTestRule
+            .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${cod.id}")
+            .performTextInput("5.5")
+        composeTestRule.waitForIdle()
+
+        assertFalse(lastDirty)
+    }
+
+    @Test
+    fun togglingTheChecklistSelectionAloneDoesNotReportDirty() {
+        var lastDirty = true
+        val gearUse = gearUseWithAddedSpecies(listOf(cod.id))
+        composeTestRule.setContent {
+            MmoTheme {
+                GearSpeciesChecklistScreenContent(
+                    draft = draftWith(gearUse),
+                    gearUse = gearUse,
+                    speciesList = speciesList,
+                    onRemoveSpecies = {},
+                    onAddAnotherSpecies = {},
+                    onSubmit = {},
+                    onDirtyChanged = { lastDirty = it },
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
+        composeTestRule.waitForIdle()
+
+        assertFalse(lastDirty)
+    }
+
+    @Test
+    fun savingNavigatesToAFreshInstanceThatStartsClean() {
+        var lastDirty = false
+        composeTestRule.setContent {
+            MmoTheme {
+                var submitted by remember { mutableStateOf<CatchRecordDraft?>(null) }
+                val gearUse = gearUseWithConfirmedWeight(5.5)
+                if (submitted == null) {
+                    GearSpeciesChecklistScreenContent(
+                        draft = draftWith(gearUse),
+                        gearUse = gearUse,
+                        speciesList = speciesList,
+                        onRemoveSpecies = {},
+                        onAddAnotherSpecies = {},
+                        onSubmit = { submitted = it },
+                        onDirtyChanged = { lastDirty = it },
+                    )
+                } else {
+                    // A fresh instance for the re-entered edit route — see DepartureDateScreen's equivalent comment.
+                    val updatedGearUse = requireNotNull(submitted).gearUses.single()
+                    GearSpeciesChecklistScreenContent(
+                        draft = requireNotNull(submitted),
+                        gearUse = updatedGearUse,
+                        speciesList = speciesList,
+                        onRemoveSpecies = {},
+                        onAddAnotherSpecies = {},
+                        onSubmit = {},
+                        onDirtyChanged = { lastDirty = it },
+                    )
+                }
+            }
+        }
+
+        composeTestRule
+            .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${cod.id}")
+            .performTextClearance()
+        composeTestRule
+            .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${cod.id}")
+            .performTextInput("6")
+        composeTestRule.waitForIdle()
+        assertTrue(lastDirty)
+        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performClick()
+        composeTestRule.waitForIdle()
+
+        assertFalse(lastDirty)
     }
 
     @Test

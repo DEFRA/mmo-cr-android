@@ -17,6 +17,11 @@
     <string name="records_retry_action">Retry</string>
     <string name="records_retry_pending">Retrying…</string>
     <string name="records_retry_offline_message">You\'re offline. This catch record is saved on your device and will be sent automatically when you\'re back online.</string>
+    <!-- FR9: sync-confirmation message (CRAR-152 Phase E) -->
+    <plurals name="sync_confirmation_message">
+        <item quantity="one">Catch record %1$s has been submitted</item>
+        <item quantity="other">%1$d catch records have been submitted</item>
+    </plurals>
     <string name="home_summary_load_error">We could not load your catch records. Please try again.</string>
     <string name="status_submitted">Submitted</string>
     <string name="status_draft">Draft</string>
@@ -242,6 +247,11 @@
     <string name="submission_pending_sync_check_records_suffix">to make sure the status changes to Submitted. You are responsible for making sure we receive it.</string>
     <string name="submission_pending_sync_warning">You must record your catch within 24 hours of landing.</string>
     <string name="wizard_error_retry_action">Try again</string>
+    <string name="unsaved_changes_dialog_title">You have unsaved changes</string>
+    <string name="unsaved_changes_dialog_body">If you leave this page, the information you have entered will not be saved.</string>
+    <string name="unsaved_changes_leave_action">Leave without saving</string>
+    <string name="unsaved_changes_stay_action">Stay on this page</string>
+    <string name="check_your_answers_offline_notice">You\'re offline. If you submit now, your catch record will be saved on this device and sent automatically when you next have a mobile signal or Wi-Fi connection.</string>
 </resources>
 
 

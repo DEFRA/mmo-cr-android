@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (Phase A, Phase B and Phase C).
+Accepted (Phase A, Phase B, Phase C, Phase D and Phase E).
 
 ## Context
 
@@ -312,3 +312,139 @@ silently-stuck record and no way to act on it.
 - Phase D (the unsaved-changes dialog, the pre-submit offline notice) and Phase E (the FR9 sync-confirmation
   banner, the DataStore watermark) build on this phase's `retryingIds`/offline-message plumbing in
   `HomeViewState` and the now-correct `KEEP` policy; append their decisions as new sections below.
+
+## Decision (Phase D)
+
+### BR-XX: `BackHandler`, not `PredictiveBackHandler` — and no opt-in to predictive back (D1)
+
+The manifest gains **no** `android:enableOnBackInvokedCallback`; `targetSdk 35` does not force predictive
+back (that only applies once an app targets 36), so this is a deliberate non-change, not an oversight.
+`CatchRecordWizardScaffold` uses `BackHandler(enabled = hasUnsavedChanges)`, called **unconditionally** with
+only `enabled` varying, so callback registration order is never disturbed by the composable
+appearing/disappearing. `PredictiveBackHandler` is rejected: it exists for UI that genuinely animates
+in step with the gesture's progress, and animating *toward* the previous screen only to then refuse to
+leave is a misleading prediction, not an honest one.
+
+### Dirty-state tracking must never fire spuriously (D3)
+
+Each free-input screen computes its own `hasUnsavedChanges` as a `rememberSaveable` local baseline compared,
+trimmed and case-normalised where relevant, against the live field value — recomputed fresh on every
+recomposition from the current persisted draft, never captured once at first composition. Opening a screen,
+or a pure radio/checklist selection with nothing free-typed to lose, must never set it; a successful
+`saveAndContinue` resets the baseline to the just-persisted draft so the flag is false again immediately.
+This is the single most safety-critical property of the feature — a false positive would train users to
+distrust or dismiss the warning — so it is covered by a dedicated "clean state, back press, no dialog,
+navigation proceeds" test ahead of every other Phase D test.
+
+### Scope: free-input wizard screens only
+
+Wired into `trip/DepartureDateScreen.kt`, `trip/ReturnDateScreen.kt` (via the shared `DateStepSupport.kt`),
+`trip/DeparturePortScreen.kt`, `trip/ReturnPortScreen.kt`, `gear/GearMeasurementScreen.kt`,
+`gear/GearSpeciesChecklistScreen.kt` and `landing/NotLandedStraightAwayScreens.kt` — all seven genuinely
+carry free-typed or free-searched state a back press could silently discard. For the latter two,
+dirtiness is computed only from the weight-entry `rawValues` map; toggling a species checklist selection
+alone never touches `rawValues` and so never reports dirty, since a tap-to-select commits immediately and
+has nothing uncommitted to lose.
+
+### The dialog: Material 3 `AlertDialog`, not a GDS question page (D4)
+
+GDS publishes no official unsaved-data pattern and no production modal-dialog component; the closest
+analogue is a full question page. A native Material 3 `AlertDialog` is used because the trigger is a
+back gesture — a full interruption page would itself need back interception, creating the same problem
+recursively — and because `AlertDialog` is the Android-idiomatic, TalkBack-correct construct. WCAG 2.2 AA
+(2.4.3 Focus Order, 2.4.7 Focus Visible, 2.4.11 Focus Not Obscured) is upheld and tested. `onDismissRequest`
+(back press and outside-tap) is wired to `onStay`, never `onLeave`: both mean "stay on this page", so an
+accidental outside-tap can never discard data.
+
+### FR6: the pre-submission offline notice reuses the existing connectivity source
+
+`CheckYourAnswersScreenContent` reads `isOffline` from `rememberWizardScaffoldState()` — the same
+`ConnectivityViewModel.isOffline` the `OfflineBanner`/scaffold banner already use — rather than
+introducing a second connectivity mechanism. The notice is shown **before** the user taps submit, so an
+offline outcome is never a surprise; the existing post-submission `submission_pending_sync_body` copy is
+unchanged, since it was already GDS-aligned.
+
+## Consequences (Phase D)
+
+- `UnsavedChangesDialog` (`common/design/UnsavedChangesDialog.kt`, new) is the only new production file; all
+  other Phase D production changes are additive parameters/local state on existing screens, keeping the
+  diff reviewable and every existing call site source-compatible (`hasUnsavedChanges`/`onDiscardChanges`
+  both default).
+- Robolectric is the primary coverage mechanism per project convention (`connectedDebugAndroidTest` is not
+  merged into Kover/SonarCloud); a genuine on-device `UnsavedChangesDialogTest` (`androidTest`) is still
+  added for a real-device WCAG pass (touch targets, back-press-as-stay), in addition to the JVM/Robolectric
+  suite that carries the bulk of the dirty-tracking and dialog-interaction assertions.
+- Testing this phase surfaced two reusable Compose-test lessons: a plain `var` captured in a test's
+  composable closure does not trigger recomposition on reassignment (it must be
+  `by remember { mutableStateOf(...) }`) for a branch-swap to be observable; and asserting
+  `assertIsDisplayed()` on a content-less placeholder `Box` in a `NavHost` test fails even on successful
+  navigation, since a zero-size node is "not displayed" — asserting
+  `navController.currentDestination?.hasRoute<T>()` directly is the correct pattern instead.
+- Phase E's FR9 sync-confirmation banner is independent of this phase's dialog/offline-notice work and does
+  not need to touch `CatchRecordWizardScaffold`'s new parameters; it reads the same `ConnectivityViewModel`
+  pattern this phase reused for FR6 on the Home screen instead.
+
+
+## Decision (Phase E)
+
+### Detected from the reactive summary flow, not `ConnectivityViewModel` (supersedes the Phase D note above)
+
+The Phase D consequences note above speculated Phase E would read `ConnectivityViewModel` on the Home screen,
+by analogy with FR6. That does not hold: FR9 ("users shall receive confirmation when a waiting record has
+been successfully submitted") must fire for **both** FR7 automatic sync and FR8 manual retry, and a
+reconnect event is neither necessary (FR8 can succeed while the device output still reports online, e.g. a
+flaky connection recovering between the retry dispatch and the worker's own check) nor sufficient (FR7
+reconciliation syncing a previously `PendingSync` draft at app start, before `ConnectivityViewModel` emits
+anything new) as a signal. `HomeViewModel.applySummary` instead reuses the exact
+`lastKnownStatusByDraftId` snapshot already maintained for the Phase C retry-guard: on every emission it
+finds every draft whose status is now `Submitted` where the **previous** snapshot held `AwaitingSync`, which
+is true precisely once, for precisely the transition FR9 describes, regardless of which path triggered it.
+
+### Cold start cannot produce a false positive, without a separate flag
+
+`lastKnownStatusByDraftId` starts as `emptyMap()`, so on the very first emission
+`lastKnownStatusByDraftId[record.id]` is `null` for every draft — `null != AwaitingSync`, so nothing is ever
+reported "newly synced" on cold start even though the flow's first emission may already contain `Submitted`
+drafts. No separate `hasObservedFirstSummary` boolean was needed.
+
+### Singular/plural wording reuses the existing `<plurals>` pattern
+
+A single `<plurals name="sync_confirmation_message">` resource (English and Welsh) covers both cases —
+`quantity="one"` takes the draft's `catchRecordReference` (`"Catch record %1$s has been submitted"`),
+`quantity="other"` takes the transitioned count (`"%1$d catch records have been submitted"`) — matching the
+existing `late_submission_warning_title` plurals pattern (Phase 8) rather than inventing a new convention.
+If a sync sweep (Phase C's `CatchRecordSyncSweep`) resolves more than one stranded `PendingSync` draft in the
+same emission, the user sees one plural message rather than one message per draft. A `null`
+`catchRecordReference` on a newly-`Submitted` single draft (not expected in practice, since a reference is
+assigned at candidate-build time) falls back to the existing `records_reference_pending` string rather than
+crashing.
+
+### Message built in the ViewModel via `Resources.getQuantityString`, not `pluralStringResource`
+
+Every other plural in this codebase is read with `pluralStringResource` inside a composable
+(`LateSubmissionWarningScreen`). `HomeViewModel` is not a composable and already reads `home_summary_load_error`
+and `records_retry_offline_message` via `Context.getString` — `context.resources.getQuantityString(...)` is
+the direct, non-Compose equivalent, consistent with that existing pattern rather than introducing a second
+mechanism.
+
+### New `SyncConfirmationMessage` composable, not a reuse of `OfflineRetryMessage`
+
+A second, near-identical transient/self-dismissing/polite-live-region composable
+(`SyncConfirmationMessage`) was added rather than parameterising `OfflineRetryMessage`, because the two
+messages are independent state (`offlineRetryMessage` and `syncConfirmationMessage` can both be non-null at
+once — a user could retry one draft while another simultaneously finishes syncing) and sharing one
+component would couple their dismiss timers and test tags for no real gain at this size.
+
+## Consequences (Phase E)
+
+- `SyncConfirmationMessage.kt` (new) and its wiring into `HomeTabContent` are the only new production
+  surface; `HomeViewModel`/`HomeViewState`/`HomeEvent` changes are additive (`syncConfirmationMessage: String?`
+  defaults to `null`, `HomeEvent.SyncConfirmationMessageShown` is a new case), keeping every existing call
+  site source-compatible.
+- Coverage follows the project convention: `HomeViewModelTests` carries the transition-detection/cold-start/
+  singular-plural/dismiss assertions, with a Robolectric render check in `HomeScreenRobolectricTests` for the
+  composable itself (`connectedDebugAndroidTest` is not merged into Kover/SonarCloud).
+- This closes out CRAR-152 (offline-first drafts, retry & sync) — FR1–FR10 are now all implemented across
+  Phases A–E.
+
+

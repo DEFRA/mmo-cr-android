@@ -14,6 +14,7 @@ import uk.gov.defra.mmocatchrecord.core.architecture.BaseViewModel
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.RetryCatchRecordSubmissionResult
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.RetryCatchRecordSubmissionUseCase
+import uk.gov.defra.mmocatchrecord.feature.home.domain.CatchRecordSummary
 import uk.gov.defra.mmocatchrecord.feature.home.domain.HomeSummary
 import uk.gov.defra.mmocatchrecord.feature.home.domain.ObserveHomeSummaryUseCase
 import javax.inject.Inject
@@ -39,6 +40,7 @@ class HomeViewModel
             when (event) {
                 is HomeEvent.RetrySubmission -> retrySubmission(event.draftId)
                 HomeEvent.OfflineRetryMessageShown -> updateState { it.copy(offlineRetryMessage = null) }
+                HomeEvent.SyncConfirmationMessageShown -> updateState { it.copy(syncConfirmationMessage = null) }
             }
         }
 
@@ -70,12 +72,36 @@ class HomeViewModel
                 currentState.retryingIds.filterTo(mutableSetOf()) { draftId ->
                     newStatusByDraftId[draftId] == lastKnownStatusByDraftId[draftId]
                 }
+            val newlySynced =
+                summary.catchRecords.filter { record ->
+                    record.status == RecordStatusTag.Submitted &&
+                        lastKnownStatusByDraftId[record.id] == RecordStatusTag.AwaitingSync
+                }
             lastKnownStatusByDraftId = newStatusByDraftId
             updateState {
                 it.copy(
                     status = UiStatus.Content(summary),
                     retryingIds = stillRetrying,
+                    syncConfirmationMessage = syncConfirmationMessage(newlySynced) ?: it.syncConfirmationMessage,
                 )
+            }
+        }
+
+        /**
+         * FR9: confirms a draft that was "Waiting to send" has now been submitted — fires for both FR7
+         * automatic sync and FR8 manual retry; `null` on an emission with no new transition (including the
+         * first, since [lastKnownStatusByDraftId] starts empty so nothing can match `AwaitingSync`).
+         */
+        private fun syncConfirmationMessage(newlySynced: List<CatchRecordSummary>): String? {
+            if (newlySynced.isEmpty()) return null
+            return if (newlySynced.size == 1) {
+                val reference =
+                    newlySynced.single().catchRecordReference
+                        ?: context.getString(R.string.records_reference_pending)
+                context.resources.getQuantityString(R.plurals.sync_confirmation_message, 1, reference)
+            } else {
+                val count = newlySynced.size
+                context.resources.getQuantityString(R.plurals.sync_confirmation_message, count, count)
             }
         }
 

@@ -44,6 +44,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardErrorSummaryItem
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardLoadingState
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardStep
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardUnsavedChangesConfig
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.catchRecordReference
 
 object GearMeasurementScreenTestTags {
@@ -78,6 +79,7 @@ fun GearMeasurementScreen(
     editGearUseId: String? = null,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    var hasUnsavedChanges by rememberSaveable { mutableStateOf(false) }
     GearMeasurementScreen(
         state = state,
         editGearUseId = editGearUseId,
@@ -93,10 +95,12 @@ fun GearMeasurementScreen(
         onRetry = { viewModel.dispatch(CatchRecordFlowEvent.Retry) },
         onBack = onBack,
         modifier = modifier,
+        hasUnsavedChanges = hasUnsavedChanges,
+        onDirtyChanged = { hasUnsavedChanges = it },
     )
 }
 
-@Suppress("FunctionNaming")
+@Suppress("FunctionNaming", "LongParameterList")
 @Composable
 private fun GearMeasurementScreen(
     state: CatchRecordFlowViewState,
@@ -105,6 +109,8 @@ private fun GearMeasurementScreen(
     modifier: Modifier = Modifier,
     editGearUseId: String? = null,
     onRetry: () -> Unit = {},
+    hasUnsavedChanges: Boolean = false,
+    onDirtyChanged: (Boolean) -> Unit = {},
 ) {
     val draft = (state.status as? UiStatus.Content<CatchRecordDraft>)?.value
     val editingGearUse = editGearUseId?.let { id -> draft?.gearUses?.firstOrNull { it.id == id } }
@@ -127,6 +133,7 @@ private fun GearMeasurementScreen(
         onBack = onBack,
         modifier = modifier,
         referenceNumber = state.catchRecordReference,
+        unsavedChanges = WizardUnsavedChangesConfig(hasUnsavedChanges = hasUnsavedChanges),
     ) {
         when (val status = state.status) {
             UiStatus.Idle, UiStatus.Loading -> WizardLoadingState()
@@ -151,6 +158,7 @@ private fun GearMeasurementScreen(
                         gearType = gearType,
                         initialMeasurements = editingGearUse?.measurements.orEmpty(),
                         onSubmit = onSubmit,
+                        onDirtyChanged = onDirtyChanged,
                     )
                 }
         }
@@ -164,25 +172,28 @@ fun GearMeasurementScreenContent(
     onSubmit: (Map<String, MeasurementValue>) -> Unit,
     modifier: Modifier = Modifier,
     initialMeasurements: Map<String, MeasurementValue> = emptyMap(),
+    onDirtyChanged: (Boolean) -> Unit = {},
 ) {
     var rawValues by
         rememberSaveable(gearType.id) {
-            mutableStateOf(
-                gearType.measurementFields.associate { field ->
-                    field.key to
-                        when (val value = initialMeasurements[field.key]) {
-                            is MeasurementValue.Numeric -> GearMeasurementSupport.formatNumber(value.value)
-                            is MeasurementValue.Text -> value.value
-                            null -> ""
-                        }
-                },
-            )
+            mutableStateOf(GearMeasurementSupport.rawValuesFor(gearType, initialMeasurements))
         }
     var errors by remember(gearType.id) { mutableStateOf<Map<String, GearMeasurementFieldError>>(emptyMap()) }
     var focusSummary by remember { mutableStateOf(false) }
     val summaryFocusRequester = remember { FocusRequester() }
     val fieldFocusRequesters =
         remember(gearType.id) { gearType.measurementFields.associate { it.key to FocusRequester() } }
+    // BR-XX (ADR 0014, Phase D): recomputes the baseline from the *current* initialMeasurements each time,
+    // rather than a cached snapshot, so a successful save clears dirty state with no manual reset.
+    val initialRawValues =
+        remember(gearType, initialMeasurements) {
+            GearMeasurementSupport.rawValuesFor(gearType, initialMeasurements)
+        }
+    val isDirty =
+        gearType.measurementFields.any { field ->
+            rawValues[field.key].orEmpty().trim() != initialRawValues[field.key].orEmpty()
+        }
+    LaunchedEffect(isDirty) { onDirtyChanged(isDirty) }
 
     LaunchedEffect(focusSummary) {
         if (focusSummary) {
