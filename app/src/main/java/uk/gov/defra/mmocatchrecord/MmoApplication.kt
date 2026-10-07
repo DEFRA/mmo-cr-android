@@ -6,6 +6,7 @@ import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
 import uk.gov.defra.mmocatchrecord.core.logging.ReleaseTree
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.sync.CatchRecordSyncSweep
 import javax.inject.Inject
 
 /**
@@ -23,6 +24,9 @@ class MmoApplication :
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
 
+    @Inject
+    lateinit var catchRecordSyncSweep: CatchRecordSyncSweep
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
 
@@ -31,5 +35,7 @@ class MmoApplication :
         // Structured, redacted logging (ADR 0011): unrestricted Timber.DebugTree for local development,
         // a redacted, WARN+-only ReleaseTree in release builds — see ReleaseTree's doc comment.
         Timber.plant(if (BuildConfig.DEBUG) Timber.DebugTree() else ReleaseTree())
+        // Fire-and-forget reconciliation sweep (FR7, ADR 0014 Phase C) — must not block cold start.
+        catchRecordSyncSweep.sweep()
     }
 }

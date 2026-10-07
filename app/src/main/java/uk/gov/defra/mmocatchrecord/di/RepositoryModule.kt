@@ -16,10 +16,8 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.CatchRecordDra
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.RoomCatchRecordDraftRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.map.AssetMapDataRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.StubReferenceDataRepository
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission.StubCatchRecordSubmissionRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.sync.WorkManagerCatchRecordSyncScheduler
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftRepository
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordSubmissionRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordSyncScheduler
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.map.MapDataRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.ReferenceDataRepository
@@ -58,11 +56,6 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideReferenceDataRepository(): ReferenceDataRepository = StubReferenceDataRepository()
-
-    @Provides
-    @Singleton
-    fun provideCatchRecordSubmissionRepository(): CatchRecordSubmissionRepository =
-        StubCatchRecordSubmissionRepository()
 
     @Provides
     @Singleton

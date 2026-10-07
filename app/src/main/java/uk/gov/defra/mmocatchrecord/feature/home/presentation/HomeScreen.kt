@@ -31,6 +31,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.AppLanguageProvider
+import uk.gov.defra.mmocatchrecord.common.design.DebugSettingsSection
 import uk.gov.defra.mmocatchrecord.common.design.GdsTopAppBar
 import uk.gov.defra.mmocatchrecord.common.design.MmoBottomNavigationBar
 import uk.gov.defra.mmocatchrecord.common.design.MmoColors
@@ -51,6 +52,12 @@ object HomeScreenTestTags {
     const val SIGN_OUT_ACTION = "home_feature_sign_out_action"
     const val ERROR_MESSAGE = "home_feature_error_message"
     const val TAB_LIST = "home_tab_list"
+}
+
+/** Default [DebugSettingsSection] for previews/call sites not supplying a real one — renders nothing. */
+private object NoOpDebugSettingsSectionPreview : DebugSettingsSection {
+    @Composable
+    override fun Render() = Unit
 }
 
 @Suppress("FunctionNaming")
@@ -79,6 +86,9 @@ fun HomeScreen(
         onSignOut = onSignOut,
         onCreateCatchRecord = onCreateCatchRecord,
         onResumeDraft = onResumeDraft,
+        onRetry = { draftId -> viewModel.dispatch(HomeEvent.RetrySubmission(draftId)) },
+        onDismissOfflineMessage = { viewModel.dispatch(HomeEvent.OfflineRetryMessageShown) },
+        debugSettingsSection = viewModel.debugSettingsSection,
         modifier = modifier,
     )
 }
@@ -97,6 +107,9 @@ fun HomeScreenContent(
     onCreateCatchRecord: () -> Unit,
     onResumeDraft: (String) -> Unit,
     modifier: Modifier = Modifier,
+    onRetry: (String) -> Unit = {},
+    onDismissOfflineMessage: () -> Unit = {},
+    debugSettingsSection: DebugSettingsSection = NoOpDebugSettingsSectionPreview,
 ) {
     AppLanguageProvider(language = currentLanguage) {
         Scaffold(
@@ -126,9 +139,11 @@ fun HomeScreenContent(
                                     onSignOut = onSignOut,
                                     onCreateCatchRecord = onCreateCatchRecord,
                                     onResumeDraft = onResumeDraft,
+                                    onRetry = onRetry,
+                                    onDismissOfflineMessage = onDismissOfflineMessage,
                                 )
                             1 -> NotificationsTabContent()
-                            2 -> SettingsTabContent(onSignOut = onSignOut)
+                            2 -> SettingsTabContent(onSignOut = onSignOut, debugSettingsSection = debugSettingsSection)
                         }
                     }
                 }
@@ -145,12 +160,17 @@ private fun HomeTabContent(
     onSignOut: () -> Unit,
     onCreateCatchRecord: () -> Unit,
     onResumeDraft: (String) -> Unit,
+    onRetry: (String) -> Unit,
+    onDismissOfflineMessage: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(Spacing.m).testTag(HomeScreenTestTags.TAB_LIST),
         verticalArrangement = Arrangement.spacedBy(Spacing.m),
     ) {
         item { ImportantBannerSection() }
+        state.offlineRetryMessage?.let { message ->
+            item { OfflineRetryMessage(message = message, onDismissed = onDismissOfflineMessage) }
+        }
         item { HeadingSection(onCreateCatchRecord = onCreateCatchRecord) }
         when (val status = state.status) {
             UiStatus.Idle, UiStatus.Loading -> item { LoadingIndicator() }
@@ -167,6 +187,8 @@ private fun HomeTabContent(
                 catchRecordsListSection(
                     records = status.value.catchRecords,
                     onRecordClick = onResumeDraft,
+                    onRetry = onRetry,
+                    retryingIds = state.retryingIds,
                 )
         }
         item { HelpAccordionsSection() }

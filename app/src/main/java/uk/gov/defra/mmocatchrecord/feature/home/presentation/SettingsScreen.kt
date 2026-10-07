@@ -33,6 +33,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import uk.gov.defra.mmocatchrecord.R
+import uk.gov.defra.mmocatchrecord.common.design.DebugSettingsSection
 import uk.gov.defra.mmocatchrecord.common.design.GdsLinkAction
 import uk.gov.defra.mmocatchrecord.common.design.MmoColors
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
@@ -49,6 +50,12 @@ object SettingsScreenTestTags {
     const val PRIVACY_NOTICE_LINK = "settings_feature_privacy_notice_link"
     const val SUPPORT_INFORMATION_LINK = "settings_feature_support_information_link"
     const val SIGN_OUT_LINK = "settings_feature_sign_out_link"
+}
+
+/** Default [DebugSettingsSection] for call sites not supplying a real one — renders nothing. */
+private object NoOpDebugSettingsSectionDefault : DebugSettingsSection {
+    @Composable
+    override fun Render() = Unit
 }
 
 /**
@@ -68,6 +75,7 @@ object SettingsScreenTestTags {
 fun SettingsTabContent(
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
+    debugSettingsSection: DebugSettingsSection = NoOpDebugSettingsSectionDefault,
 ) {
     var analyticsEnabled by remember { mutableStateOf(false) }
 
@@ -117,6 +125,8 @@ fun SettingsTabContent(
             testTag = SettingsScreenTestTags.SIGN_OUT_LINK,
             onClick = onSignOut,
         )
+
+        debugSettingsSection.Render()
 
         Box(modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.m), contentAlignment = Alignment.Center) {
             RoyalCrestPlaceholder()

@@ -18,13 +18,23 @@ import org.junit.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import uk.gov.defra.mmocatchrecord.R
+import uk.gov.defra.mmocatchrecord.common.design.DebugSettingsSection
 import uk.gov.defra.mmocatchrecord.common.design.RecordStatusTag
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DmyDate
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.RetryCatchRecordSubmissionUseCase
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.FakeCatchRecordSyncScheduler
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.FakeNetworkConnectivityChecker
 import uk.gov.defra.mmocatchrecord.feature.home.data.FakeHomeRepository
 import uk.gov.defra.mmocatchrecord.feature.home.domain.CatchRecordSummary
 import uk.gov.defra.mmocatchrecord.feature.home.domain.HomeSummary
 import uk.gov.defra.mmocatchrecord.feature.home.domain.ObserveHomeSummaryUseCase
+
+/** No-op test double — the real debug/release bindings live in build-type source sets, not `src/test`. */
+private object NoOpDebugSettingsSectionFake : DebugSettingsSection {
+    @androidx.compose.runtime.Composable
+    override fun Render() = Unit
+}
 
 private fun recordWithEveryStatus() =
     listOf(
@@ -34,13 +44,23 @@ private fun recordWithEveryStatus() =
         CatchRecordSummary("4", "MMO-REF-004", "vessel-1", DmyDate(4, 1, 2026), RecordStatusTag.AwaitingSync),
     )
 
+@Suppress("LongParameterList")
 private fun buildViewModel(
     repository: FakeHomeRepository,
     context: Context = mock(),
+    syncScheduler: FakeCatchRecordSyncScheduler = FakeCatchRecordSyncScheduler(),
+    connectivityChecker: FakeNetworkConnectivityChecker = FakeNetworkConnectivityChecker(),
     dispatcher: CoroutineDispatcher = StandardTestDispatcher(),
-): HomeViewModel = HomeViewModel(ObserveHomeSummaryUseCase(repository), context, dispatcher)
+): HomeViewModel =
+    HomeViewModel(
+        ObserveHomeSummaryUseCase(repository),
+        RetryCatchRecordSubmissionUseCase(syncScheduler, connectivityChecker),
+        NoOpDebugSettingsSectionFake,
+        context,
+        dispatcher,
+    )
 
-/** Covers AC5 (all four statuses), reactive re-emission and the error path (ADR 0014 Phase B). */
+/** Covers AC5 (all four statuses), reactive re-emission, the error path and AC4 retry (ADR 0014 Phase B/C). */
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModelTests {
     @Before
@@ -153,4 +173,93 @@ class HomeViewModelTests {
                 assertFalse(error.message.contains("offline"))
             }
         }
+
+    @Test
+    fun `AC4 retry submission enqueues exactly once and disables the row`() =
+        runTest {
+            val repository = FakeHomeRepository()
+            repository.emit(HomeSummary(signedInUserId = "alice", catchRecords = recordWithEveryStatus()))
+            val syncScheduler = FakeCatchRecordSyncScheduler()
+            val viewModel = buildViewModel(repository, syncScheduler = syncScheduler)
+
+            viewModel.state.test {
+                awaitItem()
+                awaitItem()
+                viewModel.dispatch(HomeEvent.RetrySubmission("4"))
+                assertEquals(listOf("4"), syncScheduler.scheduledDraftIds)
+                assertTrue("4" in awaitItem().retryingIds)
+            }
+        }
+
+    @Test
+    fun `double-dispatching retry for the same draft only enqueues once`() =
+        runTest {
+            val repository = FakeHomeRepository()
+            repository.emit(HomeSummary(signedInUserId = "alice", catchRecords = recordWithEveryStatus()))
+            val syncScheduler = FakeCatchRecordSyncScheduler()
+            val viewModel = buildViewModel(repository, syncScheduler = syncScheduler)
+
+            viewModel.state.test {
+                awaitItem()
+                awaitItem()
+                viewModel.dispatch(HomeEvent.RetrySubmission("4"))
+                awaitItem()
+                viewModel.dispatch(HomeEvent.RetrySubmission("4"))
+                expectNoEvents()
+                assertEquals(listOf("4"), syncScheduler.scheduledDraftIds)
+            }
+        }
+
+    @Test
+    fun `retrying while offline still enqueues and emits the offline message`() =
+        runTest {
+            val context = mock<Context>()
+            whenever(context.getString(R.string.records_retry_offline_message)).thenReturn("offline-message")
+            val repository = FakeHomeRepository()
+            repository.emit(HomeSummary(signedInUserId = "alice", catchRecords = recordWithEveryStatus()))
+            val syncScheduler = FakeCatchRecordSyncScheduler()
+            val connectivityChecker = FakeNetworkConnectivityChecker(connected = false)
+            val viewModel =
+                buildViewModel(
+                    repository,
+                    context = context,
+                    syncScheduler = syncScheduler,
+                    connectivityChecker = connectivityChecker,
+                )
+
+            viewModel.state.test {
+                awaitItem()
+                awaitItem()
+                viewModel.dispatch(HomeEvent.RetrySubmission("4"))
+                val afterRetry = awaitItem()
+                assertEquals(listOf("4"), syncScheduler.scheduledDraftIds)
+                assertEquals("offline-message", afterRetry.offlineRetryMessage)
+
+                viewModel.dispatch(HomeEvent.OfflineRetryMessageShown)
+                assertEquals(null, awaitItem().offlineRetryMessage)
+            }
+        }
+
+    @Test
+    fun `retryingIds clears once the draft's status actually changes`() =
+        runTest {
+            val repository = FakeHomeRepository()
+            repository.emit(HomeSummary(signedInUserId = "alice", catchRecords = recordWithEveryStatus()))
+            val viewModel = buildViewModel(repository)
+
+            viewModel.state.test {
+                awaitItem()
+                awaitItem()
+                viewModel.dispatch(HomeEvent.RetrySubmission("4"))
+                assertTrue("4" in awaitItem().retryingIds)
+
+                val submitted =
+                    recordWithEveryStatus().map {
+                        if (it.id == "4") it.copy(status = RecordStatusTag.Submitted) else it
+                    }
+                repository.emit(HomeSummary(signedInUserId = "alice", catchRecords = submitted))
+                assertFalse("4" in awaitItem().retryingIds)
+            }
+        }
+
 }

@@ -19,6 +19,7 @@
     <string name="records_trip_end_date_not_set">Heb ei nodi eto</string>
     <string name="records_retry_action">Ailgynnig</string>
     <string name="records_retry_pending">Wrthi\'n ailgynnig…</string>
+    <string name="records_retry_offline_message">Rydych all-lein. Mae\'r cofnod dalfa hwn wedi\'i gadw ar eich dyfais a bydd yn cael ei anfon yn awtomatig pan fyddwch ar-lein eto.</string>
     <string name="home_summary_load_error">Ni allem lwytho eich cofnodion dalfa. Rhowch gynnig arall arni.</string>
     <string name="status_submitted">Wedi cyflwyno</string>
     <string name="status_draft">Drafft</string>
@@ -60,6 +61,7 @@
     <string name="settings_my_account">Fy nghyfrif</string>
     <string name="settings_privacy_notice">Hysbysiad preifatrwydd</string>
     <string name="settings_support_information">Gwybodaeth gymorth</string>
+    <string name="settings_debug_force_failures">Gorfodi methiannau cyflwyno (dadfygio yn unig)</string>
     <string name="signin_title">Mewngofnodi</string>
     <string name="email_address">Cyfeiriad e-bost</string>
     <string name="password">Cyfrinair</string>

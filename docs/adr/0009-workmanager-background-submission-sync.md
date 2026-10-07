@@ -33,8 +33,9 @@ schedule and execute the background submission retry:
   single `OneTimeWorkRequest` for `CatchRecordSyncWorker`, constrained to `NetworkType.CONNECTED`, whenever
   a draft is left in `DraftStatus.PendingSync` — either because the device was offline at submit time, or
   because an online submission attempt failed transiently.
-- The work request is enqueued with `enqueueUniqueWork(..., ExistingWorkPolicy.REPLACE, ...)` keyed by
-  `draftId`, so re-entering the flow for the same still-pending draft never piles up duplicate queued work.
+- The work request is enqueued with `enqueueUniqueWork(..., ExistingWorkPolicy.KEEP, ...)` keyed by
+  `draftId` — **amended from `REPLACE`, see Phase C below** — so re-entering the flow for the same
+  still-pending draft never piles up duplicate queued work.
 - `CatchRecordSyncWorker` is a `@HiltWorker` `CoroutineWorker`: it re-fetches the draft, no-ops
   (`Result.success()`) if it's no longer `PendingSync` (already handled by an earlier run of the same work,
   e.g. after process death), otherwise calls `submit(draft)` and marks the draft `Submitted` on success.
@@ -81,3 +82,15 @@ Alternatives considered:
 - This is a stub submission repository today (per ADR-0008's precedent of stub-first reference data) — when
   a real submission API is introduced, this ADR's WorkManager scheduling/retry design should still hold;
   only `CatchRecordSubmissionRepository`'s implementation changes.
+
+## Amendment — CRAR-152 Phase C (2026-10-06): `REPLACE` → `KEEP`
+
+`REPLACE` was found to be a **correctness bug, not a preference**, once FR8 (manual retry) and FR7 (an
+app-start reconciliation sweep) were added: WorkManager cancellation is cooperative, so `REPLACE` enqueued
+while a request is **RUNNING** cannot retract an HTTP call the server already accepted — against a
+non-idempotent backend that is a **duplicate submission of a regulatory catch record**. `KEEP` makes
+re-enqueuing an `ENQUEUED`/`RUNNING` unique name a no-op (correct — never disturb an in-flight submission)
+while still enqueuing after a terminal state (correct — retry works). This is also what gives the manual
+retry use case and the reconciliation sweep free idempotence with no `getWorkInfosForUniqueWork` guard
+needed in either caller. See ADR 0014's Phase C section for the sweep and `syncedAt` stamping this enabled.
+
