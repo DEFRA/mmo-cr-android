@@ -12,9 +12,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.GdsLinkAction
+import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
@@ -115,6 +117,18 @@ fun LateSubmissionWarningScreenContent(
             text = stringResource(R.string.save_and_continue),
             onClick = onSubmit,
             modifier = Modifier.testTag(LateSubmissionWarningScreenTestTags.SAVE_ACTION),
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Suppress("FunctionNaming")
+@Composable
+fun LateSubmissionWarningScreenContentPreview() {
+    MmoTheme {
+        LateSubmissionWarningScreenContent(
+            onCheckTripEndDate = {},
+            onSubmit = {},
         )
     }
 }

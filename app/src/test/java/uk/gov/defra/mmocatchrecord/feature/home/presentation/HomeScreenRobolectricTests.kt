@@ -1,6 +1,7 @@
 package uk.gov.defra.mmocatchrecord.feature.home.presentation
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -10,6 +11,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.common.design.RecordStatusTag
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
@@ -93,6 +95,19 @@ class HomeScreenRobolectricTests {
         }
         scrollToRow("4")
         composeTestRule.onNodeWithTag(CatchRecordsListSectionTestTags.retry("4")).assertIsDisplayed()
+    }
+
+    /** ADR-0014 Phase F: the table must fit a typical ~412dp-wide phone without a manual horizontal
+     * scroll, matching the reference design — only narrower/zoomed viewports fall back to scrolling. */
+    @Config(qualifiers = "w412dp-h915dp")
+    @Test
+    fun `created by column is visible without horizontal scrolling at a typical phone width`() {
+        setContent()
+
+        scrollToRow("1")
+        composeTestRule.onNodeWithText("Created by").assertIsDisplayed()
+        composeTestRule.onNodeWithTag(CatchRecordsListSectionTestTags.createdBy("1")).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(CatchRecordsListSectionTestTags.createdBy("1")).assertTextEquals("You")
     }
 
     @Test

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (Phase A, Phase B, Phase C, Phase D and Phase E).
+Accepted (Phase A, Phase B, Phase C, Phase D, Phase E and Phase F).
 
 ## Context
 
@@ -446,5 +446,77 @@ component would couple their dismiss timers and test tags for no real gain at th
   composable itself (`connectedDebugAndroidTest` is not merged into Kover/SonarCloud).
 - This closes out CRAR-152 (offline-first drafts, retry & sync) — FR1–FR10 are now all implemented across
   Phases A–E.
+
+## Decision (Phase F)
+
+### Reversal to a 4-column table — explicit developer direction overrides the Phase B deviation
+
+The developer supplied a reference image of a GOV.UK-style 4-column table (Trip end date | Vessel | Status |
+Created by) plus a "Showing X to Y of Z" Previous/Next pagination bar and asked for the Home records list to
+match it. This directly reverses the Phase B decision above. Two options were presented (keep Phase B's
+accessible stacked rows and only reskin colours, or rebuild the literal table); the developer chose the
+literal rebuild. This is recorded here as the required governance-exception entry — raise with Delivery
+Architecture (`delivery.architecture@defra.gov.uk`) per the DEFRA process for deviating from a settled ADR.
+
+### WCAG 1.4.10 data-table exception resolves the Phase B accessibility objection
+
+Phase B rejected the 4-column table because a fixed-column layout clips at 200% text/320dp reflow. WCAG
+1.4.10 exempts content "for which two-dimensional layout is essential to the information" — explicitly
+including data tables — provided there is a mechanism to reach the clipped content, e.g. horizontal
+scrolling. `catchRecordsListSection`'s header and each row share one hoisted `Modifier.horizontalScroll`
+(a single `ScrollState` instance passed into every row so all rows and the header stay aligned even though
+each remains a separate `LazyColumn` item). This satisfies 1.4.10 without reintroducing the Phase B clipping
+risk; WCAG 1.4.4 (200% text zoom with no loss of content) is still met because scrolling, not clipping, is
+the response to overflow.
+
+### Column widths recalibrated to fit a typical phone without scrolling
+
+The first implementation sized columns generously (545dp total row width), which forced a horizontal scroll
+on every phone just to see "Created by" — scrolling should be the WCAG 1.4.10 fallback for narrow/zoomed
+viewports, not the default experience the reference design shows. Columns/gaps were tightened to ~372dp
+total (fits a ~412dp-wide phone unscrolled; narrower devices still fall back to scrolling). Locked in by
+`created by column is visible without horizontal scrolling at a typical phone width`
+(`HomeScreenRobolectricTests`, `@Config(qualifiers = "w412dp-h915dp")`).
+
+### Real pagination, not the Phase B "count line"
+
+Phase B removed `PaginationBar` because it was a non-functional dead control. Phase F reinstates
+Previous/Next, but wired to real client-side paging (`CATCH_RECORDS_PAGE_SIZE = 10`) over the already-loaded
+list, with a "Showing X to Y of Z" live region and disabled (not just unstyled) buttons at the first/last
+page — this is a working control, unlike the one Phase B removed.
+
+### "Created by" always shows "You" — no fabricated per-record data
+
+`RoomHomeRepository.signedInUserId` is still a hardcoded stub (no real auth/session store). Rather than
+plumb that internal value into the UI or invent per-record authorship, the column always renders a
+localised "You" string (`records_created_by_you`) — honest for a single-user device, but a column with no
+real variation. Flagged so this is revisited once real multi-user/session data exists.
+
+### Dropped: the visible catch-record reference — flagged UX risk
+
+Phase B showed `catchRecordReference` as each row's bold heading. The reference image's table has no
+reference column, so it is no longer shown anywhere in the list (still used elsewhere, e.g.
+`records_reference_pending`). This removes a user-facing identifier from the list and is flagged as a UX
+regression risk worth a product/accessibility confirmation, not reversed unilaterally here.
+
+### Kept the real 4-status model — did not reintroduce `Amended`/`Late`
+
+The reference image's status chips read "Submitted"/"Amended"/"Unsent"/"Late". Phase A deliberately dropped
+`AMENDED`/`LATE` as not corresponding to any real state. Phase F keeps the real `Draft`/`ReadyToSubmit`/
+`AwaitingSync`/`Submitted` model and does not fabricate fake statuses to match the image; the existing
+`StatusTag` colour mapping already coincidentally resembles the image's palette.
+
+## Consequences (Phase F)
+
+- This is a governance exception to Phase B, not a correction of it — Phase B's reasoning was sound at the
+  time; raise the reversal with Delivery Architecture per DEFRA process.
+- `col_status`/`col_created_by`/`pagination_showing`/`pagination_previous`/`pagination_next`/
+  `pagination_page_content_description`/`records_created_by_you` are reinstated/added; `catch_records_count`
+  (Phase B's count line) is deleted as it is now unused (Android Lint unused-resource convention).
+- `HomeScreenRobolectricTests` continues to carry the Compose coverage for the records list; discrete
+  `items(pageRecords, key = { it.id })` entries (not one composite `item {}`) are required for
+  `performScrollToNode` to reach off-screen rows in tests.
+- Welsh translations for the new strings are best-effort and not yet reviewed by a Welsh-language
+  specialist.
 
 

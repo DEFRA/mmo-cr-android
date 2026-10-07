@@ -13,13 +13,19 @@
     <string name="edit_trips_hint">I olygu teithiau neu reoli gosodiadau eich cyfrif, defnyddiwch y gwasanaeth gwe.</string>
     <string name="col_trip_end_date">Dyddiad gorffen y daith</string>
     <string name="col_vessel">Llong</string>
+    <string name="col_status">Statws</string>
+    <string name="col_created_by">Crëwyd gan</string>
     <string name="no_catch_records_yet">Nid oes gennych unrhyw gofnodion dalfa eto.</string>
-    <string name="catch_records_count">Yn dangos %1$d cofnod dalfa</string>
     <string name="records_reference_pending">Cyfeirnod heb ei neilltuo eto</string>
     <string name="records_trip_end_date_not_set">Heb ei nodi eto</string>
+    <string name="records_created_by_you">Chi</string>
     <string name="records_retry_action">Ailgynnig</string>
     <string name="records_retry_pending">Wrthi\'n ailgynnig…</string>
     <string name="records_retry_offline_message">Rydych all-lein. Mae\'r cofnod dalfa hwn wedi\'i gadw ar eich dyfais a bydd yn cael ei anfon yn awtomatig pan fyddwch ar-lein eto.</string>
+    <string name="pagination_showing">Yn dangos %1$d i %2$d o %3$d</string>
+    <string name="pagination_previous">Blaenorol</string>
+    <string name="pagination_next">Nesaf</string>
+    <string name="pagination_page_content_description">Tudalen %1$d</string>
     <!-- FR9: sync-confirmation message (CRAR-152 Phase E) -->
     <plurals name="sync_confirmation_message">
         <item quantity="one">Mae cofnod dalfa %1$s wedi\'i gyflwyno</item>

@@ -10,13 +10,19 @@
     <string name="edit_trips_hint">To edit trips or manage your account settings, use the web service.</string>
     <string name="col_trip_end_date">Trip end date</string>
     <string name="col_vessel">Vessel</string>
+    <string name="col_status">Status</string>
+    <string name="col_created_by">Created by</string>
     <string name="no_catch_records_yet">You have no catch records yet.</string>
-    <string name="catch_records_count">Showing %1$d catch records</string>
     <string name="records_reference_pending">Reference not yet assigned</string>
     <string name="records_trip_end_date_not_set">Not entered yet</string>
+    <string name="records_created_by_you">You</string>
     <string name="records_retry_action">Retry</string>
     <string name="records_retry_pending">Retrying…</string>
     <string name="records_retry_offline_message">You\'re offline. This catch record is saved on your device and will be sent automatically when you\'re back online.</string>
+    <string name="pagination_showing">Showing %1$d to %2$d of %3$d</string>
+    <string name="pagination_previous">Previous</string>
+    <string name="pagination_next">Next</string>
+    <string name="pagination_page_content_description">Page %1$d</string>
     <!-- FR9: sync-confirmation message (CRAR-152 Phase E) -->
     <plurals name="sync_confirmation_message">
         <item quantity="one">Catch record %1$s has been submitted</item>

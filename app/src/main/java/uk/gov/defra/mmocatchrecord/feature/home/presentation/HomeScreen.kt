@@ -2,6 +2,7 @@
 
 package uk.gov.defra.mmocatchrecord.feature.home.presentation
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -19,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -114,6 +117,8 @@ fun HomeScreenContent(
     debugSettingsSection: DebugSettingsSection = NoOpDebugSettingsSectionPreview,
 ) {
     AppLanguageProvider(language = currentLanguage) {
+        var catchRecordsPage by rememberSaveable { mutableIntStateOf(0) }
+        val catchRecordsHorizontalScrollState = rememberScrollState()
         Scaffold(
             topBar = {
                 GdsTopAppBar(
@@ -144,6 +149,9 @@ fun HomeScreenContent(
                                     onRetry = onRetry,
                                     onDismissOfflineMessage = onDismissOfflineMessage,
                                     onDismissSyncConfirmationMessage = onDismissSyncConfirmationMessage,
+                                    catchRecordsPage = catchRecordsPage,
+                                    onCatchRecordsPageChange = { catchRecordsPage = it },
+                                    catchRecordsHorizontalScrollState = catchRecordsHorizontalScrollState,
                                 )
                             1 -> NotificationsTabContent()
                             2 -> SettingsTabContent(onSignOut = onSignOut, debugSettingsSection = debugSettingsSection)
@@ -166,6 +174,9 @@ private fun HomeTabContent(
     onRetry: (String) -> Unit,
     onDismissOfflineMessage: () -> Unit,
     onDismissSyncConfirmationMessage: () -> Unit,
+    catchRecordsPage: Int,
+    onCatchRecordsPageChange: (Int) -> Unit,
+    catchRecordsHorizontalScrollState: ScrollState,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(Spacing.m).testTag(HomeScreenTestTags.TAB_LIST),
@@ -196,6 +207,9 @@ private fun HomeTabContent(
                     onRecordClick = onResumeDraft,
                     onRetry = onRetry,
                     retryingIds = state.retryingIds,
+                    currentPage = catchRecordsPage,
+                    onPageChange = onCatchRecordsPageChange,
+                    horizontalScrollState = catchRecordsHorizontalScrollState,
                 )
         }
         item { HelpAccordionsSection() }
