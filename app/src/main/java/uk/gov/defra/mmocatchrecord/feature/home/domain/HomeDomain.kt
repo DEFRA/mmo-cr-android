@@ -14,13 +14,19 @@ data class HomeSummary(
         get() = catchRecords.count { it.status == RecordStatusTag.AwaitingSync }
 }
 
-/** [tripEndDate] is `null` until the return date is entered (legitimate for a [RecordStatusTag.Draft]). */
+/**
+ * [tripEndDate] is `null` until the return date is entered (legitimate for a [RecordStatusTag.Draft]).
+ * [vesselName] is the vessel's reference-data display name (e.g. "ACHILLES") resolved from [vesselId] by
+ * [uk.gov.defra.mmocatchrecord.feature.home.data.RoomHomeRepository]; it defaults to the raw [vesselId]
+ * so an unresolved id is never silently blanked.
+ */
 data class CatchRecordSummary(
     val id: String,
     val catchRecordReference: String?,
     val vesselId: String,
     val tripEndDate: DmyDate?,
     val status: RecordStatusTag,
+    val vesselName: String = vesselId,
 )
 
 /** Reactive repository abstraction over Home-screen summary data — see ADR 0014 Phase B. */

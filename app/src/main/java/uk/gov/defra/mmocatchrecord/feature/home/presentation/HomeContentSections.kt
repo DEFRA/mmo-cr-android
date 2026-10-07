@@ -49,6 +49,9 @@ import uk.gov.defra.mmocatchrecord.common.design.Spacing
 import uk.gov.defra.mmocatchrecord.common.design.StatusTag
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DmyDate
 import uk.gov.defra.mmocatchrecord.feature.home.domain.CatchRecordSummary
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Suppress("FunctionNaming")
 @Composable
@@ -175,7 +178,12 @@ fun LazyListScope.catchRecordsListSection(
     }
 }
 
-private fun formatDmyDate(date: DmyDate): String = "%02d/%02d/%04d".format(date.day, date.month, date.year)
+/** Matches the reference design's "20 Nov 2020" table format — day (no leading zero), abbreviated
+ * month, 4-digit year, single-space separated. */
+private val TripEndDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.UK)
+
+private fun formatDmyDate(date: DmyDate): String =
+    LocalDate.of(date.year, date.month, date.day).format(TripEndDateFormatter)
 
 @Suppress("FunctionNaming")
 @Composable
@@ -233,7 +241,7 @@ private fun CatchRecordTableRow(
     ) {
         TripEndDateCell(tripEndDateText, isResumable, minTouchTarget) { onClick(record.id) }
         Text(
-            text = record.vesselId,
+            text = record.vesselName,
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.width(VesselColumnWidth).padding(end = TableColumnGap),
         )

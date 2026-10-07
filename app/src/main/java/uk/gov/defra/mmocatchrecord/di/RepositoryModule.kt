@@ -39,8 +39,10 @@ object RepositoryModule {
 
     @Provides
     @Singleton
-    fun provideHomeRepository(draftRepository: CatchRecordDraftRepository): HomeRepository =
-        RoomHomeRepository(draftRepository)
+    fun provideHomeRepository(
+        draftRepository: CatchRecordDraftRepository,
+        referenceDataRepository: ReferenceDataRepository,
+    ): HomeRepository = RoomHomeRepository(draftRepository, referenceDataRepository)
 
     @Provides
     @Singleton
