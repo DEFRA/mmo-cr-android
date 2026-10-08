@@ -28,7 +28,11 @@
     <string name="pagination_page_content_description">Tudalen %1$d</string>
     <!-- FR9: sync-confirmation message (CRAR-152 Phase E) -->
     <plurals name="sync_confirmation_message">
+        <item quantity="zero">Mae %1$d cofnodion dalfa wedi\'u cyflwyno</item>
         <item quantity="one">Mae cofnod dalfa %1$s wedi\'i gyflwyno</item>
+        <item quantity="two">Mae %1$d gofnod dalfa wedi\'u cyflwyno</item>
+        <item quantity="few">Mae %1$d chofnod dalfa wedi\'u cyflwyno</item>
+        <item quantity="many">Mae %1$d chofnod dalfa wedi\'u cyflwyno</item>
         <item quantity="other">Mae %1$d cofnod dalfa wedi\'u cyflwyno</item>
     </plurals>
     <string name="home_summary_load_error">Ni allem lwytho eich cofnodion dalfa. Rhowch gynnig arall arni.</string>
