@@ -1,5 +1,6 @@
 package uk.gov.defra.mmocatchrecord.common.design
 
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -37,13 +38,19 @@ fun UnsavedChangesDialog(
         confirmButton = {
             TextButton(
                 onClick = onLeave,
-                modifier = Modifier.testTag(UnsavedChangesDialogTestTags.LEAVE_ACTION),
+                modifier =
+                    Modifier
+                        .testTag(UnsavedChangesDialogTestTags.LEAVE_ACTION)
+                        .heightIn(min = Spacing.minTouchTarget),
             ) { Text(stringResource(R.string.unsaved_changes_leave_action)) }
         },
         dismissButton = {
             TextButton(
                 onClick = onStay,
-                modifier = Modifier.testTag(UnsavedChangesDialogTestTags.STAY_ACTION),
+                modifier =
+                    Modifier
+                        .testTag(UnsavedChangesDialogTestTags.STAY_ACTION)
+                        .heightIn(min = Spacing.minTouchTarget),
             ) { Text(stringResource(R.string.unsaved_changes_stay_action)) }
         },
     )
