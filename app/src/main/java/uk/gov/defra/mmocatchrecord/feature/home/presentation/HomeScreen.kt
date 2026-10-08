@@ -60,10 +60,7 @@ object HomeScreenTestTags {
 }
 
 /** Default [DebugSettingsSection] for previews/call sites not supplying a real one — renders nothing. */
-private object NoOpDebugSettingsSectionPreview : DebugSettingsSection {
-    @Composable
-    override fun Render() = Unit
-}
+private val noOpDebugSettingsSectionPreview = DebugSettingsSection {}
 
 @Suppress("FunctionNaming")
 @Composable
@@ -116,7 +113,7 @@ fun HomeScreenContent(
     onRetry: (String) -> Unit = {},
     onDismissOfflineMessage: () -> Unit = {},
     onDismissSyncConfirmationMessage: () -> Unit = {},
-    debugSettingsSection: DebugSettingsSection = NoOpDebugSettingsSectionPreview,
+    debugSettingsSection: DebugSettingsSection = noOpDebugSettingsSectionPreview,
 ) {
     AppLanguageProvider(language = currentLanguage) {
         var catchRecordsPage by rememberSaveable { mutableIntStateOf(0) }

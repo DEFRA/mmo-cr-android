@@ -53,10 +53,7 @@ object SettingsScreenTestTags {
 }
 
 /** Default [DebugSettingsSection] for call sites not supplying a real one — renders nothing. */
-private object NoOpDebugSettingsSectionDefault : DebugSettingsSection {
-    @Composable
-    override fun Render() = Unit
-}
+private val noOpDebugSettingsSectionDefault = DebugSettingsSection {}
 
 /**
  * "Your settings" screen — the content shown for the Settings tab of the app's bottom navigation (see
@@ -75,7 +72,7 @@ private object NoOpDebugSettingsSectionDefault : DebugSettingsSection {
 fun SettingsTabContent(
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
-    debugSettingsSection: DebugSettingsSection = NoOpDebugSettingsSectionDefault,
+    debugSettingsSection: DebugSettingsSection = noOpDebugSettingsSectionDefault,
 ) {
     var analyticsEnabled by remember { mutableStateOf(false) }
 

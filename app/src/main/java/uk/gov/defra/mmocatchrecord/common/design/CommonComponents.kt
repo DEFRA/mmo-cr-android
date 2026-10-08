@@ -339,6 +339,13 @@ fun ExpandableDetails(
     }
 }
 
+/** Stable, localisation-independent lookups for [MmoBottomNavigationBar]'s tabs (tests should prefer these). */
+object MmoBottomNavigationBarTestTags {
+    const val HOME_TAB = "mmo_bottom_nav_home_tab"
+    const val NOTIFICATIONS_TAB = "mmo_bottom_nav_notifications_tab"
+    const val SETTINGS_TAB = "mmo_bottom_nav_settings_tab"
+}
+
 /** App bottom navigation bar matching the iOS Design */
 @Suppress("FunctionNaming")
 @Composable
@@ -377,6 +384,7 @@ fun MmoBottomNavigationBar(
                 label = stringResource(R.string.nav_home),
                 iconComposable = { col -> CustomHomeIcon(tint = col, modifier = Modifier.size(24.dp)) },
                 onClick = { onItemClick(0) },
+                modifier = Modifier.testTag(MmoBottomNavigationBarTestTags.HOME_TAB),
             )
 
             // Notifications tab
@@ -385,6 +393,7 @@ fun MmoBottomNavigationBar(
                 label = stringResource(R.string.nav_notifications),
                 iconComposable = { col -> CustomNotificationsIcon(tint = col, modifier = Modifier.size(24.dp)) },
                 onClick = { onItemClick(1) },
+                modifier = Modifier.testTag(MmoBottomNavigationBarTestTags.NOTIFICATIONS_TAB),
             )
 
             // Settings tab
@@ -393,6 +402,7 @@ fun MmoBottomNavigationBar(
                 label = stringResource(R.string.nav_settings),
                 iconComposable = { col -> CustomSettingsIcon(tint = col, modifier = Modifier.size(24.dp)) },
                 onClick = { onItemClick(2) },
+                modifier = Modifier.testTag(MmoBottomNavigationBarTestTags.SETTINGS_TAB),
             )
         }
     }

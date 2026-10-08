@@ -73,6 +73,11 @@ room {
     schemaDirectory("$projectDir/schemas")
 }
 
+// JaCoCo engine filters Compose-compiler synthetic branches ($changed/$default/skipping) that tests cannot reach.
+kover {
+    useJacoco(libs.versions.jacoco.get())
+}
+
 detekt {
     config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
     buildUponDefaultConfig = true

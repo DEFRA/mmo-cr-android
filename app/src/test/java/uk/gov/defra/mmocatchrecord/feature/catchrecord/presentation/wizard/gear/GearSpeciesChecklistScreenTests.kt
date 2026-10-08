@@ -203,6 +203,52 @@ class GearSpeciesChecklistScreenTests {
     }
 
     @Test
+    fun aPreviouslySavedBelowMinimumAndDiscardedWeightReopenAlreadyDisclosedAndPrefilled() {
+        val gearUse =
+            GearUse(
+                id = "gear-use-1",
+                gearTypeId = seineNets.id,
+                statisticalSubRectangleCode = "38E95",
+                speciesWeights =
+                    listOf(
+                        SpeciesWeightEntry(
+                            id = "sw-0",
+                            speciesId = cod.id,
+                            confirmedCaught = true,
+                            weightAboveMinimumSizeKg = 5.5,
+                            weightBelowMinimumSizeKg = 2.0,
+                            weightLegallyDiscardedKg = 1.5,
+                        ),
+                    ),
+                confirmedUsedOnTrip = true,
+            )
+        composeTestRule.setContent {
+            MmoTheme {
+                GearSpeciesChecklistScreenContent(
+                    draft = draftWith(gearUse),
+                    gearUse = gearUse,
+                    speciesList = speciesList,
+                    onRemoveSpecies = {},
+                    onAddAnotherSpecies = {},
+                    onSubmit = {},
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                )
+            }
+        }
+
+        // Both optional fields were already disclosed and pre-filled from the saved entry — "Remove"
+        // links (not "Add") confirm the dirty-tracking baseline re-derives from the existing weights.
+        composeTestRule
+            .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.REMOVE_BELOW_MIN_ACTION_PREFIX}_${cod.id}")
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.REMOVE_DISCARDED_ACTION_PREFIX}_${cod.id}")
+            .performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    @Test
     fun noSpeciesCheckedOnSaveShowsChecklistRequiredError() {
         var submitted: CatchRecordDraft? = null
         val gearUse = gearUseWithAddedSpecies(listOf(cod.id))

@@ -1,11 +1,13 @@
 package uk.gov.defra.mmocatchrecord.feature.home.presentation
 
+import android.content.Context
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -15,27 +17,63 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.kotlin.mock
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import uk.gov.defra.mmocatchrecord.common.design.DebugSettingsSection
+import uk.gov.defra.mmocatchrecord.common.design.GdsTopAppBarTestTags
+import uk.gov.defra.mmocatchrecord.common.design.MmoBottomNavigationBarTestTags
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.common.design.RecordStatusTag
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
+import uk.gov.defra.mmocatchrecord.core.connectivity.ConnectivityViewModel
+import uk.gov.defra.mmocatchrecord.core.connectivity.FakeConnectivityObserver
+import uk.gov.defra.mmocatchrecord.core.language.AppLanguage
+import uk.gov.defra.mmocatchrecord.core.language.AppLanguageViewModel
+import uk.gov.defra.mmocatchrecord.core.language.FakeAppLanguageRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DmyDate
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.RetryCatchRecordSubmissionUseCase
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.FakeCatchRecordSyncScheduler
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.FakeNetworkConnectivityChecker
+import uk.gov.defra.mmocatchrecord.feature.home.data.FakeHomeRepository
 import uk.gov.defra.mmocatchrecord.feature.home.domain.CatchRecordSummary
 import uk.gov.defra.mmocatchrecord.feature.home.domain.HomeSummary
+import uk.gov.defra.mmocatchrecord.feature.home.domain.ObserveHomeSummaryUseCase
 
 /**
  * JVM/Robolectric Compose coverage for the Home records list and offline banner — required because
  * `connectedDebugAndroidTest` coverage is not merged into Kover/SonarCloud (see ADR 0014 Phase B).
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class HomeScreenRobolectricTests {
     @get:Rule
     val composeTestRule = createComposeRule()
+
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(StandardTestDispatcher())
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
 
     private val everyStatusRecords =
         listOf(
@@ -74,6 +112,23 @@ class HomeScreenRobolectricTests {
             }
         }
     }
+
+    /** Builds a real [HomeViewModel] backed by fakes — needed to exercise the stateful [HomeScreen] wrapper
+     * (the Hilt-resolving overload), not just the stateless [HomeScreenContent] already covered above. */
+    private fun buildHomeViewModel(
+        repository: FakeHomeRepository,
+        dispatcher: CoroutineDispatcher,
+        context: Context = mock(),
+        syncScheduler: FakeCatchRecordSyncScheduler = FakeCatchRecordSyncScheduler(),
+        connectivityChecker: FakeNetworkConnectivityChecker = FakeNetworkConnectivityChecker(),
+    ): HomeViewModel =
+        HomeViewModel(
+            ObserveHomeSummaryUseCase(repository),
+            RetryCatchRecordSubmissionUseCase(syncScheduler, connectivityChecker),
+            DebugSettingsSection {},
+            context,
+            dispatcher,
+        )
 
     /** The records list is a `LazyColumn` (R14) — off-screen rows must be scrolled into view to compose. */
     private fun scrollToRow(id: String) {
@@ -461,4 +516,210 @@ class HomeScreenRobolectricTests {
         composeTestRule.waitForIdle()
         assertTrue(dismissed)
     }
+
+    @Test
+    fun `an idle status also shows the loading indicator`() {
+        composeTestRule.setContent {
+            MmoTheme {
+                HomeScreenContent(
+                    state = HomeViewState(status = UiStatus.Idle),
+                    currentLanguage = "en",
+                    onLanguageToggle = {},
+                    isOffline = false,
+                    selectedTab = 0,
+                    onTabSelected = {},
+                    onSignOut = {},
+                    onCreateCatchRecord = {},
+                    onResumeDraft = {},
+                )
+            }
+        }
+        composeTestRule
+            .onNodeWithTag(HomeScreenTestTags.TAB_LIST)
+            .performScrollToNode(hasTestTag("home_loading_indicator"))
+        composeTestRule.onNodeWithTag("home_loading_indicator").assertIsDisplayed()
+    }
+
+    @Test
+    fun `retrying row shows the pending retry label and a disabled retry button`() {
+        composeTestRule.setContent {
+            MmoTheme {
+                HomeScreenContent(
+                    state =
+                        HomeViewState(
+                            status = UiStatus.Content(HomeSummary("alice", everyStatusRecords)),
+                            retryingIds = setOf("4"),
+                        ),
+                    currentLanguage = "en",
+                    onLanguageToggle = {},
+                    isOffline = false,
+                    selectedTab = 0,
+                    onTabSelected = {},
+                    onSignOut = {},
+                    onCreateCatchRecord = {},
+                    onResumeDraft = {},
+                )
+            }
+        }
+        scrollToRow("4")
+        composeTestRule.onNodeWithTag(CatchRecordsListSectionTestTags.retry("4")).assertIsNotEnabled()
+        composeTestRule.onNodeWithText("Retrying…").assertIsDisplayed()
+    }
+
+    /** With exactly one page of records, both pagination links are disabled at once (ADR-0014 Phase F). */
+    @Test
+    fun `pagination links are both disabled when there is only one page`() {
+        composeTestRule.setContent {
+            MmoTheme {
+                LazyColumn {
+                    catchRecordsListSection(records = everyStatusRecords, onRecordClick = {})
+                }
+            }
+        }
+        composeTestRule.onNodeWithTag(CatchRecordsListSectionTestTags.PAGINATION_PREVIOUS).assertIsNotEnabled()
+        composeTestRule.onNodeWithTag(CatchRecordsListSectionTestTags.PAGINATION_NEXT).assertIsNotEnabled()
+    }
+
+    /** On the last of several pages, "Next" is disabled while "Previous" stays enabled — the opposite
+     * boundary from the first-page case already covered by the "clickable" pagination test above. */
+    @Config(qualifiers = "w412dp-h2000dp")
+    @Test
+    fun `pagination next link is disabled on the last page while previous stays enabled`() {
+        val manyRecords =
+            (1..11).map {
+                CatchRecordSummary(
+                    it.toString(),
+                    "MMO-REF-$it",
+                    "ACHILLES",
+                    DmyDate(it, 1, 2026),
+                    RecordStatusTag.Submitted,
+                )
+            }
+        composeTestRule.setContent {
+            MmoTheme {
+                LazyColumn {
+                    catchRecordsListSection(records = manyRecords, onRecordClick = {}, currentPage = 1)
+                }
+            }
+        }
+        composeTestRule.onNodeWithTag(CatchRecordsListSectionTestTags.PAGINATION_NEXT).assertIsNotEnabled()
+        composeTestRule.onNodeWithTag(CatchRecordsListSectionTestTags.PAGINATION_PREVIOUS).performClick()
+    }
+
+    /** Drives the stateful [HomeScreen] wrapper with real view models: state collection and language toggle. */
+    @Test
+    fun `home screen wrapper collects its real view models and wires the language toggle`() =
+        runTest {
+            val repository = FakeHomeRepository()
+            repository.emit(HomeSummary(signedInUserId = "alice", catchRecords = everyStatusRecords))
+            val homeViewModel = buildHomeViewModel(repository, dispatcher = StandardTestDispatcher(testScheduler))
+            val languageViewModel = AppLanguageViewModel(FakeAppLanguageRepository())
+            val connectivityViewModel = ConnectivityViewModel(FakeConnectivityObserver(initiallyOnline = true))
+            var signedOut = false
+
+            composeTestRule.setContent {
+                MmoTheme {
+                    HomeScreen(
+                        onSignOut = { signedOut = true },
+                        onCreateCatchRecord = {},
+                        onResumeDraft = {},
+                        viewModel = homeViewModel,
+                        languageViewModel = languageViewModel,
+                        connectivityViewModel = connectivityViewModel,
+                    )
+                }
+            }
+            testScheduler.advanceUntilIdle()
+            composeTestRule.waitForIdle()
+
+            composeTestRule.onNodeWithTag(HomeScreenTestTags.SCREEN).assertIsDisplayed()
+            composeTestRule.onNodeWithTag(HomeScreenTestTags.TAB_LIST).assertIsDisplayed()
+            composeTestRule.onNodeWithTag("offline_banner").assertDoesNotExist()
+
+            composeTestRule.onNodeWithTag(GdsTopAppBarTestTags.LANGUAGE_TOGGLE).performClick()
+            testScheduler.advanceUntilIdle()
+            composeTestRule.waitForIdle()
+            assertEquals(AppLanguage.WELSH, languageViewModel.language.value)
+            composeTestRule.onNodeWithTag(GdsTopAppBarTestTags.LANGUAGE_TOGGLE).assertTextEquals("ENG")
+            assertFalse(signedOut)
+        }
+
+    /** Drives the wrapper's tab switching, back-to-home action and the Settings tab's debug section seam. */
+    @Test
+    fun `home screen wrapper switches tabs via bottom navigation and the back action returns to the home tab`() =
+        runTest {
+            val repository = FakeHomeRepository()
+            repository.emit(HomeSummary(signedInUserId = "alice", catchRecords = everyStatusRecords))
+            val homeViewModel = buildHomeViewModel(repository, dispatcher = StandardTestDispatcher(testScheduler))
+            val languageViewModel = AppLanguageViewModel(FakeAppLanguageRepository())
+            val connectivityViewModel = ConnectivityViewModel(FakeConnectivityObserver(initiallyOnline = true))
+            var signedOut = false
+
+            composeTestRule.setContent {
+                MmoTheme {
+                    HomeScreen(
+                        onSignOut = { signedOut = true },
+                        onCreateCatchRecord = {},
+                        onResumeDraft = {},
+                        viewModel = homeViewModel,
+                        languageViewModel = languageViewModel,
+                        connectivityViewModel = connectivityViewModel,
+                    )
+                }
+            }
+            testScheduler.advanceUntilIdle()
+            composeTestRule.waitForIdle()
+
+            composeTestRule.onNodeWithTag(MmoBottomNavigationBarTestTags.SETTINGS_TAB).performClick()
+            composeTestRule.onNodeWithTag(SettingsScreenTestTags.SCREEN).assertIsDisplayed()
+
+            composeTestRule.onNodeWithTag(MmoBottomNavigationBarTestTags.NOTIFICATIONS_TAB).performClick()
+            composeTestRule.onNodeWithTag(HomeScreenTestTags.NOTIFICATIONS_TAB_HEADING).assertIsDisplayed()
+
+            composeTestRule.onNodeWithTag(GdsTopAppBarTestTags.BACK_BUTTON).performClick()
+            composeTestRule.onNodeWithTag(HomeScreenTestTags.TAB_LIST).assertIsDisplayed()
+            assertFalse("back from a non-home tab must not sign the user out", signedOut)
+        }
+
+    /** Covers the wrapper's `onRetry` wiring — dispatching [HomeEvent.RetrySubmission] on the real
+     * [HomeViewModel] (not a test-local lambda) and its `retryingIds` round-trip into the rendered row. */
+    @Test
+    fun `home screen wrapper retry action dispatches RetrySubmission on the real view model`() =
+        runTest {
+            val repository = FakeHomeRepository()
+            repository.emit(HomeSummary(signedInUserId = "alice", catchRecords = everyStatusRecords))
+            val syncScheduler = FakeCatchRecordSyncScheduler()
+            val homeViewModel =
+                buildHomeViewModel(
+                    repository,
+                    dispatcher = StandardTestDispatcher(testScheduler),
+                    syncScheduler = syncScheduler,
+                )
+            val languageViewModel = AppLanguageViewModel(FakeAppLanguageRepository())
+            val connectivityViewModel = ConnectivityViewModel(FakeConnectivityObserver(initiallyOnline = true))
+
+            composeTestRule.setContent {
+                MmoTheme {
+                    HomeScreen(
+                        onSignOut = {},
+                        onCreateCatchRecord = {},
+                        onResumeDraft = {},
+                        viewModel = homeViewModel,
+                        languageViewModel = languageViewModel,
+                        connectivityViewModel = connectivityViewModel,
+                    )
+                }
+            }
+            testScheduler.advanceUntilIdle()
+            composeTestRule.waitForIdle()
+
+            scrollToRow("4")
+            composeTestRule.onNodeWithTag(CatchRecordsListSectionTestTags.retry("4")).performClick()
+            testScheduler.advanceUntilIdle()
+            composeTestRule.waitForIdle()
+
+            assertEquals(listOf("4"), syncScheduler.scheduledDraftIds)
+            scrollToRow("4")
+            composeTestRule.onNodeWithTag(CatchRecordsListSectionTestTags.retry("4")).assertIsNotEnabled()
+        }
 }
