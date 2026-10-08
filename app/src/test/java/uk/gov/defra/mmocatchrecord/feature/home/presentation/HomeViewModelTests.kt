@@ -301,6 +301,36 @@ class HomeViewModelTests {
         }
 
     @Test
+    fun `FR9 a singular confirmation falls back to a pending-reference label when the reference is null`() =
+        runTest {
+            val resources = mock<android.content.res.Resources>()
+            val pluralsRes = R.plurals.sync_confirmation_message
+            whenever(resources.getQuantityString(pluralsRes, 1, "Reference not yet assigned"))
+                .thenReturn("Catch record Reference not yet assigned has been submitted")
+            val context = mock<Context>()
+            whenever(context.resources).thenReturn(resources)
+            whenever(context.getString(R.string.records_reference_pending)).thenReturn("Reference not yet assigned")
+
+            val repository = FakeHomeRepository()
+            val awaitingOne =
+                listOf(CatchRecordSummary("4", null, "vessel-1", DmyDate(4, 1, 2026), RecordStatusTag.AwaitingSync))
+            repository.emit(HomeSummary(signedInUserId = "alice", catchRecords = awaitingOne))
+            val viewModel = buildViewModel(repository, context = context)
+
+            viewModel.state.test {
+                awaitItem()
+                awaitItem()
+
+                val synced = awaitingOne.map { it.copy(status = RecordStatusTag.Submitted) }
+                repository.emit(HomeSummary(signedInUserId = "alice", catchRecords = synced))
+                assertEquals(
+                    "Catch record Reference not yet assigned has been submitted",
+                    awaitItem().syncConfirmationMessage,
+                )
+            }
+        }
+
+    @Test
     fun `FR9 multiple simultaneous transitions surface a plural confirmation message`() =
         runTest {
             val context = contextWithQuantityString(2, 2, result = "2 catch records have been submitted")

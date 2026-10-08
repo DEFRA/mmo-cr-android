@@ -55,6 +55,8 @@ object HomeScreenTestTags {
     const val SIGN_OUT_ACTION = "home_feature_sign_out_action"
     const val ERROR_MESSAGE = "home_feature_error_message"
     const val TAB_LIST = "home_tab_list"
+    const val ROYAL_CREST = "home_feature_royal_crest"
+    const val NOTIFICATIONS_TAB_HEADING = "home_feature_notifications_tab_heading"
 }
 
 /** Default [DebugSettingsSection] for previews/call sites not supplying a real one — renders nothing. */
@@ -224,10 +226,23 @@ private fun HomeTabContent(
             ) {}
         }
         item {
-            Box(modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.m), contentAlignment = Alignment.Center) {
-                RoyalCrestPlaceholder()
-            }
+            RoyalCrestItem()
         }
+    }
+}
+
+@Suppress("FunctionNaming")
+@Composable
+private fun RoyalCrestItem() {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = Spacing.m)
+                .testTag(HomeScreenTestTags.ROYAL_CREST),
+        contentAlignment = Alignment.Center,
+    ) {
+        RoyalCrestPlaceholder()
     }
 }
 
@@ -239,7 +254,11 @@ fun NotificationsTabContent() {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(text = stringResource(R.string.nav_notifications), style = MaterialTheme.typography.headlineMedium)
+        Text(
+            text = stringResource(R.string.nav_notifications),
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.testTag(HomeScreenTestTags.NOTIFICATIONS_TAB_HEADING),
+        )
     }
 }
 

@@ -87,7 +87,7 @@ fun HeadingSection(onCreateCatchRecord: () -> Unit) {
 @Composable
 fun LoadingIndicator() {
     Box(
-        modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xl),
+        modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xl).testTag("home_loading_indicator"),
         contentAlignment = Alignment.Center,
     ) {
         CircularProgressIndicator(color = MmoColors.GovBlue)
