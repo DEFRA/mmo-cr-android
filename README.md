@@ -13,33 +13,37 @@ Fastlane (optional locally, used by CI) additionally needs Ruby 3.3+ and Bundler
 git clone <this-repo-url>
 cd mmo-cr-android
 
-# Build
-./gradlew assembleDebug
+# Build (devDebug — see docs/development/reference-data.md for choosing local/dev/prod)
+./gradlew assembleDevDebug
 
 # Run unit tests
-./gradlew testDebugUnitTest
+./gradlew testDevDebugUnitTest
 
 # Run unit tests + generate coverage report (Kover)
-./gradlew testDebugUnitTest koverXmlReportDebug
+./gradlew testDevDebugUnitTest koverXmlReportDebug
 
 # Lint / static analysis
-./gradlew ktlintCheck detekt lintDebug --continue
+./gradlew ktlintCheck detekt lintDevDebug --continue
 
-# Regenerate the offline map data (also runs automatically before assembleDebug/Release)
-./gradlew :app:generateDebugMapData
+# Regenerate the offline map data (also runs automatically before assembleDevDebug/Release)
+./gradlew :app:generateDevDebugMapData
 
 # Install & run on a connected device/emulator
-./gradlew installDebug
+./gradlew installDevDebug
 ```
+
+The **`environment`** flavor dimension (`local`/`dev`/`prod`) multiplies every task name above (ADR 0015)
+— see [`docs/development/reference-data.md`](docs/development/reference-data.md) for which flavor to pick
+and how to stand up a backend for it.
 
 The same steps are also exposed as Fastlane lanes, which is exactly what CI runs:
 
 ```powershell
 bundle install
-bundle exec fastlane lint              # ktlintCheck + detekt + lintDebug (--continue)
-bundle exec fastlane build             # assembleDebug
-bundle exec fastlane test              # testDebugUnitTest + koverXmlReportDebug
-bundle exec fastlane instrumented_test # connectedDebugAndroidTest
+bundle exec fastlane lint              # ktlintCheck + detekt + lintDevDebug (--continue)
+bundle exec fastlane build             # assembleDevDebug
+bundle exec fastlane test              # testDevDebugUnitTest + koverXmlReportDebug
+bundle exec fastlane instrumented_test # connectedDevDebugAndroidTest
 ```
 
 Or open the project in Android Studio and use the standard Run/Debug configurations.
@@ -80,6 +84,9 @@ split per feature package, per
 - **Offline fisheries statistical sub-rectangle map** — a fully offline, custom Compose `Canvas`-rendered
   map (no map SDK/tiles/API key/network) with a build-time GeoJSON preprocessing task in the `build-logic/`
   composite Gradle build — see ADR 0013 and [`docs/development/offline-map.md`](docs/development/offline-map.md).
+- **Reference-data API integration** — Retrofit/OkHttp-backed, cache-first (Room) with a bundled offline
+  fallback, across `local`/`dev`/`prod` flavors — see ADR 0014/0015 and
+  [`docs/development/reference-data.md`](docs/development/reference-data.md) for the developer runbook.
 - Full list of ADRs: [`docs/adr/`](docs/adr/).
 
 ## Developer guidelines
@@ -110,7 +117,10 @@ split per feature package, per
 | [0003](docs/adr/0003-room-offline-persistence.md) | Room for offline-first persistence |
 | [0004](docs/adr/0004-koin-dependency-injection.md) | Koin for dependency injection (superseded) |
 | [0005](docs/adr/0005-hilt-dependency-injection.md) | Hilt for dependency injection |
+| [0008](docs/adr/0008-reference-data-stub.md) | Reference-data stub (superseded by 0015) |
 | [0013](docs/adr/0013-offline-fisheries-map-rendering.md) | Offline fisheries statistical sub-rectangle map rendering |
+| [0014](docs/adr/0014-http-client-retrofit-okhttp.md) | HTTP client: Retrofit + OkHttp |
+| [0015](docs/adr/0015-reference-data-api-integration.md) | Reference-data API integration |
 | [0000](docs/adr/0000-ios-adr-references-TBC.md) | iOS ADR references — TBC |
 
 ## CI
