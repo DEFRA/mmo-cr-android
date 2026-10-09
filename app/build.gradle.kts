@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -10,6 +12,17 @@ plugins {
     alias(libs.plugins.detekt)
     id("uk.gov.defra.mmocatchrecord.mapdata.generator")
 }
+
+// Optional developer override of the reference-data service root (ADR 0015), read from a gitignored
+// `local.properties` key so it is never committed. Never applied to the `prod` flavor.
+val localProperties =
+    Properties().apply {
+        val file = rootProject.file("local.properties")
+        if (file.exists()) {
+            file.inputStream().use { stream -> load(stream) }
+        }
+    }
+val referenceDataServiceUrlOverride: String? = localProperties.getProperty("referenceData.serviceUrl")
 
 android {
     namespace = "uk.gov.defra.mmocatchrecord"
@@ -37,6 +50,42 @@ android {
             )
         }
     }
+
+    // Reference-data service environment (ADR 0015). `REFERENCE_DATA_SERVICE_URL` is the service
+    // *root* (no `api/v1/...` suffix) — see core.network for how the API base/health URLs derive from it.
+    flavorDimensions += "environment"
+    productFlavors {
+        create("local") {
+            dimension = "environment"
+            buildConfigField(
+                "String",
+                "REFERENCE_DATA_SERVICE_URL",
+                "\"${referenceDataServiceUrlOverride ?: "http://10.0.2.2:3002/"}\"",
+            )
+            // DEV's auth stub accepts any non-empty bearer token (ADR 0015) — see TokenProvider.
+            buildConfigField("boolean", "USE_STUB_AUTH", "true")
+        }
+        create("dev") {
+            dimension = "environment"
+            buildConfigField(
+                "String",
+                "REFERENCE_DATA_SERVICE_URL",
+                "\"${
+                    referenceDataServiceUrlOverride
+                        ?: "https://mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud/reference-data-service/"
+                }\"",
+            )
+            buildConfigField("boolean", "USE_STUB_AUTH", "true")
+        }
+        create("prod") {
+            dimension = "environment"
+            // Deliberately empty: core.network fails fast on first use rather than silently
+            // pointing production at DEV. Never overridable via local.properties.
+            buildConfigField("String", "REFERENCE_DATA_SERVICE_URL", "\"\"")
+            buildConfigField("boolean", "USE_STUB_AUTH", "false")
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
@@ -67,6 +116,16 @@ kotlin {
 
 room {
     schemaDirectory("$projectDir/schemas")
+}
+
+// Report variant alias so CI/Sonar's existing `app/build/reports/kover/reportDebug.xml` path survives
+// adding product flavors (no real "debug"-only variant exists once flavors are introduced).
+kover {
+    currentProject {
+        createVariant("debug") {
+            add("devDebug")
+        }
+    }
 }
 
 detekt {
@@ -124,6 +183,13 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
 
+    // Reference-data API networking foundation (ADR 0014/0015) — see core/network and di/NetworkModule.
+    implementation(platform(libs.okhttp.bom))
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.logging.interceptor)
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.kotlinx.serialization)
+
     testImplementation(libs.junit)
     testImplementation(libs.mockito.core)
     testImplementation(libs.mockito.kotlin)
@@ -134,6 +200,10 @@ dependencies {
     testImplementation(libs.androidx.room.runtime)
     testImplementation(libs.androidx.room.testing)
     testImplementation(libs.androidx.work.testing)
+
+    // MockWebServer test harness for Retrofit/OkHttp (ADR 0014) — JVM-only, no device/emulator needed.
+    testImplementation(platform(libs.okhttp.bom))
+    testImplementation(libs.okhttp.mockwebserver3.junit4)
 
     // Compose UI testing on the JVM via Robolectric: coverage from `testDebugUnitTest` is what
     // Kover reports and SonarCloud imports, whereas `connectedDebugAndroidTest` coverage is not
