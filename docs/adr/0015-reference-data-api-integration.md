@@ -1,0 +1,149 @@
+# 0015 - Reference-data API integration (supersedes 0008)
+
+## Status
+
+Accepted — supersedes [0008](0008-reference-data-stub.md)
+
+## Context
+
+A real reference-data service now exists and is reachable from this machine over VPN:
+[`mmo-cr-reference-data-service`](https://github.com/DEFRA/mmo-cr-reference-data-service), whose
+[`docs/api-reference.md`](https://github.com/DEFRA/mmo-cr-reference-data-service/blob/main/docs/api-reference.md)
+is the authoritative contract for this ADR (no OpenAPI spec is published). This ADR covers only the
+**networking foundation** (Phase 1): HTTP client wiring, environment flavors, auth/cleartext handling, and
+the integration strategy the later DTO/Room/repository phases will build on. It does not itself add
+dataset DTOs, Room caching, or swap `ReferenceDataRepository`'s binding away from ADR 0008's stub — that
+remains bound until a later phase.
+
+Key facts verified directly against the DEV environment and the committed Docker-local stack
+(`DEFRA/mmo-cr-backend-local`), not assumed from the contract alone:
+
+- DEV gateway base: `https://mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud/reference-data-service/`,
+  with API routes under `api/v1/reference-data/`. `/health` sits at the **service root**, not under the
+  API path prefix.
+- DEV's auth stub accepts **any non-empty bearer token** (`Authorization: Bearer local-stub` → 200;
+  no header → 401). This is a stub, not real authentication — see "Interim defaults" below.
+- The DEV TLS chain terminates at the publicly-trusted Amazon Root CA 1, so the existing `main` network
+  security config (system trust anchors, no cleartext) needs no change for DEV/prod traffic.
+- The local Docker stack serves the reference-data-service on host port 3002, plain HTTP, no gateway
+  prefix; from an emulator this is `http://10.0.2.2:3002/`.
+
+## Decision
+
+### Contract usage: `view=mobile`, manifest, conditional requests
+
+Later phases will request the `?view=mobile` projection documented in api-reference.md's "Canonical and
+mobile views" section for every dataset (vessels, gears, ports, species) — it already strips
+internal-only fields and keeps the GUID + primary business code the app needs. The **manifest**
+(`GET manifest`) is the source of a dataset's current `version`/`etag`/`url` and is used to decide whether
+a cached dataset needs refreshing, before fetching the dataset itself.
+
+Caching uses **two distinct ETag concepts**, per api-reference.md's "Conditional requests and caching"
+section — they are deliberately not the same value and must not be conflated:
+
+1. The **manifest's own `version`/`etag` per dataset** — checked first, cheaply, to decide "has this
+   dataset changed since I last cached it" without fetching the (potentially large) collection.
+2. The **per-request collection/item `ETag` response header** — stored alongside a cached response and
+   sent back as `If-None-Match` on the next fetch of that exact request (same dataset + query params), to
+   get a cheap `304 Not Modified` instead of re-downloading an unchanged body.
+
+Offline precedence for every dataset read (fully designed in a later phase; recorded here for
+continuity): **fresh network response → Room cache (still within its freshness window) → stale Room
+cache (network unavailable) → bundled stub fallback** (ADR 0008's data, narrowed rather than deleted —
+see "Out of scope" below) only if no cache has ever been populated.
+
+### Product flavors: `local` / `dev` / `prod`
+
+A new `environment` flavor dimension adds `local`, `dev`, `prod` flavors, each supplying a
+`REFERENCE_DATA_SERVICE_URL` `BuildConfig` field (the **service root**, e.g. including no `api/v1/...`
+suffix) so `/health` and the API base can both be derived correctly:
+
+| Flavor | `REFERENCE_DATA_SERVICE_URL`                                                              |
+| ------ | ------------------------------------------------------------------------------------------ |
+| local  | `http://10.0.2.2:3002/`                                                                    |
+| dev    | `https://mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud/reference-data-service/` |
+| prod   | `""` (deliberately empty)                                                                  |
+
+`prod`'s empty URL is intentional: the network module fails fast with a clear, typed exception at
+first use rather than silently defaulting to DEV. A developer may override the service root locally via
+a gitignored `local.properties` key (`referenceData.serviceUrl`), read in `app/build.gradle.kts` and
+exposed as the same `BuildConfig` field, without ever being committed. No `applicationIdSuffix` or
+signing changes are made — flavor-aware signing/Play-track handling is DevOps-owned and only recommended
+here, not implemented.
+
+### Token abstraction
+
+A `TokenProvider` interface (`suspend fun currentToken(): String?`) is bound per flavor rather than
+hardcoded into the interceptor, so swapping in real auth later is a DI-only change:
+
+- `local`/`dev` bind **`StubTokenProvider`**, returning a fixed non-secret literal (e.g. `"local-stub"`),
+  matching DEV's always-allow auth stub.
+- `prod` binds **`MissingTokenProvider`**, returning `null` — there is no real token source yet, and
+  `prod`'s empty service URL already fails fast before any request would be attempted.
+
+Tokens are held in memory only; `androidx.security:security-crypto` is **not** used for this (already
+rejected app-wide per ADR 0006, as it is deprecated upstream).
+
+`AuthInterceptor` and `AcceptLanguageInterceptor` each wrap their lookup in a short `runBlocking` with a
+2-second timeout, degrading to "no header" on any failure or timeout. This is safe because OkHttp never
+runs an interceptor on the main thread — it runs on the calling thread for a blocking `Call.execute()`, or
+on OkHttp's own dispatcher pool for an async/Retrofit-suspend call — so this does not violate the "no
+blocking `runBlocking` on the main thread" rule from the security instructions.
+
+### Debug-only scoped cleartext for the emulator loopback
+
+`main`'s `network_security_config.xml` is **unchanged** (`cleartextTrafficPermitted="false"` app-wide,
+system trust anchors) and is what every release build ships. A new **debug-only**
+`app/src/debug/res/xml/network_security_config.xml` adds a `domain-config` permitting cleartext **only**
+for `10.0.2.2` and `localhost` (`includeSubdomains="false"`), with the same `cleartextTrafficPermitted
+="false"` base-config as `main` for everything else. `<debug-overrides>` was considered and rejected — it
+has no `cleartextTrafficPermitted` attribute, so it cannot express a scoped cleartext exception; a
+debug-variant resource override is the correct mechanism here.
+
+### No certificate pinning (for now)
+
+Certificate pinning is not added in this phase. Rationale: DEV's chain terminates at a publicly-trusted,
+ACM-auto-rotated root (Amazon Root CA 1), the environment is VPN-only (not public internet-facing), and
+the app has no existing pinning precedent to extend. This should be revisited with DEFRA Cloud Mobile
+Services before a production rollout (see "Interim defaults", Q9).
+
+## Interim defaults / open questions
+
+Recorded here so each is visible and revisitable, per the approved brief, rather than silently decided:
+
+- **Q2 (real token)** — `local`/`dev` use `StubTokenProvider`; `prod` uses `MissingTokenProvider`
+  (returns `null`, so no `Authorization` header is sent) until real auth is designed.
+- **Q3 (port → statistical-area mapping)** — retains ADR 0008's stub mapping, keyed by port `code`, with
+  a sentinel fallback; revisited no earlier than Phase 2.
+- **Q4/Q5 (sub-rectangles, previously-used ports)** — remain on the stub fallback for now.
+- **Q6 (species quota/precision)** — keeps the app's existing domain defaults.
+- **Q7 (gear measurement keys)** — a translation table will map the API's measurement `code`s (`GM`,
+  `ME`, `GN`, `MT`, `QG`, `HE`, `NL`, `NN`, `NI`) to the app's existing persisted constants; the
+  persisted key space itself is unchanged.
+- **Vessel length bands** — `gears?vesselLengthMetres=` narrows which measurements are returned
+  (under-10m → `ME`,`GN` only; 10-to-12m and over-12m → all nine). The default approach is to cache one
+  `gears` response per documented band using a representative length, and select by the vessel's
+  `lengthOverallMetres`. Preferred long-term fix (asked of the backend team): expose the bands per
+  measurement directly, removing the need to request per-band.
+- **Q9 (production security profile)** — DEFRA Cloud Mobile Services must be consulted on a security
+  profile before production rollout, per the DEFRA mobile standard for non-public DEFRA systems; this is
+  explicitly not resolved by this ADR.
+
+## Out of scope (this ADR)
+
+- `/map/*` API datasets — ADR 0013's build-time GeoJSON pipeline remains authoritative; see that ADR's
+  appended scope note.
+- Dataset DTOs, Room caching/migrations, WorkManager refresh, and the `ReferenceDataRepository` binding
+  swap away from ADR 0008's stub — all deferred to a later phase.
+- Real authentication, catch-record submission, and UI wiring.
+
+## Consequences
+
+- `docs/adr/0008-reference-data-stub.md`'s Status is updated to "Superseded by 0015"; its stub
+  implementation is retained (narrowed, not deleted) as the final offline fallback tier.
+- The networking foundation (Phase 1) introduces no behavioural change visible to users: nothing is yet
+  wired into the UI or `ReferenceDataRepository`.
+- Three product flavors multiply every build/test/lint variant task name (e.g. `testDebugUnitTest` →
+  `testLocalDebugUnitTest`/`testDevDebugUnitTest`/`testProdDebugUnitTest`); CI/Fastlane/Sonar changes
+  needed to keep the pipeline green are tracked in Phase 1's own report, flagged for DevOps review since
+  those files are DevOps-owned.

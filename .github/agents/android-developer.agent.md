@@ -44,7 +44,9 @@ work, or delegate to the **Android Planner** for **Complex** work — then obtai
 > Compose `Canvas` rendering with build-time preprocessing of the bundled GeoJSON (land / subrectangles /
 > ports) into a compact generated asset via a `build-logic` included-build Gradle task, plus an on-device
 > runtime fallback parser — no map SDK, no tiles, no API key, no network** — confirmed by explicit user
-> direction (see [ADR-0013](../../docs/adr/0013-offline-fisheries-map-rendering.md)). Stack: Kotlin +
+> direction (see [ADR-0013](../../docs/adr/0013-offline-fisheries-map-rendering.md)). Networking confirmed
+> 2026-10-09 by developer via orchestrator: Retrofit 3.0.0 + OkHttp 5.5.0 (BOM) + converter-kotlinx-serialization;
+> product flavors local/dev/prod (ADR 0014/0015). Stack: Kotlin +
 > Jetpack Compose, Material 3 light-only GOV.UK theme, MVVM + Clean Architecture, Hilt (DI, §5 default —
 > reverts the earlier Koin deviation, see ADR 0005), Navigation Compose, Room (now real entities for the
 > catch-record draft aggregate, SQLCipher-encrypted — see ADR-0006), androidx.biometric (Stage-1
