@@ -215,19 +215,55 @@ needs DTO fields the domain mapper discards (`pln`/`cfr`/`lengthOverallMetres`, 
 gears) instead; DTO→domain mapping moves to the Phase 5 repository. No production code depended on the
 old signatures (only the Phase 2 test, updated to match).
 
+## Update (Phase 5): repository composition and the DI swap
+
+`CachingReferenceDataRepository` now backs the `ReferenceDataRepository` binding. Reads never block on
+the network when a cache exists: a cache hit returns immediately, and if older than a **1-hour** freshness
+TTL it enqueues `WorkManagerReferenceDataSyncScheduler`'s existing background refresh rather than fetching
+inline (a much tighter window than Phase 4's 12-hour worker period, since a stale-but-present cache is
+still served instantly — the TTL only decides when to *also* kick a refresh, never whether to block). An
+empty cache that is online makes one bounded (5s) inline fetch-and-cache using the Phase 2 DTO→domain
+mappers directly (no redundant Room round-trip); a timeout, any fetch failure, or being offline all fall
+back to ADR 0008's stub with no hang — connectivity is checked before attempting a fetch, so an offline
+empty cache never touches the network. Previously-used ports and statistical sub-rectangles have no live
+equivalent and pass straight through to the stub, per "Out of scope" below.
+
+**Vessel-length gear bands.** `Vessel` gained an optional `lengthOverallMetres`; `getGearTypes` gained an
+optional `vesselLengthMetres` parameter, defaulted so existing callers and the stub still compile. The
+gear-selection view model (`CatchRecordFlowViewModel.vesselSelected`) resolves the selected vessel's
+length from already-loaded state and passes it through; a null length (vessel not found, or no length on
+record) selects the Phase 4 `all` cache variant.
+
+**401/403.** A cache hit never calls the network directly, so an expired/invalid stub token cannot wipe a
+served cache. A background refresh's own 401/403 handling (terminal, no retry loop) is unchanged from
+Phase 4.
+
+**Stub-ID draft resume.** A draft saved before this change references stub ids (e.g. `port-hastings`) that
+will not exist in live reference data. `DraftInvalidation.reconcileAgainstLiveGearTypes` already clears a
+gear use's dependent answers when its `gearTypeId` is not among the live gear types; `CatchRecordFlowView
+Model.enterFlow` now runs this reconciliation against whatever `getGearTypes()` currently returns before
+showing the draft. **What the user sees:** the affected gear's "Used on trip?" question reverts to
+unanswered and its statistical rectangle/species entries are cleared — nothing crashes, and every other
+part of the draft (vessel, trip dates, other gear uses) is unaffected. The user simply re-answers that one
+question.
+
+**Deferred stale-data UI.** The stub fallback guarantees every read returns *some* data, so this phase adds
+no "cache is stale" or "showing offline data" indicator. This is a deliberate, recorded deferral, not an
+oversight — revisit once there is a concrete UX need (e.g. a support ticket about silently stale prices).
+
 ## Out of scope (this ADR)
 
 - `/map/*` API datasets — ADR 0013's build-time GeoJSON pipeline remains authoritative; see that ADR's
   appended scope note.
-- The `ReferenceDataRepository` binding swap away from ADR 0008's stub — deferred to Phase 5.
-- Real authentication, catch-record submission, and UI wiring.
+- Real authentication, catch-record submission, and new loading/stale-data UI (see the deferral above).
 
 ## Consequences
 
 - `docs/adr/0008-reference-data-stub.md`'s Status is updated to "Superseded by 0015"; its stub
   implementation is retained (narrowed, not deleted) as the final offline fallback tier.
-- The networking foundation (Phase 1) introduces no behavioural change visible to users: nothing is yet
-  wired into the UI or `ReferenceDataRepository`.
+- As of Phase 5, `ReferenceDataRepository` is bound to `CachingReferenceDataRepository`: vessels, ports,
+  species and gears are now live-data-backed (cache-first, stub fallback); previously-used ports and
+  sub-rectangles remain stub-only (see "Out of scope"). This is the first user-visible change in this ADR.
 - Three product flavors multiply every build/test/lint variant task name (e.g. `testDebugUnitTest` →
   `testLocalDebugUnitTest`/`testDevDebugUnitTest`/`testProdDebugUnitTest`); CI/Fastlane/Sonar changes
   needed to keep the pipeline green are tracked in Phase 1's own report, flagged for DevOps review since

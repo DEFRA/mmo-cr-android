@@ -28,6 +28,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementV
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelection
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectionMode
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.ReferenceDataRepository
 import java.time.Instant
@@ -97,7 +98,10 @@ class CatchRecordFlowViewModel
                     val gearTypes = referenceDataRepository.getGearTypes().getOrThrow()
                     val statisticalSubRectangles = referenceDataRepository.getStatisticalSubRectangles().getOrThrow()
                     val species = referenceDataRepository.getSpecies().getOrThrow()
-                    val existingDraft = draftRepository.getAnyActiveDraft().getOrThrow()
+                    val existingDraft =
+                        draftRepository.getAnyActiveDraft().getOrThrow()?.let {
+                            reconcileAgainstLiveGearTypes(it, gearTypes)
+                        }
                     val previouslyUsedPorts =
                         existingDraft
                             ?.let {
@@ -129,6 +133,16 @@ class CatchRecordFlowViewModel
                     }
                 }.onFailure { emitLoadError(CatchRecordFlowEvent.EnterFlow, it) }
             }
+        }
+
+        /** ADR 0015: clears a stub-era draft's gear-use state once its id no longer resolves against
+         *  live [gearTypes], persisting the change so it is not silently re-applied on every resume. */
+        private suspend fun reconcileAgainstLiveGearTypes(
+            draft: CatchRecordDraft,
+            gearTypes: List<GearType>,
+        ): CatchRecordDraft {
+            val reconciled = DraftInvalidation.reconcileAgainstLiveGearTypes(draft, gearTypes.map { it.id }.toSet())
+            return if (reconciled == draft) draft else draftRepository.saveDraft(reconciled).getOrThrow()
         }
 
         private fun resumeDraft() {
@@ -165,7 +179,9 @@ class CatchRecordFlowViewModel
                 runCatching {
                     val draft = draftRepository.startDraft(vesselId).getOrThrow()
                     val previouslyUsedPorts = referenceDataRepository.getPreviouslyUsedPorts(vesselId).getOrThrow()
-                    emitLoadedDraft(draft, WizardStep.TripToday, previouslyUsedPorts)
+                    val vesselLength = currentState.vessels.firstOrNull { it.id == vesselId }?.lengthOverallMetres
+                    val gearTypes = referenceDataRepository.getGearTypes(vesselLength).getOrThrow()
+                    emitLoadedDraft(draft, WizardStep.TripToday, previouslyUsedPorts, gearTypes)
                 }.onFailure { emitLoadError(CatchRecordFlowEvent.VesselSelected(vesselId), it) }
             }
         }
@@ -447,10 +463,12 @@ class CatchRecordFlowViewModel
             )
         }
 
+        /** [gearTypes] is re-fetched per the selected vessel's length band; `null` leaves the existing list. */
         private fun emitLoadedDraft(
             draft: CatchRecordDraft,
             nextStep: WizardStep,
             previouslyUsedPorts: List<Port>,
+            gearTypes: List<GearType>? = null,
         ) {
             updateState {
                 it.copy(
@@ -459,6 +477,7 @@ class CatchRecordFlowViewModel
                     previouslyUsedPorts = previouslyUsedPorts,
                     departurePortEntryMode = deriveDeparturePortEntryMode(previouslyUsedPorts),
                     samePortCandidate = previouslyUsedPorts.firstOrNull(),
+                    gearTypes = gearTypes ?: it.gearTypes,
                 )
             }
         }

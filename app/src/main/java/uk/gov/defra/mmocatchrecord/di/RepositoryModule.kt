@@ -13,9 +13,13 @@ import uk.gov.defra.mmocatchrecord.core.connectivity.NetworkConnectivityChecker
 import uk.gov.defra.mmocatchrecord.core.language.AppLanguageRepository
 import uk.gov.defra.mmocatchrecord.core.language.DataStoreAppLanguageRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.CatchRecordDraftDao
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.ReferenceDataDao
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.RoomCatchRecordDraftRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.map.AssetMapDataRepository
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.CachingReferenceDataRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.StubReferenceDataRepository
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.remote.ReferenceDataRemoteDataSource
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.sync.WorkManagerReferenceDataSyncScheduler
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission.StubCatchRecordSubmissionRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.sync.WorkManagerCatchRecordSyncScheduler
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftRepository
@@ -58,7 +62,21 @@ object RepositoryModule {
 
     @Provides
     @Singleton
-    fun provideReferenceDataRepository(): ReferenceDataRepository = StubReferenceDataRepository()
+    internal fun provideReferenceDataRepository(
+        dao: ReferenceDataDao,
+        remoteDataSource: ReferenceDataRemoteDataSource,
+        syncScheduler: WorkManagerReferenceDataSyncScheduler,
+        connectivityChecker: NetworkConnectivityChecker,
+        appLanguageRepository: AppLanguageRepository,
+    ): ReferenceDataRepository =
+        CachingReferenceDataRepository(
+            dao = dao,
+            remoteDataSource = remoteDataSource,
+            syncScheduler = syncScheduler,
+            connectivityChecker = connectivityChecker,
+            appLanguageRepository = appLanguageRepository,
+            stub = StubReferenceDataRepository(),
+        )
 
     @Provides
     @Singleton
