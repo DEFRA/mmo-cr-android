@@ -14,23 +14,42 @@
     <string name="col_trip_end_date">Dyddiad gorffen y daith</string>
     <string name="col_vessel">Llong</string>
     <string name="col_status">Statws</string>
-    <string name="col_created_by">CrÃƒÂ«wyd gan</string>
-    <string name="showing_x_to_y_of_z">Yn dangos %1$d i %2$d o %3$d</string>
-    <string name="next">Nesaf</string>
+    <string name="col_created_by">Crëwyd gan</string>
+    <string name="no_catch_records_yet">Nid oes gennych unrhyw gofnodion dalfa eto.</string>
+    <string name="records_reference_pending">Cyfeirnod heb ei neilltuo eto</string>
+    <string name="records_trip_end_date_not_set">Heb ei nodi eto</string>
+    <string name="records_created_by_you">Chi</string>
+    <string name="records_retry_action">Ailgynnig</string>
+    <string name="records_retry_pending">Wrthi\'n ailgynnig…</string>
+    <string name="records_retry_offline_message">Rydych all-lein. Mae\'r cofnod dalfa hwn wedi\'i gadw ar eich dyfais a bydd yn cael ei anfon yn awtomatig pan fyddwch ar-lein eto.</string>
+    <string name="pagination_showing">Yn dangos %1$d i %2$d o %3$d</string>
+    <string name="pagination_previous">Blaenorol</string>
+    <string name="pagination_next">Nesaf</string>
+    <string name="pagination_page_content_description">Tudalen %1$d</string>
+    <!-- FR9: sync-confirmation message (CRAR-152 Phase E) -->
+    <plurals name="sync_confirmation_message">
+        <item quantity="zero">Mae %1$d cofnodion dalfa wedi\'u cyflwyno</item>
+        <item quantity="one">Mae cofnod dalfa %1$s wedi\'i gyflwyno</item>
+        <item quantity="two">Mae %1$d gofnod dalfa wedi\'u cyflwyno</item>
+        <item quantity="few">Mae %1$d chofnod dalfa wedi\'u cyflwyno</item>
+        <item quantity="many">Mae %1$d chofnod dalfa wedi\'u cyflwyno</item>
+        <item quantity="other">Mae %1$d cofnod dalfa wedi\'u cyflwyno</item>
+    </plurals>
+    <string name="home_summary_load_error">Ni allem lwytho eich cofnodion dalfa. Rhowch gynnig arall arni.</string>
     <string name="status_submitted">Wedi cyflwyno</string>
-    <string name="status_amended">Wedi diwygio</string>
-    <string name="status_unsent">Heb eu hanfon</string>
-    <string name="status_late">Hwyr</string>
+    <string name="status_draft">Drafft</string>
+    <string name="status_ready_to_submit">Barod i\'w gyflwyno</string>
+    <string name="status_awaiting_sync">Yn aros i anfon</string>
     <string name="help_with_catch_recording">Cymorth gyda chofnodi dalfeydd</string>
     <string name="catch_record_statuses">Statysau cofnodion dalfa</string>
-    <string name="status_unsent_title">Heb eu hanfon:</string>
-    <string name="status_unsent_desc">Wedi\'i gadw ar eich dyfais a heb ei gyflwyno eto.</string>
+    <string name="status_draft_title">Drafft:</string>
+    <string name="status_draft_desc">Dechreuwyd cofnodi\'r cofnod ond heb ei gwblhau.</string>
+    <string name="status_ready_to_submit_title">Barod i\'w gyflwyno:</string>
+    <string name="status_ready_to_submit_desc">Wedi\'i gwblhau ond heb ei gyflwyno eto.</string>
+    <string name="status_awaiting_sync_title">Yn aros i anfon:</string>
+    <string name="status_awaiting_sync_desc">Ceisiwyd cyflwyno ond heb ei anfon.</string>
     <string name="status_submitted_title">Wedi cyflwyno:</string>
-    <string name="status_submitted_desc">Derbyniwyd gan yr MMO.</string>
-    <string name="status_amended_title">Wedi diwygio:</string>
-    <string name="status_amended_desc">Newidiwyd y cofnod hwn ar ÃƒÂ´l iddo gael ei gyflwyno.</string>
-    <string name="status_late_title">Hwyr:</string>
-    <string name="status_late_desc">Derbyniwyd y cofnod hwn gan yr MMO ar ÃƒÂ´l y terfyn amser gofynnol.</string>
+    <string name="status_submitted_desc">Cyflwynwyd yn llwyddiannus.</string>
     <string name="status_check_tab">Gwiriwch y tab Sut i gofnodi dalfa i wneud yn siÃ…Âµr eich bod yn cofnodi eich dalfeydd ar yr amser cywir.</string>
     <string name="offline_banner_label">All-lein</string>
     <string name="offline_banner_message">Gallwch barhau i gofnodi eich dalfa. Bydd eich cofnod yn cael ei gadw a\'i anfon pan fyddwch ar-lein eto.</string>
@@ -57,6 +76,7 @@
     <string name="settings_my_account">Fy nghyfrif</string>
     <string name="settings_privacy_notice">Hysbysiad preifatrwydd</string>
     <string name="settings_support_information">Gwybodaeth gymorth</string>
+    <string name="settings_debug_force_failures">Gorfodi methiannau cyflwyno (dadfygio yn unig)</string>
     <string name="signin_title">Mewngofnodi</string>
     <string name="email_address">Cyfeiriad e-bost</string>
     <string name="password">Cyfrinair</string>
@@ -250,6 +270,11 @@
     <string name="submission_pending_sync_check_records_suffix">i wneud yn siŵr bod y statws yn newid i Wedi\'i Gyflwyno. Chi sy\'n gyfrifol am wneud yn siŵr ein bod yn ei dderbyn.</string>
     <string name="submission_pending_sync_warning">Rhaid i chi gofnodi eich dalfa o fewn 24 awr i lanio.</string>
     <string name="wizard_error_retry_action">Rhowch gynnig arall arni</string>
+    <string name="unsaved_changes_dialog_title">Mae gennych newidiadau heb eu cadw</string>
+    <string name="unsaved_changes_dialog_body">Os byddwch yn gadael y dudalen hon, ni fydd y wybodaeth rydych wedi\'i nodi yn cael ei chadw.</string>
+    <string name="unsaved_changes_leave_action">Gadael heb gadw</string>
+    <string name="unsaved_changes_stay_action">Aros ar y dudalen hon</string>
+    <string name="check_your_answers_offline_notice">Rydych all-lein. Os byddwch yn cyflwyno nawr, bydd eich cofnod dalfa yn cael ei gadw ar y ddyfais hon ac yn cael ei anfon yn awtomatig y tro nesaf y bydd gennych signal symudol neu gysylltiad Wi-Fi.</string>
 </resources>
 
 

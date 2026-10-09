@@ -12,6 +12,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -178,6 +179,47 @@ class CatchRecordFlowViewModelTests {
         }
 
     @Test
+    fun `enter flow for draft loads the chosen draft, not just the most recently modified one`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            var draftIdCounter = 0
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-${draftIdCounter++}" })
+            val chosen = repository.startDraft("vessel-achilles").getOrThrow()
+            repository.startDraft("vessel-hercules").getOrThrow()
+            val viewModel = buildViewModel(repository = repository, dispatcher = dispatcher)
+
+            viewModel.state.test {
+                awaitItem()
+                viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft(chosen.id))
+                assertEquals(UiStatus.Loading, awaitItem().status)
+                val loaded = awaitItem()
+                assertEquals(WizardStep.DraftResume, loaded.currentStep)
+                assertTrue(loaded.isDraftPersisted)
+                assertEquals(chosen.id, (loaded.status as UiStatus.Content).value.id)
+                assertEquals(2, loaded.vessels.size)
+                assertEquals(DeparturePortEntryMode.SamePortShortcut, loaded.departurePortEntryMode)
+                assertEquals("port-hastings", loaded.samePortCandidate?.id)
+            }
+        }
+
+    @Test
+    fun `enter flow for an unknown draft id surfaces a terminal non-retryable error`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository()
+            val viewModel = buildViewModel(repository = repository, dispatcher = dispatcher)
+
+            viewModel.state.test {
+                awaitItem()
+                viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("missing-draft"))
+                assertEquals(UiStatus.Loading, awaitItem().status)
+                val errored = awaitItem()
+                assertTrue(errored.status is UiStatus.Error)
+                assertFalse((errored.status as UiStatus.Error).isRetryable)
+            }
+        }
+
+    @Test
     fun `fresh viewmodel rehydrates persisted draft after process death`() =
         runTest {
             val dispatcher = StandardTestDispatcher(testScheduler)
@@ -235,7 +277,7 @@ class CatchRecordFlowViewModelTests {
         }
 
     @Test
-    fun `vessel selected persists draft and advances to trip today`() =
+    fun `vessel selected with no existing draft performs zero writes per BR-XX`() =
         runTest {
             val dispatcher = StandardTestDispatcher(testScheduler)
             val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
@@ -249,8 +291,37 @@ class CatchRecordFlowViewModelTests {
                 assertEquals(WizardStep.TripToday, loaded.currentStep)
                 assertEquals("vessel-hercules", (loaded.status as UiStatus.Content<CatchRecordDraft>).value.vesselId)
                 assertEquals(DeparturePortEntryMode.Search, loaded.departurePortEntryMode)
+                assertTrue(!loaded.isDraftPersisted)
             }
-            assertEquals("vessel-hercules", repository.getActiveDraft("vessel-hercules").getOrThrow()?.vesselId)
+            assertEquals(0, repository.startDraftCallCount)
+            assertNull(repository.getActiveDraft("vessel-hercules").getOrThrow())
+        }
+
+    @Test
+    fun `the first save and continue persists exactly one row and the second does not re-create`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            val viewModel =
+                buildViewModel(repository = repository, clock = { 1_725_811_200_000L }, dispatcher = dispatcher)
+            viewModel.dispatch(CatchRecordFlowEvent.VesselSelected("vessel-achilles"))
+            testScheduler.advanceUntilIdle()
+            assertEquals(0, repository.startDraftCallCount)
+
+            viewModel.state.test {
+                skipItems(1)
+                viewModel.dispatch(CatchRecordFlowEvent.TripTodayAnswered(true))
+                assertEquals(UiStatus.Loading, awaitItem().status)
+                val afterFirstSave = awaitItem()
+                assertTrue(afterFirstSave.isDraftPersisted)
+
+                viewModel.dispatch(CatchRecordFlowEvent.SamePortShortcutAccepted)
+                assertEquals(UiStatus.Loading, awaitItem().status)
+                val afterSecondSave = awaitItem()
+                assertTrue(afterSecondSave.isDraftPersisted)
+            }
+            assertEquals(1, repository.startDraftCallCount)
+            assertEquals("vessel-achilles", repository.getActiveDraft("vessel-achilles").getOrThrow()?.vesselId)
         }
 
     @Test
@@ -389,9 +460,8 @@ class CatchRecordFlowViewModelTests {
                 val updated = awaitItem()
                 assertEquals("gear-seine-nets", updated.pendingGearTypeId)
             }
-            // Not yet persisted: the draft in the repository has no gear uses until measurements submit.
-            val activeDraft = repository.getActiveDraft("vessel-achilles").getOrThrow()
-            assertTrue(activeDraft?.gearUses.orEmpty().isEmpty())
+            // Not yet persisted per BR-XX: no draft is written until the first "Save and continue".
+            assertNull(repository.getActiveDraft("vessel-achilles").getOrThrow())
         }
 
     /**
@@ -755,5 +825,90 @@ class CatchRecordFlowViewModelTests {
             }
             assertTrue(submissionRepository.submittedDrafts.isEmpty())
             assertEquals(listOf(started.id), syncScheduler.scheduledDraftIds)
+        }
+
+    @Test
+    fun `vessel selected reuses an existing active draft without starting a new one`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            repository.startDraft("vessel-achilles")
+            val viewModel = buildViewModel(repository = repository, dispatcher = dispatcher)
+
+            viewModel.state.test {
+                awaitItem()
+                viewModel.dispatch(CatchRecordFlowEvent.VesselSelected("vessel-achilles"))
+                assertEquals(UiStatus.Loading, awaitItem().status)
+                val loaded = awaitItem()
+                assertTrue("an existing active draft must be marked as already persisted", loaded.isDraftPersisted)
+                assertEquals("draft-1", (loaded.status as UiStatus.Content<CatchRecordDraft>).value.id)
+            }
+            assertEquals(1, repository.startDraftCallCount)
+
+            // BR-XX: continuing past vessel selection must reuse the already-active draft, not re-create it.
+            viewModel.dispatch(CatchRecordFlowEvent.TripTodayAnswered(false))
+            testScheduler.advanceUntilIdle()
+            assertEquals(1, repository.startDraftCallCount)
+        }
+
+    @Test
+    fun `save and continue surfaces a retryable error when saving an already-persisted draft fails`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            val viewModel = buildViewModel(repository = repository, dispatcher = dispatcher)
+            viewModel.dispatch(CatchRecordFlowEvent.VesselSelected("vessel-achilles"))
+            testScheduler.advanceUntilIdle()
+            viewModel.dispatch(CatchRecordFlowEvent.TripTodayAnswered(true))
+            testScheduler.advanceUntilIdle()
+            assertTrue(viewModel.state.value.isDraftPersisted)
+
+            repository.failNextOperation = true
+            viewModel.state.test {
+                skipItems(1)
+                viewModel.dispatch(CatchRecordFlowEvent.SamePortShortcutAccepted)
+                assertEquals(UiStatus.Loading, awaitItem().status)
+                val errored = awaitItem()
+                assertTrue(errored.status is UiStatus.Error)
+                assertTrue((errored.status as UiStatus.Error).isRetryable)
+            }
+            // startDraft is never called a second time once persisted — only saveDraft could have failed.
+            assertEquals(1, repository.startDraftCallCount)
+        }
+
+    @Test
+    fun `removing gear before the draft is persisted is a no-op`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository()
+            val viewModel = buildViewModel(repository = repository, dispatcher = dispatcher)
+            viewModel.dispatch(CatchRecordFlowEvent.VesselSelected("vessel-hercules"))
+            testScheduler.advanceUntilIdle()
+            assertFalse(viewModel.state.value.isDraftPersisted)
+            val draftBeforeRemoval = (viewModel.state.value.status as UiStatus.Content<CatchRecordDraft>).value
+
+            viewModel.dispatch(CatchRecordFlowEvent.GearRemoved(draftBeforeRemoval.copy(gearUses = emptyList())))
+            testScheduler.advanceUntilIdle()
+
+            assertEquals(UiStatus.Content(draftBeforeRemoval), viewModel.state.value.status)
+            assertEquals(0, repository.startDraftCallCount)
+        }
+
+    @Test
+    fun `editing gear measurements before the draft is persisted is a no-op`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository()
+            val viewModel = buildViewModel(repository = repository, dispatcher = dispatcher)
+            viewModel.dispatch(CatchRecordFlowEvent.VesselSelected("vessel-hercules"))
+            testScheduler.advanceUntilIdle()
+            assertFalse(viewModel.state.value.isDraftPersisted)
+            val draftBeforeEdit = (viewModel.state.value.status as UiStatus.Content<CatchRecordDraft>).value
+
+            viewModel.dispatch(CatchRecordFlowEvent.EditGearMeasurements("gear-use-missing", emptyMap()))
+            testScheduler.advanceUntilIdle()
+
+            assertEquals(UiStatus.Content(draftBeforeEdit), viewModel.state.value.status)
+            assertEquals(0, repository.startDraftCallCount)
         }
 }

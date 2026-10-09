@@ -4,6 +4,7 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import app.cash.turbine.test
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -13,6 +14,9 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import uk.gov.defra.mmocatchrecord.common.design.RecordStatusTag
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftFactory
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DmyDate
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
@@ -42,7 +46,17 @@ class RoomCatchRecordDraftRepositoryTests {
                 .build()
         dao = database.catchRecordDraftDao()
         repository =
-            RoomCatchRecordDraftRepository(dao = dao, idFactory = { "id-${idCounter++}" }, clock = { clockMillis })
+            RoomCatchRecordDraftRepository(dao = dao, clock = { clockMillis })
+    }
+
+    /**
+     * Test-only convenience mirroring the pre-BR-XX single-argument API: builds a candidate via
+     * [CatchRecordDraftFactory] so every pre-existing call site below keeps compiling unchanged.
+     */
+    private suspend fun RoomCatchRecordDraftRepository.startDraft(vesselId: String): Result<CatchRecordDraft> {
+        val id = "id-${idCounter++}"
+        val reference = CatchRecordReferenceGenerator.generate(clockMillis)
+        return startDraft(CatchRecordDraftFactory.newDraft(vesselId = vesselId, id = id, reference = reference))
     }
 
     @Test
@@ -509,5 +523,111 @@ class RoomCatchRecordDraftRepositoryTests {
             repository.saveDraft(first.copy(status = DraftStatus.PendingSync)).getOrThrow()
             val second = repository.startDraft("vessel-achilles").getOrThrow()
             assertTrue(second.id != first.id)
+        }
+
+    @Test
+    fun `createdAt is stamped once by startDraft and is never overwritten by later saves`() =
+        runTest {
+            clockMillis = 5_000L
+            val started = repository.startDraft("vessel-achilles").getOrThrow()
+            assertEquals(5_000L, started.createdAtEpochMillis)
+
+            clockMillis = 9_000L
+            val saved = repository.saveDraft(started.copy(isTripToday = true)).getOrThrow()
+            assertEquals(5_000L, saved.createdAtEpochMillis)
+        }
+
+    @Test
+    fun `submittedAt is stamped the first time a draft becomes pending sync and is not overwritten`() =
+        runTest {
+            val started = repository.startDraft("vessel-achilles").getOrThrow()
+            assertNull(started.submittedAtEpochMillis)
+
+            clockMillis = 7_000L
+            val pending = repository.saveDraft(started.copy(status = DraftStatus.PendingSync)).getOrThrow()
+            assertEquals(7_000L, pending.submittedAtEpochMillis)
+
+            clockMillis = 8_000L
+            val resaved = repository.saveDraft(pending.copy(lateSubmissionWarningAcknowledged = true)).getOrThrow()
+            assertEquals(7_000L, resaved.submittedAtEpochMillis)
+        }
+
+    @Test
+    fun `syncedAt is stamped only once a draft reaches submitted, not at pending sync`() =
+        runTest {
+            val started = repository.startDraft("vessel-achilles").getOrThrow()
+            clockMillis = 7_000L
+            val pending = repository.saveDraft(started.copy(status = DraftStatus.PendingSync)).getOrThrow()
+            assertNull(pending.syncedAtEpochMillis)
+
+            clockMillis = 9_000L
+            val submitted = repository.saveDraft(pending.copy(status = DraftStatus.Submitted)).getOrThrow()
+            assertEquals(9_000L, submitted.syncedAtEpochMillis)
+            assertEquals(7_000L, submitted.submittedAtEpochMillis)
+        }
+
+    @Test
+    fun `an online submission stamps submittedAt and syncedAt at the same instant`() =
+        runTest {
+            val started = repository.startDraft("vessel-achilles").getOrThrow()
+            clockMillis = 11_000L
+            val submitted = repository.saveDraft(started.copy(status = DraftStatus.Submitted)).getOrThrow()
+            assertEquals(11_000L, submitted.submittedAtEpochMillis)
+            assertEquals(11_000L, submitted.syncedAtEpochMillis)
+        }
+
+    @Test
+    fun `observeRecordSummaries excludes discarded drafts`() =
+        runTest {
+            val kept = repository.startDraft("vessel-achilles").getOrThrow()
+            val discarded = repository.startDraft("vessel-hercules").getOrThrow()
+            repository.saveDraft(discarded.copy(status = DraftStatus.Discarded)).getOrThrow()
+
+            repository.observeRecordSummaries().test {
+                val summaries = awaitItem()
+                assertEquals(listOf(kept.id), summaries.map { it.id })
+                assertEquals(RecordStatusTag.Draft, summaries.single().status)
+            }
+        }
+
+    @Test
+    fun `observeRecordSummaries sorts by modifiedAt desc then id desc as a tiebreak`() =
+        runTest {
+            clockMillis = 1_000L
+            val oldest = repository.startDraft("vessel-achilles").getOrThrow()
+            clockMillis = 2_000L
+            val newest = repository.startDraft("vessel-hercules").getOrThrow()
+            clockMillis = 2_000L
+            val tiebreak = repository.startDraft("vessel-icarus").getOrThrow()
+
+            repository.observeRecordSummaries().test {
+                val ids = awaitItem().map { it.id }
+                val tiedAtTopTwo = listOf(newest.id, tiebreak.id).sortedDescending()
+                assertEquals(tiedAtTopTwo + oldest.id, ids)
+            }
+        }
+
+    @Test
+    fun `observeRecordSummaries emits again when a draft is modified`() =
+        runTest {
+            val started = repository.startDraft("vessel-achilles").getOrThrow()
+
+            repository.observeRecordSummaries().test {
+                assertEquals(RecordStatusTag.Draft, awaitItem().single().status)
+
+                clockMillis = 4_000L
+                repository.markReadyToSubmit(started.id).getOrThrow()
+                assertEquals(RecordStatusTag.ReadyToSubmit, awaitItem().single().status)
+            }
+        }
+
+    @Test
+    fun `observeRecordSummaries maps a draft with no return date to a null tripEndDate`() =
+        runTest {
+            repository.startDraft("vessel-achilles").getOrThrow()
+
+            repository.observeRecordSummaries().test {
+                assertNull(awaitItem().single().tripEndDate)
+            }
         }
 }

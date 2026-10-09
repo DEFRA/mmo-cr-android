@@ -13,7 +13,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import uk.gov.defra.mmocatchrecord.feature.home.domain.CatchRecordStatus
 
 /**
  * Compose @Preview harnesses for the reusable GOV.UK design-system components. Preview-only â€”
@@ -160,25 +159,10 @@ fun StatusTagPreview() {
             modifier = Modifier.padding(Spacing.m),
             verticalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
-            CatchRecordStatus.entries.forEach { status ->
+            RecordStatusTag.entries.forEach { status ->
                 StatusTag(status = status)
             }
         }
-    }
-}
-
-@Preview(name = "Pagination bar", showBackground = true, backgroundColor = 0xFFFFFFFF)
-@Suppress("FunctionNaming")
-@Composable
-fun PaginationBarPreview() {
-    MmoTheme {
-        PaginationBar(
-            pageStart = 1,
-            pageEnd = 4,
-            totalCount = 4,
-            onNextClick = {},
-            modifier = Modifier.padding(horizontal = Spacing.m),
-        )
     }
 }
 

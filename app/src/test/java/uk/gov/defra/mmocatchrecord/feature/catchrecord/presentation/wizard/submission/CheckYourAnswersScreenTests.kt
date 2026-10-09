@@ -104,6 +104,7 @@ class CheckYourAnswersScreenTests {
     private fun setContent(
         onChangeRow: (CheckYourAnswersRow) -> Unit = {},
         onSubmit: () -> Unit = {},
+        isOffline: Boolean = false,
     ) {
         composeTestRule.setContent {
             MmoTheme {
@@ -116,6 +117,7 @@ class CheckYourAnswersScreenTests {
                     onChangeRow = onChangeRow,
                     onSubmit = onSubmit,
                     modifier = Modifier.verticalScroll(rememberScrollState()),
+                    isOffline = isOffline,
                 )
             }
         }
@@ -205,5 +207,22 @@ class CheckYourAnswersScreenTests {
 
         composeTestRule.onNodeWithContentDescription("Change Vessel").assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription("Change Departure port").assertIsDisplayed()
+    }
+
+    @Test
+    fun offlineNoticeIsShownWhenOffline() {
+        setContent(isOffline = true)
+
+        composeTestRule
+            .onNodeWithTag(CheckYourAnswersScreenTestTags.OFFLINE_NOTICE)
+            .performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun offlineNoticeIsHiddenWhenOnline() {
+        setContent(isOffline = false)
+
+        composeTestRule.onNodeWithTag(CheckYourAnswersScreenTestTags.OFFLINE_NOTICE).assertDoesNotExist()
     }
 }

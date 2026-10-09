@@ -51,4 +51,18 @@ object GearMeasurementSupport {
     /** Renders a whole-number [Double] without a trailing ".0" (e.g. `100.0` -> `"100"`, `12.5` -> `"12.5"`). */
     fun formatNumber(value: Double): String =
         if (value == value.toLong().toDouble()) value.toLong().toString() else value.toString()
+
+    /** Seeds/re-derives the measurement-field text inputs from [measurements] (BR-XX dirty-tracking baseline). */
+    fun rawValuesFor(
+        gearType: GearType,
+        measurements: Map<String, MeasurementValue>,
+    ): Map<String, String> =
+        gearType.measurementFields.associate { field ->
+            field.key to
+                when (val value = measurements[field.key]) {
+                    is MeasurementValue.Numeric -> formatNumber(value.value)
+                    is MeasurementValue.Text -> value.value
+                    null -> ""
+                }
+        }
 }

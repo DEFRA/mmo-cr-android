@@ -12,22 +12,37 @@
     <string name="col_vessel">Vessel</string>
     <string name="col_status">Status</string>
     <string name="col_created_by">Created by</string>
-    <string name="showing_x_to_y_of_z">Showing %1$d to %2$d of %3$d</string>
-    <string name="next">Next</string>
+    <string name="no_catch_records_yet">You have no catch records yet.</string>
+    <string name="records_reference_pending">Reference not yet assigned</string>
+    <string name="records_trip_end_date_not_set">Not entered yet</string>
+    <string name="records_created_by_you">You</string>
+    <string name="records_retry_action">Retry</string>
+    <string name="records_retry_pending">Retrying…</string>
+    <string name="records_retry_offline_message">You\'re offline. This catch record is saved on your device and will be sent automatically when you\'re back online.</string>
+    <string name="pagination_showing">Showing %1$d to %2$d of %3$d</string>
+    <string name="pagination_previous">Previous</string>
+    <string name="pagination_next">Next</string>
+    <string name="pagination_page_content_description">Page %1$d</string>
+    <!-- FR9: sync-confirmation message (CRAR-152 Phase E) -->
+    <plurals name="sync_confirmation_message">
+        <item quantity="one">Catch record %1$s has been submitted</item>
+        <item quantity="other">%1$d catch records have been submitted</item>
+    </plurals>
+    <string name="home_summary_load_error">We could not load your catch records. Please try again.</string>
     <string name="status_submitted">Submitted</string>
-    <string name="status_amended">Amended</string>
-    <string name="status_unsent">Unsent</string>
-    <string name="status_late">Late</string>
+    <string name="status_draft">Draft</string>
+    <string name="status_ready_to_submit">Ready to submit</string>
+    <string name="status_awaiting_sync">Waiting to send</string>
     <string name="help_with_catch_recording">Help with catch recording</string>
     <string name="catch_record_statuses">Catch record statuses</string>
-    <string name="status_unsent_title">Unsent:</string>
-    <string name="status_unsent_desc">Saved on your device and not yet submitted.</string>
+    <string name="status_draft_title">Draft:</string>
+    <string name="status_draft_desc">Record started but not completed.</string>
+    <string name="status_ready_to_submit_title">Ready to submit:</string>
+    <string name="status_ready_to_submit_desc">Complete but not yet submitted.</string>
+    <string name="status_awaiting_sync_title">Waiting to send:</string>
+    <string name="status_awaiting_sync_desc">Submission attempted but not sent.</string>
     <string name="status_submitted_title">Submitted:</string>
-    <string name="status_submitted_desc">Received by the MMO.</string>
-    <string name="status_amended_title">Amended:</string>
-    <string name="status_amended_desc">This record was changed after it was submitted.</string>
-    <string name="status_late_title">Late:</string>
-    <string name="status_late_desc">This record was received by the MMO after the required deadline.</string>
+    <string name="status_submitted_desc">Successfully submitted.</string>
     <string name="status_check_tab">Check the How to record a catch tab to make sure you are recording your catches at the correct time.</string>
     <string name="offline_banner_label">Offline</string>
     <string name="offline_banner_message">You can still record your catch. Your record will be saved and sent when you\'re back online.</string>
@@ -54,6 +69,7 @@
     <string name="settings_my_account">My account</string>
     <string name="settings_privacy_notice">Privacy notice</string>
     <string name="settings_support_information">Support information</string>
+    <string name="settings_debug_force_failures">Force submission failures (debug only)</string>
     <string name="signin_title">Sign in</string>
     <string name="email_address">Email address</string>
     <string name="password">Password</string>
@@ -237,6 +253,11 @@
     <string name="submission_pending_sync_check_records_suffix">to make sure the status changes to Submitted. You are responsible for making sure we receive it.</string>
     <string name="submission_pending_sync_warning">You must record your catch within 24 hours of landing.</string>
     <string name="wizard_error_retry_action">Try again</string>
+    <string name="unsaved_changes_dialog_title">You have unsaved changes</string>
+    <string name="unsaved_changes_dialog_body">If you leave this page, the information you have entered will not be saved.</string>
+    <string name="unsaved_changes_leave_action">Leave without saving</string>
+    <string name="unsaved_changes_stay_action">Stay on this page</string>
+    <string name="check_your_answers_offline_notice">You\'re offline. If you submit now, your catch record will be saved on this device and sent automatically when you next have a mobile signal or Wi-Fi connection.</string>
 </resources>
 
 

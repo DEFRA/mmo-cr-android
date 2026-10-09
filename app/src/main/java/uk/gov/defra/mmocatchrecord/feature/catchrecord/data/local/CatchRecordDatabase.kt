@@ -30,6 +30,9 @@ import androidx.room.RoomDatabase
  * in [CatchRecordMigrations.MIGRATION_5_6]); [CatchRecordDraftDao.findOrCreateActiveDraft] is the
  * corresponding race-safe find-or-create DAO path.
  *
+ * v6 -> v7 (CRAR-152 Phase A, FR10): [DraftEntity] gained three nullable audit columns —
+ * `createdAtEpochMillis`/`submittedAtEpochMillis`/`syncedAtEpochMillis` — see ADR 0014.
+ *
  * Every version bump above has a real [androidx.room.migration.Migration] registered in
  * [CatchRecordMigrations] (see `di/DatabaseModule.kt`) — a draft in progress must survive every schema
  * change, so `fallbackToDestructiveMigration` must never be reintroduced for this database (ADR 0010).
@@ -43,7 +46,7 @@ import androidx.room.RoomDatabase
         LandingStorageEntity::class,
         NotLandedSpeciesEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
 )
 abstract class CatchRecordDatabase : RoomDatabase() {

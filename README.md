@@ -111,6 +111,7 @@ split per feature package, per
 | [0004](docs/adr/0004-koin-dependency-injection.md) | Koin for dependency injection (superseded) |
 | [0005](docs/adr/0005-hilt-dependency-injection.md) | Hilt for dependency injection |
 | [0013](docs/adr/0013-offline-fisheries-map-rendering.md) | Offline fisheries statistical sub-rectangle map rendering |
+| [0014](docs/adr/0014-catch-record-status-audit-and-offline-sync-confirmation.md) | Catch-record status, audit timestamps and offline-sync confirmation |
 | [0000](docs/adr/0000-ios-adr-references-TBC.md) | iOS ADR references — TBC |
 
 ## CI

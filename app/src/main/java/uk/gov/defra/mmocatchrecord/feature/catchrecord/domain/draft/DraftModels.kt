@@ -165,10 +165,8 @@ data class CatchRecordDraft(
     val status: DraftStatus = DraftStatus.Draft,
     val modifiedAtEpochMillis: Long,
     /**
-     * A stable, user-facing reference (e.g. `"A1234520260727150815"`), generated and persisted once by
-     * [CatchRecordDraftRepository.startDraft] and shown throughout the wizard and on the Phase 8
-     * submission-result screens. `null` only for drafts built directly in tests/previews that bypass the
-     * repository; every draft created via the real app always has one.
+     * A stable, user-facing reference generated once per draft and persisted at first save; see
+     * ADR 0014 for exactly when. `null` only for drafts built directly in tests/previews.
      */
     val catchRecordReference: String? = null,
     /**
@@ -179,4 +177,8 @@ data class CatchRecordDraft(
      * `WizardStep.LateSubmissionWarning`.
      */
     val lateSubmissionWarningAcknowledged: Boolean = false,
+    /** FR10 audit timestamps (CRAR-152 Phase A). See ADR 0014 for the stamping rules and rationale. */
+    val createdAtEpochMillis: Long? = null,
+    val submittedAtEpochMillis: Long? = null,
+    val syncedAtEpochMillis: Long? = null,
 )

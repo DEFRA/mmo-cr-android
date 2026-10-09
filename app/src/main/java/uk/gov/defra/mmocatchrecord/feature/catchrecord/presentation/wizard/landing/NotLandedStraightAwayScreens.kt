@@ -50,6 +50,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardErrorSummaryItem
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardLoadingState
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardStep
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardUnsavedChangesConfig
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.catchRecordReference
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.nextWizardStepForDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearMeasurementSupport
@@ -169,6 +170,15 @@ fun NotLandedStraightAwayDecisionScreenContent(
 
 private fun notLandedWeightKey(speciesId: String): String = speciesId
 
+/** Seeds/re-derives the weight-field text inputs from [draft] (BR-XX dirty-tracking baseline). */
+private fun notLandedRawValuesFor(draft: CatchRecordDraft): Map<String, String> =
+    draft.notLandedSpeciesEntries
+        .mapNotNull { entry ->
+            entry.weightAboveMinimumSizeKeptOnboardKg?.let {
+                notLandedWeightKey(entry.speciesId) to GearMeasurementSupport.formatNumber(it)
+            }
+        }.toMap()
+
 /**
  * Phase 5B, screen 4 — shown only when screen 3 was answered `true`: a checklist of every distinct species
  * confirmed-caught anywhere in the draft (see [SpeciesWeightSupport.distinctConfirmedSpeciesIds]), each
@@ -185,12 +195,14 @@ fun NotLandedStraightAwaySpeciesScreen(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    var hasUnsavedChanges by rememberSaveable { mutableStateOf(false) }
     CatchRecordWizardScaffold(
         screenTestTag = NotLandedStraightAwaySpeciesScreenTestTags.SCREEN,
         title = stringResource(R.string.not_landed_straight_away_species_title),
         onBack = onBack,
         modifier = modifier,
         referenceNumber = state.catchRecordReference,
+        unsavedChanges = WizardUnsavedChangesConfig(hasUnsavedChanges = hasUnsavedChanges),
     ) {
         when (val status = state.status) {
             UiStatus.Idle, UiStatus.Loading -> WizardLoadingState()
@@ -210,6 +222,7 @@ fun NotLandedStraightAwaySpeciesScreen(
                         viewModel.dispatch(CatchRecordFlowEvent.SaveAndContinue(updatedDraft, nextStep))
                         onNavigate(nextStep)
                     },
+                    onDirtyChanged = { hasUnsavedChanges = it },
                 )
         }
     }
@@ -222,29 +235,28 @@ fun NotLandedStraightAwaySpeciesScreenContent(
     speciesList: List<Species>,
     onSubmit: (CatchRecordDraft) -> Unit,
     modifier: Modifier = Modifier,
+    onDirtyChanged: (Boolean) -> Unit = {},
 ) {
     val distinctSpeciesIds = remember(draft) { SpeciesWeightSupport.distinctConfirmedSpeciesIds(draft) }
     var checkedIds by
         rememberSaveable(draft.id) {
             mutableStateOf(draft.notLandedSpeciesEntries.map { it.speciesId }.toSet())
         }
-    var rawValues by
-        rememberSaveable(draft.id) {
-            mutableStateOf(
-                draft.notLandedSpeciesEntries
-                    .mapNotNull { entry ->
-                        entry.weightAboveMinimumSizeKeptOnboardKg?.let {
-                            notLandedWeightKey(entry.speciesId) to GearMeasurementSupport.formatNumber(it)
-                        }
-                    }.toMap(),
-            )
-        }
+    var rawValues by rememberSaveable(draft.id) { mutableStateOf(notLandedRawValuesFor(draft)) }
     var errors by remember(draft.id) { mutableStateOf<Map<String, SpeciesWeightFieldError>>(emptyMap()) }
     var checklistError by remember(draft.id) { mutableStateOf(false) }
     var focusSummary by remember { mutableStateOf(false) }
     val summaryFocusRequester = remember { FocusRequester() }
     val fieldFocusRequesters =
         remember(checkedIds) { checkedIds.associateWith { FocusRequester() } }
+
+    // BR-XX (ADR 0014, Phase D): weight fields only (D3 scope) — checklist selection is commit-on-tap.
+    val initialRawValues = remember(draft) { notLandedRawValuesFor(draft) }
+    val isDirty =
+        rawValues.keys.union(initialRawValues.keys).any { key ->
+            rawValues[key].orEmpty().trim() != initialRawValues[key].orEmpty()
+        }
+    LaunchedEffect(isDirty) { onDirtyChanged(isDirty) }
 
     LaunchedEffect(focusSummary) {
         if (focusSummary) {

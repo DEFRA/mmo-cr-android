@@ -47,6 +47,8 @@ data class CatchRecordFlowViewState(
      * entry the user simply re-picks the gear type; no captured data is lost since nothing was saved yet.
      */
     val pendingGearTypeId: String? = null,
+    /** BR-XX: whether the draft currently in [status] has an actual Room row yet — see ADR 0014. */
+    val isDraftPersisted: Boolean = false,
 ) : ViewState
 
 /**
@@ -60,6 +62,11 @@ val CatchRecordFlowViewState.catchRecordReference: String?
 /** UI-originated events for the catch-record wizard flow, dispatched by whichever step screen is shown. */
 sealed interface CatchRecordFlowEvent {
     data object EnterFlow : CatchRecordFlowEvent
+
+    /** FR2: enter the flow resuming a specific, list-selected draft rather than "any active draft". */
+    data class EnterFlowForDraft(
+        val draftId: String,
+    ) : CatchRecordFlowEvent
 
     /** Resume the loaded active draft at its last-reached step. */
     data object ResumeDraft : CatchRecordFlowEvent

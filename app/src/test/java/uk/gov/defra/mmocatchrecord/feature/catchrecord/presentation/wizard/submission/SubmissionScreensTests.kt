@@ -241,4 +241,28 @@ class SubmissionScreensTests {
 
         composeTestRule.onNodeWithTag(SubmissionPendingSyncScreenTestTags.BANNER).assertIsDisplayed()
     }
+
+    // --- Phase 8, screen 1: late submission warning -----------------------------------------------
+
+    @Test
+    fun lateSubmissionWarningScreenContentInvokesBothActionCallbacks() {
+        var checkedTripEndDate = false
+        var submitted = false
+        composeTestRule.setContent {
+            MmoTheme {
+                LateSubmissionWarningScreenContent(
+                    onCheckTripEndDate = { checkedTripEndDate = true },
+                    onSubmit = { submitted = true },
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithTag(LateSubmissionWarningScreenTestTags.CHECK_TRIP_END_DATE_LINK)
+            .performClick()
+        composeTestRule.onNodeWithTag(LateSubmissionWarningScreenTestTags.SAVE_ACTION).performClick()
+
+        assertTrue(checkedTripEndDate)
+        assertTrue(submitted)
+    }
 }

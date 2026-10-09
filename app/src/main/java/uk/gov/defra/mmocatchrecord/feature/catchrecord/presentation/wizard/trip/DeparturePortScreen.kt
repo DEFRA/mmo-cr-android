@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,6 +42,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardErrorState
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardLoadingState
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardStep
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardUnsavedChangesConfig
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.catchRecordReference
 
 object DeparturePortScreenTestTags {
@@ -65,6 +67,7 @@ fun DeparturePortScreen(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    var hasUnsavedChanges by rememberSaveable { mutableStateOf(false) }
     DeparturePortScreen(
         state = state,
         onSamePortAccepted = {
@@ -79,10 +82,12 @@ fun DeparturePortScreen(
         onRetry = { viewModel.dispatch(CatchRecordFlowEvent.Retry) },
         onBack = onBack,
         modifier = modifier,
+        hasUnsavedChanges = hasUnsavedChanges,
+        onDirtyChanged = { hasUnsavedChanges = it },
     )
 }
 
-@Suppress("FunctionNaming")
+@Suppress("FunctionNaming", "LongParameterList")
 @Composable
 private fun DeparturePortScreen(
     state: CatchRecordFlowViewState,
@@ -92,6 +97,8 @@ private fun DeparturePortScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     onRetry: () -> Unit = {},
+    hasUnsavedChanges: Boolean = false,
+    onDirtyChanged: (Boolean) -> Unit = {},
 ) {
     CatchRecordWizardScaffold(
         screenTestTag = DeparturePortScreenTestTags.SCREEN,
@@ -99,6 +106,7 @@ private fun DeparturePortScreen(
         onBack = onBack,
         modifier = modifier,
         referenceNumber = state.catchRecordReference,
+        unsavedChanges = WizardUnsavedChangesConfig(hasUnsavedChanges = hasUnsavedChanges),
     ) {
         when (val status = state.status) {
             UiStatus.Idle, UiStatus.Loading -> WizardLoadingState()
@@ -119,6 +127,7 @@ private fun DeparturePortScreen(
                     onSamePortAccepted = onSamePortAccepted,
                     onSamePortDeclined = onSamePortDeclined,
                     onSubmit = onSubmit,
+                    onDirtyChanged = onDirtyChanged,
                 )
         }
     }
@@ -136,6 +145,7 @@ fun DeparturePortScreenContent(
     onSamePortDeclined: () -> Unit,
     onSubmit: (CatchRecordDraft) -> Unit,
     modifier: Modifier = Modifier,
+    onDirtyChanged: (Boolean) -> Unit = {},
 ) {
     if (entryMode == DeparturePortEntryMode.SamePortShortcut && samePortCandidate != null) {
         DepartureSamePortShortcutContent(
@@ -162,6 +172,7 @@ fun DeparturePortScreenContent(
         saveTag = DeparturePortScreenTestTags.SAVE_ACTION,
         errorTag = DeparturePortScreenTestTags.ERROR_MESSAGE,
         onSubmit = { selection -> onSubmit(draft.copy(departurePort = selection)) },
+        onDirtyChanged = onDirtyChanged,
     )
 }
 
@@ -233,6 +244,7 @@ fun PortSelectionStepContent(
     errorTag: String,
     onSubmit: (PortSelection) -> Unit,
     modifier: Modifier = Modifier,
+    onDirtyChanged: (Boolean) -> Unit = {},
 ) {
     val initialPortName =
         remember(initialSelection, allPorts) {
@@ -267,6 +279,10 @@ fun PortSelectionStepContent(
     var searchQuery by rememberSaveable { mutableStateOf(initialPortName) }
     var showError by rememberSaveable { mutableStateOf(false) }
     val suggestions = remember(searchQuery, allPorts) { PortSearch.filterSuggestions(searchQuery, allPorts) }
+    // BR-XX (ADR 0014, Phase D): favourites radios commit on tap, so only the free-text search field
+    // (see D3 scope) can hold genuinely uncommitted input.
+    val isDirty = showSearch && !searchQuery.trim().equals(initialPortName.trim(), ignoreCase = true)
+    LaunchedEffect(isDirty) { onDirtyChanged(isDirty) }
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
         if (!showSearch && favouritePorts.isNotEmpty()) {

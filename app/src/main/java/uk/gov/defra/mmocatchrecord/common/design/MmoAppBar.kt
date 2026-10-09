@@ -25,12 +25,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import uk.gov.defra.mmocatchrecord.R
+
+/** Stable, localisation-independent lookups for [GdsTopAppBar]'s controls (tests should prefer these). */
+object GdsTopAppBarTestTags {
+    const val BACK_BUTTON = "gds_top_app_bar_back_button"
+    const val LANGUAGE_TOGGLE = "gds_top_app_bar_language_toggle"
+}
 
 /** GOV.UK Header Top App Bar */
 @Composable
@@ -71,6 +78,7 @@ private fun GdsAppBarBackButton(onBackClick: () -> Unit) {
     Row(
         modifier =
             Modifier
+                .testTag(GdsTopAppBarTestTags.BACK_BUTTON)
                 .clickable(onClick = onBackClick)
                 .heightIn(min = Spacing.minTouchTarget)
                 .padding(end = Spacing.s),
@@ -123,6 +131,7 @@ private fun GdsAppBarLangToggle(
         contentPadding = PaddingValues(0.dp),
         modifier =
             Modifier
+                .testTag(GdsTopAppBarTestTags.LANGUAGE_TOGGLE)
                 .widthIn(min = Spacing.minTouchTarget)
                 .heightIn(min = Spacing.minTouchTarget),
     ) {
