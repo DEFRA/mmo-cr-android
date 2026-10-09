@@ -41,7 +41,7 @@ class ReferenceDataRemoteDataSourceTests {
     val serverRule = MockWebServerRule()
 
     @Test
-    fun `fetchVessels maps a successful envelope and captures the response ETag`() =
+    fun `fetchVessels parses the raw DTO envelope and captures the response ETag`() =
         runBlocking {
             serverRule.server.enqueue(
                 MockResponse
@@ -55,7 +55,8 @@ class ReferenceDataRemoteDataSourceTests {
             val result = remoteDataSource().fetchVessels() as ReferenceDataFetchResult.Modified
 
             assertEquals(1, result.items.size)
-            assertEquals("ACHILLES PH101", result.items.single().name)
+            assertEquals("ACHILLES PH101", result.items.single().displayName)
+            assertEquals("PH101", result.items.single().pln)
             assertEquals("col-1", result.collectionId)
             assertEquals("\"sha256-abc=\"", result.responseETag)
         }
@@ -71,15 +72,15 @@ class ReferenceDataRemoteDataSourceTests {
         }
 
     @Test
-    fun `fetchGears resolves band context and measurement fields`() =
+    fun `fetchGears resolves band context and the measurement catalogue`() =
         runBlocking {
             serverRule.server.enqueue(MockResponse(code = 200, body = GEARS_BODY))
 
             val result = remoteDataSource().fetchGears(vesselLengthMetres = 8.0) as ReferenceDataFetchResult.Modified
 
-            val gear = result.items.single()
-            assertEquals(1, gear.measurementFields.size)
-            assertEquals("mesh_size_mm", gear.measurementFields.single().key)
+            val payload = result.items
+            assertEquals("TBB", payload.items.single().code)
+            assertEquals("ME", payload.measurementsById.getValue("mid-1").code)
         }
 
     @Test

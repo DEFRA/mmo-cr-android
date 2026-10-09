@@ -4,10 +4,6 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import retrofit2.Response
 import timber.log.Timber
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Species
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Vessel
 import java.io.IOException
 import javax.inject.Inject
 
@@ -28,6 +24,12 @@ internal sealed interface ReferenceDataFetchResult<out T> {
     data object NotModified : ReferenceDataFetchResult<Nothing>
 }
 
+/** A `gears` fetch's raw DTOs: items plus the measurement catalogue needed to resolve each gear's fields. */
+internal data class GearsFetchPayload(
+    val items: List<GearMobileDto>,
+    val measurementsById: Map<String, GearMeasurementDto>,
+)
+
 /** The manifest has no single `schemaVersion` of its own (each of its datasets carries one) so it gets
  *  its own result shape rather than being forced through [ReferenceDataFetchResult].
  */
@@ -41,8 +43,8 @@ internal sealed interface ManifestFetchResult {
 }
 
 /**
- * Thin wrapper over [ReferenceDataApi] turning its raw [Response]s into [ReferenceDataFetchResult] (schema
- * guard + DTO→domain mapping, ADR 0015). Not yet wired into `ReferenceDataRepository` — a later phase.
+ * Thin wrapper over [ReferenceDataApi] turning its raw [Response]s into [ReferenceDataFetchResult] of the
+ * raw DTOs (schema guard only, ADR 0015) — DTO→entity and DTO→domain mapping both happen downstream.
  */
 internal class ReferenceDataRemoteDataSource
     @Inject
@@ -50,31 +52,27 @@ internal class ReferenceDataRemoteDataSource
         private val api: ReferenceDataApi,
         private val json: Json,
     ) {
-        suspend fun fetchVessels(ifNoneMatch: String? = null): ReferenceDataFetchResult<List<Vessel>> =
-            handleEnvelope(api.vessels(ifNoneMatch = ifNoneMatch), "vessels") { envelope ->
-                envelope.items.map { it.toDomain() }
-            }
+        suspend fun fetchVessels(ifNoneMatch: String? = null): ReferenceDataFetchResult<List<VesselMobileDto>> =
+            handleEnvelope(api.vessels(ifNoneMatch = ifNoneMatch), "vessels") { envelope -> envelope.items }
 
-        suspend fun fetchPorts(ifNoneMatch: String? = null): ReferenceDataFetchResult<List<Port>> =
-            handleEnvelope(api.ports(ifNoneMatch = ifNoneMatch), "ports") { envelope ->
-                envelope.items.map { it.toDomain() }
-            }
+        suspend fun fetchPorts(ifNoneMatch: String? = null): ReferenceDataFetchResult<List<PortMobileDto>> =
+            handleEnvelope(api.ports(ifNoneMatch = ifNoneMatch), "ports") { envelope -> envelope.items }
 
-        suspend fun fetchSpecies(ifNoneMatch: String? = null): ReferenceDataFetchResult<List<Species>> =
-            handleEnvelope(api.species(ifNoneMatch = ifNoneMatch), "species") { envelope ->
-                envelope.items.map { it.toDomain() }
-            }
+        suspend fun fetchSpecies(ifNoneMatch: String? = null): ReferenceDataFetchResult<List<SpeciesMobileDto>> =
+            handleEnvelope(api.species(ifNoneMatch = ifNoneMatch), "species") { envelope -> envelope.items }
 
         suspend fun fetchGears(
             vesselLengthMetres: Double? = null,
             ifNoneMatch: String? = null,
-        ): ReferenceDataFetchResult<List<GearType>> =
+        ): ReferenceDataFetchResult<GearsFetchPayload> =
             handleEnvelope(
                 api.gears(vesselLengthMetres = vesselLengthMetres, ifNoneMatch = ifNoneMatch),
                 "gears",
             ) { envelope ->
-                val measurementsById = envelope.measurements.associateBy { it.id }
-                envelope.items.map { it.toDomain(measurementsById) }
+                GearsFetchPayload(
+                    items = envelope.items,
+                    measurementsById = envelope.measurements.associateBy { it.id },
+                )
             }
 
         suspend fun fetchManifest(ifNoneMatch: String? = null): ManifestFetchResult {

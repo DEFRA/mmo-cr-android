@@ -181,12 +181,45 @@ additive `Migration(6, 7)` (ADR 0010 bans `fallbackToDestructiveMigration`). Gea
 sets. Neither phase wires into `ReferenceDataRepository`'s binding — that remains ADR 0008's stub until a
 later phase.
 
+## Update (Phase 4): manifest/ETag-driven background refresh
+
+`ReferenceDataRefresher` fetches the manifest once per run, then refreshes vessels/ports/species/gears
+**independently** (each wrapped so one dataset failing never discards another's successful update): a
+dataset is skipped entirely (no network call) if its manifest `version`/`etag` is unchanged, otherwise it
+is fetched with the stored response `ETag` as `If-None-Match` (byte-for-byte, including quotes); a `304`
+only touches `fetchedAtEpochMillis`; a `200` replaces that dataset's rows and stores the new manifest
+version/etag, response ETag, and (species only) the `Accept-Language` tag used. A species language change
+forces a refetch **without** `If-None-Match` even if the manifest is unchanged, closing the Phase 3
+enforcement gap noted above. A `schemaVersion` mismatch throws and is never cached, per dataset.
+
+**Gears are cached as four variants** sharing the manifest's single `gears` entry but each with its own
+metadata row/ETag: `under-10m` (5.0m), `10-to-12m` (11.0m), `over-12m` (15.0m), and an unfiltered `all`
+(no `vesselLengthMetres` sent) for when a vessel's length is unknown. A manifest change therefore
+refetches all four bands independently (each may individually `304` or `200`).
+
+`ReferenceDataSyncWorker` (`@HiltWorker CoroutineWorker`) maps the refresh outcome to `Result.success()`
+(no failures), `Result.retry()` (any transient failure, via `SafeErrorMapper`), or `Result.failure()`
+(only terminal failures, e.g. 401/403/schema-mismatch — never retried in a loop).
+`WorkManagerReferenceDataSyncScheduler` enqueues a `CONNECTED`-constrained unique periodic refresh every
+**12 hours** (`KEEP` policy, 15-minute exponential backoff) plus a one-time refresh at app start
+(`REPLACE` policy), mirroring `CatchRecordSyncWorker`/`WorkManagerCatchRecordSyncScheduler`. Twelve hours
+was chosen over the server's `stale-while-revalidate=86400` (24h) because reference data is read on every
+wizard step and a same-day backend correction (e.g. a port renamed) should reach users without waiting a
+full day, while still being far looser than the submission sync worker's cadence since this data changes
+rarely.
+
+**Deviation flagged for review:** `ReferenceDataRemoteDataSource.fetchVessels`/`fetchPorts`/`fetchSpecies`
+(Phase 2) returned domain-mapped lists; `fetchGears` returned `List<GearType>`. Phase 4's entity mapper
+needs DTO fields the domain mapper discards (`pln`/`cfr`/`lengthOverallMetres`, port `coordinate`, gear
+`measurements`), so these four methods were changed to return the raw DTOs (`GearsFetchPayload` for
+gears) instead; DTO→domain mapping moves to the Phase 5 repository. No production code depended on the
+old signatures (only the Phase 2 test, updated to match).
+
 ## Out of scope (this ADR)
 
 - `/map/*` API datasets — ADR 0013's build-time GeoJSON pipeline remains authoritative; see that ADR's
   appended scope note.
-- WorkManager-driven background refresh and the `ReferenceDataRepository` binding swap away from ADR
-  0008's stub — deferred to a later phase.
+- The `ReferenceDataRepository` binding swap away from ADR 0008's stub — deferred to Phase 5.
 - Real authentication, catch-record submission, and UI wiring.
 
 ## Consequences
