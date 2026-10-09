@@ -113,13 +113,35 @@ Recorded here so each is visible and revisitable, per the approved brief, rather
 
 - **Q2 (real token)** — `local`/`dev` use `StubTokenProvider`; `prod` uses `MissingTokenProvider`
   (returns `null`, so no `Authorization` header is sent) until real auth is designed.
-- **Q3 (port → statistical-area mapping)** — retains ADR 0008's stub mapping, keyed by port `code`, with
-  a sentinel fallback; revisited no earlier than Phase 2.
+- **Q3 (port → statistical-area mapping)** — `PortStatisticalAreaLookup` (Phase 2) is keyed by port
+  `code` but its map is currently **empty** (no real port→area data exists in the live API or anywhere
+  else yet), so every port sentinel-falls-back to `"AREA-UNASSIGNED"`. This is a deliberate placeholder,
+  not a bug — flagged for a decision on where this mapping will ultimately come from.
 - **Q4/Q5 (sub-rectangles, previously-used ports)** — remain on the stub fallback for now.
 - **Q6 (species quota/precision)** — keeps the app's existing domain defaults.
-- **Q7 (gear measurement keys)** — a translation table will map the API's measurement `code`s (`GM`,
-  `ME`, `GN`, `MT`, `QG`, `HE`, `NL`, `NN`, `NI`) to the app's existing persisted constants; the
-  persisted key space itself is unchanged.
+- **Q7 (gear measurement keys)** — finalized translation table (Phase 2), in
+  `ReferenceDataMappers.gearMeasurementKeyFor`:
+
+  | API `code` | Persisted key                 | Unit   | Derived type |
+  | ---------- | ------------------------------ | ------ | ------------- |
+  | `ME`       | `mesh_size_mm` (reused)         | `mm`   | Decimal       |
+  | `GM`       | `api_gear_measurement_gm`      | `m`    | Decimal       |
+  | `GN`       | `api_gear_measurement_gn`      | count  | Integer       |
+  | `MT`       | `api_gear_measurement_mt`      | count  | Integer       |
+  | `QG`       | `api_gear_measurement_qg`      | count  | Integer       |
+  | `HE`       | `api_gear_measurement_he`      | `m`    | Decimal       |
+  | `NL`       | `api_gear_measurement_nl`      | `m`    | Decimal       |
+  | `NN`       | `api_gear_measurement_nn`      | count  | Integer       |
+  | `NI`       | `api_gear_measurement_ni`      | count  | Integer       |
+
+  Only `ME` has a reliable semantic match to a pre-existing stub key (`mesh_size_mm`); the other 8 live
+  codes do not correspond 1:1 to the 8 remaining stub keys (e.g. `number_of_trawl_nets`,
+  `total_hooks_hauled`), so guessing a reuse risked silently mismapping a captured value. Each gets its
+  own new, deterministic, code-derived key (`api_gear_measurement_<lowercase code>`); any future unseen
+  code falls back to the same deterministic pattern. The persisted key *space* is additive — the 8 unused
+  stub keys are left intact for the stub repository until it is retired (Phase 6). `kind` is always
+  `"number"` in the live API, so type is derived from `unit` instead: `count` → Integer; `m`/`mm` →
+  Decimal; any other/missing unit also defaults to Decimal.
 - **Vessel length bands** — `gears?vesselLengthMetres=` narrows which measurements are returned
   (under-10m → `ME`,`GN` only; 10-to-12m and over-12m → all nine). The default approach is to cache one
   `gears` response per documented band using a representative length, and select by the vessel's
@@ -129,12 +151,40 @@ Recorded here so each is visible and revisitable, per the approved brief, rather
   profile before production rollout, per the DEFRA mobile standard for non-public DEFRA systems; this is
   explicitly not resolved by this ADR.
 
+## Update (Phases 2–3): DTOs, mapping, error handling, Room cache
+
+Phase 2 adds `internal` DTOs (`feature/catchrecord/data/referencedata/remote/`), a `ReferenceDataApi`
+(`Response<T>`-wrapped so a bodyless `304` is observable), mappers to the **unchanged** domain models in
+`domain/referencedata/ReferenceDataModels.kt`, and a `schemaVersion` guard (supported `"1.0"`; a mismatch
+throws a dedicated, never-cached, Terminal exception). `SafeErrorMapper` gained a `ReferenceDataApiException`
+branch honouring the server's `retryable` flag when present, defaulting by HTTP status otherwise (5xx
+transient, 4xx terminal; 401 is its own type for a future re-auth flow). A malformed error body falls back
+to the same status-based default rather than failing the whole classification.
+
+**Domain-model pressure (none acted on):** several live API fields have no home in the existing domain
+models and are deliberately kept DTO/entity-only rather than growing the models: vessel `pln`/`cfr`/
+`lengthOverallMetres`, port `coordinate`, species `scientificName`, gear `category`/`pairFishing`. None of
+these are currently needed by any screen; adding them was judged out of this phase's scope and is flagged
+for a product decision rather than silently added.
+
+**Species language-cache strategy:** `ReferenceDataMetadataEntity.languageTag` stores the `Accept-Language`
+tag the cached `species` rows were resolved under. The *storage* exists now; the invalidate-on-change
+*enforcement* (compare the ADR-0012 current language against the stored tag before serving/trusting the
+cache) is deferred to the Phase 4/5 repository, which owns cache-freshness decisions generally.
+
+Phase 3 adds Room entities for the four cached datasets plus `ReferenceDataMetadataEntity`, a
+`ReferenceDataDao` with transactional per-dataset `replaceAll`, and `CatchRecordDatabase` v6 → v7 via a real
+additive `Migration(6, 7)` (ADR 0010 bans `fallbackToDestructiveMigration`). Gears/measurements are keyed by
+`(id, vesselLengthBand)` since the same gear legitimately recurs across bands with different measurement
+sets. Neither phase wires into `ReferenceDataRepository`'s binding — that remains ADR 0008's stub until a
+later phase.
+
 ## Out of scope (this ADR)
 
 - `/map/*` API datasets — ADR 0013's build-time GeoJSON pipeline remains authoritative; see that ADR's
   appended scope note.
-- Dataset DTOs, Room caching/migrations, WorkManager refresh, and the `ReferenceDataRepository` binding
-  swap away from ADR 0008's stub — all deferred to a later phase.
+- WorkManager-driven background refresh and the `ReferenceDataRepository` binding swap away from ADR
+  0008's stub — deferred to a later phase.
 - Real authentication, catch-record submission, and UI wiring.
 
 ## Consequences

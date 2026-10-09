@@ -12,6 +12,7 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import uk.gov.defra.mmocatchrecord.BuildConfig
 import uk.gov.defra.mmocatchrecord.core.network.HealthApi
 import uk.gov.defra.mmocatchrecord.core.network.ReferenceDataServiceConfig
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.remote.ReferenceDataApi
 import javax.inject.Singleton
 
 /**
@@ -57,6 +58,12 @@ object ReferenceDataRetrofitModule {
     fun provideHealthApi(
         @ReferenceDataServiceRoot retrofit: Retrofit,
     ): HealthApi = retrofit.create(HealthApi::class.java)
+
+    @Provides
+    @Singleton
+    internal fun provideReferenceDataApi(
+        @ReferenceDataApiBase retrofit: Retrofit,
+    ): ReferenceDataApi = retrofit.create(ReferenceDataApi::class.java)
 
     private fun buildRetrofit(
         okHttpClient: OkHttpClient,

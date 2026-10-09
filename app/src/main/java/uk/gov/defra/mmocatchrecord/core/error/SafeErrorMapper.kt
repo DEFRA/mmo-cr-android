@@ -1,6 +1,7 @@
 package uk.gov.defra.mmocatchrecord.core.error
 
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.DraftMappingException
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.remote.ReferenceDataApiException
 import java.io.IOException
 
 /** How a [Throwable] was classified by [SafeErrorMapper] — drives both the safe message and retryability. */
@@ -19,10 +20,8 @@ data class SafeUserFacingError(
 )
 
 /**
- * Maps any [Throwable] to a safe, generic, plain-English user-facing message plus the correct
- * [SafeUserFacingError.isRetryable] flag — **never** reads or forwards [Throwable.message] (see ADR 0011 and
- * the error-handling standards: "never surface a raw exception message"). Callers additionally log the
- * throwable itself via Timber for diagnostics; [SafeErrorMapper] only decides what the *user* sees.
+ * Maps any [Throwable] to a safe, plain-English user-facing message plus [SafeUserFacingError.isRetryable] —
+ * never reads/forwards [Throwable.message] (ADR 0011). Callers log the throwable itself via Timber.
  */
 object SafeErrorMapper {
     private const val TRANSIENT_MESSAGE = "We could not save your changes. Check your connection and try again."
@@ -38,10 +37,14 @@ object SafeErrorMapper {
         when (throwable) {
             // Data corruption / an unexpected persisted value — retrying the same operation will not help.
             is DraftMappingException -> CatchRecordErrorClassification.Terminal
-            // Network/IO-shaped failures (including android.database.sqlite transient lock/busy exceptions,
-            // which surface as generic RuntimeException subclasses on some API levels) are treated as
-            // transient/retryable; everything else defaults to terminal rather than risking an infinite
-            // retry loop against a non-recoverable failure.
+            // The reference-data API already tells us whether a failure is retryable (ADR 0015); honour it.
+            is ReferenceDataApiException ->
+                if (throwable.retryable) {
+                    CatchRecordErrorClassification.Transient
+                } else {
+                    CatchRecordErrorClassification.Terminal
+                }
+            // Network/IO-shaped failures default to transient/retryable (see ADR 0011 for the full rationale).
             is IOException -> CatchRecordErrorClassification.Transient
             else -> CatchRecordErrorClassification.Terminal
         }
