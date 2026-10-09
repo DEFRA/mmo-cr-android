@@ -113,10 +113,12 @@ Recorded here so each is visible and revisitable, per the approved brief, rather
 
 - **Q2 (real token)** — `local`/`dev` use `StubTokenProvider`; `prod` uses `MissingTokenProvider`
   (returns `null`, so no `Authorization` header is sent) until real auth is designed.
-- **Q3 (port → statistical-area mapping)** — `PortStatisticalAreaLookup` (Phase 2) is keyed by port
-  `code` but its map is currently **empty** (no real port→area data exists in the live API or anywhere
-  else yet), so every port sentinel-falls-back to `"AREA-UNASSIGNED"`. This is a deliberate placeholder,
-  not a bug — flagged for a decision on where this mapping will ultimately come from.
+- **Q3 (port → statistical-area mapping)** — `PortStatisticalAreaLookup` (Phase 2, fixed Phase 4/5 review)
+  is keyed by port `code`. Only the two live DEV codes matching the confirmed stub departure ports are
+  populated so far (`GBHTG` → `AREA-HASTINGS`, `GBDVR` → `AREA-DOVER`, the same area ids the stub's
+  statistical sub-rectangles use); every other port code sentinel-falls-back to `"AREA-UNASSIGNED"`, which
+  `MapSupport.nearbyRectanglesFor` already handles as an empty (not crashing) result. Full port coverage is
+  still a decision for where this mapping will ultimately come from.
 - **Q4/Q5 (sub-rectangles, previously-used ports)** — remain on the stub fallback for now.
 - **Q6 (species quota/precision)** — keeps the app's existing domain defaults.
 - **Q7 (gear measurement keys)** — finalized translation table (Phase 2), in

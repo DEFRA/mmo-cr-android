@@ -15,12 +15,20 @@ private const val UNIT_MILLIMETRES = "mm"
 internal fun VesselMobileDto.toDomain(): Vessel = Vessel(id = id, name = displayName)
 
 /**
- * The service does not yet expose a port→statistical-area mapping (ADR 0015 interim default, Q3) — every
- * port code sentinel-falls-back to [UNASSIGNED] until a future phase/backend change supplies real data.
+ * Only the live port codes for the confirmed stub departure ports are known (ADR 0015, Q3) —
+ * every other port code sentinel-falls-back to [UNASSIGNED] pending full backend coverage.
  */
 internal object PortStatisticalAreaLookup {
     const val UNASSIGNED = "AREA-UNASSIGNED"
-    private val byPortCode: Map<String, String> = emptyMap()
+    private const val AREA_HASTINGS = "AREA-HASTINGS"
+    private const val AREA_DOVER = "AREA-DOVER"
+
+    /** Live DEV port `code`s for the two confirmed stub departure ports (Hastings/Dover) — ADR 0015. */
+    private val byPortCode: Map<String, String> =
+        mapOf(
+            "GBHTG" to AREA_HASTINGS,
+            "GBDVR" to AREA_DOVER,
+        )
 
     fun statisticalAreaId(portCode: String): String = byPortCode[portCode] ?: UNASSIGNED
 }

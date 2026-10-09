@@ -1,10 +1,14 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.remote
 
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.StubReferenceDataRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldKeys
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldType
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map.MapSupport
 
 /** DTO → domain mapping, including the measurement code→key translation table (ADR 0015). */
 class ReferenceDataMappersTests {
@@ -17,7 +21,7 @@ class ReferenceDataMappersTests {
     }
 
     @Test
-    fun `port maps displayName and a known code to its statistical area`() {
+    fun `port with an unmapped code falls back to the unassigned sentinel`() {
         val dto = PortMobileDto(id = "p1", code = "GBAOT", name = "Abbotsbury", displayName = "Abbotsbury")
 
         val port = dto.toDomain()
@@ -25,6 +29,65 @@ class ReferenceDataMappersTests {
         assertEquals("Abbotsbury", port.name)
         assertEquals(PortStatisticalAreaLookup.UNASSIGNED, port.statisticalAreaId)
     }
+
+    @Test
+    fun `a live Hastings port code resolves to the stub Hastings statistical area`() {
+        val dto =
+            PortMobileDto(
+                id = "a4135a7b-069b-422e-be2e-932393ef6239",
+                code = "GBHTG",
+                name = "Hastings",
+                displayName = "Hastings",
+            )
+
+        assertEquals("AREA-HASTINGS", dto.toDomain().statisticalAreaId)
+    }
+
+    @Test
+    fun `a live Dover port code resolves to the stub Dover statistical area`() {
+        val dto =
+            PortMobileDto(
+                id = "5baffc07-b927-4090-81f4-5c47811518d7",
+                code = "GBDVR",
+                name = "Dover",
+                displayName = "Dover",
+            )
+
+        assertEquals("AREA-DOVER", dto.toDomain().statisticalAreaId)
+    }
+
+    @Test
+    fun `a live Hastings port resolves to the same rectangles MapSupport shows for the stub Hastings port`() =
+        runTest {
+            val livePort =
+                PortMobileDto(
+                    id = "a4135a7b-069b-422e-be2e-932393ef6239",
+                    code = "GBHTG",
+                    name = "Hastings",
+                    displayName = "Hastings",
+                ).toDomain()
+            val stubRectangles = StubReferenceDataRepository().getStatisticalSubRectangles().getOrThrow()
+
+            val nearby = MapSupport.nearbyRectanglesFor(livePort, stubRectangles)
+
+            assertTrue(nearby.isNotEmpty())
+            assertTrue(nearby.all { it.statisticalAreaId == "AREA-HASTINGS" })
+        }
+
+    @Test
+    fun `an unassigned port yields no nearby rectangles, not a crash`() =
+        runTest {
+            val unmappedPort =
+                PortMobileDto(
+                    id = "p2",
+                    code = "GBAOT",
+                    name = "Abbotsbury",
+                    displayName = "Abbotsbury",
+                ).toDomain()
+            val stubRectangles = StubReferenceDataRepository().getStatisticalSubRectangles().getOrThrow()
+
+            assertTrue(MapSupport.nearbyRectanglesFor(unmappedPort, stubRectangles).isEmpty())
+        }
 
     @Test
     fun `species maps displayName and faoCode, keeping domain default quota precision`() {
