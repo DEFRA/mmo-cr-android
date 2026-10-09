@@ -286,12 +286,8 @@ class StubReferenceDataRepository : ReferenceDataRepository {
         Result.success(statisticalSubRectangles)
 
     override suspend fun getStatisticalSubRectanglesForPort(portId: String): Result<List<StatisticalSubRectangle>> {
-        val port = findPortById(portId)
-        return if (port == null) {
-            Result.failure(NoSuchElementException("Unknown port id: $portId"))
-        } else {
-            Result.success(statisticalSubRectangles.filter { it.statisticalAreaId == port.statisticalAreaId })
-        }
+        val statisticalAreaId = findPortById(portId)?.statisticalAreaId
+        return Result.success(statisticalSubRectangles.filter { it.statisticalAreaId == statisticalAreaId })
     }
 
     private fun findPortById(portId: String): Port? = ports.firstOrNull { it.id == portId }

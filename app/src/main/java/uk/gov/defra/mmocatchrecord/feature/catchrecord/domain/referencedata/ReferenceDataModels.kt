@@ -132,6 +132,7 @@ interface ReferenceDataRepository {
 
     suspend fun getStatisticalSubRectangles(): Result<List<StatisticalSubRectangle>>
 
-    /** Statistical sub-rectangles whose [StatisticalSubRectangle.statisticalAreaId] matches [port]'s area. */
+    /** Statistical sub-rectangles whose [StatisticalSubRectangle.statisticalAreaId] matches [portId]'s
+     *  area; an unresolvable [portId] returns an empty (not failed) list, matching the map's own fallback. */
     suspend fun getStatisticalSubRectanglesForPort(portId: String): Result<List<StatisticalSubRectangle>>
 }

@@ -6,6 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldKeys
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldType
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.StatisticalSubRectangle
 
 class StubReferenceDataRepositoryTests {
     private val repository = StubReferenceDataRepository()
@@ -195,10 +196,10 @@ class StubReferenceDataRepositoryTests {
         }
 
     @Test
-    fun `statistical sub-rectangles for an unknown port fails`() =
+    fun `statistical sub-rectangles for an unknown port succeed empty`() =
         runTest {
             val result = repository.getStatisticalSubRectanglesForPort("unknown-port")
-            assertTrue(result.isFailure)
+            assertEquals(emptyList<StatisticalSubRectangle>(), result.getOrThrow())
         }
 
     @Test

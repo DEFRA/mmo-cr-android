@@ -22,7 +22,9 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.CatchRecordDat
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.ReferenceDataDao
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.ReferenceDataGearEntity
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.ReferenceDataMetadataEntity
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.ReferenceDataPortEntity
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.ReferenceDataVesselEntity
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.remote.PortStatisticalAreaLookup
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.remote.ReferenceDataFetchResult
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.remote.ReferenceDataRemoteDataSource
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.remote.VesselMobileDto
@@ -31,7 +33,9 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.sync.V
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.sync.WorkManagerReferenceDataSyncScheduler
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.sync.gearsDatasetKey
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.ReferenceDataRepository
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.StatisticalSubRectangle
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Vessel
 import java.io.IOException
 import java.util.concurrent.Executor
@@ -205,6 +209,85 @@ class CachingReferenceDataRepositoryTests {
         assertEquals(listOf(GearType(id = "gear-$expectedBand", name = "Gear $expectedBand")), result.getOrThrow())
     }
 
+    @Test
+    fun `a port resolved from the cache scopes sub-rectangles to its statistical area`() =
+        runTest {
+            dao.replacePorts(listOf(portEntity("live-port-hastings", "GBHTG", "AREA-HASTINGS")))
+            whenever(stub.getStatisticalSubRectangles()).thenReturn(
+                Result.success(
+                    listOf(
+                        statisticalSubRectangle("rect-1", "AREA-HASTINGS"),
+                        statisticalSubRectangle("rect-2", "AREA-DOVER"),
+                    ),
+                ),
+            )
+
+            val result = repository().getStatisticalSubRectanglesForPort("live-port-hastings")
+
+            assertEquals(listOf("rect-1"), result.getOrThrow().map { it.id })
+        }
+
+    @Test
+    fun `an unresolvable port id for sub-rectangles succeeds with an empty list`() =
+        runTest {
+            dao.replacePorts(listOf(portEntity("live-port-hastings", "GBHTG", "AREA-HASTINGS")))
+            whenever(stub.getStatisticalSubRectangles()).thenReturn(
+                Result.success(listOf(statisticalSubRectangle("rect-1", "AREA-HASTINGS"))),
+            )
+
+            val result = repository().getStatisticalSubRectanglesForPort("unknown-port")
+
+            assertEquals(emptyList<String>(), result.getOrThrow().map { it.id })
+        }
+
+    @Test
+    fun `an empty port cache falls back to the stub ports to resolve sub-rectangles`() =
+        runTest {
+            val stubPort = Port(id = "stub-port-hastings", name = "Hastings", statisticalAreaId = "AREA-HASTINGS")
+            whenever(stub.getPorts()).thenReturn(Result.success(listOf(stubPort)))
+            whenever(stub.getStatisticalSubRectangles()).thenReturn(
+                Result.success(listOf(statisticalSubRectangle("rect-1", "AREA-HASTINGS"))),
+            )
+
+            val result = repository().getStatisticalSubRectanglesForPort("stub-port-hastings")
+
+            assertEquals(listOf("rect-1"), result.getOrThrow().map { it.id })
+        }
+
+    @Test
+    fun `previously used ports for a live vessel id succeed with an empty list`() =
+        runTest {
+            whenever(stub.getPreviouslyUsedPorts("live-vessel-guid")).thenReturn(Result.success(emptyList()))
+
+            val result = repository().getPreviouslyUsedPorts("live-vessel-guid")
+
+            assertEquals(emptyList<Port>(), result.getOrThrow())
+        }
+
+    @Test
+    fun `a live Hastings port GUID resolves to the real stub's Hastings rectangles`() =
+        runTest {
+            val hastingsId = "a4135a7b-069b-422e-be2e-932393ef6239"
+            val hastingsAreaId = PortStatisticalAreaLookup.statisticalAreaId("GBHTG")
+            dao.replacePorts(listOf(portEntity(hastingsId, "GBHTG", hastingsAreaId)))
+            val repositoryWithRealStub =
+                CachingReferenceDataRepository(
+                    dao = dao,
+                    remoteDataSource = remoteDataSource,
+                    syncScheduler = syncScheduler,
+                    connectivityChecker = connectivityChecker,
+                    appLanguageRepository = FakeAppLanguageRepository(languageFlow),
+                    stub = StubReferenceDataRepository(),
+                    clock = { FIXED_NOW_MILLIS },
+                )
+
+            val rectangles = repositoryWithRealStub.getStatisticalSubRectanglesForPort(hastingsId).getOrThrow()
+
+            val expectedCodes =
+                setOf("38E95", "38E98", "38F02", "38E96", "38E99", "38F03", "37E97", "37F01", "37F02")
+            assertEquals(expectedCodes, rectangles.map { it.code }.toSet())
+        }
+
     private fun repository(): CachingReferenceDataRepository =
         CachingReferenceDataRepository(
             dao = dao,
@@ -227,6 +310,25 @@ class CachingReferenceDataRepositoryTests {
         cfr = null,
         lengthOverallMetres = null,
     )
+
+    private fun portEntity(
+        id: String,
+        code: String,
+        statisticalAreaId: String,
+    ) = ReferenceDataPortEntity(
+        id = id,
+        code = code,
+        name = code,
+        displayName = code,
+        latitude = null,
+        longitude = null,
+        statisticalAreaId = statisticalAreaId,
+    )
+
+    private fun statisticalSubRectangle(
+        id: String,
+        statisticalAreaId: String,
+    ) = StatisticalSubRectangle(id = id, code = id, statisticalAreaId = statisticalAreaId)
 
     private fun gearEntity(band: String) =
         ReferenceDataGearEntity(

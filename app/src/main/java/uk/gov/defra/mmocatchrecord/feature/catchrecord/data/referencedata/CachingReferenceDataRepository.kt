@@ -110,14 +110,23 @@ internal class CachingReferenceDataRepository
             )
         }
 
+        /** [stub] is keyed by stub vessel ids only, so a live vessel always (correctly) yields no favourites
+         *  yet — no local source exists (ADR 0015 follow-up: derive from draft/submission history). */
         override suspend fun getPreviouslyUsedPorts(vesselId: String): Result<List<Port>> =
             stub.getPreviouslyUsedPorts(vesselId)
 
         override suspend fun getStatisticalSubRectangles(): Result<List<StatisticalSubRectangle>> =
             stub.getStatisticalSubRectangles()
 
-        override suspend fun getStatisticalSubRectanglesForPort(portId: String): Result<List<StatisticalSubRectangle>> =
-            stub.getStatisticalSubRectanglesForPort(portId)
+        /** Resolves [portId] against cached/live ports (stub ports only if the cache is empty) so a live
+         *  port GUID still matches its [Port.statisticalAreaId]; an unresolved port yields an empty list. */
+        override suspend fun getStatisticalSubRectanglesForPort(portId: String): Result<List<StatisticalSubRectangle>> {
+            val cachedPorts = dao.getPorts().map { it.toDomain() }
+            val ports = cachedPorts.ifEmpty { stub.getPorts().getOrDefault(emptyList()) }
+            val statisticalAreaId = ports.firstOrNull { it.id == portId }?.statisticalAreaId
+            val rectangles = stub.getStatisticalSubRectangles().getOrDefault(emptyList())
+            return Result.success(rectangles.filter { it.statisticalAreaId == statisticalAreaId })
+        }
 
         /** Cache hit → return (maybe background-refresh); empty cache → bounded inline fetch, else [stub]. */
         private suspend fun <T> served(
