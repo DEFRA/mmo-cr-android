@@ -251,6 +251,59 @@ question.
 no "cache is stale" or "showing offline data" indicator. This is a deliberate, recorded deferral, not an
 oversight — revisit once there is a concrete UX need (e.g. a support ticket about silently stale prices).
 
+## Update (Phase 6): stub-tier ID fix, fallback framing, and close-out
+
+**Stub-tier ID-format fix.** The live DI swap (Phase 5) exposed two `CachingReferenceDataRepository`
+methods still passing a live GUID straight to the stub, which only recognises its own stub ids:
+
+- `getStatisticalSubRectanglesForPort(portId)` now resolves `portId` against the cached/live ports
+  first (falling back to the stub's own port list only when the cache is empty), then filters the
+  stub's sub-rectangles by that port's `statisticalAreaId` — the same pattern `MapSupport` already
+  uses. An unresolved port id now succeeds with an empty list rather than failing: the interface KDoc
+  does not mandate a failure, and empty-on-unknown matches the map screen's own fallback. The stub's
+  own implementation was aligned to the same empty-on-unknown contract for consistency.
+- `getPreviouslyUsedPorts(vesselId)` needed no code change: the stub's vessel-keyed map simply has no
+  entry for a live vessel GUID, so it already returned success with an empty list. Confirmed (with a
+  new Compose test) that `PortSelectionStepContent` — shared by the departure and return port screens —
+  already goes straight to the search/autocomplete field with no empty "favourites" heading when the
+  list is empty, so no screen change was required.
+
+**Fallback framing — kept the class, renamed the role.** `StubReferenceDataRepository` is referenced
+by name across 13 files (the DI module, KDoc cross-references in two gear screens, and unit/instrumented
+tests). Renaming the class would touch all of them for a documentation-only change, so the class keeps
+its name; its KDoc now opens by stating its narrowed role explicitly — a fallback composed as the
+`stub` tier behind `CachingReferenceDataRepository` with two remaining jobs:
+
+1. the empty-cache **offline-cold-start tier** for vessels/ports/species/gears (so a cold start with no
+   cache and no network still works);
+2. the **sole source** for what the live API does not yet provide: statistical sub-rectangles,
+   port → statistical-area mapping, previously-used ports, and species quota/precision.
+
+Every placeholder/TBC row inside it was already clearly marked (per ADR 0008's consequence clause) in
+earlier phases and remains unchanged — no data was deleted or renamed.
+
+**Previously-used-ports follow-up (recorded, not built).** There is no API for this (Q5). The proper
+long-term source is almost certainly the user's own local draft/submission history, not a reference-data
+endpoint — that is out of scope for this ADR and is tracked as a follow-up: *derive previously-used ports
+from local draft history*.
+
+## Open questions — final status
+
+| # | Topic | Status |
+| - | ----- | ------ |
+| Q1 | DEV reachability/seeding | **Resolved** — seeded 2026-10-09; confirmed end-to-end including an on-device smoke test against DEV |
+| Q2 | Real token issuer | **Open** — `StubTokenProvider`/`MissingTokenProvider` remain interim |
+| Q3 | Port → statistical-area mapping | **Open** — only `GBHTG`/`GBDVR` populated in `PortStatisticalAreaLookup`; everything else sentinel-falls-back |
+| Q4 | Sub-rectangles from the API | **Open** — no API source; stub remains the sole source, now correctly resolved against live port ids (Phase 6 fix) |
+| Q5 | Previously-used ports from the API | **Open** — no API source; follow-up recorded above (derive from local draft history) |
+| Q6 | Species quota/precision | **Open** — app's existing domain defaults retained |
+| Q7 | Gear measurement key translation table | **Accepted** — only `ME` is a semantic match; the stub's other keys record catch activity (pots hauled/left in water) while the API's describe gear characteristics, which is a product question, not a mapping bug |
+| — | Vessel-length bands | Option (a) implemented (four cached variants); option (b) — exposing bands per measurement directly — requested of the backend team |
+| Q9 | Production security profile | **Open** — DEFRA Cloud Mobile Services must be consulted before production (no certificate pinning yet) |
+| Q10 | `applicationIdSuffix` per flavor | **Open** — DevOps-owned; recommended only, not implemented |
+| Q11 | CI flavor matrix | **Open** — DevOps-owned; Phase 1's Fastfile/CI changes are an interim single-flavor pipeline |
+| — | Previously-used-ports follow-up | **Open** — derive from local draft/submission history |
+
 ## Out of scope (this ADR)
 
 - `/map/*` API datasets — ADR 0013's build-time GeoJSON pipeline remains authoritative; see that ADR's
@@ -260,7 +313,8 @@ oversight — revisit once there is a concrete UX need (e.g. a support ticket ab
 ## Consequences
 
 - `docs/adr/0008-reference-data-stub.md`'s Status is updated to "Superseded by 0015"; its stub
-  implementation is retained (narrowed, not deleted) as the final offline fallback tier.
+  implementation is retained (narrowed, not deleted) as the final offline fallback tier, now resolving
+  sub-rectangles against live port ids (Phase 6) rather than only its own stub ids.
 - As of Phase 5, `ReferenceDataRepository` is bound to `CachingReferenceDataRepository`: vessels, ports,
   species and gears are now live-data-backed (cache-first, stub fallback); previously-used ports and
   sub-rectangles remain stub-only (see "Out of scope"). This is the first user-visible change in this ADR.
@@ -268,3 +322,5 @@ oversight — revisit once there is a concrete UX need (e.g. a support ticket ab
   `testLocalDebugUnitTest`/`testDevDebugUnitTest`/`testProdDebugUnitTest`); CI/Fastlane/Sonar changes
   needed to keep the pipeline green are tracked in Phase 1's own report, flagged for DevOps review since
   those files are DevOps-owned.
+- This phase (6) is the last planned phase of this ADR's rollout; remaining items are tracked in the
+  "Open questions — final status" table above, not as further work under this ADR.
