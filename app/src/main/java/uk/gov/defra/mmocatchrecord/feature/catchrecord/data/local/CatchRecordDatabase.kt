@@ -30,6 +30,9 @@ import androidx.room.RoomDatabase
  * in [CatchRecordMigrations.MIGRATION_5_6]); [CatchRecordDraftDao.findOrCreateActiveDraft] is the
  * corresponding race-safe find-or-create DAO path.
  *
+ * v6 -> v7 (ADR 0015): six new, purely additive reference-data cache tables (vessels/ports/species/gears/
+ * gear-measurements/metadata) — no pre-existing draft table is touched, so an in-progress draft survives.
+ *
  * Every version bump above has a real [androidx.room.migration.Migration] registered in
  * [CatchRecordMigrations] (see `di/DatabaseModule.kt`) — a draft in progress must survive every schema
  * change, so `fallbackToDestructiveMigration` must never be reintroduced for this database (ADR 0010).
@@ -42,10 +45,18 @@ import androidx.room.RoomDatabase
         SpeciesWeightEntity::class,
         LandingStorageEntity::class,
         NotLandedSpeciesEntity::class,
+        ReferenceDataVesselEntity::class,
+        ReferenceDataPortEntity::class,
+        ReferenceDataSpeciesEntity::class,
+        ReferenceDataGearEntity::class,
+        ReferenceDataGearMeasurementEntity::class,
+        ReferenceDataMetadataEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
 )
 abstract class CatchRecordDatabase : RoomDatabase() {
     abstract fun catchRecordDraftDao(): CatchRecordDraftDao
+
+    abstract fun referenceDataDao(): ReferenceDataDao
 }
