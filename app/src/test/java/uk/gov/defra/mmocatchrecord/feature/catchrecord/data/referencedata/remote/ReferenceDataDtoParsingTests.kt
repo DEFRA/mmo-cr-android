@@ -157,4 +157,146 @@ class ReferenceDataDtoParsingTests {
         assertNull(envelope.error.retryable)
         assertNull(envelope.error.dataset)
     }
+
+    @Test
+    fun `envelope with optional paging fields parses to the equivalent constructed DTO`() {
+        val envelope =
+            json.decodeFromString<ReferenceDataEnvelopeDto<SpeciesMobileDto>>(
+                """
+                {"dataset":"species","collectionId":"col-3","schemaVersion":"1.0","version":"v1",
+                "view":"mobile","total":1,"offset":0,"limit":50,"items":[
+                {"id":"s1","faoCode":"COD","displayName":"Cod"}]}
+                """.trimIndent(),
+            )
+
+        val expected =
+            ReferenceDataEnvelopeDto(
+                dataset = "species",
+                collectionId = "col-3",
+                schemaVersion = "1.0",
+                version = "v1",
+                view = "mobile",
+                total = 1,
+                items = listOf(SpeciesMobileDto(id = "s1", faoCode = "COD", displayName = "Cod")),
+                offset = 0,
+                limit = 50,
+            )
+        assertEquals(expected, envelope)
+        val withDefaults =
+            ReferenceDataEnvelopeDto(
+                dataset = "species",
+                collectionId = "col-3",
+                schemaVersion = "1.0",
+                version = "v1",
+                view = "mobile",
+                total = 1,
+                items = expected.items,
+            )
+        assertEquals(expected.copy(offset = null, limit = null), withDefaults)
+    }
+
+    @Test
+    fun `gears envelope parses to the equivalent constructed DTO`() {
+        val envelope =
+            json.decodeFromString<GearsEnvelopeDto>(
+                """
+                {"dataset":"gears","collectionId":"col-4","schemaVersion":"1.0","version":"v1",
+                "view":"mobile","total":1,"offset":0,"limit":10,
+                "context":{"vesselLengthBand":"under-10m"},"items":[
+                {"id":"g1","code":"TBB","name":"Beam trawl",
+                "category":{"id":"c1","code":"TRAWL_NETS","name":"Trawl nets"}}]}
+                """.trimIndent(),
+            )
+
+        val gear =
+            GearMobileDto(
+                id = "g1",
+                code = "TBB",
+                name = "Beam trawl",
+                category = GearCategoryDto(id = "c1", code = "TRAWL_NETS", name = "Trawl nets"),
+            )
+        val expected =
+            GearsEnvelopeDto(
+                dataset = "gears",
+                collectionId = "col-4",
+                schemaVersion = "1.0",
+                version = "v1",
+                view = "mobile",
+                total = 1,
+                items = listOf(gear),
+                context = GearsContextDto(vesselLengthBand = "under-10m"),
+                offset = 0,
+                limit = 10,
+            )
+        assertEquals(expected, envelope)
+        assertNull(GearsContextDto().vesselLengthBand)
+        assertEquals(emptyList<GearMeasurementDto>(), envelope.measurements)
+    }
+
+    @Test
+    fun `manifest parses to the equivalent constructed DTO`() {
+        val manifest =
+            json.decodeFromString<ManifestDto>(
+                """
+                {"manifestId":"m-1","version":"v1","generatedAt":"2026-01-01T00:00:00Z","datasets":[
+                {"dataset":"vessels","collectionId":"col-1","schemaVersion":"1.0","version":"v1","etag":"e1",
+                "url":"/vessels","format":"json","itemCount":30,"sizeBytes":1024,
+                "lastModified":"2026-01-01T00:00:00Z"}]}
+                """.trimIndent(),
+            )
+
+        val expected =
+            ManifestDto(
+                manifestId = "m-1",
+                version = "v1",
+                generatedAt = "2026-01-01T00:00:00Z",
+                datasets =
+                    listOf(
+                        ManifestDatasetDto(
+                            dataset = "vessels",
+                            collectionId = "col-1",
+                            schemaVersion = "1.0",
+                            version = "v1",
+                            etag = "e1",
+                            url = "/vessels",
+                            format = "json",
+                            itemCount = 30,
+                            sizeBytes = 1024,
+                            lastModified = "2026-01-01T00:00:00Z",
+                        ),
+                    ),
+            )
+        assertEquals(expected, manifest)
+        assertEquals(emptyList<ManifestDatasetDto>(), ManifestDto(manifestId = "m-2", version = "v2").datasets)
+    }
+
+    @Test
+    fun `port coordinate and error envelope parse to the equivalent constructed DTOs`() {
+        val envelope =
+            json.decodeFromString<ErrorEnvelopeDto>(
+                """
+                {"error":{"code":"invalid_request","message":"bad input","traceId":"trace-1",
+                "dataset":"vessels","retryable":false,"details":[{"path":"limit","message":"must be positive"}]}}
+                """.trimIndent(),
+            )
+
+        val expected =
+            ErrorEnvelopeDto(
+                error =
+                    ErrorBodyDto(
+                        code = "invalid_request",
+                        message = "bad input",
+                        traceId = "trace-1",
+                        dataset = "vessels",
+                        retryable = false,
+                        details = listOf(ErrorDetailDto(path = "limit", message = "must be positive")),
+                    ),
+            )
+        assertEquals(expected, envelope)
+        assertNull(ErrorDetailDto().path)
+        assertEquals(
+            PortCoordinateDto(latitude = 50.66, longitude = -2.59),
+            json.decodeFromString<PortCoordinateDto>("""{"latitude":50.66,"longitude":-2.59}"""),
+        )
+    }
 }

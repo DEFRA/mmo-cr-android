@@ -7,7 +7,7 @@ import retrofit2.http.GET
  * Unauthenticated liveness check at the reference-data service **root** (not under `api/v1/...`) — see
  * ADR 0016 and the service's `docs/api-reference.md` "Authentication and permissions" section.
  */
-interface HealthApi {
+fun interface HealthApi {
     @GET("health")
     suspend fun health(): HealthResponse
 }

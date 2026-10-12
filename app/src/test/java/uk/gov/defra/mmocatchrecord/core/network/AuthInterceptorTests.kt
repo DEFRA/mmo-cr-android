@@ -1,11 +1,13 @@
 package uk.gov.defra.mmocatchrecord.core.network
 
+import kotlinx.coroutines.runBlocking
 import mockwebserver3.MockResponse
 import mockwebserver3.junit4.MockWebServerRule
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -53,6 +55,29 @@ class AuthInterceptorTests {
 
         assertNull(serverRule.server.takeRequest().headers["Authorization"])
     }
+
+    @Test
+    fun `omits Authorization header and still proceeds when the token provider throws`() {
+        serverRule.server.enqueue(MockResponse(code = 200))
+        val client =
+            OkHttpClient
+                .Builder()
+                .addInterceptor(AuthInterceptor { throw IllegalStateException("token store unavailable") })
+                .build()
+
+        client.newCall(Request.Builder().url(serverRule.server.url("/health")).build()).execute().use {
+            assertEquals(200, it.code)
+        }
+
+        assertNull(serverRule.server.takeRequest().headers["Authorization"])
+    }
+
+    @Test
+    fun `stub token provider supplies a non-blank token and the missing provider supplies none`() =
+        runBlocking {
+            assertTrue(StubTokenProvider().currentToken().isNotBlank())
+            assertNull(MissingTokenProvider().currentToken())
+        }
 
     private fun clientWithToken(token: String?): OkHttpClient =
         OkHttpClient

@@ -13,6 +13,7 @@ import org.junit.runner.RunWith
 import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
@@ -24,10 +25,18 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.ReferenceDataG
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.ReferenceDataMetadataEntity
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.ReferenceDataPortEntity
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.ReferenceDataVesselEntity
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.remote.GearCategoryDto
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.remote.GearMeasurementDto
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.remote.GearMobileDto
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.remote.GearsFetchPayload
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.remote.PortMobileDto
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.remote.PortStatisticalAreaLookup
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.remote.ReferenceDataFetchResult
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.remote.ReferenceDataRemoteDataSource
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.remote.SpeciesMobileDto
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.remote.VesselMobileDto
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.sync.DATASET_PORTS
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.sync.DATASET_SPECIES
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.sync.DATASET_VESSELS
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.sync.VesselLengthBands
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.sync.WorkManagerReferenceDataSyncScheduler
@@ -35,6 +44,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.sync.g
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.ReferenceDataRepository
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Species
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.StatisticalSubRectangle
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Vessel
 import java.io.IOException
@@ -287,6 +297,125 @@ class CachingReferenceDataRepositoryTests {
                 setOf("38E95", "38E98", "38F02", "38E96", "38E99", "38F03", "37E97", "37F01", "37F02")
             assertEquals(expectedCodes, rectangles.map { it.code }.toSet())
         }
+
+    @Test
+    fun `a cache hit with no stored metadata is treated as stale and triggers a background refresh`() =
+        runTest {
+            dao.replaceVessels(listOf(vesselEntity("v1", "ACHILLES")))
+
+            repository().getVessels()
+
+            verify(syncScheduler).scheduleStartupRefresh()
+        }
+
+    @Test
+    fun `an empty port cache online fetches inline, caches it, and serves later reads from the cache`() =
+        runTest {
+            whenever(connectivityChecker.isConnected()).thenReturn(true)
+            whenever(remoteDataSource.fetchPorts()).thenReturn(
+                modified(listOf(PortMobileDto(id = "p1", code = "GBHTG", name = "HASTINGS", displayName = "Hastings"))),
+            )
+            val expected = listOf(Port("p1", "Hastings", PortStatisticalAreaLookup.statisticalAreaId("GBHTG")))
+
+            val fetched = repository().getPorts()
+            val cached = repository().getPorts()
+
+            assertEquals(expected, fetched.getOrThrow())
+            assertEquals(expected, cached.getOrThrow())
+            assertEquals("col-1", dao.getMetadata(DATASET_PORTS)?.collectionId)
+            verify(remoteDataSource, times(1)).fetchPorts()
+        }
+
+    @Test
+    fun `an empty species cache online fetches inline and records the current language`() =
+        runTest {
+            languageFlow.value = "cy"
+            whenever(connectivityChecker.isConnected()).thenReturn(true)
+            whenever(remoteDataSource.fetchSpecies()).thenReturn(
+                modified(listOf(SpeciesMobileDto(id = "s1", faoCode = "COD", displayName = "Cod"))),
+            )
+            val expected = listOf(Species(id = "s1", name = "Cod", faoCode = "COD"))
+
+            val fetched = repository().getSpecies()
+            val cached = repository().getSpecies()
+
+            assertEquals(expected, fetched.getOrThrow())
+            assertEquals(expected, cached.getOrThrow())
+            assertEquals("cy", dao.getMetadata(DATASET_SPECIES)?.languageTag)
+        }
+
+    @Test
+    fun `an empty gear cache online fetches the band inline and caches its measurement fields`() =
+        runTest {
+            val band = VesselLengthBands.bandFor(8.0)
+            val representativeLength = VesselLengthBands.cacheableVariants.first { it.first == band }.second
+            val measurement =
+                GearMeasurementDto(id = "m1", code = "ME", label = "Mesh size", kind = "number", unit = "mm")
+            val gear =
+                GearMobileDto(
+                    id = "g1",
+                    code = "TBB",
+                    name = "Beam trawl",
+                    category = GearCategoryDto(id = "c1", code = "TRAWL_NETS", name = "Trawl nets"),
+                    requiredMeasurementIds = listOf("m1"),
+                )
+            whenever(connectivityChecker.isConnected()).thenReturn(true)
+            whenever(remoteDataSource.fetchGears(vesselLengthMetres = representativeLength)).thenReturn(
+                modified(GearsFetchPayload(items = listOf(gear), measurementsById = mapOf("m1" to measurement))),
+            )
+
+            val fetched = repository().getGearTypes(8.0).getOrThrow()
+            val cached = repository().getGearTypes(8.0).getOrThrow()
+
+            assertEquals(listOf("g1"), fetched.map { it.id })
+            assertEquals(1, fetched.single().measurementFields.size)
+            assertEquals(fetched, cached)
+            assertEquals("col-1", dao.getMetadata(gearsDatasetKey(band))?.collectionId)
+        }
+
+    @Test
+    fun `an inline fetch answered with an unexpected 304 falls back to the stub`() =
+        runTest {
+            whenever(connectivityChecker.isConnected()).thenReturn(true)
+            whenever(remoteDataSource.fetchVessels()).thenReturn(ReferenceDataFetchResult.NotModified)
+            whenever(stub.getVessels()).thenReturn(Result.success(listOf(Vessel("stub-v1", "STUB VESSEL"))))
+
+            val result = repository().getVessels()
+
+            assertEquals(listOf(Vessel("stub-v1", "STUB VESSEL")), result.getOrThrow())
+            assertEquals(0, dao.getVessels().size)
+        }
+
+    @Test
+    fun `statistical sub-rectangles are served from the stub`() =
+        runTest {
+            val rectangles = listOf(statisticalSubRectangle("rect-1", "AREA-HASTINGS"))
+            whenever(stub.getStatisticalSubRectangles()).thenReturn(Result.success(rectangles))
+
+            val result = repository().getStatisticalSubRectangles()
+
+            assertEquals(rectangles, result.getOrThrow())
+        }
+
+    @Test
+    fun `failing stub ports and rectangles resolve sub-rectangles for a port to an empty list`() =
+        runTest {
+            whenever(stub.getPorts()).thenReturn(Result.failure(IOException("boom")))
+            whenever(stub.getStatisticalSubRectangles()).thenReturn(Result.failure(IOException("boom")))
+
+            val result = repository().getStatisticalSubRectanglesForPort("any-port")
+
+            assertEquals(emptyList<StatisticalSubRectangle>(), result.getOrThrow())
+        }
+
+    private fun <T> modified(items: T) =
+        ReferenceDataFetchResult.Modified(
+            items = items,
+            collectionId = "col-1",
+            schemaVersion = "1.0",
+            datasetVersion = "v1",
+            responseETag = null,
+        )
 
     private fun repository(): CachingReferenceDataRepository =
         CachingReferenceDataRepository(

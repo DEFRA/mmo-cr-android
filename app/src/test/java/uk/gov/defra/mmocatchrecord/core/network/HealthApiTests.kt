@@ -34,6 +34,7 @@ class HealthApiTests {
 
             assertEquals("ok", response.status)
             assertEquals("mmo-cr-reference-data-service", response.service)
+            assertEquals(HealthResponse("ok", "mmo-cr-reference-data-service", "2026-01-01T00:00:00Z"), response)
         }
 
     @Test

@@ -29,6 +29,14 @@ private const val GEARS_BODY =
         """"name":"Beam trawl","category":{"id":"c1","code":"TRAWL_NETS","name":"Trawl nets"},""" +
         """"pairFishing":false,"requiredMeasurementIds":[],"variableMeasurementIds":["mid-1"]}]}"""
 
+private const val PORTS_BODY =
+    """{"dataset":"ports","collectionId":"col-2","schemaVersion":"1.0","version":"v1","view":"mobile",""" +
+        """"total":1,"items":[{"id":"p1","code":"GBHTG","name":"HASTINGS","displayName":"Hastings"}]}"""
+
+private const val SPECIES_BODY =
+    """{"dataset":"species","collectionId":"col-3","schemaVersion":"1.0","version":"v1","view":"mobile",""" +
+        """"total":1,"items":[{"id":"s1","faoCode":"COD","displayName":"Cod"}]}"""
+
 private const val MANIFEST_BODY =
     """{"manifestId":"m-1","version":"2026-01-01T00:00:00Z","datasets":[{"dataset":"vessels",""" +
         """"collectionId":"col-1","schemaVersion":"1.0","version":"v1",""" +
@@ -236,6 +244,41 @@ class ReferenceDataRemoteDataSourceTests {
 
         assertThrows(SocketTimeoutException::class.java) {
             runBlocking { remoteDataSource(readTimeoutMs = FAST_READ_TIMEOUT_MS).fetchVessels() }
+        }
+    }
+
+    @Test
+    fun `fetchPorts and fetchSpecies parse their envelopes`() =
+        runBlocking {
+            serverRule.server.enqueue(MockResponse(code = 200, body = PORTS_BODY))
+            serverRule.server.enqueue(MockResponse(code = 200, body = SPECIES_BODY))
+            val dataSource = remoteDataSource()
+
+            val ports = dataSource.fetchPorts() as ReferenceDataFetchResult.Modified
+            val species = dataSource.fetchSpecies() as ReferenceDataFetchResult.Modified
+
+            assertEquals("GBHTG", ports.items.single().code)
+            assertEquals("COD", species.items.single().faoCode)
+        }
+
+    @Test
+    fun `a failed manifest fetch throws a classified http exception`() {
+        enqueueError(503, "reference_data_unavailable", retryable = null)
+
+        val error =
+            assertThrows(ReferenceDataHttpException::class.java) {
+                runBlocking { remoteDataSource().fetchManifest() }
+            }
+
+        assertTrue(error.retryable)
+    }
+
+    @Test
+    fun `a bodyless manifest success is treated as malformed`() {
+        serverRule.server.enqueue(MockResponse.Builder().code(204).build())
+
+        assertThrows(ReferenceDataMalformedResponseException::class.java) {
+            runBlocking { remoteDataSource().fetchManifest() }
         }
     }
 

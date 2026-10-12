@@ -14,31 +14,31 @@ private const val MOBILE_VIEW = "mobile"
 internal interface ReferenceDataApi {
     @GET("manifest")
     suspend fun manifest(
-        @Header("If-None-Match") ifNoneMatch: String? = null,
+        @Header("If-None-Match") ifNoneMatch: String?,
     ): Response<ManifestDto>
 
     @GET("vessels")
     suspend fun vessels(
         @Query("view") view: String = MOBILE_VIEW,
-        @Header("If-None-Match") ifNoneMatch: String? = null,
+        @Header("If-None-Match") ifNoneMatch: String?,
     ): Response<ReferenceDataEnvelopeDto<VesselMobileDto>>
 
     @GET("ports")
     suspend fun ports(
         @Query("view") view: String = MOBILE_VIEW,
-        @Header("If-None-Match") ifNoneMatch: String? = null,
+        @Header("If-None-Match") ifNoneMatch: String?,
     ): Response<ReferenceDataEnvelopeDto<PortMobileDto>>
 
     @GET("species")
     suspend fun species(
         @Query("view") view: String = MOBILE_VIEW,
-        @Header("If-None-Match") ifNoneMatch: String? = null,
+        @Header("If-None-Match") ifNoneMatch: String?,
     ): Response<ReferenceDataEnvelopeDto<SpeciesMobileDto>>
 
     @GET("gears")
     suspend fun gears(
         @Query("view") view: String = MOBILE_VIEW,
-        @Query("vesselLengthMetres") vesselLengthMetres: Double? = null,
-        @Header("If-None-Match") ifNoneMatch: String? = null,
+        @Query("vesselLengthMetres") vesselLengthMetres: Double?,
+        @Header("If-None-Match") ifNoneMatch: String?,
     ): Response<GearsEnvelopeDto>
 }
