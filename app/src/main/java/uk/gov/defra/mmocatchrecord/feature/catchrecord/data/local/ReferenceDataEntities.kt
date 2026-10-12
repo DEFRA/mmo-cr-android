@@ -6,7 +6,7 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
-/** Cached mirror of a live reference-data `vessels` mobile-view item (ADR 0015). */
+/** Cached mirror of a live reference-data `vessels` mobile-view item (ADR 0016). */
 @Entity(tableName = "reference_data_vessel")
 data class ReferenceDataVesselEntity(
     @PrimaryKey val id: String,
@@ -84,7 +84,7 @@ data class ReferenceDataGearMeasurementEntity(
 
 /**
  * One row per cached dataset (`vessels`, `ports`, `species`, or `gears:<band>`), recording manifest/response
- * caching metadata (ADR 0015). [languageTag] is only meaningful for `species` — its cache-invalidation key.
+ * caching metadata (ADR 0016). [languageTag] is only meaningful for `species` — its cache-invalidation key.
  */
 @Entity(tableName = "reference_data_metadata")
 data class ReferenceDataMetadataEntity(

@@ -2,7 +2,7 @@
 
 ## Status
 
-Superseded by [ADR 0015](0015-reference-data-api-integration.md)
+Superseded by [ADR 0016](0016-reference-data-api-integration.md)
 
 ## Context
 

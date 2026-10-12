@@ -51,6 +51,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardErrorSummaryItem
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardLoadingState
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardStep
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardUnsavedChangesConfig
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.catchRecordReference
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.nextGearUsePendingSpecies
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.nextWizardStepForDraft
@@ -84,6 +85,26 @@ private fun rawValueKey(
     kind: SpeciesWeightFieldKind,
 ): String = "$speciesId::${kind.name}"
 
+/** Seeds/re-derives the weight-field text inputs from [gearUse] (BR-XX dirty-tracking baseline). */
+private fun rawValuesFor(gearUse: GearUse): Map<String, String> =
+    gearUse.speciesWeights
+        .flatMap { entry ->
+            listOfNotNull(
+                entry.weightAboveMinimumSizeKg?.let {
+                    rawValueKey(entry.speciesId, SpeciesWeightFieldKind.AboveMinimumSize) to
+                        GearMeasurementSupport.formatNumber(it)
+                },
+                entry.weightBelowMinimumSizeKg?.let {
+                    rawValueKey(entry.speciesId, SpeciesWeightFieldKind.BelowMinimumSize) to
+                        GearMeasurementSupport.formatNumber(it)
+                },
+                entry.weightLegallyDiscardedKg?.let {
+                    rawValueKey(entry.speciesId, SpeciesWeightFieldKind.LegallyDiscarded) to
+                        GearMeasurementSupport.formatNumber(it)
+                },
+            )
+        }.toMap()
+
 /**
  * "Which species did you catch with {gear}?" checklist + progressive-disclosure weight capture (Phase 5A,
  * screen 2) — mirrors [GearSummaryScreenContent]'s checklist shape (checking a row reveals fields; "Add
@@ -100,6 +121,7 @@ fun GearSpeciesChecklistScreen(
     editGearUseId: String? = null,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    var hasUnsavedChanges by rememberSaveable { mutableStateOf(false) }
     GearSpeciesChecklistScreen(
         state = state,
         editGearUseId = editGearUseId,
@@ -121,10 +143,12 @@ fun GearSpeciesChecklistScreen(
         onRetry = { viewModel.dispatch(CatchRecordFlowEvent.Retry) },
         onBack = onBack,
         modifier = modifier,
+        hasUnsavedChanges = hasUnsavedChanges,
+        onDirtyChanged = { hasUnsavedChanges = it },
     )
 }
 
-@Suppress("FunctionNaming")
+@Suppress("FunctionNaming", "LongParameterList")
 @Composable
 private fun GearSpeciesChecklistScreen(
     state: CatchRecordFlowViewState,
@@ -135,6 +159,8 @@ private fun GearSpeciesChecklistScreen(
     modifier: Modifier = Modifier,
     editGearUseId: String? = null,
     onRetry: () -> Unit = {},
+    hasUnsavedChanges: Boolean = false,
+    onDirtyChanged: (Boolean) -> Unit = {},
 ) {
     val draft = (state.status as? UiStatus.Content<CatchRecordDraft>)?.value
     val currentGearUse =
@@ -155,6 +181,7 @@ private fun GearSpeciesChecklistScreen(
         onBack = onBack,
         modifier = modifier,
         referenceNumber = state.catchRecordReference,
+        unsavedChanges = WizardUnsavedChangesConfig(hasUnsavedChanges = hasUnsavedChanges),
     ) {
         when (val status = state.status) {
             UiStatus.Idle, UiStatus.Loading -> WizardLoadingState()
@@ -180,13 +207,14 @@ private fun GearSpeciesChecklistScreen(
                         onRemoveSpecies = onRemoveSpecies,
                         onAddAnotherSpecies = onAddAnotherSpecies,
                         onSubmit = onSubmit,
+                        onDirtyChanged = onDirtyChanged,
                     )
                 }
         }
     }
 }
 
-@Suppress("FunctionNaming", "LongMethod", "CyclomaticComplexMethod")
+@Suppress("FunctionNaming", "LongMethod", "CyclomaticComplexMethod", "LongParameterList")
 @Composable
 fun GearSpeciesChecklistScreenContent(
     draft: CatchRecordDraft,
@@ -196,6 +224,7 @@ fun GearSpeciesChecklistScreenContent(
     onAddAnotherSpecies: () -> Unit,
     onSubmit: (CatchRecordDraft) -> Unit,
     modifier: Modifier = Modifier,
+    onDirtyChanged: (Boolean) -> Unit = {},
 ) {
     var checkedIds by
         rememberSaveable(gearUse.id) {
@@ -206,28 +235,7 @@ fun GearSpeciesChecklistScreenContent(
                     .toSet(),
             )
         }
-    var rawValues by
-        rememberSaveable(gearUse.id) {
-            mutableStateOf(
-                gearUse.speciesWeights
-                    .flatMap { entry ->
-                        listOfNotNull(
-                            entry.weightAboveMinimumSizeKg?.let {
-                                rawValueKey(entry.speciesId, SpeciesWeightFieldKind.AboveMinimumSize) to
-                                    GearMeasurementSupport.formatNumber(it)
-                            },
-                            entry.weightBelowMinimumSizeKg?.let {
-                                rawValueKey(entry.speciesId, SpeciesWeightFieldKind.BelowMinimumSize) to
-                                    GearMeasurementSupport.formatNumber(it)
-                            },
-                            entry.weightLegallyDiscardedKg?.let {
-                                rawValueKey(entry.speciesId, SpeciesWeightFieldKind.LegallyDiscarded) to
-                                    GearMeasurementSupport.formatNumber(it)
-                            },
-                        )
-                    }.toMap(),
-            )
-        }
+    var rawValues by rememberSaveable(gearUse.id) { mutableStateOf(rawValuesFor(gearUse)) }
     var disclosed by
         rememberSaveable(gearUse.id) {
             mutableStateOf(
@@ -265,6 +273,14 @@ fun GearSpeciesChecklistScreenContent(
             focusSummary = false
         }
     }
+
+    // BR-XX (ADR 0014, Phase D): weight fields only (D3 scope) — checklist selection is commit-on-tap.
+    val initialRawValues = remember(gearUse) { rawValuesFor(gearUse) }
+    val isDirty =
+        rawValues.keys.union(initialRawValues.keys).any { key ->
+            rawValues[key].orEmpty().trim() != initialRawValues[key].orEmpty()
+        }
+    LaunchedEffect(isDirty) { onDirtyChanged(isDirty) }
 
     val options =
         gearUse.speciesWeights.map { entry ->

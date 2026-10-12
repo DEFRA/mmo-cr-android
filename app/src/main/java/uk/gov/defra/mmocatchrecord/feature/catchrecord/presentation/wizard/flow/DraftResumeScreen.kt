@@ -9,6 +9,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -44,8 +45,18 @@ fun DraftResumeScreen(
     onNavigate: (WizardStep) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    draftId: String? = null,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    // FR2: a non-null draftId means we arrived directly from the Home records list (B5), bypassing
+    // CatchRecordEntryRoute's own EnterFlow — load that specific draft instead.
+    LaunchedEffect(draftId) {
+        if (draftId != null) {
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft(draftId))
+        }
+    }
+
     CatchRecordWizardScaffold(
         screenTestTag = DraftResumeScreenTestTags.SCREEN,
         title = stringResource(R.string.draft_resume_title),

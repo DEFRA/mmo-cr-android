@@ -37,7 +37,7 @@ object SafeErrorMapper {
         when (throwable) {
             // Data corruption / an unexpected persisted value — retrying the same operation will not help.
             is DraftMappingException -> CatchRecordErrorClassification.Terminal
-            // The reference-data API already tells us whether a failure is retryable (ADR 0015); honour it.
+            // The reference-data API already tells us whether a failure is retryable (ADR 0016); honour it.
             is ReferenceDataApiException ->
                 if (throwable.retryable) {
                     CatchRecordErrorClassification.Transient

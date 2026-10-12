@@ -10,7 +10,7 @@ import uk.gov.defra.mmocatchrecord.core.language.AppLanguageRepository
 
 /**
  * Sends the current app language preference (ADR 0012) as `Accept-Language`, degrading to no header
- * (never throws, never blocks indefinitely) if the DataStore-backed read fails — see ADR 0015.
+ * (never throws, never blocks indefinitely) if the DataStore-backed read fails — see ADR 0016.
  */
 class AcceptLanguageInterceptor(
     private val appLanguageRepository: AppLanguageRepository,

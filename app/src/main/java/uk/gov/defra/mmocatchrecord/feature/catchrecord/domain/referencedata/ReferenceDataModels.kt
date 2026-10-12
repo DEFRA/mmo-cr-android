@@ -6,7 +6,7 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata
 data class Vessel(
     val id: String,
     val name: String,
-    /** `null` until resolved from live reference data; selects the gears vessel-length band (ADR 0015). */
+    /** `null` until resolved from live reference data; selects the gears vessel-length band (ADR 0016). */
     val lengthOverallMetres: Double? = null,
 )
 

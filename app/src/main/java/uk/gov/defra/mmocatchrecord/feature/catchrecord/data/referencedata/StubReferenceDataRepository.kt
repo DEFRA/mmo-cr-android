@@ -12,7 +12,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Stat
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Vessel
 
 /**
- * Fallback reference-data source (ADR 0008; narrowed by ADR 0015, which composes this as the `stub`
+ * Fallback reference-data source (ADR 0008; narrowed by ADR 0016, which composes this as the `stub`
  * tier behind [CachingReferenceDataRepository] — see that ADR's "Fallback source" section for the
  * two jobs this class now does: the empty-cache offline tier, and the sole source for data the live
  * API doesn't provide). Includes the confirmed Stage-1 screenshot data points (vessels

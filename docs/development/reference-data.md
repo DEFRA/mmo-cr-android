@@ -1,7 +1,7 @@
 # Reference-data backend: choosing a flavor and running it locally
 
 This document is the practical companion to
-[`docs/adr/0015-reference-data-api-integration.md`](../adr/0015-reference-data-api-integration.md) (read
+[`docs/adr/0016-reference-data-api-integration.md`](../adr/0016-reference-data-api-integration.md) (read
 that first for the *why* — networking stack, caching strategy, auth stub, and the open questions table).
 This page is the *how*: which flavor to build, how to stand up a backend for it, and how to troubleshoot.
 
@@ -82,7 +82,7 @@ the derived API base, rather than one combined base URL.
 
 DEV's authentication is currently an **always-allow stub**: any non-empty `Authorization: Bearer <token>`
 header is accepted (confirmed with `Authorization: Bearer local-stub` → `200`); a request with no header
-gets `401`. This is not real authentication — see ADR 0015's "Token abstraction" section and its Q2 open
+gets `401`. This is not real authentication — see ADR 0016's "Token abstraction" section and its Q2 open
 question.
 
 ## Troubleshooting
@@ -91,6 +91,6 @@ question.
 | ------- | ------------ | --- |
 | `401 unauthorized` | Missing/empty `Authorization` header | Confirm the flavor's `TokenProvider` binding — `local`/`dev` should use `StubTokenProvider`, not `MissingTokenProvider` (that's `prod`-only) |
 | `503 reference_data_unavailable` (or `reference_store_unavailable`) | The backend isn't seeded yet | Run the bootstrap step above, then check `curl .../health/ready` reports `"ready": true` |
-| A cleartext/`CLEARTEXT communication not permitted` error | Wrong flavor selected, or pointed at the wrong host | Cleartext is only permitted for `10.0.2.2`/`localhost` in debug builds (ADR 0015) — a real hostname (e.g. DEV) always needs HTTPS; rebuild with the correct flavor |
+| A cleartext/`CLEARTEXT communication not permitted` error | Wrong flavor selected, or pointed at the wrong host | Cleartext is only permitted for `10.0.2.2`/`localhost` in debug builds (ADR 0016) — a real hostname (e.g. DEV) always needs HTTPS; rebuild with the correct flavor |
 | `dataset_not_found` from the local backend | Floci hasn't been seeded (fresh volume, or after `down -v`) | Re-run the bootstrap step above |
 | Backend containers can't reach each other | A service's `.env` points at `localhost`/`host.docker.internal` instead of the Docker service name | See `mmo-cr-backend-local`'s own troubleshooting section — cross-service calls must use Compose service names (e.g. `http://mmo-cr-authentication-service:3001`) |

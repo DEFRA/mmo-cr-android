@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 7,
-    "identityHash": "d4bab54834b4ef3a3d181d22df883645",
+    "identityHash": "b31578af7fe8da001095d8c48e4f10af",
     "entities": [
       {
         "tableName": "catch_record_draft",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `vesselId` TEXT NOT NULL, `isTripToday` INTEGER, `departureDay` INTEGER, `departureMonth` INTEGER, `departureYear` INTEGER, `returnDay` INTEGER, `returnMonth` INTEGER, `returnYear` INTEGER, `departurePortId` TEXT, `departurePortSelectionMode` TEXT, `returnPortId` TEXT, `returnPortSelectionMode` TEXT, `status` TEXT NOT NULL, `modifiedAtEpochMillis` INTEGER NOT NULL, `notLandedStraightAway` INTEGER, `catchRecordReference` TEXT, `lateSubmissionWarningAcknowledged` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `vesselId` TEXT NOT NULL, `isTripToday` INTEGER, `departureDay` INTEGER, `departureMonth` INTEGER, `departureYear` INTEGER, `returnDay` INTEGER, `returnMonth` INTEGER, `returnYear` INTEGER, `departurePortId` TEXT, `departurePortSelectionMode` TEXT, `returnPortId` TEXT, `returnPortSelectionMode` TEXT, `status` TEXT NOT NULL, `modifiedAtEpochMillis` INTEGER NOT NULL, `notLandedStraightAway` INTEGER, `catchRecordReference` TEXT, `lateSubmissionWarningAcknowledged` INTEGER NOT NULL, `createdAtEpochMillis` INTEGER, `submittedAtEpochMillis` INTEGER, `syncedAtEpochMillis` INTEGER, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -102,6 +102,21 @@
             "columnName": "lateSubmissionWarningAcknowledged",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "createdAtEpochMillis",
+            "columnName": "createdAtEpochMillis",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "submittedAtEpochMillis",
+            "columnName": "submittedAtEpochMillis",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "syncedAtEpochMillis",
+            "columnName": "syncedAtEpochMillis",
+            "affinity": "INTEGER"
           }
         ],
         "primaryKey": {
@@ -467,352 +482,11 @@
             ]
           }
         ]
-      },
-      {
-        "tableName": "reference_data_vessel",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `displayName` TEXT NOT NULL, `pln` TEXT, `cfr` TEXT, `lengthOverallMetres` REAL, PRIMARY KEY(`id`))",
-        "fields": [
-          {
-            "fieldPath": "id",
-            "columnName": "id",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "name",
-            "columnName": "name",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "displayName",
-            "columnName": "displayName",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "pln",
-            "columnName": "pln",
-            "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "cfr",
-            "columnName": "cfr",
-            "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "lengthOverallMetres",
-            "columnName": "lengthOverallMetres",
-            "affinity": "REAL"
-          }
-        ],
-        "primaryKey": {
-          "autoGenerate": false,
-          "columnNames": [
-            "id"
-          ]
-        }
-      },
-      {
-        "tableName": "reference_data_port",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `code` TEXT NOT NULL, `name` TEXT NOT NULL, `displayName` TEXT NOT NULL, `latitude` REAL, `longitude` REAL, `statisticalAreaId` TEXT NOT NULL, PRIMARY KEY(`id`))",
-        "fields": [
-          {
-            "fieldPath": "id",
-            "columnName": "id",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "code",
-            "columnName": "code",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "name",
-            "columnName": "name",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "displayName",
-            "columnName": "displayName",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "latitude",
-            "columnName": "latitude",
-            "affinity": "REAL"
-          },
-          {
-            "fieldPath": "longitude",
-            "columnName": "longitude",
-            "affinity": "REAL"
-          },
-          {
-            "fieldPath": "statisticalAreaId",
-            "columnName": "statisticalAreaId",
-            "affinity": "TEXT",
-            "notNull": true
-          }
-        ],
-        "primaryKey": {
-          "autoGenerate": false,
-          "columnNames": [
-            "id"
-          ]
-        }
-      },
-      {
-        "tableName": "reference_data_species",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `faoCode` TEXT NOT NULL, `scientificName` TEXT, `displayName` TEXT NOT NULL, PRIMARY KEY(`id`))",
-        "fields": [
-          {
-            "fieldPath": "id",
-            "columnName": "id",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "faoCode",
-            "columnName": "faoCode",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "scientificName",
-            "columnName": "scientificName",
-            "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "displayName",
-            "columnName": "displayName",
-            "affinity": "TEXT",
-            "notNull": true
-          }
-        ],
-        "primaryKey": {
-          "autoGenerate": false,
-          "columnNames": [
-            "id"
-          ]
-        }
-      },
-      {
-        "tableName": "reference_data_gear",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `vesselLengthBand` TEXT NOT NULL, `code` TEXT NOT NULL, `name` TEXT NOT NULL, `categoryId` TEXT NOT NULL, `categoryCode` TEXT NOT NULL, `categoryName` TEXT NOT NULL, `pairFishing` INTEGER NOT NULL, `orderIndex` INTEGER NOT NULL, PRIMARY KEY(`id`, `vesselLengthBand`))",
-        "fields": [
-          {
-            "fieldPath": "id",
-            "columnName": "id",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "vesselLengthBand",
-            "columnName": "vesselLengthBand",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "code",
-            "columnName": "code",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "name",
-            "columnName": "name",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "categoryId",
-            "columnName": "categoryId",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "categoryCode",
-            "columnName": "categoryCode",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "categoryName",
-            "columnName": "categoryName",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "pairFishing",
-            "columnName": "pairFishing",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "orderIndex",
-            "columnName": "orderIndex",
-            "affinity": "INTEGER",
-            "notNull": true
-          }
-        ],
-        "primaryKey": {
-          "autoGenerate": false,
-          "columnNames": [
-            "id",
-            "vesselLengthBand"
-          ]
-        }
-      },
-      {
-        "tableName": "reference_data_gear_measurement",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`rowId` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `gearId` TEXT NOT NULL, `vesselLengthBand` TEXT NOT NULL, `key` TEXT NOT NULL, `label` TEXT NOT NULL, `type` TEXT NOT NULL, `unit` TEXT, `orderIndex` INTEGER NOT NULL, FOREIGN KEY(`gearId`, `vesselLengthBand`) REFERENCES `reference_data_gear`(`id`, `vesselLengthBand`) ON UPDATE NO ACTION ON DELETE CASCADE )",
-        "fields": [
-          {
-            "fieldPath": "rowId",
-            "columnName": "rowId",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "gearId",
-            "columnName": "gearId",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "vesselLengthBand",
-            "columnName": "vesselLengthBand",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "key",
-            "columnName": "key",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "label",
-            "columnName": "label",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "type",
-            "columnName": "type",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "unit",
-            "columnName": "unit",
-            "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "orderIndex",
-            "columnName": "orderIndex",
-            "affinity": "INTEGER",
-            "notNull": true
-          }
-        ],
-        "primaryKey": {
-          "autoGenerate": true,
-          "columnNames": [
-            "rowId"
-          ]
-        },
-        "indices": [
-          {
-            "name": "index_reference_data_gear_measurement_gearId_vesselLengthBand",
-            "unique": false,
-            "columnNames": [
-              "gearId",
-              "vesselLengthBand"
-            ],
-            "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_reference_data_gear_measurement_gearId_vesselLengthBand` ON `${TABLE_NAME}` (`gearId`, `vesselLengthBand`)"
-          }
-        ],
-        "foreignKeys": [
-          {
-            "table": "reference_data_gear",
-            "onDelete": "CASCADE",
-            "onUpdate": "NO ACTION",
-            "columns": [
-              "gearId",
-              "vesselLengthBand"
-            ],
-            "referencedColumns": [
-              "id",
-              "vesselLengthBand"
-            ]
-          }
-        ]
-      },
-      {
-        "tableName": "reference_data_metadata",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`datasetKey` TEXT NOT NULL, `collectionId` TEXT NOT NULL, `schemaVersion` TEXT NOT NULL, `manifestVersion` TEXT, `manifestEtag` TEXT, `responseETag` TEXT, `fetchedAtEpochMillis` INTEGER NOT NULL, `languageTag` TEXT, PRIMARY KEY(`datasetKey`))",
-        "fields": [
-          {
-            "fieldPath": "datasetKey",
-            "columnName": "datasetKey",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "collectionId",
-            "columnName": "collectionId",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "schemaVersion",
-            "columnName": "schemaVersion",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "manifestVersion",
-            "columnName": "manifestVersion",
-            "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "manifestEtag",
-            "columnName": "manifestEtag",
-            "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "responseETag",
-            "columnName": "responseETag",
-            "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "fetchedAtEpochMillis",
-            "columnName": "fetchedAtEpochMillis",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "languageTag",
-            "columnName": "languageTag",
-            "affinity": "TEXT"
-          }
-        ],
-        "primaryKey": {
-          "autoGenerate": false,
-          "columnNames": [
-            "datasetKey"
-          ]
-        }
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd4bab54834b4ef3a3d181d22df883645')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'b31578af7fe8da001095d8c48e4f10af')"
     ]
   }
 }

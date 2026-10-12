@@ -62,7 +62,7 @@ private fun gearsBody(): String =
 
 private fun errorBody(code: String): String = """{"error":{"code":"$code","message":"failed"}}"""
 
-/** [ReferenceDataRefresher]'s manifest/etag-driven per-dataset refresh (ADR 0015). */
+/** [ReferenceDataRefresher]'s manifest/etag-driven per-dataset refresh (ADR 0016). */
 @RunWith(RobolectricTestRunner::class)
 class ReferenceDataRefresherTests {
     @JvmField

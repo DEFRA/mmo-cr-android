@@ -17,7 +17,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.remote
 import java.io.IOException
 
 /**
- * Unit tests for [ReferenceDataSyncWorker]'s success/retry/failure mapping (ADR 0015), following the same
+ * Unit tests for [ReferenceDataSyncWorker]'s success/retry/failure mapping (ADR 0016), following the same
  * [TestListenableWorkerBuilder] + custom [WorkerFactory] pattern as `CatchRecordSyncWorkerTests` — a mocked
  * [ReferenceDataRefresher] stands in for Hilt's real `@AssistedInject` factory.
  */

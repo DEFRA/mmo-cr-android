@@ -16,7 +16,7 @@ internal fun VesselMobileDto.toDomain(): Vessel =
     Vessel(id = id, name = displayName, lengthOverallMetres = lengthOverallMetres)
 
 /**
- * Only the live port codes for the confirmed stub departure ports are known (ADR 0015, Q3) —
+ * Only the live port codes for the confirmed stub departure ports are known (ADR 0016, Q3) —
  * every other port code sentinel-falls-back to [UNASSIGNED] pending full backend coverage.
  */
 internal object PortStatisticalAreaLookup {
@@ -24,7 +24,7 @@ internal object PortStatisticalAreaLookup {
     private const val AREA_HASTINGS = "AREA-HASTINGS"
     private const val AREA_DOVER = "AREA-DOVER"
 
-    /** Live DEV port `code`s for the two confirmed stub departure ports (Hastings/Dover) — ADR 0015. */
+    /** Live DEV port `code`s for the two confirmed stub departure ports (Hastings/Dover) — ADR 0016. */
     private val byPortCode: Map<String, String> =
         mapOf(
             "GBHTG" to AREA_HASTINGS,
@@ -41,12 +41,12 @@ internal fun PortMobileDto.toDomain(): Port =
         statisticalAreaId = PortStatisticalAreaLookup.statisticalAreaId(code),
     )
 
-/** Quota/precision are not yet part of the API contract (ADR 0015 interim default, Q6) — domain defaults. */
+/** Quota/precision are not yet part of the API contract (ADR 0016 interim default, Q6) — domain defaults. */
 internal fun SpeciesMobileDto.toDomain(): Species = Species(id = id, name = displayName, faoCode = faoCode)
 
 /**
  * Translates a live API gear-measurement `code` to the persisted [GearMeasurementField.key] space — full
- * table and rationale in ADR 0015. `ME` reuses [GearMeasurementFieldKeys.MESH_SIZE_MM]; others are new keys.
+ * table and rationale in ADR 0016. `ME` reuses [GearMeasurementFieldKeys.MESH_SIZE_MM]; others are new keys.
  */
 internal fun gearMeasurementKeyFor(code: String): String =
     when (code) {
@@ -55,7 +55,7 @@ internal fun gearMeasurementKeyFor(code: String): String =
     }
 
 /** `count` → [GearMeasurementFieldType.Integer]; `m`/`mm` → [GearMeasurementFieldType.Decimal]; any other
- *  or missing unit also defaults to [GearMeasurementFieldType.Decimal] (ADR 0015).
+ *  or missing unit also defaults to [GearMeasurementFieldType.Decimal] (ADR 0016).
  */
 internal fun gearMeasurementTypeFor(unit: String?): GearMeasurementFieldType =
     if (unit == UNIT_COUNT) GearMeasurementFieldType.Integer else GearMeasurementFieldType.Decimal

@@ -19,6 +19,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -53,6 +55,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.applySubmissionResultNavOptions
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.editRouteFor
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.routeFor
+import uk.gov.defra.mmocatchrecord.feature.home.domain.CatchRecordSummary
 
 /**
  * JVM/Robolectric port of the androidTest `SubmissionFlowNavigationTest` — see that file's doc comments for
@@ -81,7 +84,7 @@ class CheckYourAnswersNavigationTests {
 
         override suspend fun getDraftById(draftId: String): Result<CatchRecordDraft?> = Result.success(drafts[draftId])
 
-        override suspend fun startDraft(vesselId: String): Result<CatchRecordDraft> =
+        override suspend fun startDraft(candidate: CatchRecordDraft): Result<CatchRecordDraft> =
             Result.failure(UnsupportedOperationException("Not exercised by this test"))
 
         override suspend fun saveDraft(draft: CatchRecordDraft): Result<CatchRecordDraft> {
@@ -96,6 +99,8 @@ class CheckYourAnswersNavigationTests {
 
         override suspend fun markReadyToSubmit(draftId: String): Result<CatchRecordDraft> =
             Result.failure(UnsupportedOperationException("Not exercised by this test"))
+
+        override fun observeRecordSummaries(): Flow<List<CatchRecordSummary>> = flowOf(emptyList())
 
         fun statusOf(draftId: String): DraftStatus? = drafts[draftId]?.status
     }

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Debug-only override of `main`'s network security config (ADR 0015): cleartext remains disallowed
+  Debug-only override of `main`'s network security config (ADR 0016): cleartext remains disallowed
   everywhere except the emulator's host-loopback alias, needed only for the `local` flavor's Docker stack.
 -->
 <network-security-config>

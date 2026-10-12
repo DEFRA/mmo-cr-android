@@ -13,10 +13,7 @@ import javax.inject.Inject
 
 /**
  * WorkManager-backed [CatchRecordSyncScheduler] — see [CatchRecordSyncWorker] and ADR 0009.
- *
- * Uses [ExistingWorkPolicy.REPLACE] keyed by [draftId] so re-submitting/re-saving the same pending draft
- * (e.g. the user re-opens the app and the flow re-evaluates its state) only ever has one queued sync
- * request in flight for it, rather than piling up duplicates.
+ * [ExistingWorkPolicy.KEEP] avoids racing a duplicate submission against an already in-flight request.
  */
 class WorkManagerCatchRecordSyncScheduler
     @Inject
@@ -36,7 +33,7 @@ class WorkManagerCatchRecordSyncScheduler
                     .build()
             WorkManager
                 .getInstance(context)
-                .enqueueUniqueWork(uniqueWorkName(draftId), ExistingWorkPolicy.REPLACE, request)
+                .enqueueUniqueWork(uniqueWorkName(draftId), ExistingWorkPolicy.KEEP, request)
         }
 
         companion object {

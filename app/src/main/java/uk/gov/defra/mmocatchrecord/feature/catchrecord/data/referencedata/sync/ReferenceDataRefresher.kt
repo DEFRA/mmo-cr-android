@@ -40,7 +40,7 @@ internal data class ReferenceDataRefreshResult(
 }
 
 /**
- * Manifest/ETag-driven refresh of the cached reference-data tables (ADR 0015): compares each dataset's
+ * Manifest/ETag-driven refresh of the cached reference-data tables (ADR 0016): compares each dataset's
  * manifest `version`/`etag` against the stored metadata, fetches only what changed (or, for species, when
  * the cached [AppLanguageRepository] language differs), and persists each dataset's own response ETag for
  * the next run's `If-None-Match`. Every dataset is refreshed independently so one failure never discards

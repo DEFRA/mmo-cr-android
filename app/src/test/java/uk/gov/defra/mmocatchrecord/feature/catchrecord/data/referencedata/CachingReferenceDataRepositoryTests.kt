@@ -42,7 +42,7 @@ import java.util.concurrent.Executor
 
 private const val FIXED_NOW_MILLIS = 10_000_000L
 
-/** [CachingReferenceDataRepository]'s cache/stub precedence and vessel-length band selection (ADR 0015). */
+/** [CachingReferenceDataRepository]'s cache/stub precedence and vessel-length band selection (ADR 0016). */
 @RunWith(RobolectricTestRunner::class)
 class CachingReferenceDataRepositoryTests {
     private lateinit var database: CatchRecordDatabase

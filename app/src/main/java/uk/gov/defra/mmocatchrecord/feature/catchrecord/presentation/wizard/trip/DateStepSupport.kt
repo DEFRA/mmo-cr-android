@@ -41,6 +41,7 @@ fun WizardDateStepContent(
     modifier: Modifier = Modifier,
     departureDate: DmyDate? = null,
     isReturnDate: Boolean = false,
+    onDirtyChanged: (Boolean) -> Unit = {},
 ) {
     // Seeded from the flow ViewModel's current draft value (see DepartureDateScreen/ReturnDateScreen),
     // which is itself rehydrated from the encrypted Room draft on flow entry — so re-entering this step
@@ -56,6 +57,11 @@ fun WizardDateStepContent(
     val dayFocusRequester = remember { FocusRequester() }
     val monthFocusRequester = remember { FocusRequester() }
     val yearFocusRequester = remember { FocusRequester() }
+
+    // BR-XX (ADR 0014, Phase D): compares live text against the *current* initialDate, so a save
+    // (which recomposes with the newly saved value) clears dirty state with no manual reset.
+    val isDirty = isDateStepDirty(day, month, year, initialDate)
+    LaunchedEffect(isDirty) { onDirtyChanged(isDirty) }
 
     LaunchedEffect(focusSummary) {
         if (focusSummary) {
@@ -129,6 +135,17 @@ fun WizardDateStepContent(
 
 /** Zero-pads a day/month value to two digits (e.g. `3` -> `"03"`) to match the GDS date input convention. */
 private fun zeroPad(value: Int): String = value.toString().padStart(2, '0')
+
+/** BR-XX (ADR 0014, Phase D): true when any live field differs (trimmed) from [initialDate]'s value. */
+private fun isDateStepDirty(
+    day: String,
+    month: String,
+    year: String,
+    initialDate: DmyDate?,
+): Boolean =
+    day.trim() != initialDate?.day?.let { zeroPad(it) }.orEmpty() ||
+        month.trim() != initialDate?.month?.let { zeroPad(it) }.orEmpty() ||
+        year.trim() != initialDate?.year?.toString().orEmpty()
 
 @Suppress("FunctionNaming")
 @Composable

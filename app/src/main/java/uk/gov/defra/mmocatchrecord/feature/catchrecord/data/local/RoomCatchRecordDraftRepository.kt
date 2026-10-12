@@ -1,8 +1,11 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local
 
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
+import uk.gov.defra.mmocatchrecord.feature.home.domain.CatchRecordSummary
 import javax.inject.Inject
 
 /**
@@ -15,7 +18,6 @@ class RoomCatchRecordDraftRepository
     @Inject
     constructor(
         private val dao: CatchRecordDraftDao,
-        private val idFactory: () -> String,
         private val clock: () -> Long,
     ) : CatchRecordDraftRepository {
         override suspend fun getActiveDraft(vesselId: String): Result<CatchRecordDraft?> =
@@ -27,39 +29,34 @@ class RoomCatchRecordDraftRepository
         override suspend fun getDraftById(draftId: String): Result<CatchRecordDraft?> =
             runCatching { dao.getDraftWithChildren(draftId)?.let(DraftMappers::toDomain) }
 
-        override suspend fun startDraft(vesselId: String): Result<CatchRecordDraft> =
+        override suspend fun startDraft(candidate: CatchRecordDraft): Result<CatchRecordDraft> =
             runCatching {
                 val creationTime = clock()
-                val candidate =
-                    DraftEntity(
-                        id = idFactory(),
-                        vesselId = vesselId,
-                        isTripToday = null,
-                        departureDay = null,
-                        departureMonth = null,
-                        departureYear = null,
-                        returnDay = null,
-                        returnMonth = null,
-                        returnYear = null,
-                        departurePortId = null,
-                        departurePortSelectionMode = null,
-                        returnPortId = null,
-                        returnPortSelectionMode = null,
-                        status = DraftStatus.Draft.name,
+                val stamped =
+                    candidate.copy(
+                        createdAtEpochMillis = candidate.createdAtEpochMillis ?: creationTime,
                         modifiedAtEpochMillis = creationTime,
-                        catchRecordReference = CatchRecordReferenceGenerator.generate(creationTime),
                     )
                 // Race-safe find-or-create (see ADR 0010): returns the vessel's existing active draft
                 // unchanged if one already exists (including one created concurrently by another caller),
                 // never a duplicate.
-                val winningEntity = dao.findOrCreateActiveDraft(vesselId, candidate)
+                val winningEntity =
+                    dao.findOrCreateActiveDraft(stamped.vesselId, DraftMappers.toEntities(stamped).draft)
                 dao.getDraftWithChildren(winningEntity.id)?.let(DraftMappers::toDomain)
                     ?: error("Draft '${winningEntity.id}' vanished immediately after find-or-create")
             }
 
         override suspend fun saveDraft(draft: CatchRecordDraft): Result<CatchRecordDraft> =
             runCatching {
-                val updated = draft.copy(modifiedAtEpochMillis = clock())
+                val now = clock()
+                val isSynced = draft.status == DraftStatus.Submitted
+                val isSubmissionAccepted = isSynced || draft.status == DraftStatus.PendingSync
+                val updated =
+                    draft.copy(
+                        modifiedAtEpochMillis = now,
+                        submittedAtEpochMillis = draft.submittedAtEpochMillis ?: now.takeIf { isSubmissionAccepted },
+                        syncedAtEpochMillis = draft.syncedAtEpochMillis ?: now.takeIf { isSynced },
+                    )
                 persist(updated)
                 updated
             }
@@ -87,4 +84,7 @@ class RoomCatchRecordDraftRepository
                 notLandedSpecies = entities.notLandedSpecies,
             )
         }
+
+        override fun observeRecordSummaries(): Flow<List<CatchRecordSummary>> =
+            dao.observeRecordSummaries().map { rows -> rows.mapNotNull(DraftSummaryMappers::toDomain) }
     }

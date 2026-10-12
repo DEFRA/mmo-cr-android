@@ -12,14 +12,14 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Species
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Vessel
 
-/** Entity → domain mapping for the cached reference-data tables (ADR 0015); the cache-hit read path. */
+/** Entity → domain mapping for the cached reference-data tables (ADR 0016); the cache-hit read path. */
 internal fun ReferenceDataVesselEntity.toDomain(): Vessel =
     Vessel(id = id, name = displayName, lengthOverallMetres = lengthOverallMetres)
 
 internal fun ReferenceDataPortEntity.toDomain(): Port =
     Port(id = id, name = displayName, statisticalAreaId = statisticalAreaId)
 
-/** Quota/precision stay the existing domain defaults — cache storage mirrors the API's own scope (ADR 0015). */
+/** Quota/precision stay the existing domain defaults — cache storage mirrors the API's own scope (ADR 0016). */
 internal fun ReferenceDataSpeciesEntity.toDomain(): Species = Species(id = id, name = displayName, faoCode = faoCode)
 
 internal fun ReferenceDataGearMeasurementEntity.toDomain(): GearMeasurementField =

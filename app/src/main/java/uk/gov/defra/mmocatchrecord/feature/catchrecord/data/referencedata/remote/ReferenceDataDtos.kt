@@ -3,7 +3,7 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.remot
 import kotlinx.serialization.Serializable
 
 /**
- * Common envelope fields every reference-data response shares (ADR 0015), implemented by both
+ * Common envelope fields every reference-data response shares (ADR 0016), implemented by both
  * [ReferenceDataEnvelopeDto] and [GearsEnvelopeDto] so one response handler covers both.
  */
 internal interface ReferenceDataEnvelopeMetadata {
@@ -88,7 +88,7 @@ internal data class GearMeasurementDto(
     val maximumValue: Double? = null,
 )
 
-/** Only present (per-request) when the `vesselLengthMetres` query parameter was supplied (ADR 0015). */
+/** Only present (per-request) when the `vesselLengthMetres` query parameter was supplied (ADR 0016). */
 @Serializable
 internal data class GearsContextDto(
     val vesselLengthBand: String? = null,
@@ -141,7 +141,7 @@ internal data class ErrorDetailDto(
     val message: String? = null,
 )
 
-/** The `error` object inside [ErrorEnvelopeDto] — see ADR 0015 and the service's error-envelope docs. */
+/** The `error` object inside [ErrorEnvelopeDto] — see ADR 0016 and the service's error-envelope docs. */
 @Serializable
 internal data class ErrorBodyDto(
     val code: String,

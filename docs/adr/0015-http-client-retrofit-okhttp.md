@@ -1,4 +1,4 @@
-# 0014 - HTTP client: Retrofit + OkHttp
+# 0015 - HTTP client: Retrofit + OkHttp
 
 ## Status
 
@@ -7,7 +7,7 @@ Accepted
 ## Context
 
 ADR 0008's bundled reference-data stub is being superseded by a real network-backed
-`ReferenceDataRepository` implementation (see ADR 0015). This requires a first HTTP client in the app.
+`ReferenceDataRepository` implementation (see ADR 0016). This requires a first HTTP client in the app.
 DEFRA's standards precedence (`copilot-instructions.md` §5) names no HTTP library, so this decision is
 made at the Google/Android-community tier, consistent with the precedence order.
 
@@ -53,7 +53,7 @@ since it changes the pinned OkHttp version recorded here.
 
 - `okhttp-bom`, `okhttp`, `logging-interceptor`, `retrofit`, `converter-kotlinx-serialization` and
   `mockwebserver3-junit4` are new, additive dependencies pinned in the version catalog.
-- `HttpLoggingInterceptor` is wired debug-only (see ADR 0015) with the `Authorization` header redacted,
+- `HttpLoggingInterceptor` is wired debug-only (see ADR 0016) with the `Authorization` header redacted,
   consistent with ADR 0011's "never log secrets" policy.
-- No certificate pinning is added at this stage (see ADR 0015's rationale); this ADR covers only the
+- No certificate pinning is added at this stage (see ADR 0016's rationale); this ADR covers only the
   client library choice.

@@ -45,6 +45,13 @@ data class DraftEntity(
      * `lateSubmissionWarningAcknowledged`.
      */
     val lateSubmissionWarningAcknowledged: Boolean = false,
+    /**
+     * FR10 audit columns. Deliberately `Long?` with no `@ColumnInfo(defaultValue)` — see
+     * ADR 0014: a `DEFAULT 0` would silently read back as 1 Jan 1970 instead of visibly absent.
+     */
+    val createdAtEpochMillis: Long? = null,
+    val submittedAtEpochMillis: Long? = null,
+    val syncedAtEpochMillis: Long? = null,
 )
 
 /** One gear deployment within a draft trip. Cascades from [DraftEntity] on delete (FR10 invalidation). */

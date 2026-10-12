@@ -4,6 +4,9 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -15,6 +18,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardErrorState
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardLoadingState
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardStep
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardUnsavedChangesConfig
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.catchRecordReference
 
 object DepartureDateScreenTestTags {
@@ -36,12 +40,14 @@ fun DepartureDateScreen(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    var hasUnsavedChanges by rememberSaveable { mutableStateOf(false) }
     CatchRecordWizardScaffold(
         screenTestTag = DepartureDateScreenTestTags.SCREEN,
         title = stringResource(R.string.departure_date_title),
         onBack = onBack,
         modifier = modifier,
         referenceNumber = state.catchRecordReference,
+        unsavedChanges = WizardUnsavedChangesConfig(hasUnsavedChanges = hasUnsavedChanges),
     ) {
         when (val status = state.status) {
             UiStatus.Idle, UiStatus.Loading -> WizardLoadingState()
@@ -72,6 +78,7 @@ fun DepartureDateScreen(
                         )
                         onNavigate(WizardStep.ReturnDate)
                     },
+                    onDirtyChanged = { hasUnsavedChanges = it },
                 )
         }
     }

@@ -8,7 +8,7 @@ import org.junit.Test
 
 private val json = Json { ignoreUnknownKeys = true }
 
-/** DTO parsing from realistic fixtures shaped exactly like the live-verified DEV contract (ADR 0015). */
+/** DTO parsing from realistic fixtures shaped exactly like the live-verified DEV contract (ADR 0016). */
 class ReferenceDataDtoParsingTests {
     @Test
     fun `vessel envelope parses and ignores unknown fields`() {

@@ -124,7 +124,7 @@ sealed interface WizardStep {
 
 fun routeFor(step: WizardStep): Any =
     when (step) {
-        WizardStep.DraftResume -> DraftResumeRoute
+        WizardStep.DraftResume -> DraftResumeRoute()
         WizardStep.VesselSelection -> VesselSelectionRoute
         WizardStep.TripToday -> TripTodayRoute
         WizardStep.DepartureDate -> DepartureDateRoute

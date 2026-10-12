@@ -25,12 +25,12 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Stat
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Vessel
 import javax.inject.Inject
 
-/** A cache older than this (and online) triggers a background refresh rather than blocking the read (ADR 0015). */
+/** A cache older than this (and online) triggers a background refresh rather than blocking the read (ADR 0016). */
 internal const val CACHE_FRESHNESS_TTL_MILLIS = 60L * 60L * 1000L
 private const val INLINE_FETCH_TIMEOUT_MILLIS = 5_000L
 private const val UNEXPECTED_NOT_MODIFIED_MESSAGE = "Unexpected 304 for an uncached dataset fetched with no ETag"
 
-/** Cache-first [ReferenceDataRepository] (ADR 0015): a hit returns immediately (refreshing in the
+/** Cache-first [ReferenceDataRepository] (ADR 0016): a hit returns immediately (refreshing in the
  *  background if stale); an empty cache fetches once inline when online, else falls back to [stub]. */
 @Suppress("TooManyFunctions", "LongParameterList") // One method per dataset + the shared `served` helper.
 internal class CachingReferenceDataRepository
@@ -111,7 +111,7 @@ internal class CachingReferenceDataRepository
         }
 
         /** [stub] is keyed by stub vessel ids only, so a live vessel always (correctly) yields no favourites
-         *  yet — no local source exists (ADR 0015 follow-up: derive from draft/submission history). */
+         *  yet — no local source exists (ADR 0016 follow-up: derive from draft/submission history). */
         override suspend fun getPreviouslyUsedPorts(vesselId: String): Result<List<Port>> =
             stub.getPreviouslyUsedPorts(vesselId)
 

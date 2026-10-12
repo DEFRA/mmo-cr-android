@@ -4,7 +4,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
- * Real Room [Migration]s for every [CatchRecordDatabase] schema version bump, v1 through v7 — see ADR 0010.
+ * Real Room [Migration]s for every [CatchRecordDatabase] schema version bump, v1 through v8 — see ADR 0010.
  * Each migration's SQL is derived directly from the committed `app/schemas` JSON history (the authoritative
  * record of each version's actual column/table shape), never destructively dropping/recreating the whole
  * database. Registered via `.addMigrations(...)` in `di/DatabaseModule.kt`.
@@ -148,12 +148,26 @@ object CatchRecordMigrations {
             }
         }
 
-    /**
-     * v6 -> v7 (ADR 0015): six new, purely additive reference-data cache tables — no existing draft table
-     * is altered, so an in-progress draft is unaffected. SQL copied verbatim from the exported v7 schema.
-     */
+    /** v6 -> v7 (CRAR-152 Phase A, FR10): [DraftEntity] gained three nullable audit columns — see ADR 0014. */
     val MIGRATION_6_7 =
         object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE catch_record_draft ADD COLUMN createdAtEpochMillis INTEGER")
+                db.execSQL("ALTER TABLE catch_record_draft ADD COLUMN submittedAtEpochMillis INTEGER")
+                db.execSQL("ALTER TABLE catch_record_draft ADD COLUMN syncedAtEpochMillis INTEGER")
+                db.execSQL(
+                    "UPDATE catch_record_draft SET createdAtEpochMillis = modifiedAtEpochMillis " +
+                        "WHERE createdAtEpochMillis IS NULL",
+                )
+            }
+        }
+
+    /**
+     * v7 -> v8 (ADR 0016): six new, purely additive reference-data cache tables — no existing draft table
+     * is altered, so an in-progress draft is unaffected. SQL copied verbatim from the exported v8 schema.
+     */
+    val MIGRATION_7_8 =
+        object : Migration(7, 8) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
                     "CREATE TABLE IF NOT EXISTS reference_data_vessel (`id` TEXT NOT NULL, `name` TEXT NOT NULL, " +
@@ -199,5 +213,13 @@ object CatchRecordMigrations {
         }
 
     val ALL =
-        arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+        arrayOf(
+            MIGRATION_1_2,
+            MIGRATION_2_3,
+            MIGRATION_3_4,
+            MIGRATION_4_5,
+            MIGRATION_5_6,
+            MIGRATION_6_7,
+            MIGRATION_7_8,
+        )
 }

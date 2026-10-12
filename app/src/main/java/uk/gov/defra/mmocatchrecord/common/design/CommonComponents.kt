@@ -52,7 +52,6 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import uk.gov.defra.mmocatchrecord.R
-import uk.gov.defra.mmocatchrecord.feature.home.domain.CatchRecordStatus
 
 /** GOV.UK Important Notification Banner */
 @Suppress("FunctionNaming")
@@ -242,19 +241,20 @@ fun SecondaryActionButton(
     }
 }
 
-/** GOV.UK table row status tag */
+/** GOV.UK table row status tag. Text always carries the label (WCAG 1.4.1) — colour is supplementary only. */
 @Suppress("FunctionNaming")
 @Composable
 fun StatusTag(
-    status: CatchRecordStatus,
+    status: RecordStatusTag,
     modifier: Modifier = Modifier,
 ) {
     val (bg, textCol, labelRes) =
         when (status) {
-            CatchRecordStatus.SUBMITTED -> Triple(Color(0xFFDFEFE5), Color(0xFF005A30), R.string.status_submitted)
-            CatchRecordStatus.AMENDED -> Triple(Color(0xFFE1EDF7), MmoColors.GovBlue, R.string.status_amended)
-            CatchRecordStatus.UNSENT -> Triple(Color(0xFFFFF5CC), Color(0xFF6F5200), R.string.status_unsent)
-            CatchRecordStatus.LATE -> Triple(Color(0xFFFCE1E1), Color(0xFF942514), R.string.status_late)
+            RecordStatusTag.Draft -> Triple(MmoColors.Background, MmoColors.Text, R.string.status_draft)
+            RecordStatusTag.ReadyToSubmit ->
+                Triple(Color(0xFFE1EDF7), MmoColors.GovBlueHover, R.string.status_ready_to_submit)
+            RecordStatusTag.AwaitingSync -> Triple(Color(0xFFFFF5CC), Color(0xFF6F5200), R.string.status_awaiting_sync)
+            RecordStatusTag.Submitted -> Triple(Color(0xFFDFEFE5), Color(0xFF005A30), R.string.status_submitted)
         }
 
     Surface(
@@ -272,72 +272,6 @@ fun StatusTag(
                 ),
             modifier = Modifier.padding(horizontal = Spacing.xxs, vertical = 2.dp),
         )
-    }
-}
-
-/** GOV.UK style Pagination Bar */
-@Suppress("FunctionNaming")
-@Composable
-fun PaginationBar(
-    pageStart: Int,
-    pageEnd: Int,
-    totalCount: Int,
-    onNextClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .padding(vertical = Spacing.s),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        // Info text
-        Text(
-            text = stringResource(R.string.showing_x_to_y_of_z, pageStart, pageEnd, totalCount),
-            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-        )
-
-        // Page square "1" indicator
-        Box(
-            modifier =
-                Modifier
-                    .size(36.dp)
-                    .background(MmoColors.GovBlue),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = "1",
-                color = MmoColors.White,
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-            )
-        }
-
-        // "Next" link with arrow
-        Row(
-            modifier =
-                Modifier
-                    .clickable(onClick = onNextClick)
-                    .heightIn(min = Spacing.minTouchTarget)
-                    .padding(Spacing.xxs),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(R.string.next),
-                color = MmoColors.GovBlue,
-                style =
-                    MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        textDecoration = TextDecoration.Underline,
-                    ),
-            )
-            Spacer(modifier = Modifier.width(Spacing.xxs))
-            CustomArrowForwardIcon(
-                tint = MmoColors.GovBlue,
-                modifier = Modifier.size(16.dp),
-            )
-        }
     }
 }
 
@@ -405,6 +339,13 @@ fun ExpandableDetails(
     }
 }
 
+/** Stable, localisation-independent lookups for [MmoBottomNavigationBar]'s tabs (tests should prefer these). */
+object MmoBottomNavigationBarTestTags {
+    const val HOME_TAB = "mmo_bottom_nav_home_tab"
+    const val NOTIFICATIONS_TAB = "mmo_bottom_nav_notifications_tab"
+    const val SETTINGS_TAB = "mmo_bottom_nav_settings_tab"
+}
+
 /** App bottom navigation bar matching the iOS Design */
 @Suppress("FunctionNaming")
 @Composable
@@ -443,6 +384,7 @@ fun MmoBottomNavigationBar(
                 label = stringResource(R.string.nav_home),
                 iconComposable = { col -> CustomHomeIcon(tint = col, modifier = Modifier.size(24.dp)) },
                 onClick = { onItemClick(0) },
+                modifier = Modifier.testTag(MmoBottomNavigationBarTestTags.HOME_TAB),
             )
 
             // Notifications tab
@@ -451,6 +393,7 @@ fun MmoBottomNavigationBar(
                 label = stringResource(R.string.nav_notifications),
                 iconComposable = { col -> CustomNotificationsIcon(tint = col, modifier = Modifier.size(24.dp)) },
                 onClick = { onItemClick(1) },
+                modifier = Modifier.testTag(MmoBottomNavigationBarTestTags.NOTIFICATIONS_TAB),
             )
 
             // Settings tab
@@ -459,6 +402,7 @@ fun MmoBottomNavigationBar(
                 label = stringResource(R.string.nav_settings),
                 iconComposable = { col -> CustomSettingsIcon(tint = col, modifier = Modifier.size(24.dp)) },
                 onClick = { onItemClick(2) },
+                modifier = Modifier.testTag(MmoBottomNavigationBarTestTags.SETTINGS_TAB),
             )
         }
     }

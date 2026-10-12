@@ -11,7 +11,7 @@ import uk.gov.defra.mmocatchrecord.core.error.CatchRecordErrorClassification
 import uk.gov.defra.mmocatchrecord.core.error.SafeErrorMapper
 
 /**
- * Periodic + app-start background refresh of the cached reference data (ADR 0015) — see
+ * Periodic + app-start background refresh of the cached reference data (ADR 0016) — see
  * [WorkManagerReferenceDataSyncScheduler] and [ReferenceDataRefresher]. Success/retry/failure mirror
  * `CatchRecordSyncWorker`'s reliance on WorkManager's own exponential backoff for [Result.retry].
  */

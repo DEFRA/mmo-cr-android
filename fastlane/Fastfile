@@ -5,7 +5,7 @@ GRADLE_FLAGS = "--console=plain".freeze
 platform :android do
   desc "Static analysis: ktlint, detekt and Android Lint."
   lane :lint do
-    # dev flavor: product flavors were added for reference-data environments (ADR 0015);
+    # dev flavor: product flavors were added for reference-data environments (ADR 0016);
     # there is no flavor-less "Debug" variant to run lint against any more.
     gradle(tasks: ["ktlintCheck", "detekt", "lintDevDebug"], flags: "#{GRADLE_FLAGS} --continue")
   end

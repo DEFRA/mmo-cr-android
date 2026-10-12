@@ -15,8 +15,11 @@ import kotlinx.serialization.Serializable
 @Serializable
 data object CatchRecordEntryRoute
 
+/** [draftId] is non-null when reached from the records list (FR2); null resumes via `EnterFlow`. */
 @Serializable
-data object DraftResumeRoute
+data class DraftResumeRoute(
+    val draftId: String? = null,
+)
 
 @Serializable
 data object VesselSelectionRoute

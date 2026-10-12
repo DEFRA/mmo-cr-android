@@ -1,47 +1,44 @@
 package uk.gov.defra.mmocatchrecord.feature.home.domain
 
+import kotlinx.coroutines.flow.Flow
+import uk.gov.defra.mmocatchrecord.common.design.RecordStatusTag
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DmyDate
 import javax.inject.Inject
 
-/** Domain summary shown on the Home screen. */
+/** Domain summary shown on the Home screen; [pendingCatchRecordCount] is derived, see its getter. */
 data class HomeSummary(
     val signedInUserId: String,
-    val pendingCatchRecordCount: Int,
     val catchRecords: List<CatchRecordSummary> = emptyList(),
-    val totalCount: Int = 0,
-    val pageStart: Int = 1,
-    val pageEnd: Int = 4,
-)
-
-data class CatchRecordSummary(
-    val id: String,
-    val tripEndDate: String,
-    val vesselName: String,
-    val status: CatchRecordStatus,
-    val createdBy: String,
-)
-
-enum class CatchRecordStatus {
-    SUBMITTED,
-    AMENDED,
-    UNSENT,
-    LATE,
+) {
+    val pendingCatchRecordCount: Int
+        get() = catchRecords.count { it.status == RecordStatusTag.AwaitingSync }
 }
 
 /**
- * Repository abstraction over Home-screen summary data (pending offline records, sync status, etc).
- *
- * **Real implementation contract (later stage):** must read from the Room-backed offline mutation queue
- * (see `core.persistence`, added in a later stage) so the pending-record count is accurate offline.
+ * [tripEndDate] is `null` until the return date is entered (legitimate for a [RecordStatusTag.Draft]).
+ * [vesselName] is the vessel's reference-data display name (e.g. "ACHILLES") resolved from [vesselId] by
+ * [uk.gov.defra.mmocatchrecord.feature.home.data.RoomHomeRepository]; it defaults to the raw [vesselId]
+ * so an unresolved id is never silently blanked.
  */
+data class CatchRecordSummary(
+    val id: String,
+    val catchRecordReference: String?,
+    val vesselId: String,
+    val tripEndDate: DmyDate?,
+    val status: RecordStatusTag,
+    val vesselName: String = vesselId,
+)
+
+/** Reactive repository abstraction over Home-screen summary data — see ADR 0014 Phase B. */
 interface HomeRepository {
-    suspend fun getSummary(): Result<HomeSummary>
+    fun observeSummary(): Flow<HomeSummary>
 }
 
-/** Use-case wrapping [HomeRepository.getSummary]. */
-class GetHomeSummaryUseCase
+/** Use-case wrapping [HomeRepository.observeSummary]. */
+class ObserveHomeSummaryUseCase
     @Inject
     constructor(
         private val repository: HomeRepository,
     ) {
-        suspend operator fun invoke(): Result<HomeSummary> = repository.getSummary()
+        operator fun invoke(): Flow<HomeSummary> = repository.observeSummary()
     }

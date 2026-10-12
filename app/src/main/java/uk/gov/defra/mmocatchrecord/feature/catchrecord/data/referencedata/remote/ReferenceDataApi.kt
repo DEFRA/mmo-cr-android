@@ -8,7 +8,7 @@ import retrofit2.http.Query
 private const val MOBILE_VIEW = "mobile"
 
 /**
- * Reference-data collection endpoints on the `api/v1/reference-data/` base (ADR 0015). Every method
+ * Reference-data collection endpoints on the `api/v1/reference-data/` base (ADR 0016). Every method
  * returns [Response] (not the bare body) so a bodyless `304 Not Modified` is observable by the caller.
  */
 internal interface ReferenceDataApi {

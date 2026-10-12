@@ -10,7 +10,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
-/** [ReferenceDataDao]'s per-dataset replace-all, band scoping, and metadata upsert (ADR 0015). */
+/** [ReferenceDataDao]'s per-dataset replace-all, band scoping, and metadata upsert (ADR 0016). */
 @RunWith(RobolectricTestRunner::class)
 class ReferenceDataDaoTests {
     private lateinit var database: CatchRecordDatabase

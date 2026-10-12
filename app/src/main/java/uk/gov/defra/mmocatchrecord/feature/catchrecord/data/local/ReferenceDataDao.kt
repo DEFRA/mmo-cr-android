@@ -7,7 +7,7 @@ import androidx.room.Query
 import androidx.room.Transaction
 
 /**
- * DAO for the cached reference-data tables (ADR 0015). Every `replace*` is a transactional delete-then-
+ * DAO for the cached reference-data tables (ADR 0016). Every `replace*` is a transactional delete-then-
  * insert; suspend functions already run off the main thread, so the 624-row `ports` insert needs no more.
  */
 @Suppress("TooManyFunctions") // Cohesive cache DAO: 4 datasets + metadata, each needing read/replace.

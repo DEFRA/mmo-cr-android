@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit
 
 /**
  * [HealthApi] against a real [mockwebserver3.MockWebServer] round trip — happy path, a documented
- * `503`, a malformed body, and a client-side timeout (ADR 0015's verified DEV behaviour).
+ * `503`, a malformed body, and a client-side timeout (ADR 0016's verified DEV behaviour).
  */
 class HealthApiTests {
     @JvmField

@@ -11,7 +11,7 @@ import org.junit.Rule
 import org.junit.Test
 
 /**
- * The debug-only logging interceptor (ADR 0014/0015, wired in [uk.gov.defra.mmocatchrecord.di.NetworkModule])
+ * The debug-only logging interceptor (ADR 0015/0016, wired in [uk.gov.defra.mmocatchrecord.di.NetworkModule])
  * must never leak the raw bearer token into its log output, even at `HEADERS` level.
  */
 class LoggingRedactionTests {

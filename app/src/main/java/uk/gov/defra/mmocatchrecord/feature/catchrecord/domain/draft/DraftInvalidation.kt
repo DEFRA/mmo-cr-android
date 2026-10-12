@@ -58,7 +58,7 @@ object DraftInvalidation {
         return gearUse
     }
 
-    /** ADR 0015: clears a gear use's confirmed/dependent state if its [GearUse.gearTypeId] is not
+    /** ADR 0016: clears a gear use's confirmed/dependent state if its [GearUse.gearTypeId] is not
      *  in [liveGearTypeIds] (e.g. a stub-saved draft, now that live gear types are cached). */
     fun reconcileAgainstLiveGearTypes(
         draft: CatchRecordDraft,

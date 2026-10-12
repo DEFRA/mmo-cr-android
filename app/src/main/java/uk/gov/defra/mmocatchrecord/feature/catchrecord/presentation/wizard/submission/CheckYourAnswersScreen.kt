@@ -26,6 +26,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.GdsInsetText
 import uk.gov.defra.mmocatchrecord.common.design.GdsLinkAction
+import uk.gov.defra.mmocatchrecord.common.design.GdsWarningText
 import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
@@ -41,6 +42,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardLoadingState
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardStep
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.catchRecordReference
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.rememberWizardScaffoldState
 
 object CheckYourAnswersScreenTestTags {
     const val SCREEN = "check_your_answers_screen"
@@ -49,6 +51,7 @@ object CheckYourAnswersScreenTestTags {
     const val DECLARATION_PANEL = "check_your_answers_declaration_panel"
     const val SUBMIT_ACTION = "check_your_answers_submit_action"
     const val ERROR_MESSAGE = "check_your_answers_error_message"
+    const val OFFLINE_NOTICE = "check_your_answers_offline_notice"
 }
 
 /**
@@ -72,6 +75,7 @@ fun CheckYourAnswersScreen(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val isOffline = rememberWizardScaffoldState().isOffline
 
     // "Accept and submit trip details" is a genuinely asynchronous action (connectivity check + stub
     // submit call — see `CatchRecordFlowViewModel.acceptDeclarationAndSubmit`): unlike every earlier
@@ -125,6 +129,7 @@ fun CheckYourAnswersScreen(
                         }
                     },
                     onSubmit = { viewModel.dispatch(CatchRecordFlowEvent.AcceptDeclarationAndSubmit) },
+                    isOffline = isOffline,
                 )
         }
     }
@@ -140,6 +145,7 @@ fun CheckYourAnswersScreenContent(
     onChangeRow: (CheckYourAnswersRow) -> Unit,
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
+    isOffline: Boolean = false,
 ) {
     val sections = CheckYourAnswersSupport.buildSections(draft, vessels, ports, gearTypes, species)
     val sectionsByKind = sections.groupBy { it.kind }
@@ -163,6 +169,15 @@ fun CheckYourAnswersScreenContent(
         }
 
         DeclarationPanel()
+
+        // FR6: shown before submission, not after, so an offline outcome is never a surprise (see the
+        // unchanged submission_pending_sync_body copy shown once that outcome has actually happened).
+        if (isOffline) {
+            GdsWarningText(
+                text = stringResource(R.string.check_your_answers_offline_notice),
+                testTag = CheckYourAnswersScreenTestTags.OFFLINE_NOTICE,
+            )
+        }
 
         PrimaryActionButton(
             text = stringResource(R.string.check_your_answers_submit_action),

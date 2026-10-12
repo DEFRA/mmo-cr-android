@@ -101,6 +101,7 @@ class CheckYourAnswersScreenTest {
     private fun setContent(
         onChangeRow: (CheckYourAnswersRow) -> Unit = {},
         onSubmit: () -> Unit = {},
+        isOffline: Boolean = false,
     ) {
         composeTestRule.setContent {
             MmoTheme {
@@ -118,6 +119,7 @@ class CheckYourAnswersScreenTest {
                     // test split) needs its own scroll container so every section remains reachable via
                     // performScrollTo(), exactly as a real device would let the user scroll to see it.
                     modifier = Modifier.verticalScroll(rememberScrollState()),
+                    isOffline = isOffline,
                 )
             }
         }
@@ -209,5 +211,22 @@ class CheckYourAnswersScreenTest {
         // not "Change, Change, Change..." for every row) — see GdsLinkAction's accessibleLabel parameter.
         composeTestRule.onNodeWithContentDescription("Change Vessel").assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription("Change Departure port").assertIsDisplayed()
+    }
+
+    @Test
+    fun offlineNoticeIsShownWhenOffline() {
+        setContent(isOffline = true)
+
+        composeTestRule
+            .onNodeWithTag(CheckYourAnswersScreenTestTags.OFFLINE_NOTICE)
+            .performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun offlineNoticeIsHiddenWhenOnline() {
+        setContent(isOffline = false)
+
+        composeTestRule.onNodeWithTag(CheckYourAnswersScreenTestTags.OFFLINE_NOTICE).assertDoesNotExist()
     }
 }

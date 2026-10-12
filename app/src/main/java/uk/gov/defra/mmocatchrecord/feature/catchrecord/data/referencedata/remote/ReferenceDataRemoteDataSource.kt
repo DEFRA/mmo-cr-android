@@ -44,7 +44,7 @@ internal sealed interface ManifestFetchResult {
 
 /**
  * Thin wrapper over [ReferenceDataApi] turning its raw [Response]s into [ReferenceDataFetchResult] of the
- * raw DTOs (schema guard only, ADR 0015) — DTO→entity and DTO→domain mapping both happen downstream.
+ * raw DTOs (schema guard only, ADR 0016) — DTO→entity and DTO→domain mapping both happen downstream.
  */
 internal class ReferenceDataRemoteDataSource
     @Inject

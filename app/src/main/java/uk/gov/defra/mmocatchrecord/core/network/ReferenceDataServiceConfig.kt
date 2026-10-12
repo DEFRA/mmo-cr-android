@@ -2,7 +2,7 @@ package uk.gov.defra.mmocatchrecord.core.network
 
 /**
  * Thrown when a build flavor has no reference-data service root configured (currently only `prod`,
- * deliberately — ADR 0015) and something attempts to use it, rather than silently pointing at DEV.
+ * deliberately — ADR 0016) and something attempts to use it, rather than silently pointing at DEV.
  */
 class MissingReferenceDataServiceUrlException :
     IllegalStateException(
@@ -10,7 +10,7 @@ class MissingReferenceDataServiceUrlException :
     )
 
 /**
- * Derives the reference-data API base URL from the configured service root (ADR 0015): `/health` lives
+ * Derives the reference-data API base URL from the configured service root (ADR 0016): `/health` lives
  * at the service root, while every other documented route sits under `api/v1/reference-data/`.
  */
 object ReferenceDataServiceConfig {

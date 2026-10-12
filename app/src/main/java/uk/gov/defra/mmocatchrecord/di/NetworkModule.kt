@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
 /**
- * Networking foundation (ADR 0014/0015): JSON, the per-flavor [TokenProvider] and the authenticated/
+ * Networking foundation (ADR 0015/0016): JSON, the per-flavor [TokenProvider] and the authenticated/
  * localised [OkHttpClient]. See [ReferenceDataRetrofitModule] for the Retrofit/`HealthApi` layer.
  */
 @Module

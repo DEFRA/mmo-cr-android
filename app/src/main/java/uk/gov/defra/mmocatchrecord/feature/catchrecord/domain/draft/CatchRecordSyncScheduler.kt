@@ -8,6 +8,6 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft
  * no WorkManager/Android dependency in its test classpath.
  */
 interface CatchRecordSyncScheduler {
-    /** Enqueues (or replaces any already-queued) sync work for the [draftId] whose status is `PendingSync`. */
+    /** Enqueues sync work for the [draftId]; a no-op if work for it is already enqueued or running. */
     fun scheduleSync(draftId: String)
 }

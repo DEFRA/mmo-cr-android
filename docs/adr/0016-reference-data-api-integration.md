@@ -1,4 +1,4 @@
-# 0015 - Reference-data API integration (supersedes 0008)
+# 0016 - Reference-data API integration (supersedes 0008)
 
 ## Status
 
@@ -175,8 +175,8 @@ tag the cached `species` rows were resolved under. The *storage* exists now; the
 cache) is deferred to the Phase 4/5 repository, which owns cache-freshness decisions generally.
 
 Phase 3 adds Room entities for the four cached datasets plus `ReferenceDataMetadataEntity`, a
-`ReferenceDataDao` with transactional per-dataset `replaceAll`, and `CatchRecordDatabase` v6 → v7 via a real
-additive `Migration(6, 7)` (ADR 0010 bans `fallbackToDestructiveMigration`). Gears/measurements are keyed by
+`ReferenceDataDao` with transactional per-dataset `replaceAll`, and `CatchRecordDatabase` v7 → v8 via a real
+additive `Migration(7, 8)` (ADR 0010 bans `fallbackToDestructiveMigration`). Gears/measurements are keyed by
 `(id, vesselLengthBand)` since the same gear legitimately recurs across bands with different measurement
 sets. Neither phase wires into `ReferenceDataRepository`'s binding — that remains ADR 0008's stub until a
 later phase.
@@ -312,7 +312,7 @@ from local draft history*.
 
 ## Consequences
 
-- `docs/adr/0008-reference-data-stub.md`'s Status is updated to "Superseded by 0015"; its stub
+- `docs/adr/0008-reference-data-stub.md`'s Status is updated to "Superseded by 0016"; its stub
   implementation is retained (narrowed, not deleted) as the final offline fallback tier, now resolving
   sub-rectangles against live port ids (Phase 6) rather than only its own stub ids.
 - As of Phase 5, `ReferenceDataRepository` is bound to `CachingReferenceDataRepository`: vessels, ports,

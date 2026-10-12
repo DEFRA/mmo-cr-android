@@ -34,7 +34,7 @@ private const val MANIFEST_BODY =
         """"collectionId":"col-1","schemaVersion":"1.0","version":"v1",""" +
         """"etag":"61dd8fed9ed7cc2a4a96a97da8a1174c","url":"/vessels","format":"json","itemCount":30}]}"""
 
-/** [ReferenceDataRemoteDataSource] against a real [mockwebserver3.MockWebServer] round trip (ADR 0015). */
+/** [ReferenceDataRemoteDataSource] against a real [mockwebserver3.MockWebServer] round trip (ADR 0016). */
 class ReferenceDataRemoteDataSourceTests {
     @JvmField
     @Rule

@@ -32,7 +32,7 @@ cd mmo-cr-android
 ./gradlew installDevDebug
 ```
 
-The **`environment`** flavor dimension (`local`/`dev`/`prod`) multiplies every task name above (ADR 0015)
+The **`environment`** flavor dimension (`local`/`dev`/`prod`) multiplies every task name above (ADR 0016)
 — see [`docs/development/reference-data.md`](docs/development/reference-data.md) for which flavor to pick
 and how to stand up a backend for it.
 
@@ -85,7 +85,7 @@ split per feature package, per
   map (no map SDK/tiles/API key/network) with a build-time GeoJSON preprocessing task in the `build-logic/`
   composite Gradle build — see ADR 0013 and [`docs/development/offline-map.md`](docs/development/offline-map.md).
 - **Reference-data API integration** — Retrofit/OkHttp-backed, cache-first (Room) with a bundled offline
-  fallback, across `local`/`dev`/`prod` flavors — see ADR 0014/0015 and
+  fallback, across `local`/`dev`/`prod` flavors — see ADR 0015/0016 and
   [`docs/development/reference-data.md`](docs/development/reference-data.md) for the developer runbook.
 - Full list of ADRs: [`docs/adr/`](docs/adr/).
 
@@ -117,10 +117,11 @@ split per feature package, per
 | [0003](docs/adr/0003-room-offline-persistence.md) | Room for offline-first persistence |
 | [0004](docs/adr/0004-koin-dependency-injection.md) | Koin for dependency injection (superseded) |
 | [0005](docs/adr/0005-hilt-dependency-injection.md) | Hilt for dependency injection |
-| [0008](docs/adr/0008-reference-data-stub.md) | Reference-data stub (superseded by 0015) |
+| [0008](docs/adr/0008-reference-data-stub.md) | Reference-data stub (superseded by 0016) |
 | [0013](docs/adr/0013-offline-fisheries-map-rendering.md) | Offline fisheries statistical sub-rectangle map rendering |
-| [0014](docs/adr/0014-http-client-retrofit-okhttp.md) | HTTP client: Retrofit + OkHttp |
-| [0015](docs/adr/0015-reference-data-api-integration.md) | Reference-data API integration |
+| [0014](docs/adr/0014-catch-record-status-audit-and-offline-sync-confirmation.md) | Catch-record status, audit timestamps and offline-sync confirmation |
+| [0015](docs/adr/0015-http-client-retrofit-okhttp.md) | HTTP client: Retrofit + OkHttp |
+| [0016](docs/adr/0016-reference-data-api-integration.md) | Reference-data API integration |
 | [0000](docs/adr/0000-ios-adr-references-TBC.md) | iOS ADR references — TBC |
 
 ## CI

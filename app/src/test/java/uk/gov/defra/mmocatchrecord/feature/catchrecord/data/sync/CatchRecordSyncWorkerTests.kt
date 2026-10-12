@@ -10,6 +10,7 @@ import androidx.work.testing.TestListenableWorkerBuilder
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -150,6 +151,36 @@ class CatchRecordSyncWorkerTests {
             assertEquals(1, submissionRepository.submittedDrafts.size)
             val updated = draftRepository.getDraftById(draft.id).getOrThrow()
             assertEquals(DraftStatus.Submitted, updated?.status)
+        }
+
+    @Test
+    fun `AC3 successful submission stamps submittedAt and syncedAt, not just status`() =
+        runTest {
+            val draft = pendingDraft()
+            val submissionRepository = FakeCatchRecordSubmissionRepository(shouldSucceed = true)
+            val worker = buildWorker(submissionRepository, draftId = draft.id)
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.success(), result)
+            val updated = draftRepository.getDraftById(draft.id).getOrThrow()
+            assertEquals(DraftStatus.Submitted, updated?.status)
+            assertNotNull(updated?.submittedAtEpochMillis)
+            assertNotNull(updated?.syncedAtEpochMillis)
+        }
+
+    @Test
+    fun `a draft failing submission validation fails without retrying`() =
+        runTest {
+            val draft = pendingDraft().copy(gearUses = emptyList())
+            draftRepository.saveDraft(draft).getOrThrow()
+            val submissionRepository = FakeCatchRecordSubmissionRepository(shouldSucceed = true)
+            val worker = buildWorker(submissionRepository, draftId = draft.id)
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.failure(), result)
+            assertEquals(0, submissionRepository.submittedDrafts.size)
         }
 
     @Test

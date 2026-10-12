@@ -16,7 +16,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.remote
 import javax.inject.Singleton
 
 /**
- * The reference-data service's two Retrofit instances (ADR 0015: `/health` at the service root, every
+ * The reference-data service's two Retrofit instances (ADR 0016: `/health` at the service root, every
  * other route under `api/v1/reference-data/`) and the `HealthApi` built from the former.
  */
 @Module

@@ -5,7 +5,10 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import uk.gov.defra.mmocatchrecord.core.di.ApplicationScope
 import uk.gov.defra.mmocatchrecord.core.security.BiometricPreferenceStore
 import uk.gov.defra.mmocatchrecord.core.security.BiometricReentryPolicy
 import uk.gov.defra.mmocatchrecord.core.security.BiometricRepository
@@ -50,4 +53,10 @@ object AppModule {
     @Provides
     @Singleton
     fun provideBiometricPreferenceStore(): BiometricPreferenceStore = InMemoryBiometricPreferenceStore()
+
+    /** Process-lifetime scope for app-start reconciliation work — see `CatchRecordSyncSweep`/ADR 0014. */
+    @Provides
+    @Singleton
+    @ApplicationScope
+    fun provideApplicationScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 }

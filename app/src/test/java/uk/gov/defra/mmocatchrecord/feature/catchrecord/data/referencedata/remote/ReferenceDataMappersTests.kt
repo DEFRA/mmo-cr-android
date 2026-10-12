@@ -10,7 +10,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Gear
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map.MapSupport
 
-/** DTO → domain mapping, including the measurement code→key translation table (ADR 0015). */
+/** DTO → domain mapping, including the measurement code→key translation table (ADR 0016). */
 class ReferenceDataMappersTests {
     @Test
     fun `vessel maps displayName to domain name`() {

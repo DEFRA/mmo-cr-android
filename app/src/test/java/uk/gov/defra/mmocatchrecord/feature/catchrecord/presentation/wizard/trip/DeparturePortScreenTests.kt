@@ -11,7 +11,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 
-/** ADR 0015: a live vessel with no previously-used ports must show the search field directly, with no
+/** ADR 0016: a live vessel with no previously-used ports must show the search field directly, with no
  *  empty favourites heading/section — see the Phase 6 `getPreviouslyUsedPorts` fix. */
 @RunWith(RobolectricTestRunner::class)
 class DeparturePortScreenTests {

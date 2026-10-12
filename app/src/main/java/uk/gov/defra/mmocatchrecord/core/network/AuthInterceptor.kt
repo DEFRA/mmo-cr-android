@@ -7,8 +7,8 @@ import okhttp3.Response
 import timber.log.Timber
 
 /**
- * Adds an `Authorization` bearer header when [tokenProvider] supplies a non-blank token (ADR 0015);
- * omits it otherwise and never logs the token — see ADR 0015 for why `runBlocking` here is safe.
+ * Adds an `Authorization` bearer header when [tokenProvider] supplies a non-blank token (ADR 0016);
+ * omits it otherwise and never logs the token — see ADR 0016 for why `runBlocking` here is safe.
  */
 class AuthInterceptor(
     private val tokenProvider: TokenProvider,

@@ -9,7 +9,7 @@ private const val OVER_12M_REPRESENTATIVE_METRES = 15.0
 
 /**
  * The `gears` endpoint's documented `vesselLengthMetres` bands (api-reference.md), plus an unfiltered
- * [ALL] variant cached for when a draft's vessel length is unknown (ADR 0015).
+ * [ALL] variant cached for when a draft's vessel length is unknown (ADR 0016).
  */
 object VesselLengthBands {
     const val UNDER_10M = "under-10m"

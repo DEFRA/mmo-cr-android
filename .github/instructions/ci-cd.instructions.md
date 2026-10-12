@@ -35,7 +35,8 @@ release engineering. Any deviation from a DEFRA standard must be raised as a gov
   reproducible. Instrumented tests run on an emulator (e.g. `reactivecircus/android-emulator-runner`) or a
   Gradle Managed Device.
 - **Quality/coverage:** **SonarCloud** (DEFRA organisation) is the source of truth for coverage and the
-  quality gate. Report coverage with **Kover**.
+  quality gate. Report coverage with **Kover** on its **JaCoCo engine** (≥0.8.12), which filters the
+  Compose-compiler synthetic branches the default IntelliJ engine counts against the gate.
 - **Dependencies:** **Gradle version catalog** for app dependencies; **Bundler** (`Gemfile`) to pin
   Fastlane and its plugins.
 

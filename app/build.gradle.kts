@@ -13,7 +13,7 @@ plugins {
     id("uk.gov.defra.mmocatchrecord.mapdata.generator")
 }
 
-// Optional developer override of the reference-data service root (ADR 0015), read from a gitignored
+// Optional developer override of the reference-data service root (ADR 0016), read from a gitignored
 // `local.properties` key so it is never committed. Never applied to the `prod` flavor.
 val localProperties =
     Properties().apply {
@@ -51,7 +51,7 @@ android {
         }
     }
 
-    // Reference-data service environment (ADR 0015). `REFERENCE_DATA_SERVICE_URL` is the service
+    // Reference-data service environment (ADR 0016). `REFERENCE_DATA_SERVICE_URL` is the service
     // *root* (no `api/v1/...` suffix) — see core.network for how the API base/health URLs derive from it.
     flavorDimensions += "environment"
     productFlavors {
@@ -62,7 +62,7 @@ android {
                 "REFERENCE_DATA_SERVICE_URL",
                 "\"${referenceDataServiceUrlOverride ?: "http://10.0.2.2:3002/"}\"",
             )
-            // DEV's auth stub accepts any non-empty bearer token (ADR 0015) — see TokenProvider.
+            // DEV's auth stub accepts any non-empty bearer token (ADR 0016) — see TokenProvider.
             buildConfigField("boolean", "USE_STUB_AUTH", "true")
         }
         create("dev") {
@@ -86,6 +86,10 @@ android {
         }
     }
 
+    sourceSets {
+        // Bundles the exported Room schema JSON into the test APK so MigrationTestHelper can read it.
+        getByName("androidTest").assets.srcDirs("$projectDir/schemas")
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
@@ -119,8 +123,10 @@ room {
 }
 
 // Report variant alias so CI/Sonar's existing `app/build/reports/kover/reportDebug.xml` path survives
-// adding product flavors (no real "debug"-only variant exists once flavors are introduced).
+// adding product flavors (no real "debug"-only variant exists once flavors are introduced). JaCoCo
+// engine filters Compose-compiler synthetic branches ($changed/$default/skipping) that tests cannot reach.
 kover {
+    useJacoco(libs.versions.jacoco.get())
     currentProject {
         createVariant("debug") {
             add("devDebug")
@@ -183,7 +189,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
 
-    // Reference-data API networking foundation (ADR 0014/0015) — see core/network and di/NetworkModule.
+    // Reference-data API networking foundation (ADR 0015/0016) — see core/network and di/NetworkModule.
     implementation(platform(libs.okhttp.bom))
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
@@ -201,7 +207,7 @@ dependencies {
     testImplementation(libs.androidx.room.testing)
     testImplementation(libs.androidx.work.testing)
 
-    // MockWebServer test harness for Retrofit/OkHttp (ADR 0014) — JVM-only, no device/emulator needed.
+    // MockWebServer test harness for Retrofit/OkHttp (ADR 0015) — JVM-only, no device/emulator needed.
     testImplementation(platform(libs.okhttp.bom))
     testImplementation(libs.okhttp.mockwebserver3.junit4)
 
@@ -217,6 +223,9 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    // Needed for the CatchRecordMigrationTest instrumented migration test (CRAR-152 Phase C).
+    androidTestImplementation(libs.androidx.room.testing)
+    androidTestImplementation(libs.kotlinx.coroutines.test)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

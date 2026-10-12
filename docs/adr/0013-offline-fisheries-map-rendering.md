@@ -215,9 +215,9 @@ iterates the viewport-culled subset of features every frame.
   as a source of "expected" map behaviour** in any future test or demo involving Hastings by name — flagged
   here as a governance item for whoever next revisits ADR-0008's stub data.
 
-## Scope note (added alongside ADR 0015)
+## Scope note (added alongside ADR 0016)
 
 The real reference-data service's `/map/land`, `/map/statistical-areas` and `/map/ports` (derived)
 datasets are deliberately **not** consumed by this feature. This build-time preprocessing pipeline (bundled
 GeoJSON → `map_geometry.bin`) remains the sole, authoritative, fully-offline source of map geometry — see
-ADR 0015's "Out of scope" section.
+ADR 0016's "Out of scope" section.

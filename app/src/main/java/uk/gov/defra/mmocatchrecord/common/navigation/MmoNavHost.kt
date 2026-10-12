@@ -95,6 +95,7 @@ fun MmoNavHost(
             HomeScreen(
                 onSignOut = { onRootEvent(RootEvent.SignedOut) },
                 onCreateCatchRecord = { navController.navigate(CatchRecordGraphRoute) },
+                onResumeDraft = { draftId -> navController.navigate(DraftResumeRoute(draftId = draftId)) },
             )
         }
         navigation<CatchRecordGraphRoute>(startDestination = CatchRecordEntryRoute) {
@@ -110,10 +111,12 @@ fun MmoNavHost(
                 )
             }
             composable<DraftResumeRoute> { backStackEntry ->
+                val draftId = backStackEntry.toRoute<DraftResumeRoute>().draftId
                 DraftResumeScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
                     onNavigate = { navController.navigate(routeFor(it)) },
                     onBack = { navController.popBackStack() },
+                    draftId = draftId,
                 )
             }
             composable<VesselSelectionRoute> { backStackEntry ->
@@ -256,10 +259,7 @@ fun MmoNavHost(
             composable<SubmissionSuccessRoute> { backStackEntry ->
                 SubmissionSuccessScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
-                    // Placeholder destination: no "my catch records" list screen exists yet (out of scope
-                    // for Phase 8) — navigates to the app's existing Home screen instead, clearing the
-                    // whole wizard graph off the back stack so the user cannot navigate "back" into a
-                    // now-submitted draft.
+                    // Clears the wizard graph so the user cannot navigate "back" into a submitted draft.
                     onViewRecords = {
                         navController.navigate(HomeRoute) {
                             popUpTo<CatchRecordGraphRoute> { inclusive = true }
@@ -271,7 +271,6 @@ fun MmoNavHost(
             composable<SubmissionPendingSyncRoute> { backStackEntry ->
                 SubmissionPendingSyncScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
-                    // Same placeholder destination as SubmissionSuccessScreen above.
                     onViewRecords = {
                         navController.navigate(HomeRoute) {
                             popUpTo<CatchRecordGraphRoute> { inclusive = true }

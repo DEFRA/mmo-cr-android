@@ -20,7 +20,7 @@ internal class ReferenceDataHttpException(
     )
 
 /** A missing/invalid/expired bearer token (401) — distinct from other 4xx so a future re-auth flow can
- *  target it specifically; still terminal for the current request (ADR 0015).
+ *  target it specifically; still terminal for the current request (ADR 0016).
  */
 internal class ReferenceDataUnauthorizedException(
     val dataset: String,
@@ -30,7 +30,7 @@ internal class ReferenceDataMalformedResponseException(
     val dataset: String,
 ) : ReferenceDataApiException("Reference-data '$dataset' response body was missing or malformed", retryable = false)
 
-/** The server returned a `schemaVersion` this app build does not understand; never cached (ADR 0015). */
+/** The server returned a `schemaVersion` this app build does not understand; never cached (ADR 0016). */
 internal class ReferenceDataSchemaVersionException(
     val dataset: String,
     val actualSchemaVersion: String,
