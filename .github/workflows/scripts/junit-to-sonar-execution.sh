@@ -4,7 +4,7 @@ set -euo pipefail
 # Converts Gradle JUnit XML to SonarQube's generic testExecutions format.
 # Kotlin has no native JUnit importer, so sonar.testExecutionReportPaths is the only route.
 
-RESULTS_DIR="${1:-app/build/test-results/testDebugUnitTest}"
+RESULTS_DIR="${1:-app/build/test-results/testDevDebugUnitTest}"
 OUTPUT_FILE="${2:-build/sonar/test-execution.xml}"
 SOURCE_ROOTS=("app/src/test/java" "app/src/androidTest/java")
 
