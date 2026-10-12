@@ -30,7 +30,7 @@ data class CatchRecordSummary(
 )
 
 /** Reactive repository abstraction over Home-screen summary data — see ADR 0014 Phase B. */
-interface HomeRepository {
+fun interface HomeRepository {
     fun observeSummary(): Flow<HomeSummary>
 }
 

@@ -32,6 +32,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Vess
 class StubReferenceDataRepository : ReferenceDataRepository {
     private val statAreaHastings = "AREA-HASTINGS"
     private val statAreaDover = "AREA-DOVER"
+    private val meshSizeLabel = "Mesh size (mm)"
 
     private val vessels =
         listOf(
@@ -80,7 +81,7 @@ class StubReferenceDataRepository : ReferenceDataRepository {
                     listOf(
                         GearMeasurementField(
                             key = GearMeasurementFieldKeys.MESH_SIZE_MM,
-                            label = "Mesh size (mm)",
+                            label = meshSizeLabel,
                             type = GearMeasurementFieldType.Integer,
                             unit = "mm",
                         ),
@@ -108,7 +109,7 @@ class StubReferenceDataRepository : ReferenceDataRepository {
                     listOf(
                         GearMeasurementField(
                             key = GearMeasurementFieldKeys.MESH_SIZE_MM,
-                            label = "Mesh size (mm)",
+                            label = meshSizeLabel,
                             type = GearMeasurementFieldType.Integer,
                             unit = "mm",
                         ),
@@ -126,7 +127,7 @@ class StubReferenceDataRepository : ReferenceDataRepository {
                         ),
                         GearMeasurementField(
                             key = GearMeasurementFieldKeys.MESH_SIZE_MM,
-                            label = "Mesh size (mm)",
+                            label = meshSizeLabel,
                             type = GearMeasurementFieldType.Integer,
                             unit = "mm",
                         ),
@@ -195,7 +196,7 @@ class StubReferenceDataRepository : ReferenceDataRepository {
                         // this Gillnets screenshot confirmed the whole-number rule applies universally).
                         GearMeasurementField(
                             key = GearMeasurementFieldKeys.MESH_SIZE_MM,
-                            label = "Mesh size (mm)",
+                            label = meshSizeLabel,
                             type = GearMeasurementFieldType.Integer,
                             unit = "mm",
                         ),

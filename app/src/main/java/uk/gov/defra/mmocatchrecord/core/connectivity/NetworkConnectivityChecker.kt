@@ -6,6 +6,6 @@ package uk.gov.defra.mmocatchrecord.core.connectivity
  * moment "Accept and submit trip details" is pressed, not ongoing observation; see
  * [AndroidNetworkConnectivityChecker] and ADR 0009.
  */
-interface NetworkConnectivityChecker {
+fun interface NetworkConnectivityChecker {
     fun isConnected(): Boolean
 }

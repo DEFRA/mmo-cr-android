@@ -55,13 +55,15 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.catchRecordReference
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.nextGearUsePendingSpecies
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.nextWizardStepForDraft
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearSpeciesChecklistSupport.initialDisclosedKeysFor
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearSpeciesChecklistSupport.rawValueKey
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearSpeciesChecklistSupport.rawValuesFor
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearSpeciesChecklistSupport.replaceGearUse
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearSpeciesChecklistSupport.validateChecklist
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map.MapSupport
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.species.SpeciesSupport
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.species.SpeciesWeightEntryValidationResult
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.species.SpeciesWeightFieldError
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.species.SpeciesWeightFieldKind
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.species.SpeciesWeightSupport
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.species.SpeciesWeightValidator
 
 object GearSpeciesChecklistScreenTestTags {
     const val SCREEN = "gear_species_checklist_screen"
@@ -79,31 +81,6 @@ object GearSpeciesChecklistScreenTestTags {
     const val REMOVE_SPECIES_ACTION = "gear_species_checklist_remove_species_action"
     const val SAVE_ACTION = "gear_species_checklist_save_action"
 }
-
-private fun rawValueKey(
-    speciesId: String,
-    kind: SpeciesWeightFieldKind,
-): String = "$speciesId::${kind.name}"
-
-/** Seeds/re-derives the weight-field text inputs from [gearUse] (BR-XX dirty-tracking baseline). */
-private fun rawValuesFor(gearUse: GearUse): Map<String, String> =
-    gearUse.speciesWeights
-        .flatMap { entry ->
-            listOfNotNull(
-                entry.weightAboveMinimumSizeKg?.let {
-                    rawValueKey(entry.speciesId, SpeciesWeightFieldKind.AboveMinimumSize) to
-                        GearMeasurementSupport.formatNumber(it)
-                },
-                entry.weightBelowMinimumSizeKg?.let {
-                    rawValueKey(entry.speciesId, SpeciesWeightFieldKind.BelowMinimumSize) to
-                        GearMeasurementSupport.formatNumber(it)
-                },
-                entry.weightLegallyDiscardedKg?.let {
-                    rawValueKey(entry.speciesId, SpeciesWeightFieldKind.LegallyDiscarded) to
-                        GearMeasurementSupport.formatNumber(it)
-                },
-            )
-        }.toMap()
 
 /**
  * "Which species did you catch with {gear}?" checklist + progressive-disclosure weight capture (Phase 5A,
@@ -236,26 +213,7 @@ fun GearSpeciesChecklistScreenContent(
             )
         }
     var rawValues by rememberSaveable(gearUse.id) { mutableStateOf(rawValuesFor(gearUse)) }
-    var disclosed by
-        rememberSaveable(gearUse.id) {
-            mutableStateOf(
-                gearUse.speciesWeights
-                    .flatMap { entry ->
-                        listOfNotNull(
-                            if (entry.weightBelowMinimumSizeKg != null) {
-                                rawValueKey(entry.speciesId, SpeciesWeightFieldKind.BelowMinimumSize)
-                            } else {
-                                null
-                            },
-                            if (entry.weightLegallyDiscardedKg != null) {
-                                rawValueKey(entry.speciesId, SpeciesWeightFieldKind.LegallyDiscarded)
-                            } else {
-                                null
-                            },
-                        )
-                    }.toSet(),
-            )
-        }
+    var disclosed by rememberSaveable(gearUse.id) { mutableStateOf(initialDisclosedKeysFor(gearUse)) }
     var errors by remember(gearUse.id) { mutableStateOf<Map<String, SpeciesWeightFieldError>>(emptyMap()) }
     var checklistError by remember(gearUse.id) { mutableStateOf(false) }
     var focusSummary by remember { mutableStateOf(false) }
@@ -290,22 +248,11 @@ fun GearSpeciesChecklistScreenContent(
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
         if (errors.isNotEmpty()) {
-            WizardErrorSummary(
-                title = stringResource(R.string.error_summary_title),
-                items =
-                    errors.mapNotNull { (key, error) ->
-                        val speciesId = key.substringBefore("::")
-                        val kindName = key.substringAfter("::")
-                        val kind =
-                            SpeciesWeightFieldKind.entries.firstOrNull { it.name == kindName } ?: return@mapNotNull null
-                        val species = speciesList.firstOrNull { it.id == speciesId } ?: return@mapNotNull null
-                        WizardErrorSummaryItem(
-                            message = speciesWeightErrorMessage(species, error, kind),
-                            onClick = { fieldFocusRequesters[key]?.requestFocus() },
-                        )
-                    },
-                focusRequester = summaryFocusRequester,
-                testTag = GearSpeciesChecklistScreenTestTags.ERROR_SUMMARY,
+            SpeciesChecklistErrorSummary(
+                errors = errors,
+                speciesList = speciesList,
+                fieldFocusRequesters = fieldFocusRequesters,
+                summaryFocusRequester = summaryFocusRequester,
             )
         }
         if (checklistError) {
@@ -371,44 +318,20 @@ fun GearSpeciesChecklistScreenContent(
                 if (checkedIds.isEmpty()) {
                     checklistError = true
                 } else {
-                    val validationErrors = mutableMapOf<String, SpeciesWeightFieldError>()
-                    val validatedEntries =
-                        gearUse.speciesWeights.map { entry ->
-                            if (entry.speciesId !in checkedIds) {
-                                entry
-                            } else {
-                                val species = speciesList.firstOrNull { it.id == entry.speciesId }
-                                if (species == null) {
-                                    entry
-                                } else {
-                                    val result =
-                                        validateSpeciesRow(
-                                            draft = draft,
-                                            gearUse = gearUse,
-                                            species = species,
-                                            rawValues = rawValues,
-                                            disclosed = disclosed,
-                                        )
-                                    validationErrors +=
-                                        result.errors.mapKeys { (kind, _) -> rawValueKey(entry.speciesId, kind) }
-                                    entry.copy(
-                                        confirmedCaught = true,
-                                        weightAboveMinimumSizeKg =
-                                            result.values[SpeciesWeightFieldKind.AboveMinimumSize],
-                                        weightBelowMinimumSizeKg =
-                                            result.values[SpeciesWeightFieldKind.BelowMinimumSize],
-                                        weightLegallyDiscardedKg =
-                                            result.values[SpeciesWeightFieldKind.LegallyDiscarded],
-                                    )
-                                }
-                            }
-                        }
-                    if (validationErrors.isNotEmpty()) {
-                        errors = validationErrors
+                    val validation =
+                        validateChecklist(
+                            draft = draft,
+                            gearUse = gearUse,
+                            speciesList = speciesList,
+                            checkedIds = checkedIds,
+                            rawValues = rawValues,
+                            disclosed = disclosed,
+                        )
+                    errors = validation.errors
+                    if (validation.errors.isNotEmpty()) {
                         focusSummary = true
                     } else {
-                        errors = emptyMap()
-                        onSubmit(replaceGearUse(draft, gearUse.copy(speciesWeights = validatedEntries)))
+                        onSubmit(replaceGearUse(draft, gearUse.copy(speciesWeights = validation.entries)))
                     }
                 }
             },
@@ -422,45 +345,32 @@ fun GearSpeciesChecklistScreenContent(
     }
 }
 
-private fun validateSpeciesRow(
-    draft: CatchRecordDraft,
-    gearUse: GearUse,
-    species: Species,
-    rawValues: Map<String, String>,
-    disclosed: Set<String>,
-): SpeciesWeightEntryValidationResult {
-    val aboveKey = rawValueKey(species.id, SpeciesWeightFieldKind.AboveMinimumSize)
-    val belowKey = rawValueKey(species.id, SpeciesWeightFieldKind.BelowMinimumSize)
-    val discardedKey = rawValueKey(species.id, SpeciesWeightFieldKind.LegallyDiscarded)
-    val rawValuesByField =
-        buildMap {
-            put(SpeciesWeightFieldKind.AboveMinimumSize, rawValues[aboveKey].orEmpty())
-            if (belowKey in disclosed) put(SpeciesWeightFieldKind.BelowMinimumSize, rawValues[belowKey].orEmpty())
-            if (discardedKey in
-                disclosed
-            ) {
-                put(SpeciesWeightFieldKind.LegallyDiscarded, rawValues[discardedKey].orEmpty())
-            }
-        }
-    return SpeciesWeightValidator.validateEntry(
-        species = species,
-        rawValuesByField = rawValuesByField,
-        mandatoryFields =
-            if (species.weightAboveMinimumSizeMandatory) {
-                setOf(SpeciesWeightFieldKind.AboveMinimumSize)
-            } else {
-                emptySet()
+@Suppress("FunctionNaming")
+@Composable
+private fun SpeciesChecklistErrorSummary(
+    errors: Map<String, SpeciesWeightFieldError>,
+    speciesList: List<Species>,
+    fieldFocusRequesters: Map<String, FocusRequester>,
+    summaryFocusRequester: FocusRequester,
+) {
+    WizardErrorSummary(
+        title = stringResource(R.string.error_summary_title),
+        items =
+            errors.mapNotNull { (key, error) ->
+                val speciesId = key.substringBefore("::")
+                val kindName = key.substringAfter("::")
+                val kind =
+                    SpeciesWeightFieldKind.entries.firstOrNull { it.name == kindName } ?: return@mapNotNull null
+                val species = speciesList.firstOrNull { it.id == speciesId } ?: return@mapNotNull null
+                WizardErrorSummaryItem(
+                    message = speciesWeightErrorMessage(species, error, kind),
+                    onClick = { fieldFocusRequesters[key]?.requestFocus() },
+                )
             },
-        cumulativeOtherEntriesKg =
-            SpeciesWeightSupport.cumulativeWeightForSpeciesInOtherGearUses(draft, species.id, gearUse.id),
+        focusRequester = summaryFocusRequester,
+        testTag = GearSpeciesChecklistScreenTestTags.ERROR_SUMMARY,
     )
 }
-
-private fun replaceGearUse(
-    draft: CatchRecordDraft,
-    updatedGearUse: GearUse,
-): CatchRecordDraft =
-    draft.copy(gearUses = draft.gearUses.map { if (it.id == updatedGearUse.id) updatedGearUse else it })
 
 @Suppress("FunctionNaming", "LongParameterList")
 @Composable
