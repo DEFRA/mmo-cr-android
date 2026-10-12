@@ -1,3 +1,5 @@
+@file:Suppress("detekt.LargeClass")
+
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear
 
 import androidx.compose.foundation.rememberScrollState
@@ -19,10 +21,17 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -42,10 +51,21 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Spec
  * exercised directly, and the top-level package doc on why a `testDebugUnitTest`-reachable equivalent is
  * needed for the Kover/SonarCloud coverage gate.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class GearSpeciesChecklistScreenTests {
     @get:Rule
     val composeTestRule = createComposeRule()
+
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(StandardTestDispatcher())
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
 
     private val seineNets = GearType(id = "gear-seine-nets", name = "Seine nets (not specified)")
 
@@ -666,5 +686,197 @@ class GearSpeciesChecklistScreenTests {
         }
 
         composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SCREEN).assertIsDisplayed()
+    }
+
+    @Test
+    fun zeroBelowMinimumFieldShowsBelowMinimumRangeError() {
+        val gearUse = gearUseWithAddedSpecies(listOf(cod.id))
+        composeTestRule.setContent {
+            MmoTheme {
+                GearSpeciesChecklistScreenContent(
+                    draft = draftWith(gearUse),
+                    gearUse = gearUse,
+                    speciesList = speciesList,
+                    onRemoveSpecies = {},
+                    onAddAnotherSpecies = {},
+                    onSubmit = {},
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
+        composeTestRule
+            .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${cod.id}")
+            .performScrollTo()
+            .performTextInput("5")
+        composeTestRule
+            .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ADD_BELOW_MIN_ACTION_PREFIX}_${cod.id}")
+            .performScrollTo()
+            .performClick()
+        composeTestRule
+            .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.BELOW_MIN_FIELD_PREFIX}_${cod.id}")
+            .performScrollTo()
+            .performTextInput("0")
+        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performScrollTo().performClick()
+
+        composeTestRule
+            .onAllNodesWithText("Weight for Atlantic cod must be more than 0kg")
+            .onFirst()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun zeroDiscardedFieldShowsBelowMinimumRangeError() {
+        val gearUse = gearUseWithAddedSpecies(listOf(cod.id))
+        composeTestRule.setContent {
+            MmoTheme {
+                GearSpeciesChecklistScreenContent(
+                    draft = draftWith(gearUse),
+                    gearUse = gearUse,
+                    speciesList = speciesList,
+                    onRemoveSpecies = {},
+                    onAddAnotherSpecies = {},
+                    onSubmit = {},
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
+        composeTestRule
+            .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${cod.id}")
+            .performScrollTo()
+            .performTextInput("5")
+        composeTestRule
+            .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ADD_DISCARDED_ACTION_PREFIX}_${cod.id}")
+            .performScrollTo()
+            .performClick()
+        composeTestRule
+            .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.DISCARDED_FIELD_PREFIX}_${cod.id}")
+            .performScrollTo()
+            .performTextInput("0")
+        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performScrollTo().performClick()
+
+        composeTestRule
+            .onAllNodesWithText("Weight for Atlantic cod must be more than 0kg")
+            .onFirst()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun wholeNumberSpeciesRejectsADecimalWeightWithAPrecisionError() {
+        // The UI's GdsNumericField filters non-digit input for a WholeNumber species, so a decimal value
+        // can only reach validation via a pre-existing saved raw value (e.g. a reopened draft) — not typed.
+        val gearUse =
+            GearUse(
+                id = "gear-use-1",
+                gearTypeId = seineNets.id,
+                statisticalSubRectangleCode = "38E95",
+                speciesWeights =
+                    listOf(
+                        SpeciesWeightEntry(
+                            id = "sw-0",
+                            speciesId = plaice.id,
+                            confirmedCaught = true,
+                            weightAboveMinimumSizeKg = 5.5,
+                        ),
+                    ),
+                confirmedUsedOnTrip = true,
+            )
+        composeTestRule.setContent {
+            MmoTheme {
+                GearSpeciesChecklistScreenContent(
+                    draft = draftWith(gearUse),
+                    gearUse = gearUse,
+                    speciesList = speciesList,
+                    onRemoveSpecies = {},
+                    onAddAnotherSpecies = {},
+                    onSubmit = {},
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performClick()
+
+        composeTestRule
+            .onAllNodesWithText("Weight for Plaice must be a whole number")
+            .onFirst()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun weightExceedingTheAnnualQuotaShowsAnAnnualQuotaError() {
+        val annualQuotaOnlySpecies =
+            Species(
+                id = "species-sole",
+                name = "Sole (SOL)",
+                faoCode = "SOL",
+                weightPrecision = SpeciesWeightPrecision.OneDecimalPlace,
+                weightAboveMinimumSizeMandatory = false,
+                monthlyQuotaKg = null,
+                annualQuotaKg = 20.0,
+            )
+        val gearUse = gearUseWithAddedSpecies(listOf(annualQuotaOnlySpecies.id))
+        composeTestRule.setContent {
+            MmoTheme {
+                GearSpeciesChecklistScreenContent(
+                    draft = draftWith(gearUse),
+                    gearUse = gearUse,
+                    speciesList = speciesList + annualQuotaOnlySpecies,
+                    onRemoveSpecies = {},
+                    onAddAnotherSpecies = {},
+                    onSubmit = {},
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
+        composeTestRule
+            .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${annualQuotaOnlySpecies.id}")
+            .performTextInput("21")
+        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performClick()
+
+        composeTestRule
+            .onAllNodesWithText(
+                "The weight entered would exceed your annual quota for this species. Enter a lower weight.",
+            ).onFirst()
+            .assertIsDisplayed()
+    }
+
+    /** Covers [uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearSpeciesChecklistSupport]'s
+     *  `?: return@map entry` fallback: an added-but-unchecked species entry passes through save unchanged. */
+    @Test
+    fun savingWithOnlyOneOfTwoAddedSpeciesCheckedLeavesTheUncheckedEntryUnconfirmedAndUnchanged() {
+        var submitted: CatchRecordDraft? = null
+        val gearUse = gearUseWithAddedSpecies(listOf(cod.id, plaice.id))
+        composeTestRule.setContent {
+            MmoTheme {
+                GearSpeciesChecklistScreenContent(
+                    draft = draftWith(gearUse),
+                    gearUse = gearUse,
+                    speciesList = speciesList,
+                    onRemoveSpecies = {},
+                    onAddAnotherSpecies = {},
+                    onSubmit = { submitted = it },
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
+        composeTestRule
+            .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${cod.id}")
+            .performScrollTo()
+            .performTextInput("5.5")
+        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performScrollTo().performClick()
+
+        val savedEntries = requireNotNull(submitted).gearUses.single().speciesWeights
+        val confirmedCod = savedEntries.single { it.speciesId == cod.id }
+        val uncheckedPlaice = savedEntries.single { it.speciesId == plaice.id }
+        assertTrue(confirmedCod.confirmedCaught)
+        assertEquals(5.5, confirmedCod.weightAboveMinimumSizeKg)
+        assertFalse(uncheckedPlaice.confirmedCaught)
+        assertNull(uncheckedPlaice.weightAboveMinimumSizeKg)
     }
 }
