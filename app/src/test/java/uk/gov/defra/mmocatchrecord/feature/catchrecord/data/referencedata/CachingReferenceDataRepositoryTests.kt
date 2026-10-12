@@ -342,6 +342,7 @@ class CachingReferenceDataRepositoryTests {
             assertEquals(expected, fetched.getOrThrow())
             assertEquals(expected, cached.getOrThrow())
             assertEquals("cy", dao.getMetadata(DATASET_SPECIES)?.languageTag)
+            verify(remoteDataSource, times(1)).fetchSpecies()
         }
 
     @Test
@@ -371,6 +372,7 @@ class CachingReferenceDataRepositoryTests {
             assertEquals(1, fetched.single().measurementFields.size)
             assertEquals(fetched, cached)
             assertEquals("col-1", dao.getMetadata(gearsDatasetKey(band))?.collectionId)
+            verify(remoteDataSource, times(1)).fetchGears(vesselLengthMetres = representativeLength)
         }
 
     @Test
