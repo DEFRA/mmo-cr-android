@@ -33,6 +33,9 @@ import androidx.room.RoomDatabase
  * v6 -> v7 (CRAR-152 Phase A, FR10): [DraftEntity] gained three nullable audit columns —
  * `createdAtEpochMillis`/`submittedAtEpochMillis`/`syncedAtEpochMillis` — see ADR 0014.
  *
+ * v7 -> v8 (ADR 0016): six new, purely additive reference-data cache tables (vessels/ports/species/gears/
+ * gear-measurements/metadata) — no pre-existing draft table is touched, so an in-progress draft survives.
+ *
  * Every version bump above has a real [androidx.room.migration.Migration] registered in
  * [CatchRecordMigrations] (see `di/DatabaseModule.kt`) — a draft in progress must survive every schema
  * change, so `fallbackToDestructiveMigration` must never be reintroduced for this database (ADR 0010).
@@ -45,10 +48,18 @@ import androidx.room.RoomDatabase
         SpeciesWeightEntity::class,
         LandingStorageEntity::class,
         NotLandedSpeciesEntity::class,
+        ReferenceDataVesselEntity::class,
+        ReferenceDataPortEntity::class,
+        ReferenceDataSpeciesEntity::class,
+        ReferenceDataGearEntity::class,
+        ReferenceDataGearMeasurementEntity::class,
+        ReferenceDataMetadataEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = true,
 )
 abstract class CatchRecordDatabase : RoomDatabase() {
     abstract fun catchRecordDraftDao(): CatchRecordDraftDao
+
+    abstract fun referenceDataDao(): ReferenceDataDao
 }

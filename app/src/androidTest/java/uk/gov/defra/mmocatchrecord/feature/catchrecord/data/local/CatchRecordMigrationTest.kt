@@ -61,7 +61,7 @@ class CatchRecordMigrationTest {
     }
 
     @Test
-    fun migrate1To7fullChainPreservesARowAcrossEveryIntermediateSchemaChange() {
+    fun migrate1To8fullChainPreservesARowAcrossEveryIntermediateSchemaChange() {
         val db = helper.createDatabase(databaseName, 1)
         db.seedV1DraftWithChildren("draft-v1", "vessel-legacy", 9_000L)
 
@@ -102,6 +102,10 @@ class CatchRecordMigrationTest {
                 assertEquals(0.5, cursor.getDouble(2), 0.0)
                 assertEquals(1, cursor.getInt(3))
             }
+        db
+            .query(
+                "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'reference_data_metadata'",
+            ).use { cursor -> assertTrue(cursor.moveToFirst()) }
         db.close()
     }
 

@@ -208,4 +208,41 @@ class DraftInvalidationTests {
 
         assertEquals(next, result)
     }
+
+    @Test
+    fun `a stub-era gear type id absent from live gear types has its dependent data cleared`() {
+        val stubEraGearUse =
+            GearUse(
+                id = "gear-use-1",
+                gearTypeId = "gear-pots",
+                statisticalSubRectangleCode = "38E95",
+                confirmedUsedOnTrip = true,
+                speciesWeights = listOf(SpeciesWeightEntry(id = "sw-1", speciesId = "species-cod")),
+            )
+        val next = draft(gearUses = listOf(stubEraGearUse))
+
+        val result = DraftInvalidation.reconcileAgainstLiveGearTypes(next, liveGearTypeIds = setOf("live-gear-1"))
+
+        val reconciled = result.gearUses.single()
+        assertNull(reconciled.statisticalSubRectangleCode)
+        assertTrue(reconciled.speciesWeights.isEmpty())
+        assertEquals(false, reconciled.confirmedUsedOnTrip)
+    }
+
+    @Test
+    fun `a gear use whose gear type id is still live is left untouched`() {
+        val liveGearUse =
+            GearUse(
+                id = "gear-use-1",
+                gearTypeId = "live-gear-1",
+                statisticalSubRectangleCode = "38E95",
+                confirmedUsedOnTrip = true,
+                speciesWeights = listOf(SpeciesWeightEntry(id = "sw-1", speciesId = "species-cod")),
+            )
+        val next = draft(gearUses = listOf(liveGearUse))
+
+        val result = DraftInvalidation.reconcileAgainstLiveGearTypes(next, liveGearTypeIds = setOf("live-gear-1"))
+
+        assertEquals(liveGearUse, result.gearUses.single())
+    }
 }

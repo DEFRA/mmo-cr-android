@@ -4,7 +4,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
- * Real Room [Migration]s for every [CatchRecordDatabase] schema version bump, v1 through v7 — see ADR 0010.
+ * Real Room [Migration]s for every [CatchRecordDatabase] schema version bump, v1 through v8 — see ADR 0010.
  * Each migration's SQL is derived directly from the committed `app/schemas` JSON history (the authoritative
  * record of each version's actual column/table shape), never destructively dropping/recreating the whole
  * database. Registered via `.addMigrations(...)` in `di/DatabaseModule.kt`.
@@ -162,6 +162,64 @@ object CatchRecordMigrations {
             }
         }
 
+    /**
+     * v7 -> v8 (ADR 0016): six new, purely additive reference-data cache tables — no existing draft table
+     * is altered, so an in-progress draft is unaffected. SQL copied verbatim from the exported v8 schema.
+     */
+    val MIGRATION_7_8 =
+        object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS reference_data_vessel (`id` TEXT NOT NULL, `name` TEXT NOT NULL, " +
+                        "`displayName` TEXT NOT NULL, `pln` TEXT, `cfr` TEXT, `lengthOverallMetres` REAL, " +
+                        "PRIMARY KEY(`id`))",
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS reference_data_port (`id` TEXT NOT NULL, `code` TEXT NOT NULL, " +
+                        "`name` TEXT NOT NULL, `displayName` TEXT NOT NULL, `latitude` REAL, `longitude` REAL, " +
+                        "`statisticalAreaId` TEXT NOT NULL, PRIMARY KEY(`id`))",
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS reference_data_species (`id` TEXT NOT NULL, " +
+                        "`faoCode` TEXT NOT NULL, `scientificName` TEXT, `displayName` TEXT NOT NULL, " +
+                        "PRIMARY KEY(`id`))",
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS reference_data_gear (`id` TEXT NOT NULL, " +
+                        "`vesselLengthBand` TEXT NOT NULL, `code` TEXT NOT NULL, `name` TEXT NOT NULL, " +
+                        "`categoryId` TEXT NOT NULL, `categoryCode` TEXT NOT NULL, `categoryName` TEXT NOT NULL, " +
+                        "`pairFishing` INTEGER NOT NULL, `orderIndex` INTEGER NOT NULL, " +
+                        "PRIMARY KEY(`id`, `vesselLengthBand`))",
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS reference_data_gear_measurement (" +
+                        "`rowId` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `gearId` TEXT NOT NULL, " +
+                        "`vesselLengthBand` TEXT NOT NULL, `key` TEXT NOT NULL, `label` TEXT NOT NULL, " +
+                        "`type` TEXT NOT NULL, `unit` TEXT, `orderIndex` INTEGER NOT NULL, " +
+                        "FOREIGN KEY(`gearId`, `vesselLengthBand`) REFERENCES " +
+                        "`reference_data_gear`(`id`, `vesselLengthBand`) ON UPDATE NO ACTION ON DELETE CASCADE)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_reference_data_gear_measurement_gearId_vesselLengthBand " +
+                        "ON reference_data_gear_measurement (gearId, vesselLengthBand)",
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS reference_data_metadata (`datasetKey` TEXT NOT NULL, " +
+                        "`collectionId` TEXT NOT NULL, `schemaVersion` TEXT NOT NULL, `manifestVersion` TEXT, " +
+                        "`manifestEtag` TEXT, `responseETag` TEXT, `fetchedAtEpochMillis` INTEGER NOT NULL, " +
+                        "`languageTag` TEXT, PRIMARY KEY(`datasetKey`))",
+                )
+            }
+        }
+
     val ALL =
-        arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+        arrayOf(
+            MIGRATION_1_2,
+            MIGRATION_2_3,
+            MIGRATION_3_4,
+            MIGRATION_4_5,
+            MIGRATION_5_6,
+            MIGRATION_6_7,
+            MIGRATION_7_8,
+        )
 }

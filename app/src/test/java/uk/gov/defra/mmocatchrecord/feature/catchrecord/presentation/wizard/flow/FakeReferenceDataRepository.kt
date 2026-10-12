@@ -176,7 +176,7 @@ class FakeReferenceDataRepository(
     override suspend fun getPreviouslyUsedPorts(vesselId: String): Result<List<Port>> =
         Result.success(previousPortsByVessel[vesselId].orEmpty())
 
-    override suspend fun getGearTypes(): Result<List<GearType>> = Result.success(gearTypes)
+    override suspend fun getGearTypes(vesselLengthMetres: Double?): Result<List<GearType>> = Result.success(gearTypes)
 
     override suspend fun getSpecies(): Result<List<Species>> = Result.success(species)
 

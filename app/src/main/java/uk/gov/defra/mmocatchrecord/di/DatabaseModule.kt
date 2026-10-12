@@ -12,6 +12,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.CatchRecordDat
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.CatchRecordDraftDao
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.CatchRecordMigrations
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.CatchRecordPassphraseProvider
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.ReferenceDataDao
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.SqlCipherLibraryLoader
 import javax.inject.Singleton
 
@@ -52,4 +53,8 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideCatchRecordDraftDao(database: CatchRecordDatabase): CatchRecordDraftDao = database.catchRecordDraftDao()
+
+    @Provides
+    @Singleton
+    fun provideReferenceDataDao(database: CatchRecordDatabase): ReferenceDataDao = database.referenceDataDao()
 }

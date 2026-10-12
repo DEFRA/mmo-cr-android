@@ -49,3 +49,11 @@ There was also no structured logging library in the app at all — diagnostics r
 - `Timber` is a new, small, additive dependency (pinned in the Gradle version catalog); it has no transitive
   Android-version or licensing implications relevant to the DEFRA/GDS constraints already recorded in
   copilot-instructions §5.
+
+## Update (reference-data API integration, ADR 0016)
+
+`SafeErrorMapper.classify` treats any `IOException` (including the `android.database.sqlite` transient
+lock/busy exceptions some API levels surface as generic `RuntimeException`s, and a real network timeout) as
+`Transient`. A new `ReferenceDataApiException` hierarchy is classified explicitly instead, honouring the
+server's `retryable` flag (or a status-code default) rather than falling through the generic `IOException`
+branch — see ADR 0016 for the full classification table.

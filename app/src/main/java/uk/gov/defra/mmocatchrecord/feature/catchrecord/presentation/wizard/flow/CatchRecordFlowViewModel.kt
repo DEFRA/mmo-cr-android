@@ -121,7 +121,10 @@ class CatchRecordFlowViewModel
             launchInViewModelScope {
                 runCatching {
                     val referenceData = loadReferenceData()
-                    val existingDraft = draftRepository.getAnyActiveDraft().getOrThrow()
+                    val existingDraft =
+                        draftRepository.getAnyActiveDraft().getOrThrow()?.let {
+                            reconcileAgainstLiveGearTypes(it, referenceData.gearTypes)
+                        }
                     val previouslyUsedPorts = previouslyUsedPortsFor(existingDraft)
                     updateState {
                         it.copy(
@@ -143,6 +146,16 @@ class CatchRecordFlowViewModel
             }
         }
 
+        /** ADR 0016: clears a stub-era draft's gear-use state once its id no longer resolves against
+         *  live [gearTypes], persisting the change so it is not silently re-applied on every resume. */
+        private suspend fun reconcileAgainstLiveGearTypes(
+            draft: CatchRecordDraft,
+            gearTypes: List<GearType>,
+        ): CatchRecordDraft {
+            val reconciled = DraftInvalidation.reconcileAgainstLiveGearTypes(draft, gearTypes.map { it.id }.toSet())
+            return if (reconciled == draft) draft else draftRepository.saveDraft(reconciled).getOrThrow()
+        }
+
         /** FR2: as [enterFlow], but resumes the specific [draftId] chosen from the Home records list. */
         private fun enterFlowForDraft(draftId: String) {
             updateState { it.copy(status = UiStatus.Loading) }
@@ -152,10 +165,11 @@ class CatchRecordFlowViewModel
                     val draft =
                         draftRepository.getDraftById(draftId).getOrThrow()
                             ?: error("Draft '$draftId' was not found")
-                    val previouslyUsedPorts = previouslyUsedPortsFor(draft)
+                    val reconciledDraft = reconcileAgainstLiveGearTypes(draft, referenceData.gearTypes)
+                    val previouslyUsedPorts = previouslyUsedPortsFor(reconciledDraft)
                     updateState {
                         it.copy(
-                            status = UiStatus.Content(draft),
+                            status = UiStatus.Content(reconciledDraft),
                             currentStep = WizardStep.DraftResume,
                             vessels = referenceData.vessels,
                             ports = referenceData.ports,
@@ -208,7 +222,9 @@ class CatchRecordFlowViewModel
                     val existingDraft = draftRepository.getActiveDraft(vesselId).getOrThrow()
                     val draft = existingDraft ?: newUnpersistedDraftCandidate(vesselId)
                     val previouslyUsedPorts = referenceDataRepository.getPreviouslyUsedPorts(vesselId).getOrThrow()
-                    emitLoadedDraft(draft, WizardStep.TripToday, previouslyUsedPorts, existingDraft != null)
+                    val vesselLength = currentState.vessels.firstOrNull { it.id == vesselId }?.lengthOverallMetres
+                    val gearTypes = referenceDataRepository.getGearTypes(vesselLength).getOrThrow()
+                    emitLoadedDraft(draft, WizardStep.TripToday, previouslyUsedPorts, existingDraft != null, gearTypes)
                 }.onFailure { emitLoadError(CatchRecordFlowEvent.VesselSelected(vesselId), it) }
             }
         }
@@ -516,11 +532,13 @@ class CatchRecordFlowViewModel
             )
         }
 
+        /** [gearTypes] is re-fetched per the selected vessel's length band; `null` leaves the existing list. */
         private fun emitLoadedDraft(
             draft: CatchRecordDraft,
             nextStep: WizardStep,
             previouslyUsedPorts: List<Port>,
             isDraftPersisted: Boolean,
+            gearTypes: List<GearType>? = null,
         ) {
             updateState {
                 it.copy(
@@ -529,6 +547,7 @@ class CatchRecordFlowViewModel
                     previouslyUsedPorts = previouslyUsedPorts,
                     departurePortEntryMode = deriveDeparturePortEntryMode(previouslyUsedPorts),
                     samePortCandidate = previouslyUsedPorts.firstOrNull(),
+                    gearTypes = gearTypes ?: it.gearTypes,
                     isDraftPersisted = isDraftPersisted,
                 )
             }

@@ -27,6 +27,9 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectio
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectionMode
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldKeys
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.ReferenceDataRepository
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Vessel
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CatchRecordFlowViewModelTests {
@@ -43,7 +46,7 @@ class CatchRecordFlowViewModelTests {
     @Suppress("LongParameterList")
     private fun buildViewModel(
         repository: FakeCatchRecordDraftRepository,
-        referenceDataRepository: FakeReferenceDataRepository = FakeReferenceDataRepository(),
+        referenceDataRepository: ReferenceDataRepository = FakeReferenceDataRepository(),
         submissionRepository: FakeCatchRecordSubmissionRepository = FakeCatchRecordSubmissionRepository(),
         connectivityChecker: FakeNetworkConnectivityChecker = FakeNetworkConnectivityChecker(),
         syncScheduler: FakeCatchRecordSyncScheduler = FakeCatchRecordSyncScheduler(),
@@ -276,6 +279,52 @@ class CatchRecordFlowViewModelTests {
             }
         }
 
+    /** ADR 0016: a stub-id draft must not crash on resume — it loses the affected gear's confirmed/
+     *  dependent data (user sees "Used on trip?" reset to unanswered), rather than carrying a dead id. */
+    @Test
+    fun `enter flow reconciles a stub-era draft whose gear type id is absent from live reference data`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            val started = repository.startDraft("vessel-achilles").getOrThrow()
+            val stubEraGearUse =
+                GearUse(
+                    id = "gear-use-1",
+                    gearTypeId = "gear-pots",
+                    statisticalSubRectangleCode = "38E95",
+                    confirmedUsedOnTrip = true,
+                    speciesWeights =
+                        listOf(SpeciesWeightEntry(id = "sw-1", speciesId = "species-cod", confirmedCaught = true)),
+                )
+            repository.saveDraft(started.copy(gearUses = listOf(stubEraGearUse))).getOrThrow()
+            val liveOnlyReferenceData =
+                FakeReferenceDataRepository(gearTypes = listOf(GearType("live-gear-1", "Live gear")))
+            val viewModel =
+                buildViewModel(
+                    repository = repository,
+                    referenceDataRepository = liveOnlyReferenceData,
+                    dispatcher = dispatcher,
+                )
+
+            viewModel.state.test {
+                awaitItem()
+                viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+                awaitItem()
+                val loaded = awaitItem()
+                val reconciled = (loaded.status as UiStatus.Content<CatchRecordDraft>).value.gearUses.single()
+                assertNull(reconciled.statisticalSubRectangleCode)
+                assertTrue(reconciled.speciesWeights.isEmpty())
+                assertEquals(false, reconciled.confirmedUsedOnTrip)
+            }
+            val persisted =
+                repository
+                    .getAnyActiveDraft()
+                    .getOrThrow()
+                    ?.gearUses
+                    ?.single()
+            assertEquals(false, persisted?.confirmedUsedOnTrip)
+        }
+
     @Test
     fun `vessel selected with no existing draft performs zero writes per BR-XX`() =
         runTest {
@@ -322,6 +371,36 @@ class CatchRecordFlowViewModelTests {
             }
             assertEquals(1, repository.startDraftCallCount)
             assertEquals("vessel-achilles", repository.getActiveDraft("vessel-achilles").getOrThrow()?.vesselId)
+        }
+
+    @Test
+    fun `vessel selected passes the selected vessel's length to gear types`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            val recordingReferenceData =
+                RecordingReferenceDataRepository(
+                    FakeReferenceDataRepository(
+                        vessels = listOf(Vessel("vessel-achilles", "ACHILLES", lengthOverallMetres = 8.74)),
+                    ),
+                )
+            val viewModel =
+                buildViewModel(
+                    repository = repository,
+                    referenceDataRepository = recordingReferenceData,
+                    dispatcher = dispatcher,
+                )
+
+            viewModel.state.test {
+                awaitItem()
+                viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+                awaitItem()
+                awaitItem()
+                viewModel.dispatch(CatchRecordFlowEvent.VesselSelected("vessel-achilles"))
+                awaitItem()
+                awaitItem()
+            }
+            assertEquals(listOf(null, 8.74), recordingReferenceData.gearTypesCalls)
         }
 
     @Test
@@ -911,4 +990,16 @@ class CatchRecordFlowViewModelTests {
             assertEquals(UiStatus.Content(draftBeforeEdit), viewModel.state.value.status)
             assertEquals(0, repository.startDraftCallCount)
         }
+}
+
+/** Records every [getGearTypes] call's `vesselLengthMetres` argument (ADR 0016 band-selection wiring). */
+private class RecordingReferenceDataRepository(
+    private val delegate: FakeReferenceDataRepository,
+) : ReferenceDataRepository by delegate {
+    val gearTypesCalls = mutableListOf<Double?>()
+
+    override suspend fun getGearTypes(vesselLengthMetres: Double?): Result<List<GearType>> {
+        gearTypesCalls += vesselLengthMetres
+        return delegate.getGearTypes(vesselLengthMetres)
+    }
 }

@@ -6,6 +6,8 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata
 data class Vessel(
     val id: String,
     val name: String,
+    /** `null` until resolved from live reference data; selects the gears vessel-length band (ADR 0016). */
+    val lengthOverallMetres: Double? = null,
 )
 
 /** A UK/EU landing port. */
@@ -124,12 +126,13 @@ interface ReferenceDataRepository {
     /** Returns previously used ports for [vesselId], most-recent-first for shortcut/favourites use. */
     suspend fun getPreviouslyUsedPorts(vesselId: String): Result<List<Port>>
 
-    suspend fun getGearTypes(): Result<List<GearType>>
+    suspend fun getGearTypes(vesselLengthMetres: Double? = null): Result<List<GearType>>
 
     suspend fun getSpecies(): Result<List<Species>>
 
     suspend fun getStatisticalSubRectangles(): Result<List<StatisticalSubRectangle>>
 
-    /** Statistical sub-rectangles whose [StatisticalSubRectangle.statisticalAreaId] matches [port]'s area. */
+    /** Statistical sub-rectangles whose [StatisticalSubRectangle.statisticalAreaId] matches [portId]'s
+     *  area; an unresolvable [portId] returns an empty (not failed) list, matching the map's own fallback. */
     suspend fun getStatisticalSubRectanglesForPort(portId: String): Result<List<StatisticalSubRectangle>>
 }

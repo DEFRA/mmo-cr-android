@@ -58,6 +58,27 @@ object DraftInvalidation {
         return gearUse
     }
 
+    /** ADR 0016: clears a gear use's confirmed/dependent state if its [GearUse.gearTypeId] is not
+     *  in [liveGearTypeIds] (e.g. a stub-saved draft, now that live gear types are cached). */
+    fun reconcileAgainstLiveGearTypes(
+        draft: CatchRecordDraft,
+        liveGearTypeIds: Set<String>,
+    ): CatchRecordDraft {
+        val reconciledGearUses =
+            draft.gearUses.map { gearUse ->
+                if (gearUse.gearTypeId in liveGearTypeIds) {
+                    gearUse
+                } else {
+                    gearUse.copy(
+                        statisticalSubRectangleCode = null,
+                        speciesWeights = emptyList(),
+                        confirmedUsedOnTrip = false,
+                    )
+                }
+            }
+        return pruneOrphanNotLandedSpecies(draft.copy(gearUses = reconciledGearUses))
+    }
+
     private fun pruneOrphanNotLandedSpecies(draft: CatchRecordDraft): CatchRecordDraft {
         if (draft.notLandedStraightAway != true) {
             return if (draft.notLandedSpeciesEntries.isEmpty()) {
