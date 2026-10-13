@@ -3,6 +3,7 @@ package uk.gov.defra.mmocatchrecord.core.logging
 import android.util.Log
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -11,9 +12,10 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.shadows.ShadowLog
 import timber.log.Timber
 
-/** Covers [ReleaseTree]'s log-level filtering and throwable-message redaction (ADR 0011). */
 @RunWith(RobolectricTestRunner::class)
 class ReleaseTreeTests {
+    private val secret = "do not log this message"
+
     @Before
     fun plantReleaseTree() {
         Timber.uprootAll()
@@ -24,6 +26,7 @@ class ReleaseTreeTests {
     @After
     fun removeAllTrees() {
         Timber.uprootAll()
+        ShadowLog.clear()
     }
 
     @Test
@@ -31,9 +34,7 @@ class ReleaseTreeTests {
         Timber.v("verbose message")
         Timber.d("debug message")
 
-        val logs = ShadowLog.getLogs()
-        assertTrue(logs.none { it.msg?.contains("verbose message") == true })
-        assertTrue(logs.none { it.msg?.contains("debug message") == true })
+        assertTrue(defaultTagEntries().isEmpty())
     }
 
     @Test
@@ -46,12 +47,38 @@ class ReleaseTreeTests {
     }
 
     @Test
-    fun `error priority with a throwable appends the throwable class name suffix`() {
-        Timber.e(IllegalStateException("do not log this message"), "failed")
+    fun `error with a message and throwable logs only the message and throwable class name`() {
+        Timber.e(IllegalStateException(secret), "failed")
 
-        val entry = defaultTagEntries().single { it.type == Log.ERROR }
-        assertTrue(entry.msg.startsWith("failed"))
-        assertTrue(entry.msg.endsWith("(IllegalStateException)"))
+        val entry = defaultTagEntries().single()
+        assertEquals(Log.ERROR, entry.type)
+        assertEquals("failed (IllegalStateException)", entry.msg)
+    }
+
+    @Test
+    fun `error with only a throwable logs just its class name`() {
+        Timber.e(IllegalStateException(secret))
+
+        assertEquals("(IllegalStateException)", defaultTagEntries().single().msg)
+    }
+
+    @Test
+    fun `a nested cause and formatted args never leak throwable messages or stack frames`() {
+        val error = RuntimeException("outer $secret", IllegalArgumentException("inner $secret"))
+
+        Timber.w(error, "sync failed for %s", "draft-1")
+
+        val message = defaultTagEntries().single().msg
+        assertEquals("sync failed for draft-1 (RuntimeException)", message)
+        assertFalse(message.contains(secret))
+        assertFalse(message.contains("\tat "))
+    }
+
+    @Test
+    fun `a multi-line message keeps its own lines but drops the stack trace`() {
+        Timber.e(IllegalStateException(secret), "first line\nsecond line")
+
+        assertEquals("first line\nsecond line (IllegalStateException)", defaultTagEntries().single().msg)
     }
 
     @Test
