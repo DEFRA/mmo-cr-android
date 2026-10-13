@@ -225,4 +225,50 @@ class CheckYourAnswersScreenTests {
 
         composeTestRule.onNodeWithTag(CheckYourAnswersScreenTestTags.OFFLINE_NOTICE).assertDoesNotExist()
     }
+
+    @Test
+    fun belowMinimumSizeAndLegallyDiscardedWeightRowsAreDisplayed() {
+        val draftWithExtraWeights =
+            draft().copy(
+                gearUses =
+                    listOf(
+                        GearUse(
+                            id = "gear-use-1",
+                            gearTypeId = seineNet.id,
+                            statisticalSubRectangleCode = "38E9",
+                            confirmedUsedOnTrip = true,
+                            speciesWeights =
+                                listOf(
+                                    SpeciesWeightEntry(
+                                        id = "sw-1",
+                                        speciesId = cod.id,
+                                        weightBelowMinimumSizeKg = 2.5,
+                                        weightLegallyDiscardedKg = 1.5,
+                                        confirmedCaught = true,
+                                    ),
+                                ),
+                        ),
+                    ),
+                notLandedStraightAway = false,
+                notLandedSpeciesEntries = emptyList(),
+            )
+        composeTestRule.setContent {
+            MmoTheme {
+                CheckYourAnswersScreenContent(
+                    draft = draftWithExtraWeights,
+                    vessels = listOf(vessel),
+                    ports = listOf(departurePort, returnPort),
+                    gearTypes = listOf(seineNet),
+                    species = listOf(cod),
+                    onChangeRow = {},
+                    onSubmit = {},
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    isOffline = false,
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("2.5 kg").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("1.5 kg").performScrollTo().assertIsDisplayed()
+    }
 }

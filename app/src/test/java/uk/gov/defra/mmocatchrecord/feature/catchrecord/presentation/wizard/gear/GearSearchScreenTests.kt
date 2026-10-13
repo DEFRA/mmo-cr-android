@@ -1,5 +1,7 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear
 
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -8,8 +10,17 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -22,14 +33,23 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementField
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordFlowEvent
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordFlowViewModel
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordFlowViewState
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.FakeCatchRecordDraftRepository
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.FakeCatchRecordSubmissionRepository
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.FakeCatchRecordSyncScheduler
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.FakeNetworkConnectivityChecker
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.FakeReferenceDataRepository
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardStep
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardTestTheme
 
 /**
  * JVM/Robolectric port of (a focused subset of) the androidTest `GearScreensTest`'s "Gear search" section
- * — see the top-level package doc on [GearSpeciesChecklistScreenTests] for why a
+ * - see the top-level package doc on [GearSpeciesChecklistScreenTests] for why a
  * `testDebugUnitTest`-reachable equivalent is needed for the Kover/SonarCloud coverage gate.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class GearSearchScreenTests {
     @get:Rule
@@ -46,6 +66,30 @@ class GearSearchScreenTests {
             measurementFields = listOf(meshSizeField),
         )
     private val gearTypes = listOf(seineNets, bottomOtterTrawls)
+
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(StandardTestDispatcher())
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
+    private fun buildViewModel(
+        dispatcher: CoroutineDispatcher,
+        repository: FakeCatchRecordDraftRepository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" }),
+    ) = CatchRecordFlowViewModel(
+        repository,
+        FakeReferenceDataRepository(),
+        FakeCatchRecordSubmissionRepository(),
+        FakeNetworkConnectivityChecker(),
+        FakeCatchRecordSyncScheduler(),
+        { 0L },
+        { "gear-use-1" },
+        dispatcher,
+    )
 
     private fun sampleDraft(gearUses: List<GearUse>) =
         CatchRecordDraft(
@@ -140,5 +184,61 @@ class GearSearchScreenTests {
         }
 
         composeTestRule.onNodeWithTag(GearSearchScreenTestTags.AUTOCOMPLETE_FIELD).assertDoesNotExist()
+    }
+
+    /**
+     * JVM/Robolectric coverage for the Hilt-backed, stateful [GearSearchScreen] wrapper: selecting a gear
+     * dispatches [CatchRecordFlowEvent.GearTypeSelected] and navigates to [WizardStep.GearMeasurement].
+     */
+    @Test
+    fun viewModelBackedScreenDispatchesGearTypeSelectedAndNavigatesToGearMeasurement() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            val viewModel = buildViewModel(dispatcher, repository)
+            var navigatedStep: WizardStep? = null
+
+            composeTestRule.setContent {
+                WizardTestTheme {
+                    GearSearchScreen(viewModel = viewModel, onNavigate = { navigatedStep = it }, onBack = {})
+                }
+            }
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            testScheduler.advanceUntilIdle()
+            composeTestRule.waitForIdle()
+            viewModel.dispatch(CatchRecordFlowEvent.VesselSelected("vessel-achilles"))
+            testScheduler.advanceUntilIdle()
+            composeTestRule.waitForIdle()
+
+            composeTestRule.onNodeWithTag(GearSearchScreenTestTags.AUTOCOMPLETE_FIELD).performTextInput("Se")
+            composeTestRule.onNodeWithTag("${GearSearchScreenTestTags.SUGGESTION_PREFIX}_0").performClick()
+            composeTestRule.onNodeWithTag(GearSearchScreenTestTags.SAVE_ACTION).performClick()
+            testScheduler.advanceUntilIdle()
+            composeTestRule.waitForIdle()
+
+            assertEquals(WizardStep.GearMeasurement, navigatedStep)
+            assertEquals("gear-seine-nets", viewModel.state.value.pendingGearTypeId)
+        }
+
+    @Test
+    fun screenPreviewRendersWithoutError() {
+        composeTestRule.setContent {
+            CompositionLocalProvider(LocalInspectionMode provides true) {
+                GearSearchScreen_Preview()
+            }
+        }
+
+        composeTestRule.onNodeWithText("What gear did you use?").assertIsDisplayed()
+    }
+
+    @Test
+    fun addAnotherGearPreviewRendersWithoutError() {
+        composeTestRule.setContent {
+            CompositionLocalProvider(LocalInspectionMode provides true) {
+                GearSearchScreen_AddAnotherGearPreview()
+            }
+        }
+
+        composeTestRule.onNodeWithText("Add gear to your list").assertIsDisplayed()
     }
 }

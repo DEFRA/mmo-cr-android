@@ -1,6 +1,7 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear
 
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -138,5 +139,57 @@ class GearMeasurementScreenTests {
             composeTestRule.waitForIdle()
 
             assertEquals(WizardStep.CheckYourAnswers, navigatedStep)
+        }
+
+    @Test
+    fun `an outer load error is shown as a retryable wizard error and recovers via Retry`() =
+        runTest {
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            repository.failNextOperation = true
+            val viewModel = buildViewModel(dispatcher = StandardTestDispatcher(testScheduler), repository = repository)
+
+            composeTestRule.setContent {
+                WizardTestTheme {
+                    GearMeasurementScreen(viewModel = viewModel, onNavigate = {}, onBack = {})
+                }
+            }
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            testScheduler.advanceUntilIdle()
+            composeTestRule.waitForIdle()
+
+            composeTestRule.onNodeWithTag(GearMeasurementScreenTestTags.ERROR_MESSAGE).assertIsDisplayed()
+            composeTestRule
+                .onNodeWithTag("${GearMeasurementScreenTestTags.ERROR_MESSAGE}_retry_action")
+                .performClick()
+            testScheduler.advanceUntilIdle()
+            composeTestRule.waitForIdle()
+
+            assertEquals(UiStatus.Idle, viewModel.state.value.status)
+        }
+
+    @Test
+    fun `an unresolvable pending gear type shows the defensive fallback message`() =
+        runTest {
+            val viewModel = buildViewModel(dispatcher = StandardTestDispatcher(testScheduler))
+
+            composeTestRule.setContent {
+                WizardTestTheme {
+                    GearMeasurementScreen(viewModel = viewModel, onNavigate = {}, onBack = {})
+                }
+            }
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            testScheduler.advanceUntilIdle()
+            composeTestRule.waitForIdle()
+            viewModel.dispatch(CatchRecordFlowEvent.VesselSelected("vessel-achilles"))
+            testScheduler.advanceUntilIdle()
+            composeTestRule.waitForIdle()
+            // An id that resolves to no known gear type leaves pendingGearTypeId null (see
+            // CatchRecordFlowViewModel.gearTypeSelected's own defensive guard) - exercising the screen's own
+            // defensive branch rather than the ViewModel's.
+            viewModel.dispatch(CatchRecordFlowEvent.GearTypeSelected("no-such-gear-type"))
+            testScheduler.advanceUntilIdle()
+            composeTestRule.waitForIdle()
+
+            composeTestRule.onNodeWithTag(GearMeasurementScreenTestTags.ERROR_MESSAGE).assertIsDisplayed()
         }
 }

@@ -276,4 +276,103 @@ class CheckYourAnswersSupportTests {
         assertEquals("unknown-gear", gearTypeRow.value)
         assertNull(gearSection.rows.firstOrNull { it.kind == CheckYourAnswersFieldKind.Measurement })
     }
+
+    @Test
+    fun `species-caught section falls back to the raw species id when unknown`() {
+        val gearOne =
+            GearUse(
+                id = "gear-use-1",
+                gearTypeId = seineNet.id,
+                statisticalSubRectangleCode = "38E9",
+                confirmedUsedOnTrip = true,
+                speciesWeights =
+                    listOf(SpeciesWeightEntry(id = "sw-1", speciesId = "unknown-species", confirmedCaught = true)),
+            )
+        val sections = buildSections(draft(gearUses = listOf(gearOne)))
+        val speciesSection = sections.first { it.kind == CheckYourAnswersSectionKind.SpeciesCaught }
+
+        val speciesRow = speciesSection.rows.first { it.kind == CheckYourAnswersFieldKind.Species }
+        assertEquals("unknown-species", speciesRow.value)
+    }
+
+    @Test
+    fun `species-caught section includes below-minimum-size and legally-discarded weight rows`() {
+        val gearOne =
+            GearUse(
+                id = "gear-use-1",
+                gearTypeId = seineNet.id,
+                statisticalSubRectangleCode = "38E9",
+                confirmedUsedOnTrip = true,
+                speciesWeights =
+                    listOf(
+                        SpeciesWeightEntry(
+                            id = "sw-1",
+                            speciesId = cod.id,
+                            weightBelowMinimumSizeKg = 2.5,
+                            weightLegallyDiscardedKg = 1.5,
+                            confirmedCaught = true,
+                        ),
+                    ),
+            )
+        val sections = buildSections(draft(gearUses = listOf(gearOne)))
+        val speciesSection = sections.first { it.kind == CheckYourAnswersSectionKind.SpeciesCaught }
+
+        val belowRow = speciesSection.rows.first { it.kind == CheckYourAnswersFieldKind.WeightBelowMinimumSize }
+        assertEquals("2.5 kg", belowRow.value)
+        val discardedRow = speciesSection.rows.first { it.kind == CheckYourAnswersFieldKind.WeightLegallyDiscarded }
+        assertEquals("1.5 kg", discardedRow.value)
+    }
+
+    @Test
+    fun `species-not-landed section falls back to the raw species id when unknown`() {
+        val sections =
+            buildSections(
+                draft(
+                    notLandedStraightAway = true,
+                    notLandedSpeciesEntries = listOf(NotLandedSpeciesEntry(speciesId = "unknown-species")),
+                ),
+            )
+        val speciesSection =
+            sections.first {
+                it.kind == CheckYourAnswersSectionKind.SpeciesNotLanded &&
+                    it.rows.any { row -> row.kind == CheckYourAnswersFieldKind.Species }
+            }
+
+        val speciesRow = speciesSection.rows.first { it.kind == CheckYourAnswersFieldKind.Species }
+        assertEquals("unknown-species", speciesRow.value)
+    }
+
+    @Test
+    fun `measurement value with a blank unit omits the unit suffix`() {
+        val gearOne =
+            GearUse(
+                id = "gear-use-1",
+                gearTypeId = seineNet.id,
+                statisticalSubRectangleCode = "38E9",
+                confirmedUsedOnTrip = true,
+                measurements = mapOf("mesh_size_mm" to MeasurementValue.Numeric(value = 50.0, unit = "")),
+            )
+        val sections = buildSections(draft(gearUses = listOf(gearOne)))
+        val gearSection = sections.first { it.kind == CheckYourAnswersSectionKind.GearUsed }
+
+        val measurementRow = gearSection.rows.first { it.kind == CheckYourAnswersFieldKind.Measurement }
+        assertEquals("50", measurementRow.value)
+    }
+
+    @Test
+    fun `text measurement value is used verbatim`() {
+        val gearOne =
+            GearUse(
+                id = "gear-use-1",
+                gearTypeId = seineNet.id,
+                statisticalSubRectangleCode = "38E9",
+                confirmedUsedOnTrip = true,
+                measurements = mapOf("mesh_size_mm" to MeasurementValue.Text(value = "Diamond")),
+            )
+        val sections = buildSections(draft(gearUses = listOf(gearOne)))
+        val gearSection = sections.first { it.kind == CheckYourAnswersSectionKind.GearUsed }
+
+        val measurementRow = gearSection.rows.first { it.kind == CheckYourAnswersFieldKind.Measurement }
+        assertEquals("Diamond", measurementRow.value)
+    }
 }

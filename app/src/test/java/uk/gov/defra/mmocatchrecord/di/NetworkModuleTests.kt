@@ -3,6 +3,7 @@ package uk.gov.defra.mmocatchrecord.di
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.serialization.decodeFromString
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import uk.gov.defra.mmocatchrecord.core.language.AppLanguageRepository
@@ -37,6 +38,27 @@ class NetworkModuleTests {
             )
 
         assertTrue(response.status == "ok")
+    }
+
+    @Test
+    fun `provideTokenProvider wires up the stub for this test build flavor`() {
+        assertTrue(NetworkModule.provideTokenProvider() is StubTokenProvider)
+    }
+
+    @Test
+    fun `provideAuthInterceptor wraps the given token provider`() {
+        val tokenProvider = StubTokenProvider()
+
+        val interceptor = NetworkModule.provideAuthInterceptor(tokenProvider)
+
+        assertNotNull(interceptor)
+    }
+
+    @Test
+    fun `provideAcceptLanguageInterceptor wraps the given app language repository`() {
+        val interceptor = NetworkModule.provideAcceptLanguageInterceptor(FakeAppLanguageRepository)
+
+        assertNotNull(interceptor)
     }
 
     @Test

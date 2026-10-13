@@ -73,7 +73,12 @@ fun GdsAutocompleteField(
     var textFieldValueState by remember { mutableStateOf(value.withCursorAtEnd()) }
     val textFieldValue = textFieldValueState.syncedWith(value)
     // Structural-equality state: writing an unchanged value is a no-op, so no extra recomposition.
-    SideEffect { textFieldValueState = textFieldValue }
+    // True between picking a suggestion and the next composition, while the IME still holds the typed text.
+    var awaitingSelectionRender by remember { mutableStateOf(false) }
+    SideEffect {
+        textFieldValueState = textFieldValue
+        awaitingSelectionRender = false
+    }
     val trimmedQuery = value.trim()
     val isQueryLongEnough = trimmedQuery.length >= minQueryLength
     val showSuggestions = isQueryLongEnough && dismissedQuery != value && options.isNotEmpty()
@@ -91,7 +96,9 @@ fun GdsAutocompleteField(
         Text(text = label, style = MaterialTheme.typography.bodyLarge)
         OutlinedTextField(
             value = textFieldValue,
-            onValueChange = { newValue ->
+            onValueChange = onValueChange@{ newValue ->
+                // A stale IME edit computed from the pre-selection buffer would otherwise revert the pick.
+                if (awaitingSelectionRender) return@onValueChange
                 val hasTextChanged = newValue.text != textFieldValueState.text
                 textFieldValueState = newValue
                 // Cursor/selection-only changes must not re-open dismissed suggestions or reset callers.
@@ -131,6 +138,7 @@ fun GdsAutocompleteField(
                     // Also covers picking an option whose label equals the typed text.
                     dismissedQuery = option.label
                     textFieldValueState = option.label.withCursorAtEnd()
+                    awaitingSelectionRender = true
                     onValueChange(option.label)
                     onOptionSelected(option)
                 },

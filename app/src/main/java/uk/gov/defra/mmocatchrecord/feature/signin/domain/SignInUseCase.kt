@@ -10,7 +10,7 @@ import javax.inject.Inject
  * only, must never log the supplied credentials, and must map every transport/HTTP failure to
  * [SignInFailure] rather than leaking raw exception/HTTP details to the UI layer.
  */
-interface SignInRepository {
+fun interface SignInRepository {
     suspend fun signIn(
         username: String,
         password: String,

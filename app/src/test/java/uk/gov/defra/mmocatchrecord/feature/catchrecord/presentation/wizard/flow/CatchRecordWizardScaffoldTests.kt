@@ -1,8 +1,10 @@
-package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow
+﻿package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow
 
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.material3.Text
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertWidthIsAtLeast
@@ -12,11 +14,13 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import uk.gov.defra.mmocatchrecord.R
+import uk.gov.defra.mmocatchrecord.common.design.GdsTopAppBarTestTags
 import uk.gov.defra.mmocatchrecord.common.design.UnsavedChangesDialogTestTags
 
 /**
@@ -117,5 +121,71 @@ class CatchRecordWizardScaffoldTests {
             .onNodeWithTag(UnsavedChangesDialogTestTags.LEAVE_ACTION)
             .assertHeightIsAtLeast(48.dp)
             .assertWidthIsAtLeast(48.dp)
+    }
+
+    @Test
+    fun cleanStateTopAppBarBackClickNavigatesAwayWithNoDialog() {
+        setContent(hasUnsavedChanges = false)
+
+        composeTestRule.onNodeWithTag(GdsTopAppBarTestTags.BACK_BUTTON).performClick()
+
+        composeTestRule.onNodeWithTag(UnsavedChangesDialogTestTags.DIALOG).assertDoesNotExist()
+        assertEquals(1, onBackCalls)
+    }
+
+    @Test
+    fun dirtyStateTopAppBarBackClickShowsDialogAndBlocksNavigation() {
+        setContent(hasUnsavedChanges = true)
+
+        composeTestRule.onNodeWithTag(GdsTopAppBarTestTags.BACK_BUTTON).performClick()
+
+        composeTestRule.onNodeWithTag(UnsavedChangesDialogTestTags.DIALOG).assertIsDisplayed()
+        assertEquals(0, onBackCalls)
+    }
+
+    @Test
+    fun `rememberWizardScaffoldState falls back to preview defaults under inspection mode`() {
+        composeTestRule.setContent {
+            CompositionLocalProvider(LocalInspectionMode provides true) {
+                CatchRecordWizardScaffold(
+                    screenTestTag = "preview_scaffold",
+                    title = "Preview",
+                    onBack = {},
+                ) {
+                    Text("content")
+                }
+            }
+        }
+        composeTestRule.onNodeWithTag("preview_scaffold").assertIsDisplayed()
+        // Preview defaults wire the language toggle to a no-op lambda - tap it to cover that no-op body.
+        composeTestRule.onNodeWithTag(GdsTopAppBarTestTags.LANGUAGE_TOGGLE).performClick()
+    }
+
+    @Test
+    fun `wizard error summary lists every item and invokes its onClick`() {
+        var clickedMessage: String? = null
+        val focusRequester =
+            androidx.compose.ui.focus
+                .FocusRequester()
+        composeTestRule.setContent {
+            WizardTestTheme {
+                WizardErrorSummary(
+                    title = "There is a problem",
+                    items =
+                        listOf(
+                            WizardErrorSummaryItem("First error") { clickedMessage = "First error" },
+                            WizardErrorSummaryItem("Second error") { clickedMessage = "Second error" },
+                        ),
+                    focusRequester = focusRequester,
+                    testTag = "error_summary",
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("error_summary").assertIsDisplayed()
+        composeTestRule.onNodeWithText("There is a problem").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Second error").performClick()
+
+        assertTrue(clickedMessage == "Second error")
     }
 }

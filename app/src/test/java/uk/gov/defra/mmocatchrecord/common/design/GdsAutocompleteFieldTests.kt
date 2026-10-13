@@ -105,6 +105,24 @@ class GdsAutocompleteFieldTests {
     }
 
     @Test
+    fun `a stale IME update delivered before the picked suggestion renders does not revert the field`() {
+        setPortAutocompleteContent()
+        composeTestRule.onNodeWithTag("port_field").performTextInput("Ha")
+        composeTestRule.onAllNodesWithTag("port_suggestion_0").assertCountEquals(1)
+
+        composeTestRule.mainClock.autoAdvance = false
+        composeTestRule.onNodeWithTag("port_suggestion_0").performClick()
+        // Mimics the IME acting on its pre-selection "Ha" buffer before the next frame re-renders the field.
+        composeTestRule.onNodeWithTag("port_field").performTextInputSelection(TextRange(1))
+        composeTestRule.mainClock.autoAdvance = true
+
+        composeTestRule
+            .onNodeWithTag("port_field")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText, AnnotatedString("Hastings")))
+        composeTestRule.onAllNodesWithTag("port_suggestion_0").assertCountEquals(0)
+    }
+
+    @Test
     fun blankQueryShowsNoMatchesTextWhenOptionsAreEmpty() {
         composeTestRule.setContent {
             MmoTheme {

@@ -7,7 +7,7 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft
  * ADR 0009) behind a plain interface so `CatchRecordFlowViewModel` stays unit-testable with a fake, with
  * no WorkManager/Android dependency in its test classpath.
  */
-interface CatchRecordSyncScheduler {
+fun interface CatchRecordSyncScheduler {
     /** Enqueues sync work for the [draftId]; a no-op if work for it is already enqueued or running. */
     fun scheduleSync(draftId: String)
 }

@@ -8,6 +8,6 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft
  * (`CatchRecordFlowViewModel`) and the offline background retry path (`CatchRecordSyncWorker`), so both
  * paths exercise the exact same submission call.
  */
-interface CatchRecordSubmissionRepository {
+fun interface CatchRecordSubmissionRepository {
     suspend fun submit(draft: CatchRecordDraft): Result<Unit>
 }

@@ -92,6 +92,21 @@ class ReferenceDataRemoteDataSourceTests {
         }
 
     @Test
+    fun `fetchGears with no vessel length and no ETag uses both default parameters`() =
+        runBlocking {
+            serverRule.server.enqueue(MockResponse(code = 200, body = GEARS_BODY))
+
+            val result = remoteDataSource().fetchGears() as ReferenceDataFetchResult.Modified
+
+            assertEquals(
+                "TBB",
+                result.items.items
+                    .single()
+                    .code,
+            )
+        }
+
+    @Test
     fun `fetchManifest maps successfully and ignores unrecognised dataset names downstream`() =
         runBlocking {
             serverRule.server.enqueue(MockResponse(code = 200, body = MANIFEST_BODY))

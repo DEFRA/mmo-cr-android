@@ -1,5 +1,6 @@
 package uk.gov.defra.mmocatchrecord.feature.home.data
 
+import app.cash.turbine.test
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -74,5 +75,24 @@ class RoomHomeRepositoryTests {
             // No vessel names resolve, so every record falls back to its raw vesselId — proves the
             // `getVessels().getOrDefault(emptyList())` fallback, not a crash propagating from the failure.
             assertEquals("vessel-achilles", summary.catchRecords.single().vesselName)
+        }
+
+    @Test
+    fun `emits a second summary when the draft repository publishes a follow-up update`() =
+        runTest {
+            var nextId = 0
+            val draftRepository = FakeCatchRecordDraftRepository(idFactory = { "draft-${nextId++}" })
+            draftRepository.startDraft("vessel-achilles")
+            val repository = RoomHomeRepository(draftRepository, FakeReferenceDataRepository())
+
+            repository.observeSummary().test {
+                assertEquals(1, awaitItem().catchRecords.size)
+
+                draftRepository.startDraft("vessel-unresolved")
+
+                val second = awaitItem()
+                assertEquals(2, second.catchRecords.size)
+                cancel()
+            }
         }
 }
