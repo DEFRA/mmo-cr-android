@@ -27,6 +27,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordD
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementValue
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldKeys
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Species
@@ -88,6 +89,40 @@ class GearSpeciesSearchScreenTests {
             gearTypes = listOf(seineNets),
             species = listOf(cod, haddock),
         )
+    }
+
+    @Test
+    fun aRouteBoundCompletedGearIsShownAndSubmitsWithItsGearUseId() {
+        val completeGear =
+            gearUsePendingSpecies().copy(
+                speciesWeights =
+                    listOf(
+                        SpeciesWeightEntry(
+                            id = "species-1",
+                            speciesId = cod.id,
+                            confirmedCaught = true,
+                        ),
+                    ),
+            )
+        var submitted: Pair<String, String>? = null
+        composeTestRule.setContent {
+            WizardTestTheme {
+                GearSpeciesSearchScreen(
+                    state = stateWith(completeGear),
+                    onSubmit = {},
+                    onBack = {},
+                    gearUseId = "gear-use-1",
+                    onGearSubmit = { speciesId, gearUseId -> submitted = speciesId to gearUseId },
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag(GearSpeciesSearchScreenTestTags.ERROR_MESSAGE).assertDoesNotExist()
+        composeTestRule.onNodeWithTag(GearSpeciesSearchScreenTestTags.AUTOCOMPLETE_FIELD).performTextInput("Ha")
+        composeTestRule.onNodeWithTag("${GearSpeciesSearchScreenTestTags.SUGGESTION_PREFIX}_0").performClick()
+        composeTestRule.onNodeWithTag(GearSpeciesSearchScreenTestTags.SAVE_ACTION).performClick()
+
+        assertEquals("species-haddock" to "gear-use-1", submitted)
     }
 
     @Test

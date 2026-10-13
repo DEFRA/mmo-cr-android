@@ -3,6 +3,9 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map
 
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
@@ -365,6 +368,25 @@ class MapScreenTests {
             .onNodeWithText("Unable to load this gear's statistical area. Please go back and try again.")
             .assertIsDisplayed()
         composeTestRule.onNodeWithTag(MapScreenTestTags.MAP).assertDoesNotExist()
+    }
+
+    @Test
+    fun returningAfterTheGearsRectangleWasSavedStillShowsThatGearInsteadOfAnError() {
+        var state by mutableStateOf(stateWith(pendingGearUse()))
+        composeTestRule.setContent {
+            WizardTestTheme {
+                MapScreen(state = state, onSubmit = {}, onBack = {})
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        state = stateWith(pendingGearUse().copy(statisticalSubRectangleCode = "38E95"))
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag(MapScreenTestTags.ERROR_MESSAGE).assertDoesNotExist()
+        composeTestRule
+            .onNodeWithText("Where was the majority of your catch caught using seine nets (mesh size 100mm)?")
+            .assertIsDisplayed()
     }
 
     @Test

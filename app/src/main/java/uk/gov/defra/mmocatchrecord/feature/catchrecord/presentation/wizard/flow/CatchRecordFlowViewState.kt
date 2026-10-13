@@ -47,6 +47,8 @@ data class CatchRecordFlowViewState(
      * entry the user simply re-picks the gear type; no captured data is lost since nothing was saved yet.
      */
     val pendingGearTypeId: String? = null,
+    /** Id pre-allocated with [pendingGearTypeId] so the measurement screen can re-find its gear use on Back. */
+    val pendingGearUseId: String? = null,
     /** BR-XX: whether the draft currently in [status] has an actual Room row yet — see ADR 0014. */
     val isDraftPersisted: Boolean = false,
 ) : ViewState
@@ -105,13 +107,12 @@ sealed interface CatchRecordFlowEvent {
         val gearTypeId: String,
     ) : CatchRecordFlowEvent
 
-    /**
-     * Builds and appends a new [uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse] for
-     * the pending gear type (see [CatchRecordFlowViewState.pendingGearTypeId]) with the entered
-     * [measurements], persists it, and advances to the gear-summary checklist.
-     */
+    /** Adds a [GearUse][uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse] with [measurements],
+     *  or updates [gearUseId] in place if it already exists (Back navigation), then goes to gear summary. */
     data class GearMeasurementsSubmitted(
         val measurements: Map<String, MeasurementValue>,
+        val gearTypeId: String? = null,
+        val gearUseId: String? = null,
     ) : CatchRecordFlowEvent
 
     /**
@@ -122,15 +123,11 @@ sealed interface CatchRecordFlowEvent {
         val updatedDraft: CatchRecordDraft,
     ) : CatchRecordFlowEvent
 
-    /**
-     * Appends a new, unconfirmed
-     * [uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry] for [speciesId] to
-     * the current gear use (see [nextGearUsePendingSpecies]), persists it, and advances to the
-     * gear-species checklist. A no-op re-navigation (no duplicate entry) if [speciesId] was already added
-     * to this gear.
-     */
+    /** Adds [speciesId] to [gearUseId] (or, if null, the next gear pending species) and goes to the checklist;
+     *  a no-op re-navigation if already added. */
     data class SpeciesAddedToCurrentGear(
         val speciesId: String,
+        val gearUseId: String? = null,
     ) : CatchRecordFlowEvent
 
     /**
