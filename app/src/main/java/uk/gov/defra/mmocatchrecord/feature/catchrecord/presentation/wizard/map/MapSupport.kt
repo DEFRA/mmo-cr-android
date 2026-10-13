@@ -8,6 +8,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Gear
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.StatisticalSubRectangle
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.nextGearUsePendingStatRectangle
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.resolveWizardGearUse
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearMeasurementSupport
 
 /**
@@ -57,12 +58,8 @@ object MapSupport {
     fun currentGearUseFor(
         draft: CatchRecordDraft?,
         editGearUseId: String?,
-    ): GearUse? =
-        if (editGearUseId != null) {
-            draft?.gearUses?.firstOrNull { it.id == editGearUseId }
-        } else {
-            draft?.let(::nextGearUsePendingStatRectangle)
-        }
+        boundGearUseId: String? = null,
+    ): GearUse? = resolveWizardGearUse(draft, editGearUseId, boundGearUseId, ::nextGearUsePendingStatRectangle)
 
     /** Returns [draft] with [gearUse]'s statistical sub-rectangle set to [code] — see `MapScreen`. */
     fun withStatRectangleCode(

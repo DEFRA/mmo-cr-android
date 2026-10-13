@@ -55,14 +55,17 @@ data class GearStatRectangleRoute(
     val editGearUseId: String? = null,
 )
 
+/** [gearUseId] binds the forward (non-edit) flow to a specific gear so Back/forward revisits stay on it. */
 @Serializable
 data class GearSpeciesSearchRoute(
     val editGearUseId: String? = null,
+    val gearUseId: String? = null,
 )
 
 @Serializable
 data class GearSpeciesChecklistRoute(
     val editGearUseId: String? = null,
+    val gearUseId: String? = null,
 )
 
 @Serializable

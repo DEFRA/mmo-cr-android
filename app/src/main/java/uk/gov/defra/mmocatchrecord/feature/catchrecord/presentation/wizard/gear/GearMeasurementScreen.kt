@@ -80,15 +80,32 @@ fun GearMeasurementScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var hasUnsavedChanges by rememberSaveable { mutableStateOf(false) }
+    // Pinned per back-stack entry so navigating Back here still resolves this gear after it was saved.
+    var boundGearTypeId by rememberSaveable { mutableStateOf(state.pendingGearTypeId) }
+    var boundGearUseId by rememberSaveable { mutableStateOf(state.pendingGearUseId) }
+    LaunchedEffect(state.pendingGearTypeId, state.pendingGearUseId) {
+        if (editGearUseId == null && boundGearUseId == null && state.pendingGearUseId != null) {
+            boundGearTypeId = state.pendingGearTypeId
+            boundGearUseId = state.pendingGearUseId
+        }
+    }
     GearMeasurementScreen(
         state = state,
         editGearUseId = editGearUseId,
+        boundGearTypeId = boundGearTypeId,
+        boundGearUseId = boundGearUseId,
         onSubmit = { measurements ->
             if (editGearUseId != null) {
                 viewModel.dispatch(CatchRecordFlowEvent.EditGearMeasurements(editGearUseId, measurements))
                 onNavigate(WizardStep.CheckYourAnswers)
             } else {
-                viewModel.dispatch(CatchRecordFlowEvent.GearMeasurementsSubmitted(measurements))
+                viewModel.dispatch(
+                    CatchRecordFlowEvent.GearMeasurementsSubmitted(
+                        measurements = measurements,
+                        gearTypeId = boundGearTypeId ?: state.pendingGearTypeId,
+                        gearUseId = boundGearUseId ?: state.pendingGearUseId,
+                    ),
+                )
                 onNavigate(WizardStep.GearSummary)
             }
         },
@@ -108,18 +125,17 @@ private fun GearMeasurementScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     editGearUseId: String? = null,
+    boundGearTypeId: String? = null,
+    boundGearUseId: String? = null,
     onRetry: () -> Unit = {},
     hasUnsavedChanges: Boolean = false,
     onDirtyChanged: (Boolean) -> Unit = {},
 ) {
     val draft = (state.status as? UiStatus.Content<CatchRecordDraft>)?.value
-    val editingGearUse = editGearUseId?.let { id -> draft?.gearUses?.firstOrNull { it.id == id } }
-    val gearType =
-        if (editGearUseId != null) {
-            editingGearUse?.let { gearUse -> state.gearTypes.firstOrNull { it.id == gearUse.gearTypeId } }
-        } else {
-            state.gearTypes.firstOrNull { it.id == state.pendingGearTypeId }
-        }
+    val editingGearUse = measurementGearUseFor(draft, editGearUseId ?: boundGearUseId ?: state.pendingGearUseId)
+    val gearTypeId =
+        editingGearUse?.gearTypeId ?: (boundGearTypeId ?: state.pendingGearTypeId).takeIf { editGearUseId == null }
+    val gearType = state.gearTypes.firstOrNull { it.id == gearTypeId }
     CatchRecordWizardScaffold(
         screenTestTag = GearMeasurementScreenTestTags.SCREEN,
         title =
@@ -146,9 +162,8 @@ private fun GearMeasurementScreen(
                 )
             is UiStatus.Content ->
                 if (gearType == null || (editGearUseId != null && editingGearUse == null)) {
-                    // Defensive only: normal navigation always sets pendingGearTypeId (add-new-gear path) or
-                    // supplies a valid editGearUseId (check-your-answers edit path) before reaching this
-                    // screen — see nextWizardStepForDraft / editRouteFor.
+                    // Defensive only: the add path pins its gear type/gear use on entry; the edit path
+                    // supplies a valid editGearUseId — see editRouteFor.
                     WizardErrorState(
                         stringResource(R.string.gear_measurement_missing_gear_type),
                         GearMeasurementScreenTestTags.ERROR_MESSAGE,
@@ -260,6 +275,11 @@ fun GearMeasurementScreenContent(
         )
     }
 }
+
+private fun measurementGearUseFor(
+    draft: CatchRecordDraft?,
+    gearUseId: String?,
+) = gearUseId?.let { id -> draft?.gearUses?.firstOrNull { it.id == id } }
 
 @Suppress("FunctionNaming")
 @Composable

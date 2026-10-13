@@ -54,6 +54,10 @@ class CatchRecordRoutesTests {
             GearSpeciesChecklistRoute(editGearUseId = "gear-1"),
             editRouteFor(WizardStep.GearSpeciesChecklist, "gear-1"),
         )
+        assertEquals(
+            GearSpeciesSearchRoute(editGearUseId = "gear-1"),
+            editRouteFor(WizardStep.GearSpeciesSearch, "gear-1"),
+        )
     }
 
     @Test
@@ -64,6 +68,7 @@ class CatchRecordRoutesTests {
                     setOf(
                         WizardStep.GearMeasurement,
                         WizardStep.GearStatRectangle,
+                        WizardStep.GearSpeciesSearch,
                         WizardStep.GearSpeciesChecklist,
                     )
             }.forEach { step -> assertEquals(routeFor(step), editRouteFor(step, "gear-1")) }

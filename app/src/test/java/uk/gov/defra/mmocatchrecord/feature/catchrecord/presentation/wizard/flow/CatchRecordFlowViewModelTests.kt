@@ -614,6 +614,212 @@ class CatchRecordFlowViewModelTests {
         }
 
     @Test
+    fun `resubmitting measurements for an already-added gear use updates it in place after Back navigation`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            val viewModel = buildViewModel(repository = repository, dispatcher = dispatcher)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            testScheduler.advanceUntilIdle()
+            viewModel.dispatch(CatchRecordFlowEvent.VesselSelected("vessel-achilles"))
+            testScheduler.advanceUntilIdle()
+            viewModel.dispatch(CatchRecordFlowEvent.GearTypeSelected("gear-seine-nets"))
+            testScheduler.advanceUntilIdle()
+            val gearUseId = requireNotNull(viewModel.state.value.pendingGearUseId)
+            viewModel.dispatch(
+                CatchRecordFlowEvent.GearMeasurementsSubmitted(
+                    mapOf(GearMeasurementFieldKeys.MESH_SIZE_MM to MeasurementValue.Numeric(80.0, "mm")),
+                    gearTypeId = "gear-seine-nets",
+                    gearUseId = gearUseId,
+                ),
+            )
+            testScheduler.advanceUntilIdle()
+            assertNull(viewModel.state.value.pendingGearUseId)
+
+            viewModel.dispatch(
+                CatchRecordFlowEvent.GearMeasurementsSubmitted(
+                    mapOf(GearMeasurementFieldKeys.MESH_SIZE_MM to MeasurementValue.Numeric(90.0, "mm")),
+                    gearTypeId = "gear-seine-nets",
+                    gearUseId = gearUseId,
+                ),
+            )
+            testScheduler.advanceUntilIdle()
+
+            val state = viewModel.state.value
+            assertEquals(WizardStep.GearSummary, state.currentStep)
+            val gearUse = (state.status as UiStatus.Content<CatchRecordDraft>).value.gearUses.single()
+            assertEquals(gearUseId, gearUse.id)
+            assertEquals(
+                MeasurementValue.Numeric(90.0, "mm"),
+                gearUse.measurements[GearMeasurementFieldKeys.MESH_SIZE_MM],
+            )
+        }
+
+    @Test
+    fun `resubmitting measurements for one gear use leaves a second gear use unchanged`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            val viewModel = buildViewModel(repository = repository, dispatcher = dispatcher)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            testScheduler.advanceUntilIdle()
+            viewModel.dispatch(CatchRecordFlowEvent.VesselSelected("vessel-achilles"))
+            testScheduler.advanceUntilIdle()
+
+            viewModel.dispatch(CatchRecordFlowEvent.GearTypeSelected("gear-seine-nets"))
+            testScheduler.advanceUntilIdle()
+            val firstGearUseId = requireNotNull(viewModel.state.value.pendingGearUseId)
+            viewModel.dispatch(
+                CatchRecordFlowEvent.GearMeasurementsSubmitted(
+                    mapOf(GearMeasurementFieldKeys.MESH_SIZE_MM to MeasurementValue.Numeric(80.0, "mm")),
+                    gearTypeId = "gear-seine-nets",
+                    gearUseId = firstGearUseId,
+                ),
+            )
+            testScheduler.advanceUntilIdle()
+
+            viewModel.dispatch(CatchRecordFlowEvent.GearTypeSelected("gear-seine-nets"))
+            testScheduler.advanceUntilIdle()
+            val secondGearUseId = requireNotNull(viewModel.state.value.pendingGearUseId)
+            viewModel.dispatch(
+                CatchRecordFlowEvent.GearMeasurementsSubmitted(
+                    mapOf(GearMeasurementFieldKeys.MESH_SIZE_MM to MeasurementValue.Numeric(90.0, "mm")),
+                    gearTypeId = "gear-seine-nets",
+                    gearUseId = secondGearUseId,
+                ),
+            )
+            testScheduler.advanceUntilIdle()
+
+            // Resubmit (a Back-navigation re-save) for the first gear use only — the second must be untouched.
+            viewModel.dispatch(
+                CatchRecordFlowEvent.GearMeasurementsSubmitted(
+                    mapOf(GearMeasurementFieldKeys.MESH_SIZE_MM to MeasurementValue.Numeric(100.0, "mm")),
+                    gearTypeId = "gear-seine-nets",
+                    gearUseId = firstGearUseId,
+                ),
+            )
+            testScheduler.advanceUntilIdle()
+
+            val gearUses = (viewModel.state.value.status as UiStatus.Content<CatchRecordDraft>).value.gearUses
+            assertEquals(2, gearUses.size)
+            val updatedFirst = gearUses.single { it.id == firstGearUseId }
+            val untouchedSecond = gearUses.single { it.id == secondGearUseId }
+            assertEquals(
+                MeasurementValue.Numeric(100.0, "mm"),
+                updatedFirst.measurements[GearMeasurementFieldKeys.MESH_SIZE_MM],
+            )
+            assertEquals(
+                MeasurementValue.Numeric(90.0, "mm"),
+                untouchedSecond.measurements[GearMeasurementFieldKeys.MESH_SIZE_MM],
+            )
+        }
+
+    @Test
+    fun `gear measurements submitted with no pending gear type and no explicit id is a no-op`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            val viewModel = buildViewModel(repository = repository, dispatcher = dispatcher)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            testScheduler.advanceUntilIdle()
+            viewModel.dispatch(CatchRecordFlowEvent.VesselSelected("vessel-achilles"))
+            testScheduler.advanceUntilIdle()
+            val stepBefore = viewModel.state.value.currentStep
+
+            // Defensive only: a direct event dispatch bypassing gear-type selection entirely, with neither a
+            // pending nor an explicit gear type to fall back to — the handler must no-op rather than guess.
+            viewModel.dispatch(
+                CatchRecordFlowEvent.GearMeasurementsSubmitted(
+                    mapOf(GearMeasurementFieldKeys.MESH_SIZE_MM to MeasurementValue.Numeric(80.0, "mm")),
+                ),
+            )
+            testScheduler.advanceUntilIdle()
+
+            assertEquals(stepBefore, viewModel.state.value.currentStep)
+            val draft = (viewModel.state.value.status as UiStatus.Content<CatchRecordDraft>).value
+            assertTrue(draft.gearUses.isEmpty())
+        }
+
+    @Test
+    fun `gear measurements submitted with an explicit gear type but no pending gear use id generates a fresh id`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            val viewModel =
+                buildViewModel(
+                    repository = repository,
+                    idFactory = { "generated-gear-use-id" },
+                    dispatcher = dispatcher,
+                )
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            testScheduler.advanceUntilIdle()
+            viewModel.dispatch(CatchRecordFlowEvent.VesselSelected("vessel-achilles"))
+            testScheduler.advanceUntilIdle()
+
+            // Defensive only: gearTypeId supplied directly (bypassing gear-type selection), so there is no
+            // pending gear-use id to reuse either — the handler must mint a fresh one via idFactory().
+            viewModel.dispatch(
+                CatchRecordFlowEvent.GearMeasurementsSubmitted(
+                    mapOf(GearMeasurementFieldKeys.MESH_SIZE_MM to MeasurementValue.Numeric(80.0, "mm")),
+                    gearTypeId = "gear-seine-nets",
+                ),
+            )
+            testScheduler.advanceUntilIdle()
+
+            val gearUse = (viewModel.state.value.status as UiStatus.Content<CatchRecordDraft>).value.gearUses.single()
+            assertEquals("generated-gear-use-id", gearUse.id)
+            assertEquals("gear-seine-nets", gearUse.gearTypeId)
+        }
+
+    @Test
+    fun `species added with an explicit gear use id targets that gear even when it is already complete`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            val started = repository.startDraft("vessel-achilles").getOrThrow()
+            val completeGear =
+                GearUse(
+                    id = "gear-use-1",
+                    gearTypeId = "gear-seine-nets",
+                    statisticalSubRectangleCode = "38E95",
+                    confirmedUsedOnTrip = true,
+                    speciesWeights =
+                        listOf(SpeciesWeightEntry(id = "species-1", speciesId = "species-cod", confirmedCaught = true)),
+                )
+            repository
+                .saveDraft(
+                    started.copy(
+                        isTripToday = true,
+                        departurePort = PortSelection("port-hastings", PortSelectionMode.Favourite),
+                        returnPort = PortSelection("port-hastings", PortSelectionMode.Favourite),
+                        gearUses = listOf(completeGear),
+                    ),
+                ).getOrThrow()
+            val viewModel = buildViewModel(repository = repository, dispatcher = dispatcher)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            testScheduler.advanceUntilIdle()
+            viewModel.dispatch(CatchRecordFlowEvent.ResumeDraft)
+            testScheduler.advanceUntilIdle()
+
+            viewModel.dispatch(CatchRecordFlowEvent.SpeciesAddedToCurrentGear("species-plaice", "gear-use-1"))
+            testScheduler.advanceUntilIdle()
+
+            val state = viewModel.state.value
+            assertEquals(WizardStep.GearSpeciesChecklist, state.currentStep)
+            val gearUse = (state.status as UiStatus.Content<CatchRecordDraft>).value.gearUses.single()
+            assertTrue(gearUse.speciesWeights.any { it.speciesId == "species-plaice" })
+
+            viewModel.dispatch(CatchRecordFlowEvent.SpeciesAddedToCurrentGear("species-haddock", "removed-gear"))
+            testScheduler.advanceUntilIdle()
+            val unchanged = (viewModel.state.value.status as UiStatus.Content<CatchRecordDraft>).value
+            assertTrue(
+                unchanged.gearUses.none { gear ->
+                    gear.speciesWeights.any { it.speciesId == "species-haddock" }
+                },
+            )
+        }
+
+    @Test
     fun `gear removed persists filtered gear list without changing step`() =
         runTest {
             val dispatcher = StandardTestDispatcher(testScheduler)

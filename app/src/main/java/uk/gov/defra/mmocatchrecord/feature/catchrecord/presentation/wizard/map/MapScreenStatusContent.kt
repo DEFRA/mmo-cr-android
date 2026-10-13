@@ -37,10 +37,7 @@ internal fun MapScreenStatusContent(
             )
         is UiStatus.Content ->
             if (draft == null || currentGearUse == null) {
-                // Defensive only: normal navigation only reaches this screen while
-                // nextGearUsePendingStatRectangle(draft) is non-null (add path), or editGearUseId
-                // resolves to a real gear use (check-your-answers edit path) — see
-                // nextWizardStepForDraft / editRouteFor.
+                // Defensive only: the add path pins its gear on entry; the edit path supplies a valid editGearUseId.
                 WizardErrorState(
                     stringResource(R.string.gear_stat_rectangle_missing_gear),
                     MapScreenTestTags.ERROR_MESSAGE,

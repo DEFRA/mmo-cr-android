@@ -2,6 +2,7 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear
 
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -18,6 +19,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -139,6 +141,34 @@ class GearMeasurementScreenTests {
             composeTestRule.waitForIdle()
 
             assertEquals(WizardStep.CheckYourAnswers, navigatedStep)
+        }
+
+    @Test
+    fun `returning to the measurement screen after saving shows the saved gear instead of an error`() =
+        runTest {
+            val viewModel = buildViewModel(dispatcher = StandardTestDispatcher(testScheduler))
+            composeTestRule.setContent {
+                WizardTestTheme {
+                    GearMeasurementScreen(viewModel = viewModel, onNavigate = {}, onBack = {})
+                }
+            }
+            enterFlowWithPendingGearType(viewModel)
+            composeTestRule.onNodeWithTag("${GearMeasurementScreenTestTags.FIELD_PREFIX}_0").performTextInput("80")
+            composeTestRule.onNodeWithTag(GearMeasurementScreenTestTags.SAVE_ACTION).performClick()
+            testScheduler.advanceUntilIdle()
+            composeTestRule.waitForIdle()
+
+            assertNull(viewModel.state.value.pendingGearTypeId)
+            composeTestRule.onNodeWithTag(GearMeasurementScreenTestTags.ERROR_MESSAGE).assertDoesNotExist()
+            composeTestRule
+                .onNodeWithTag("${GearMeasurementScreenTestTags.FIELD_PREFIX}_0")
+                .assertTextContains("80")
+            composeTestRule.onNodeWithTag(GearMeasurementScreenTestTags.SAVE_ACTION).performClick()
+            testScheduler.advanceUntilIdle()
+            composeTestRule.waitForIdle()
+
+            val draft = (viewModel.state.value.status as UiStatus.Content<CatchRecordDraft>).value
+            assertEquals(1, draft.gearUses.size)
         }
 
     @Test

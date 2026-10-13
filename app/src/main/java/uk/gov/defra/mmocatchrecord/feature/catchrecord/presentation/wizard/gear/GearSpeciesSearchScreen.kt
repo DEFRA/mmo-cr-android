@@ -42,6 +42,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardStep
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.catchRecordReference
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.nextGearUsePendingSpecies
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.rememberWizardGearUse
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map.MapSupport
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.species.SpeciesSearch
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.species.SpeciesSearchInputError
@@ -73,18 +74,23 @@ fun GearSpeciesSearchScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     editGearUseId: String? = null,
+    gearUseId: String? = null,
+    onNavigateForGear: (WizardStep, String) -> Unit = { step, _ -> onNavigate(step) },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     GearSpeciesSearchScreen(
         state = state,
         editGearUseId = editGearUseId,
-        onSubmit = { speciesId ->
+        gearUseId = gearUseId,
+        onSubmit = {},
+        onGearSubmit = { speciesId, currentGearUseId ->
             if (editGearUseId != null) {
                 viewModel.dispatch(CatchRecordFlowEvent.SpeciesAddedToGearUse(editGearUseId, speciesId))
+                onNavigate(WizardStep.GearSpeciesChecklist)
             } else {
-                viewModel.dispatch(CatchRecordFlowEvent.SpeciesAddedToCurrentGear(speciesId))
+                viewModel.dispatch(CatchRecordFlowEvent.SpeciesAddedToCurrentGear(speciesId, currentGearUseId))
+                onNavigateForGear(WizardStep.GearSpeciesChecklist, currentGearUseId)
             }
-            onNavigate(WizardStep.GearSpeciesChecklist)
         },
         onRetry = { viewModel.dispatch(CatchRecordFlowEvent.Retry) },
         onBack = onBack,
@@ -92,7 +98,7 @@ fun GearSpeciesSearchScreen(
     )
 }
 
-@Suppress("FunctionNaming")
+@Suppress("FunctionNaming", "LongParameterList")
 @Composable
 internal fun GearSpeciesSearchScreen(
     state: CatchRecordFlowViewState,
@@ -101,14 +107,11 @@ internal fun GearSpeciesSearchScreen(
     modifier: Modifier = Modifier,
     editGearUseId: String? = null,
     onRetry: () -> Unit = {},
+    gearUseId: String? = null,
+    onGearSubmit: (speciesId: String, gearUseId: String) -> Unit = { speciesId, _ -> onSubmit(speciesId) },
 ) {
     val draft = (state.status as? UiStatus.Content<CatchRecordDraft>)?.value
-    val currentGearUse =
-        if (editGearUseId != null) {
-            draft?.gearUses?.firstOrNull { it.id == editGearUseId }
-        } else {
-            draft?.let(::nextGearUsePendingSpecies)
-        }
+    val currentGearUse = rememberWizardGearUse(draft, editGearUseId, gearUseId, ::nextGearUsePendingSpecies)
     val gearType = currentGearUse?.let { gearUse -> state.gearTypes.firstOrNull { it.id == gearUse.gearTypeId } }
     val gearNameWithMeasurement =
         currentGearUse?.let { MapSupport.gearNameWithIdentifyingMeasurementFor(gearType, it) }
@@ -133,15 +136,16 @@ internal fun GearSpeciesSearchScreen(
                 )
             is UiStatus.Content ->
                 if (draft == null || currentGearUse == null) {
-                    // Defensive only: normal navigation only reaches this screen while
-                    // nextGearUsePendingSpecies(draft) is non-null (add path), or editGearUseId resolves to
-                    // a real gear use (check-your-answers edit path) — see nextWizardStepForDraft/editRouteFor.
+                    // Defensive only: the add path pins its gear on entry; the edit path supplies editGearUseId.
                     WizardErrorState(
                         stringResource(R.string.gear_species_search_title_fallback),
                         GearSpeciesSearchScreenTestTags.ERROR_MESSAGE,
                     )
                 } else {
-                    GearSpeciesSearchScreenContent(species = state.species, onSubmit = onSubmit)
+                    GearSpeciesSearchScreenContent(
+                        species = state.species,
+                        onSubmit = { speciesId -> onGearSubmit(speciesId, currentGearUse.id) },
+                    )
                 }
         }
     }
