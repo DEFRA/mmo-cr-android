@@ -40,7 +40,7 @@ class ReleaseTreeTests {
     fun `warn priority without a throwable logs the message without a suffix`() {
         Timber.w("something went wrong")
 
-        val entry = ShadowLog.getLogs().last()
+        val entry = defaultTagEntries().single()
         assertEquals(Log.WARN, entry.type)
         assertEquals("something went wrong", entry.msg)
     }
@@ -49,7 +49,7 @@ class ReleaseTreeTests {
     fun `error priority with a throwable appends the throwable class name suffix`() {
         Timber.e(IllegalStateException("do not log this message"), "failed")
 
-        val entry = ShadowLog.getLogs().last()
+        val entry = defaultTagEntries().single { it.type == Log.ERROR }
         assertTrue(entry.msg.startsWith("failed"))
         assertTrue(entry.msg.endsWith("(IllegalStateException)"))
     }
@@ -58,7 +58,9 @@ class ReleaseTreeTests {
     fun `log with no explicit tag falls back to the default tag`() {
         Timber.e("failed")
 
-        val entry = ShadowLog.getLogs().last()
-        assertEquals("MMOCatchRecord", entry.tag)
+        assertEquals(listOf("failed"), defaultTagEntries().map { it.msg })
     }
+
+    // Other threads (e.g. Robolectric loopers) can log concurrently, so never rely on the last entry.
+    private fun defaultTagEntries() = ShadowLog.getLogsForTag("MMOCatchRecord")
 }
