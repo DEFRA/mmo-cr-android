@@ -21,10 +21,12 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -40,10 +42,21 @@ import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelection
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectionMode
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Species
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.SpeciesWeightPrecision
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordFlowEvent
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordFlowViewModel
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.FakeCatchRecordDraftRepository
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.FakeCatchRecordSubmissionRepository
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.FakeCatchRecordSyncScheduler
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.FakeNetworkConnectivityChecker
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.FakeReferenceDataRepository
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardStep
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardTestTheme
 
 /**
  * JVM/Robolectric port of the androidTest `GearSpeciesChecklistScreenTest` — see that file's doc comment
@@ -879,4 +892,100 @@ class GearSpeciesChecklistScreenTests {
         assertFalse(uncheckedPlaice.confirmedCaught)
         assertNull(uncheckedPlaice.weightAboveMinimumSizeKg)
     }
+
+    private fun buildViewModel(
+        dispatcher: CoroutineDispatcher,
+        repository: FakeCatchRecordDraftRepository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" }),
+    ) = CatchRecordFlowViewModel(
+        repository,
+        FakeReferenceDataRepository(),
+        FakeCatchRecordSubmissionRepository(),
+        FakeNetworkConnectivityChecker(),
+        FakeCatchRecordSyncScheduler(),
+        { 0L },
+        { "gear-use-1" },
+        dispatcher,
+    )
+
+    /** Seeds a draft with one confirmed gear use still pending species — see [nextGearUsePendingSpecies]. */
+    private suspend fun seedDraftPendingSpecies(repository: FakeCatchRecordDraftRepository) {
+        val started = repository.startDraft("vessel-achilles").getOrThrow()
+        val gearUse =
+            GearUse(
+                id = "gear-use-1",
+                gearTypeId = seineNets.id,
+                statisticalSubRectangleCode = "38E95",
+                confirmedUsedOnTrip = true,
+            )
+        repository
+            .saveDraft(
+                started.copy(
+                    isTripToday = true,
+                    departurePort = PortSelection("port-hastings", PortSelectionMode.Favourite),
+                    returnPort = PortSelection("port-hastings", PortSelectionMode.Favourite),
+                    gearUses = listOf(gearUse),
+                ),
+            ).getOrThrow()
+    }
+
+    @Test
+    fun `adding another species on the add path navigates for the current gear use id`() =
+        runTest {
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            seedDraftPendingSpecies(repository)
+            val viewModel = buildViewModel(dispatcher = StandardTestDispatcher(testScheduler), repository = repository)
+            var navigatedStep: WizardStep? = null
+            var navigatedForGear: Pair<WizardStep, String>? = null
+            composeTestRule.setContent {
+                WizardTestTheme {
+                    GearSpeciesChecklistScreen(
+                        viewModel = viewModel,
+                        onNavigate = { navigatedStep = it },
+                        onNavigateForGear = { step, gearUseId -> navigatedForGear = step to gearUseId },
+                        onBack = {},
+                    )
+                }
+            }
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            testScheduler.advanceUntilIdle()
+            viewModel.dispatch(CatchRecordFlowEvent.ResumeDraft)
+            testScheduler.advanceUntilIdle()
+            composeTestRule.waitForIdle()
+
+            composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.ADD_SPECIES_ACTION).performClick()
+
+            assertEquals(WizardStep.GearSpeciesSearch to "gear-use-1", navigatedForGear)
+            assertNull(navigatedStep)
+        }
+
+    @Test
+    fun `adding another species while editing a gear use navigates via the plain onNavigate callback`() =
+        runTest {
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            seedDraftPendingSpecies(repository)
+            val viewModel = buildViewModel(dispatcher = StandardTestDispatcher(testScheduler), repository = repository)
+            var navigatedStep: WizardStep? = null
+            var navigatedForGearCalled = false
+            composeTestRule.setContent {
+                WizardTestTheme {
+                    GearSpeciesChecklistScreen(
+                        viewModel = viewModel,
+                        onNavigate = { navigatedStep = it },
+                        onNavigateForGear = { _, _ -> navigatedForGearCalled = true },
+                        editGearUseId = "gear-use-1",
+                        onBack = {},
+                    )
+                }
+            }
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            testScheduler.advanceUntilIdle()
+            viewModel.dispatch(CatchRecordFlowEvent.ResumeDraft)
+            testScheduler.advanceUntilIdle()
+            composeTestRule.waitForIdle()
+
+            composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.ADD_SPECIES_ACTION).performClick()
+
+            assertEquals(WizardStep.GearSpeciesSearch, navigatedStep)
+            assertFalse(navigatedForGearCalled)
+        }
 }
