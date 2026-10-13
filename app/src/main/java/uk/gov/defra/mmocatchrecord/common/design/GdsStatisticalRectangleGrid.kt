@@ -100,9 +100,10 @@ private fun GdsStatisticalRectangleCell(
         modifier =
             modifier
                 .heightIn(min = Spacing.minTouchTarget)
+                // Must precede the focus targets it observes, or the focus indicator never shows.
+                .onFocusChanged { hasFocus = it.hasFocus }
                 .selectable(selected = selected, onClick = onClick, role = Role.RadioButton)
                 .focusable()
-                .onFocusChanged { hasFocus = it.hasFocus }
                 .then(if (hasFocus) Modifier.govukFocusIndicator() else Modifier)
                 .border(
                     width = if (selected) 2.dp else 1.dp,
