@@ -1,4 +1,4 @@
-﻿package uk.gov.defra.mmocatchrecord.common.design
+package uk.gov.defra.mmocatchrecord.common.design
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
@@ -7,16 +7,15 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.requestFocus
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.GraphicsMode
 
-/**
- * Exercises [GdsStatisticalRectangleGrid]'s row-wrapping (`chunked`), partial-final-row padding, click
- * selection and focus-indicator branches. `captureToImage()` forces Robolectric to actually run the
- * `Modifier.border`/`background` draw phase - see `MmoIconsTests`/`MapCanvasTests` for the pattern.
- */
+// Pixel assertions need native graphics; legacy Robolectric capture is fully transparent.
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 @RunWith(RobolectricTestRunner::class)
 class GdsStatisticalRectangleGridTests {
     @get:Rule
@@ -76,8 +75,14 @@ class GdsStatisticalRectangleGridTests {
             }
         }
 
-        composeTestRule.onNodeWithTag("${prefix}_0").captureToImage()
-        composeTestRule.onNodeWithTag("${prefix}_1").captureToImage()
+        val selected = composeTestRule.onNodeWithTag("${prefix}_0").captureToImage()
+        assertTrue(selected.countOf(MmoColors.GovBlue) > 0)
+        assertTrue(selected.countOf(MmoColors.SelectedTint) > 0)
+        assertEquals(0, selected.countOf(MmoColors.White))
+        val unselected = composeTestRule.onNodeWithTag("${prefix}_1").captureToImage()
+        assertTrue(unselected.countOf(MmoColors.Grey2) > 0)
+        assertTrue(unselected.countOf(MmoColors.White) > 0)
+        assertEquals(0, unselected.countOf(MmoColors.GovBlue))
     }
 
     @Test
@@ -96,7 +101,7 @@ class GdsStatisticalRectangleGridTests {
     }
 
     @Test
-    fun `focusing a cell renders the focus indicator`() {
+    fun `focusing a cell shows the GOV UK yellow focus indicator only on that cell`() {
         composeTestRule.setContent {
             MmoTheme {
                 GdsStatisticalRectangleGrid(
@@ -108,8 +113,12 @@ class GdsStatisticalRectangleGridTests {
             }
         }
 
+        assertEquals(0, composeTestRule.onNodeWithTag("${prefix}_0").captureToImage().countOf(MmoColors.FocusYellow))
+
         composeTestRule.onNodeWithTag("${prefix}_0").requestFocus()
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithTag("${prefix}_0").captureToImage()
+
+        assertTrue(composeTestRule.onNodeWithTag("${prefix}_0").captureToImage().countOf(MmoColors.FocusYellow) > 0)
+        assertEquals(0, composeTestRule.onNodeWithTag("${prefix}_1").captureToImage().countOf(MmoColors.FocusYellow))
     }
 }

@@ -45,10 +45,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardTestTheme
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.nextWizardStepForDraft
 
-/**
- * JVM/Robolectric port of the androidTest `NotLandedStraightAwayScreensTest`, plus new viewModel-wrapper
- * coverage for both Phase 5B screens' Hilt-backed, stateful entry points.
- */
+/** JVM coverage for Phase 5B content and Hilt-backed wrapper paths. */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class NotLandedStraightAwayScreensTests {
@@ -245,10 +242,7 @@ class NotLandedStraightAwayScreensTests {
             .assertIsDisplayed()
     }
 
-    /**
-     * Defensive branch: a checked species id with no matching entry in [speciesList] (e.g. stale reference
-     * data) is silently dropped from the submitted entries rather than crashing or blocking the save.
-     */
+    /** Stale species ids are silently dropped rather than crashing or blocking save. */
     @Test
     fun aCheckedSpeciesMissingFromTheSuppliedSpeciesListIsDroppedFromTheSubmittedEntries() {
         var submitted: CatchRecordDraft? = null
@@ -316,10 +310,7 @@ class NotLandedStraightAwayScreensTests {
             .assertIsDisplayed()
     }
 
-    /**
-     * The UI's GdsNumericField filters non-digit input for a WholeNumber species, so a decimal value can
-     * only reach validation via a pre-existing saved raw value (e.g. a reopened draft) - not typed.
-     */
+    /** Decimal saved values can only reach WholeNumber validation from a reopened draft, not typed input. */
     @Test
     fun wholeNumberSpeciesRejectsADecimalWeightWithAPrecisionError() {
         val draft =

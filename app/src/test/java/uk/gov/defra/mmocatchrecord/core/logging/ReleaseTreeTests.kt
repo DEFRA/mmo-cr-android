@@ -3,42 +3,42 @@ package uk.gov.defra.mmocatchrecord.core.logging
 import android.util.Log
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.shadows.ShadowLog
-import timber.log.Timber
 
-/** Covers [ReleaseTree]'s log-level filtering and throwable-message redaction (ADR 0011). */
 @RunWith(RobolectricTestRunner::class)
 class ReleaseTreeTests {
+    private val secret = "do not log this message"
+
+    // Called directly, not planted: a planted tree would also capture other tests' background logging.
+    private val tree = ReleaseTree()
+
     @Before
-    fun plantReleaseTree() {
-        Timber.uprootAll()
-        Timber.plant(ReleaseTree())
+    fun clearLogs() {
         ShadowLog.clear()
     }
 
     @After
-    fun removeAllTrees() {
-        Timber.uprootAll()
+    fun clearLogsAfter() {
+        ShadowLog.clear()
     }
 
     @Test
     fun `verbose and debug priorities are dropped entirely`() {
-        Timber.v("verbose message")
-        Timber.d("debug message")
+        tree.v("verbose message")
+        tree.d("debug message")
 
-        val logs = ShadowLog.getLogs()
-        assertTrue(logs.none { it.msg?.contains("verbose message") == true })
-        assertTrue(logs.none { it.msg?.contains("debug message") == true })
+        assertTrue(defaultTagEntries().isEmpty())
     }
 
     @Test
     fun `warn priority without a throwable logs the message without a suffix`() {
-        Timber.w("something went wrong")
+        tree.w("something went wrong")
 
         val entry = defaultTagEntries().single()
         assertEquals(Log.WARN, entry.type)
@@ -46,17 +46,43 @@ class ReleaseTreeTests {
     }
 
     @Test
-    fun `error priority with a throwable appends the throwable class name suffix`() {
-        Timber.e(IllegalStateException("do not log this message"), "failed")
+    fun `error with a message and throwable logs only the message and throwable class name`() {
+        tree.e(IllegalStateException(secret), "failed")
 
-        val entry = defaultTagEntries().single { it.type == Log.ERROR }
-        assertTrue(entry.msg.startsWith("failed"))
-        assertTrue(entry.msg.endsWith("(IllegalStateException)"))
+        val entry = defaultTagEntries().single()
+        assertEquals(Log.ERROR, entry.type)
+        assertEquals("failed (IllegalStateException)", entry.msg)
+    }
+
+    @Test
+    fun `error with only a throwable logs just its class name`() {
+        tree.e(IllegalStateException(secret))
+
+        assertEquals("(IllegalStateException)", defaultTagEntries().single().msg)
+    }
+
+    @Test
+    fun `a nested cause and formatted args never leak throwable messages or stack frames`() {
+        val error = RuntimeException("outer $secret", IllegalArgumentException("inner $secret"))
+
+        tree.w(error, "sync failed for %s", "draft-1")
+
+        val message = defaultTagEntries().single().msg
+        assertEquals("sync failed for draft-1 (RuntimeException)", message)
+        assertFalse(message.contains(secret))
+        assertFalse(message.contains("\tat "))
+    }
+
+    @Test
+    fun `a multi-line message keeps its own lines but drops the stack trace`() {
+        tree.e(IllegalStateException(secret), "first line\nsecond line")
+
+        assertEquals("first line\nsecond line (IllegalStateException)", defaultTagEntries().single().msg)
     }
 
     @Test
     fun `log with no explicit tag falls back to the default tag`() {
-        Timber.e("failed")
+        tree.e("failed")
 
         assertEquals(listOf("failed"), defaultTagEntries().map { it.msg })
     }

@@ -1,4 +1,4 @@
-﻿package uk.gov.defra.mmocatchrecord.common.design
+package uk.gov.defra.mmocatchrecord.common.design
 
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
@@ -9,36 +9,36 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.GraphicsMode
 
-/**
- * Covers the handful of `CommonComponents.kt` lines not already exercised indirectly by other screens'
- * tests: the `drawBehind` draw-phase branches (forced via `captureToImage()`), the disabled-state colour
- * branches, [SecondaryActionButton]'s default `modifier` parameter (only executes when a caller omits it),
- * [ExpandableDetails]'s click-to-expand interaction, and [MmoBottomNavigationBar]'s home-tab click.
- */
+// Pixel assertions need native graphics; legacy Robolectric capture is fully transparent.
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 @RunWith(RobolectricTestRunner::class)
 class CommonComponentsTests {
     @get:Rule
     val composeTestRule = createComposeRule()
 
     @Test
-    fun `PrimaryActionButton draws its bottom shadow when enabled`() {
+    fun `PrimaryActionButton fills with GOV UK success green when enabled`() {
         composeTestRule.setContent {
             MmoTheme {
                 PrimaryActionButton(text = "Continue", onClick = {}, modifier = Modifier.testTag("primary"))
             }
         }
-        composeTestRule.onNodeWithTag("primary").captureToImage()
+
+        val image = composeTestRule.onNodeWithTag("primary").captureToImage()
+        assertTrue(image.countOf(MmoColors.SuccessGreen) > image.pixels().size / 2)
+        assertEquals(0, image.countOf(MmoColors.Grey2))
     }
 
     @Test
-    fun `PrimaryActionButton omits its bottom shadow when disabled`() {
+    fun `PrimaryActionButton fills with the disabled grey when disabled`() {
         composeTestRule.setContent {
             MmoTheme {
                 PrimaryActionButton(
@@ -49,7 +49,10 @@ class CommonComponentsTests {
                 )
             }
         }
-        composeTestRule.onNodeWithTag("primary").captureToImage()
+
+        val image = composeTestRule.onNodeWithTag("primary").captureToImage()
+        assertTrue(image.countOf(MmoColors.Grey2) > image.pixels().size / 2)
+        assertEquals(0, image.countOf(MmoColors.SuccessGreen))
     }
 
     @Test
@@ -97,7 +100,7 @@ class CommonComponentsTests {
         composeTestRule.onNodeWithText("More detail").performClick()
 
         composeTestRule.onNodeWithTag("expandable_body").assertIsDisplayed()
-        composeTestRule.onNodeWithTag("expandable_body").captureToImage()
+        assertTrue(composeTestRule.onNodeWithTag("expandable").captureToImage().countOf(MmoColors.Grey2) > 0)
     }
 
     @Test
@@ -114,7 +117,7 @@ class CommonComponentsTests {
     }
 
     @Test
-    fun `MmoBottomNavigationBar draws its top border and routes the home tab click`() {
+    fun `MmoBottomNavigationBar routes the home tab click`() {
         var clickedIndex = -1
         composeTestRule.setContent {
             MmoTheme {
@@ -126,11 +129,9 @@ class CommonComponentsTests {
             }
         }
 
-        composeTestRule.onNodeWithTag("bottom_nav").captureToImage()
         composeTestRule.onNodeWithTag(MmoBottomNavigationBarTestTags.HOME_TAB).performClick()
 
-        assertTrue(clickedIndex == 0)
-        assertFalse(clickedIndex == 1)
+        assertEquals(0, clickedIndex)
     }
 
     @Test
@@ -143,10 +144,10 @@ class CommonComponentsTests {
         }
 
         composeTestRule.onNodeWithTag(MmoBottomNavigationBarTestTags.NOTIFICATIONS_TAB).performClick()
-        assertTrue(clickedIndex == 1)
+        assertEquals(1, clickedIndex)
 
         composeTestRule.onNodeWithTag(MmoBottomNavigationBarTestTags.SETTINGS_TAB).performClick()
-        assertTrue(clickedIndex == 2)
+        assertEquals(2, clickedIndex)
     }
 
     @Test

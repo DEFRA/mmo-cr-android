@@ -1,4 +1,4 @@
-﻿package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow
+package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -21,11 +21,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 
-/**
- * JVM/Robolectric tests for [CatchRecordFlowEntryScreen] and [PhaseThreeCompleteScreen] - both take a real
- * [CatchRecordFlowViewModel] (no Hilt dependency), so a [StandardTestDispatcher] + [FakeCatchRecordDraftRepository]
- * drives every status branch deterministically, following the same pattern as `DraftResumeScreenTests`.
- */
+/** Uses a dispatcher and fake draft repository to drive every status branch deterministically. */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class CatchRecordFlowScreenTests {

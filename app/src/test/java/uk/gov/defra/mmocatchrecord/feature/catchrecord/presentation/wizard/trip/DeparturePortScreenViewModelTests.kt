@@ -19,11 +19,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardStep
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardTestTheme
 
-/**
- * Exercises the real, ViewModel-driven [DeparturePortScreen] overload end-to-end (loading/error/content,
- * the same-port shortcut accept/decline branches, and the favourites/search submit path), as opposed to
- * [DeparturePortScreenTests] which drives the stateless content composables directly.
- */
+/** Exercises the real ViewModel-driven departure port overload rather than stateless content only. */
 @RunWith(RobolectricTestRunner::class)
 class DeparturePortScreenViewModelTests {
     @get:Rule

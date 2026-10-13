@@ -41,10 +41,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardStep
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardTestTheme
 
-/**
- * JVM/Robolectric port of the androidTest `GearSpeciesSearchScreenTest` - see the top-level package doc on
- * [GearSpeciesChecklistScreenTests] for why a `testDebugUnitTest`-reachable equivalent is needed.
- */
+/** JVM coverage for species search paths that instrumented coverage cannot supply to Kover. */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class GearSpeciesSearchScreenTests {
@@ -220,10 +217,7 @@ class GearSpeciesSearchScreenTests {
 
     @Test
     fun screenPreviewRendersWithoutError() {
-        // CatchRecordWizardScaffold resolves its language/connectivity state from Hilt view models unless
-        // LocalInspectionMode is true (see that composable's doc comment) - providing it here mirrors what
-        // Android Studio's own @Preview renderer does, letting this Preview composable run under plain
-        // Robolectric without a Hilt component.
+        // LocalInspectionMode mirrors Preview so this composable runs without a Hilt component.
         composeTestRule.setContent {
             CompositionLocalProvider(LocalInspectionMode provides true) {
                 GearSpeciesSearchScreenPreview()
@@ -235,11 +229,7 @@ class GearSpeciesSearchScreenTests {
             .assertIsDisplayed()
     }
 
-    /**
-     * JVM/Robolectric coverage for the Hilt-backed, stateful [GearSpeciesSearchScreen] wrapper's add path:
-     * selecting a species dispatches [CatchRecordFlowEvent.SpeciesAddedToCurrentGear] and navigates to
-     * [WizardStep.GearSpeciesChecklist].
-     */
+    /** Covers add-mode species selection dispatch and navigation from the Hilt-backed wrapper. */
     @Test
     fun viewModelBackedScreenAddPathDispatchesSpeciesAddedToCurrentGearAndNavigates() =
         runTest {
@@ -287,11 +277,7 @@ class GearSpeciesSearchScreenTests {
             )
         }
 
-    /**
-     * JVM/Robolectric coverage for the Hilt-backed, stateful [GearSpeciesSearchScreen] wrapper's edit path
-     * (reached via a check-your-answers "Change" link): dispatches
-     * [CatchRecordFlowEvent.SpeciesAddedToGearUse] for the explicit [editGearUseId], not the pending gear.
-     */
+    /** Covers edit-mode species selection dispatch for the explicit gear use. */
     @Test
     fun viewModelBackedScreenEditPathDispatchesSpeciesAddedToGearUseAndNavigates() =
         runTest {

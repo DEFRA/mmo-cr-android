@@ -25,13 +25,8 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Gear
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 
-/**
- * JVM/Robolectric port of the androidTest `GearScreensTest`'s per-gear-type "Gear measurement" section -
- * see the top-level package doc on [GearSpeciesChecklistScreenTests] for why a `testDebugUnitTest`-reachable
- * equivalent is needed for the Kover/SonarCloud coverage gate. Exercises every
- * [gearMeasurementFieldLabel] branch (one per confirmed gear type's schema) plus the Required/Numeric
- * validation-error paths and the Preview composable.
- */
+/** JVM coverage for gear measurement branches that instrumented coverage cannot supply to Kover.
+ * Covers every field label plus required/numeric errors and the preview. */
 @RunWith(RobolectricTestRunner::class)
 class GearMeasurementScreenContentFieldLabelsTests {
     @get:Rule
@@ -307,13 +302,7 @@ class GearMeasurementScreenContentFieldLabelsTests {
         assertEquals("", editableText)
     }
 
-    /**
-     * A lone decimal point is the one value the numeric field's character-level filtering still lets
-     * through for a [GearMeasurementFieldType.Decimal] field, but it does not parse as a valid number -
-     * reaching the validator's "Numeric" error path via real UI input. No currently-confirmed gear type
-     * uses a Decimal field (mesh size is Integer everywhere), so this test uses a synthetic Decimal-typed
-     * gear type purely to keep this UI-reachable "Numeric" error path covered.
-     */
+    /** A lone decimal point reaches the Decimal numeric validator only with a synthetic Decimal gear type. */
     @Test
     fun measurementScreenWithALoneDecimalPointShowsErrorSummaryAndDoesNotSubmit() {
         val syntheticDecimalGearType =

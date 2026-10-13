@@ -183,9 +183,7 @@ class GearMeasurementScreenTests {
             viewModel.dispatch(CatchRecordFlowEvent.VesselSelected("vessel-achilles"))
             testScheduler.advanceUntilIdle()
             composeTestRule.waitForIdle()
-            // An id that resolves to no known gear type leaves pendingGearTypeId null (see
-            // CatchRecordFlowViewModel.gearTypeSelected's own defensive guard) - exercising the screen's own
-            // defensive branch rather than the ViewModel's.
+            // Unknown gear ids leave pendingGearTypeId null, covering the screen's defensive branch.
             viewModel.dispatch(CatchRecordFlowEvent.GearTypeSelected("no-such-gear-type"))
             testScheduler.advanceUntilIdle()
             composeTestRule.waitForIdle()

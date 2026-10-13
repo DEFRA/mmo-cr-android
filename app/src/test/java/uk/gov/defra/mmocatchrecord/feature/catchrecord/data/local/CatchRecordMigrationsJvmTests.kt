@@ -5,7 +5,6 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteOpenHelper
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -13,12 +12,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 
-/**
- * JVM/Robolectric coverage for `MIGRATION_1_2` through `MIGRATION_5_6`'s SQL directly against a plain
- * (unencrypted) in-memory SQLite database -- mirrors [CatchRecordMigration6To7Tests]'s approach (SQLCipher
- * is Android-only native code, so full-schema row-preservation coverage stays in the androidTest
- * `CatchRecordMigrationTest`); these tests only exercise each migration's own SQL for Kover.
- */
+// Runs each migration's SQL on plain in-memory SQLite; SQLCipher is native-only, so full-schema
+// row preservation stays in the androidTest `CatchRecordMigrationTest`.
 @RunWith(RobolectricTestRunner::class)
 class CatchRecordMigrationsJvmTests {
     private fun createDb(
@@ -151,7 +146,6 @@ class CatchRecordMigrationsJvmTests {
                     "WHERE id = 'd1'",
             ).use { cursor ->
                 assertTrue(cursor.moveToFirst())
-                assertNull(null)
                 assertTrue(cursor.isNull(cursor.getColumnIndexOrThrow("catchRecordReference")))
                 assertEquals(0, cursor.getInt(cursor.getColumnIndexOrThrow("lateSubmissionWarningAcknowledged")))
             }
