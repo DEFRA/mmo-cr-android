@@ -44,11 +44,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardStep
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardTestTheme
 
-/**
- * JVM/Robolectric port of (a focused subset of) the androidTest `GearScreensTest`'s "Gear search" section
- * - see the top-level package doc on [GearSpeciesChecklistScreenTests] for why a
- * `testDebugUnitTest`-reachable equivalent is needed for the Kover/SonarCloud coverage gate.
- */
+/** JVM coverage for gear search paths that instrumented coverage cannot supply to Kover. */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class GearSearchScreenTests {
@@ -186,10 +182,7 @@ class GearSearchScreenTests {
         composeTestRule.onNodeWithTag(GearSearchScreenTestTags.AUTOCOMPLETE_FIELD).assertDoesNotExist()
     }
 
-    /**
-     * JVM/Robolectric coverage for the Hilt-backed, stateful [GearSearchScreen] wrapper: selecting a gear
-     * dispatches [CatchRecordFlowEvent.GearTypeSelected] and navigates to [WizardStep.GearMeasurement].
-     */
+    /** Covers the Hilt-backed GearSearchScreen wrapper dispatch and navigation path. */
     @Test
     fun viewModelBackedScreenDispatchesGearTypeSelectedAndNavigatesToGearMeasurement() =
         runTest {

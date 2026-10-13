@@ -21,15 +21,8 @@ import org.robolectric.shadows.ShadowNetwork
 import org.robolectric.shadows.ShadowNetworkCapabilities
 import org.robolectric.shadows.ShadowNetworkInfo
 
-/**
- * Covers [AndroidConnectivityObserver] against Robolectric's [org.robolectric.shadows.ShadowConnectivityManager]
- * -- no existing JVM test exercised this class before. [ShadowNetwork.newInstance] and the shadow's
- * `addNetwork`/`setActiveNetworkInfo`/`setDefaultNetworkActive`/`setNetworkCapabilities` calls simulate the
- * states [ConnectivityManager.getActiveNetwork]/`getNetworkCapabilities` would report on a device. An
- * explicit [ShadowConnectivityManager.reset] runs before every test since this shadow's state is held in
- * static fields shared across test methods -- a previous test's registered [callback][ConnectivityManager.NetworkCallback]
- * must never leak into the next.
- */
+/** Robolectric shadows simulate ConnectivityManager states without device-only connectivity dependencies.
+ * Reset the shadow before each test because its static state can leak callbacks. */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class AndroidConnectivityObserverTests {

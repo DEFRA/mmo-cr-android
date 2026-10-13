@@ -1,13 +1,11 @@
-﻿package uk.gov.defra.mmocatchrecord.core.root
+package uk.gov.defra.mmocatchrecord.core.root
 
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.lifecycle.Lifecycle
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.StandardTestDispatcher
 import org.junit.Rule
 import org.junit.Test
@@ -18,20 +16,15 @@ import uk.gov.defra.mmocatchrecord.core.security.FakeBiometricRepository
 import uk.gov.defra.mmocatchrecord.core.security.InMemoryBiometricPreferenceStore
 import uk.gov.defra.mmocatchrecord.core.security.InMemorySessionStore
 
-/**
- * [RootNavigation] driven by a fakes-backed [SessionCoordinator] (no Hilt needed - `sessionCoordinator`
- * is a plain constructor parameter), covering the APP_LOCK destination and the `AppResumed`
- * lifecycle re-dispatch. The real-Hilt SPLASH -> SIGN_IN path is covered separately by
- * [MainActivityNavigationTests]; the HOME destination is not reachable under Robolectric (SQLCipher's
- * native library is unavailable in this host JVM - see that file's doc comment).
- */
+// HOME is unreachable here (SQLCipher's native library is unavailable under Robolectric).
 @RunWith(RobolectricTestRunner::class)
 class RootNavigationTests {
     @get:Rule
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
-    /** A session already authenticated well outside the reentry window, so [SessionCoordinator]
-     * resolves directly to [RootPhase.APP_LOCK] without ever visiting HOME. */
+    private val dispatcher = StandardTestDispatcher()
+
+    // Authenticated well outside the reentry window, so the coordinator resolves straight to APP_LOCK.
     private fun buildLockedCoordinator(biometricRepository: FakeBiometricRepository = FakeBiometricRepository()) =
         SessionCoordinator(
             sessionStore = InMemorySessionStore(initialLastAuthenticatedAtMillis = 0L),
@@ -39,13 +32,14 @@ class RootNavigationTests {
             reentryPolicy = BiometricReentryPolicy(reentryTimeoutMillis = 60_000L),
             biometricRepository = biometricRepository,
             clock = { 120_000L },
-            dispatcher = Dispatchers.Default,
+            dispatcher = dispatcher,
         )
 
-    private fun waitForTag(tag: String) {
-        composeTestRule.waitUntil(timeoutMillis = 10_000) {
-            composeTestRule.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
-        }
+    // Also steps the Compose clock past RootNavigation's 600 ms minimum splash display.
+    private fun settle() {
+        dispatcher.scheduler.advanceUntilIdle()
+        composeTestRule.mainClock.advanceTimeBy(1_000L)
+        composeTestRule.waitForIdle()
     }
 
     @Test
@@ -55,7 +49,7 @@ class RootNavigationTests {
             RootNavigation(sessionCoordinator = coordinator)
         }
 
-        waitForTag(RootScreenTestTags.APP_LOCK_SCREEN)
+        settle()
 
         composeTestRule.onNodeWithTag(RootScreenTestTags.APP_LOCK_SCREEN).assertIsDisplayed()
     }
@@ -67,10 +61,10 @@ class RootNavigationTests {
         composeTestRule.setContent {
             RootNavigation(sessionCoordinator = coordinator)
         }
-        waitForTag(RootScreenTestTags.APP_LOCK_SCREEN)
+        settle()
 
         composeTestRule.onNodeWithTag(RootScreenTestTags.APP_LOCK_ACTION).performClick()
-        composeTestRule.waitForIdle()
+        settle()
 
         composeTestRule.onNodeWithTag(RootScreenTestTags.APP_LOCK_SCREEN).assertIsDisplayed()
     }
@@ -81,17 +75,16 @@ class RootNavigationTests {
         composeTestRule.setContent {
             RootNavigation(sessionCoordinator = coordinator)
         }
-        waitForTag(RootScreenTestTags.APP_LOCK_SCREEN)
+        settle()
 
         composeTestRule.activityRule.scenario.moveToState(Lifecycle.State.STARTED)
         composeTestRule.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
-        composeTestRule.waitForIdle()
+        settle()
 
         composeTestRule.onNodeWithTag(RootScreenTestTags.APP_LOCK_SCREEN).assertIsDisplayed()
     }
 
-    /** A dispatcher whose scheduler is never advanced leaves the coordinator parked at its initial
-     * SPLASH phase forever - exercising the self-navigation guard once the first frame has drawn. */
+    // The scheduler is never advanced, so the coordinator stays in SPLASH and self-navigation is skipped.
     @Test
     fun `splash phase suppresses redundant self-navigation once the first frame renders`() {
         val coordinator =
@@ -100,7 +93,7 @@ class RootNavigationTests {
                 biometricPreferenceStore = InMemoryBiometricPreferenceStore(initiallyEnabled = false),
                 reentryPolicy = BiometricReentryPolicy(reentryTimeoutMillis = 60_000L),
                 biometricRepository = FakeBiometricRepository(),
-                dispatcher = StandardTestDispatcher(),
+                dispatcher = dispatcher,
             )
         composeTestRule.setContent {
             RootNavigation(sessionCoordinator = coordinator)

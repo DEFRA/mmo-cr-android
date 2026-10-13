@@ -22,12 +22,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectio
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.DeparturePortEntryMode
 
-/**
- * Coverage for [DeparturePortScreenContent]'s branching (same-port-shortcut vs. favourites/search
- * delegation) and the remaining [PortSelectionStepContent]/[DepartureSamePortShortcutContent] paths not
- * already exercised by [DeparturePortScreenTests]/[PortSelectionStepContentTests] (favourites submit, the
- * "Add port" switch, the no-selection validation errors, and picking an autocomplete suggestion).
- */
+/** Covers departure-port content branches not reached by the direct screen/content tests. */
 @RunWith(RobolectricTestRunner::class)
 class DeparturePortScreenContentCoverageTests {
     @get:Rule

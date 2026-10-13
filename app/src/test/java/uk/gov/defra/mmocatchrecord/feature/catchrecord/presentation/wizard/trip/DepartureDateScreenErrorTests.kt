@@ -12,11 +12,8 @@ import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordFlowEvent
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardTestTheme
 
-/**
- * Loading/error coverage for the real, ViewModel-driven [DepartureDateScreen] overload — the happy-path
- * save/dirty-tracking/navigation behaviour is already covered end-to-end by
- * [DepartureDateScreenUnsavedChangesJourneyTests].
- */
+/** Covers loading/error for the real ViewModel-driven departure date overload.
+ * Happy-path save, dirty tracking and navigation are covered by the journey tests. */
 @RunWith(RobolectricTestRunner::class)
 class DepartureDateScreenErrorTests {
     @get:Rule

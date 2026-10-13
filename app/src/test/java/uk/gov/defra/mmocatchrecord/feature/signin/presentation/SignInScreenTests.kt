@@ -34,12 +34,8 @@ import uk.gov.defra.mmocatchrecord.core.language.FakeAppLanguageRepository
 import uk.gov.defra.mmocatchrecord.feature.signin.data.FakeSignInRepository
 import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInUseCase
 
-/**
- * JVM/Robolectric Compose coverage for [SignInScreen] and [SignInContent] - required because
- * `connectedDebugAndroidTest` coverage is not merged into Kover/SonarCloud (see ADR 0014 Phase B).
- * The content is a single scrollable Column taller than Robolectric's default viewport, so every
- * interaction/assertion below the fold goes through [performScrollTo].
- */
+/** Robolectric coverage is needed because instrumented coverage is not merged into Kover/SonarCloud.
+ * Below-the-fold assertions scroll through the tall sign-in content. */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class SignInScreenTests {
