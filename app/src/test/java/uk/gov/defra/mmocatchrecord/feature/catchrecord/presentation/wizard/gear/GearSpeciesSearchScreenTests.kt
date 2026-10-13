@@ -380,4 +380,57 @@ class GearSpeciesSearchScreenTests {
                     .speciesId,
             )
         }
+
+    /**
+     * JVM/Robolectric coverage for the Hilt-backed, stateful [GearSpeciesSearchScreen] wrapper's add path
+     * when re-entered for an explicit, already-bound [gearUseId] (a Back-navigation resume) — the submit
+     * must still target that gear use and navigate via [onNavigateForGear], not the plain [onNavigate].
+     */
+    @Test
+    fun viewModelBackedScreenAddPathWithAnExplicitGearUseIdNavigatesForThatGear() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            repository.startDraft("vessel-achilles")
+            repository.saveDraft(
+                repository.getAnyActiveDraft().getOrThrow()!!.copy(gearUses = listOf(gearUsePendingSpecies())),
+            )
+            val viewModel =
+                CatchRecordFlowViewModel(
+                    repository,
+                    FakeReferenceDataRepository(),
+                    FakeCatchRecordSubmissionRepository(),
+                    FakeNetworkConnectivityChecker(),
+                    FakeCatchRecordSyncScheduler(),
+                    { 0L },
+                    { "gear-use-1" },
+                    dispatcher,
+                )
+            var navigatedStep: WizardStep? = null
+            var navigatedForGear: Pair<WizardStep, String>? = null
+
+            composeTestRule.setContent {
+                WizardTestTheme {
+                    GearSpeciesSearchScreen(
+                        viewModel = viewModel,
+                        onNavigate = { navigatedStep = it },
+                        onNavigateForGear = { step, gearUseId -> navigatedForGear = step to gearUseId },
+                        onBack = {},
+                        gearUseId = "gear-use-1",
+                    )
+                }
+            }
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            testScheduler.advanceUntilIdle()
+            composeTestRule.waitForIdle()
+
+            composeTestRule.onNodeWithTag(GearSpeciesSearchScreenTestTags.AUTOCOMPLETE_FIELD).performTextInput("Co")
+            composeTestRule.onNodeWithTag("${GearSpeciesSearchScreenTestTags.SUGGESTION_PREFIX}_0").performClick()
+            composeTestRule.onNodeWithTag(GearSpeciesSearchScreenTestTags.SAVE_ACTION).performClick()
+            testScheduler.advanceUntilIdle()
+            composeTestRule.waitForIdle()
+
+            assertEquals(WizardStep.GearSpeciesChecklist to "gear-use-1", navigatedForGear)
+            assertNull(navigatedStep)
+        }
 }
