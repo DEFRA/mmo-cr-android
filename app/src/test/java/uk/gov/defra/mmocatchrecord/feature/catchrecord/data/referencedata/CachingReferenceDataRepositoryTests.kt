@@ -327,6 +327,19 @@ class CachingReferenceDataRepositoryTests {
         }
 
     @Test
+    fun `an empty port cache offline falls back to the stub with no hang`() =
+        runTest {
+            whenever(connectivityChecker.isConnected()).thenReturn(false)
+            val stubPort = Port(id = "stub-port-hastings", name = "Hastings", statisticalAreaId = "AREA-HASTINGS")
+            whenever(stub.getPorts()).thenReturn(Result.success(listOf(stubPort)))
+
+            val result = repository().getPorts()
+
+            assertEquals(listOf(stubPort), result.getOrThrow())
+            verifyNoInteractions(remoteDataSource)
+        }
+
+    @Test
     fun `an empty species cache online fetches inline and records the current language`() =
         runTest {
             languageFlow.value = "cy"
@@ -343,6 +356,19 @@ class CachingReferenceDataRepositoryTests {
             assertEquals(expected, cached.getOrThrow())
             assertEquals("cy", dao.getMetadata(DATASET_SPECIES)?.languageTag)
             verify(remoteDataSource, times(1)).fetchSpecies()
+        }
+
+    @Test
+    fun `an empty species cache offline falls back to the stub with no hang`() =
+        runTest {
+            whenever(connectivityChecker.isConnected()).thenReturn(false)
+            val stubSpecies = Species(id = "stub-s1", name = "Stub Cod", faoCode = "COD")
+            whenever(stub.getSpecies()).thenReturn(Result.success(listOf(stubSpecies)))
+
+            val result = repository().getSpecies()
+
+            assertEquals(listOf(stubSpecies), result.getOrThrow())
+            verifyNoInteractions(remoteDataSource)
         }
 
     @Test
@@ -373,6 +399,19 @@ class CachingReferenceDataRepositoryTests {
             assertEquals(fetched, cached)
             assertEquals("col-1", dao.getMetadata(gearsDatasetKey(band))?.collectionId)
             verify(remoteDataSource, times(1)).fetchGears(vesselLengthMetres = representativeLength)
+        }
+
+    @Test
+    fun `an empty gear cache offline falls back to the stub with no hang`() =
+        runTest {
+            whenever(connectivityChecker.isConnected()).thenReturn(false)
+            val stubGearType = GearType(id = "stub-gear-1", name = "Stub Gear")
+            whenever(stub.getGearTypes(8.0)).thenReturn(Result.success(listOf(stubGearType)))
+
+            val result = repository().getGearTypes(8.0)
+
+            assertEquals(listOf(stubGearType), result.getOrThrow())
+            verifyNoInteractions(remoteDataSource)
         }
 
     @Test
