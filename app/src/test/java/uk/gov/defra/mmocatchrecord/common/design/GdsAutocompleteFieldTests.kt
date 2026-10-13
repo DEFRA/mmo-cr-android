@@ -14,6 +14,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextInputSelection
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextRange
 import org.junit.Rule
@@ -120,6 +121,22 @@ class GdsAutocompleteFieldTests {
             .onNodeWithTag("port_field")
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText, AnnotatedString("Hastings")))
         composeTestRule.onAllNodesWithTag("port_suggestion_0").assertCountEquals(0)
+    }
+
+    @Test
+    fun `a genuine edit delivered before the picked suggestion renders is still applied`() {
+        setPortAutocompleteContent()
+        composeTestRule.onNodeWithTag("port_field").performTextInput("Ha")
+        composeTestRule.onAllNodesWithTag("port_suggestion_0").assertCountEquals(1)
+
+        composeTestRule.mainClock.autoAdvance = false
+        composeTestRule.onNodeWithTag("port_suggestion_0").performClick()
+        composeTestRule.onNodeWithTag("port_field").performTextReplacement("Hastings Pier")
+        composeTestRule.mainClock.autoAdvance = true
+
+        composeTestRule
+            .onNodeWithTag("port_field")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText, AnnotatedString("Hastings Pier")))
     }
 
     @Test

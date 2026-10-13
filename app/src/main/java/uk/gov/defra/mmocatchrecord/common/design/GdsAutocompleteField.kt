@@ -73,11 +73,11 @@ fun GdsAutocompleteField(
     var textFieldValueState by remember { mutableStateOf(value.withCursorAtEnd()) }
     val textFieldValue = textFieldValueState.syncedWith(value)
     // Structural-equality state: writing an unchanged value is a no-op, so no extra recomposition.
-    // True between picking a suggestion and the next composition, while the IME still holds the typed text.
-    var awaitingSelectionRender by remember { mutableStateOf(false) }
+    // Typed text replaced by a picked suggestion, until the next composition hands the IME the new label.
+    var preSelectionText by remember { mutableStateOf<String?>(null) }
     SideEffect {
         textFieldValueState = textFieldValue
-        awaitingSelectionRender = false
+        preSelectionText = null
     }
     val trimmedQuery = value.trim()
     val isQueryLongEnough = trimmedQuery.length >= minQueryLength
@@ -97,8 +97,8 @@ fun GdsAutocompleteField(
         OutlinedTextField(
             value = textFieldValue,
             onValueChange = onValueChange@{ newValue ->
-                // A stale IME edit computed from the pre-selection buffer would otherwise revert the pick.
-                if (awaitingSelectionRender) return@onValueChange
+                // An IME echo of the stale pre-selection buffer would otherwise revert the pick.
+                if (newValue.text == preSelectionText) return@onValueChange
                 val hasTextChanged = newValue.text != textFieldValueState.text
                 textFieldValueState = newValue
                 // Cursor/selection-only changes must not re-open dismissed suggestions or reset callers.
@@ -137,8 +137,8 @@ fun GdsAutocompleteField(
                 onOptionSelected = { option ->
                     // Also covers picking an option whose label equals the typed text.
                     dismissedQuery = option.label
+                    preSelectionText = textFieldValueState.text
                     textFieldValueState = option.label.withCursorAtEnd()
-                    awaitingSelectionRender = true
                     onValueChange(option.label)
                     onOptionSelected(option)
                 },
