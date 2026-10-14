@@ -49,7 +49,6 @@ data class GdsAutocompleteOption(
 @Suppress("FunctionNaming", "LongParameterList", "LongMethod")
 @Composable
 fun GdsAutocompleteField(
-    label: String,
     value: String,
     options: List<GdsAutocompleteOption>,
     onValueChange: (String) -> Unit,
@@ -59,6 +58,9 @@ fun GdsAutocompleteField(
     suggestionTestTagPrefix: String,
     noMatchesTestTag: String,
     modifier: Modifier = Modifier,
+    // Null omits the visible label entirely — the gear search screen relies on its wizard heading alone
+    // and doesn't repeat it as a field label (see GearSearchScreen).
+    label: String? = null,
     errorText: String? = null,
     // Both default to the existing port-search behaviour so every current call site (port screens,
     // GdsAutocompleteFieldTest) is unaffected; gear search overrides only [noMatchesText] since the
@@ -93,7 +95,9 @@ fun GdsAutocompleteField(
         )
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-        Text(text = label, style = MaterialTheme.typography.bodyLarge)
+        if (label != null) {
+            Text(text = label, style = MaterialTheme.typography.bodyLarge)
+        }
         OutlinedTextField(
             value = textFieldValue,
             onValueChange = onValueChange@{ newValue ->

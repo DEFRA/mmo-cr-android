@@ -127,7 +127,6 @@
     <string name="phase_three_complete_body">Vessel, trip timing, dates, ports and gear are now saved. Statistical sub-rectangle, species, landing storage and review steps are still out of scope for this phase.</string>
     <string name="gear_search_title">What gear did you use?</string>
     <string name="gear_search_title_add_another">Add gear to your list</string>
-    <string name="gear_search_autocomplete_label">Enter the gear you used</string>
     <string name="gear_search_no_matches_found">No matching gear types found</string>
     <string name="gear_selection_error">Select a gear type or choose one from the list</string>
     <string name="gear_measurement_title">Enter the measurements for %1$s</string>

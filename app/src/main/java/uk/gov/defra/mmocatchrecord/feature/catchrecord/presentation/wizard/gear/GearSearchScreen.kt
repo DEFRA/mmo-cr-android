@@ -138,7 +138,6 @@ fun GearSearchScreenContent(
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
         GdsAutocompleteField(
-            label = stringResource(R.string.gear_search_autocomplete_label),
             value = searchQuery,
             options = suggestions.map { GdsAutocompleteOption(it.id, it.name) },
             onValueChange = {
