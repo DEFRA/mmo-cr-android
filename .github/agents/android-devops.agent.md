@@ -59,6 +59,15 @@ restate or fork it. Your primary standards reference is
 > `uk.gov.defra.mmocatchrecord`, which conflicts with the frozen `mmo.catchrecording.android[.dev|.test]`
 > three-identity model), Play App Signing + upload-key custody, `versionCode`/`versionName` derivation,
 > the `android-v*` release tag prefix, and the six-environment gated topology.
+>
+> **Release POC confirmed 2026-10-14 by the user (ADR 0017/0018) — supersedes the matching items above:**
+> one Play app `mmo.catchrecording.android` (flavors removed; debug suffix `.debug`) with closed tracks per
+> CDP backend; Play App Signing + upload key held as `dev` Environment secrets (fastlane match is iOS-only,
+> so not used); version in `version.properties`, CI tag `v<VERSION_NAME>-BUILD_<VERSION_CODE>` on `main`;
+> `android-release.yml` started on a tag with target `build-only` / `internal` / `dev`; one ungated `dev`
+> Environment; Play service-account JSON key (**parked** — needs a DEFRA-owned Google Cloud project, ADR
+> 0018; POC uploads `build-only` artifacts by hand). Still open for the end-to-end design: per-track versionCode
+> scheme, gates A–F, production flow, compile-once repackaging.
 
 **You own the tech-stack confirmation gate for the pipeline/identity/signing stack (copilot-instructions
 §5.1).** Before you make **any** pipeline/config/signing change — including first-time pipeline scaffolding,

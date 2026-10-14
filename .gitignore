@@ -10,6 +10,9 @@ local.properties
 *.aar
 *.jks
 *.keystore
+*.p12
+*.pfx
+*.b64
 
 # Gradle / build outputs
 /build/

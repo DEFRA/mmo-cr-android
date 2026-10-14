@@ -11,36 +11,42 @@ plugins {
     alias(libs.plugins.ktlint)
     alias(libs.plugins.detekt)
     id("uk.gov.defra.mmocatchrecord.mapdata.generator")
+    id("uk.gov.defra.mmocatchrecord.appconfig")
 }
 
-// Optional developer override of the reference-data service root (ADR 0016), read from a gitignored
-// `local.properties` key so it is never committed. Never applied to the `prod` flavor.
-val localProperties =
+val appVersion =
     Properties().apply {
-        val file = rootProject.file("local.properties")
-        if (file.exists()) {
-            file.inputStream().use { stream -> load(stream) }
-        }
+        rootProject.file("version.properties").inputStream().use { stream -> load(stream) }
     }
-val referenceDataServiceUrlOverride: String? = localProperties.getProperty("referenceData.serviceUrl")
 
 android {
     namespace = "uk.gov.defra.mmocatchrecord"
     // Pinned to 37 due to library AAR metadata requirements (androidx.core, lifecycle, navigation).
-    // Runtime behavior is unchanged; targetSdk remains pinned at 35.
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "uk.gov.defra.mmocatchrecord"
+        applicationId = "mmo.catchrecording.android"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 2
-        versionName = "1.0.1"
+        targetSdk = 36
+        versionCode = appVersion.getProperty("VERSION_CODE").toInt()
+        versionName = appVersion.getProperty("VERSION_NAME")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Traceability only; the release lane passes the tagged commit, local builds say "local".
+        buildConfigField(
+            "String",
+            "GIT_COMMIT_SHA",
+            "\"${providers.gradleProperty("crGitSha").getOrElse("local")}\"",
+        )
     }
 
     buildTypes {
+        debug {
+            // Lets a local debug build sit beside the Play-installed app on one device.
+            applicationIdSuffix = ".debug"
+        }
+        // Built unsigned; the release lane signs the AAB with the upload key (ADR 0018).
         release {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -48,41 +54,6 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-        }
-    }
-
-    // Reference-data service environment (ADR 0016). `REFERENCE_DATA_SERVICE_URL` is the service
-    // *root* (no `api/v1/...` suffix) — see core.network for how the API base/health URLs derive from it.
-    flavorDimensions += "environment"
-    productFlavors {
-        create("local") {
-            dimension = "environment"
-            buildConfigField(
-                "String",
-                "REFERENCE_DATA_SERVICE_URL",
-                "\"${referenceDataServiceUrlOverride ?: "http://10.0.2.2:3002/"}\"",
-            )
-            // DEV's auth stub accepts any non-empty bearer token (ADR 0016) — see TokenProvider.
-            buildConfigField("boolean", "USE_STUB_AUTH", "true")
-        }
-        create("dev") {
-            dimension = "environment"
-            buildConfigField(
-                "String",
-                "REFERENCE_DATA_SERVICE_URL",
-                "\"${
-                    referenceDataServiceUrlOverride
-                        ?: "https://mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud/reference-data-service/"
-                }\"",
-            )
-            buildConfigField("boolean", "USE_STUB_AUTH", "true")
-        }
-        create("prod") {
-            dimension = "environment"
-            // Deliberately empty: core.network fails fast on first use rather than silently
-            // pointing production at DEV. Never overridable via local.properties.
-            buildConfigField("String", "REFERENCE_DATA_SERVICE_URL", "\"\"")
-            buildConfigField("boolean", "USE_STUB_AUTH", "false")
         }
     }
 
@@ -122,16 +93,9 @@ room {
     schemaDirectory("$projectDir/schemas")
 }
 
-// Report variant alias so CI/Sonar's existing `app/build/reports/kover/reportDebug.xml` path survives
-// adding product flavors (no real "debug"-only variant exists once flavors are introduced). JaCoCo
-// engine filters Compose-compiler synthetic branches ($changed/$default/skipping) that tests cannot reach.
+// JaCoCo engine filters Compose-compiler synthetic branches ($changed/$default/skipping) that tests cannot reach.
 kover {
     useJacoco(libs.versions.jacoco.get())
-    currentProject {
-        createVariant("debug") {
-            add("devDebug")
-        }
-    }
 }
 
 detekt {

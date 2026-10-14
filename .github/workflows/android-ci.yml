@@ -6,14 +6,20 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      publish_release_tag:
+        description: "Publish release tag after CI passes"
+        type: boolean
+        default: false
   merge_group:
 
 permissions:
   contents: read
 
+# Never cancel a main run: every non-Dependabot merge to main must publish its own release tag.
 concurrency:
   group: android-ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   validate:
@@ -27,6 +33,11 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+
+      # Dependabot PRs carry no bump; they ship with the next release (and their merges are not tagged).
+      - name: Verify version has been bumped
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.user.login != 'dependabot[bot]' }}
+        run: bash .github/workflows/scripts/check-version-bump.sh
 
       - name: Set up JDK 21 (Temurin)
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
@@ -42,6 +53,10 @@ jobs:
         with:
           ruby-version: "3.3"
           bundler-cache: true
+
+      # Fastfile wiring, release logic and the app config schema guard (no secret-like or tracking keys).
+      - name: Release tooling tests
+        run: bundle exec ruby -e 'Dir.glob("fastlane/test/*_test.rb").sort.each { |f| require File.expand_path(f) }'
 
       - name: Static analysis (Fastlane)
         run: bundle exec fastlane lint
@@ -78,7 +93,7 @@ jobs:
         with:
           name: static-analysis-reports
           path: |
-            app/build/reports/lint-results-devDebug.html
+            app/build/reports/lint-results-debug.html
             app/build/reports/ktlint
             app/build/reports/detekt
           retention-days: 14
@@ -141,3 +156,31 @@ jobs:
           name: instrumented-test-report
           path: app/build/reports/androidTests/connected
           retention-days: 14
+
+  # Tags only — CI never starts a release; Android Release is run manually on the tag.
+  # POC ONLY (ADR 0018): a manual run may tag any branch; restore the main-only check after the POC.
+  release-tag:
+    name: Publish release tag
+    needs: [validate, instrumented-tests]
+    if: >-
+      ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && inputs.publish_release_tag) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Detect Dependabot merge
+        id: source
+        if: ${{ github.event_name == 'push' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/workflows/scripts/detect-dependabot-merge.sh
+
+      - name: Create and push release tag
+        if: ${{ steps.source.outputs.dependabot != 'true' }}
+        run: bash .github/workflows/scripts/create-release-tag.sh

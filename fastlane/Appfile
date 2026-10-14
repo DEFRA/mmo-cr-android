@@ -1,3 +1,2 @@
-# Matches the applicationId in app/build.gradle.kts, which differs from the frozen three-identity
-# model in ci-cd.instructions.md — reconcile when flavors and the Play release lanes land.
-package_name("uk.gov.defra.mmocatchrecord")
+# Play API credentials come from Environment-scoped secrets at runtime, never from this file.
+package_name("mmo.catchrecording.android")

@@ -1,0 +1,20 @@
+{
+  "assetName": "mmocr_app_config.json",
+  "variablePrefix": "CR_APP_CFG_",
+  "keys": {
+    "API_BASE_URL": {
+      "type": "url",
+      "required": true,
+      "log": true,
+      "tracking": false,
+      "description": "Root URL of the reference-data service for this stage (the app derives the API paths)."
+    },
+    "USE_STUB_AUTH": {
+      "type": "bool",
+      "required": true,
+      "log": true,
+      "tracking": false,
+      "description": "Send the DEV stub bearer token instead of real authentication."
+    }
+  }
+}

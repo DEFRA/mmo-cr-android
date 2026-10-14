@@ -8,6 +8,7 @@ import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import uk.gov.defra.mmocatchrecord.BuildConfig
+import uk.gov.defra.mmocatchrecord.core.config.AppConfiguration
 import uk.gov.defra.mmocatchrecord.core.language.AppLanguageRepository
 import uk.gov.defra.mmocatchrecord.core.network.AcceptLanguageInterceptor
 import uk.gov.defra.mmocatchrecord.core.network.AuthInterceptor
@@ -17,10 +18,7 @@ import uk.gov.defra.mmocatchrecord.core.network.TokenProvider
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
-/**
- * Networking foundation (ADR 0015/0016): JSON, the per-flavor [TokenProvider] and the authenticated/
- * localised [OkHttpClient]. See [ReferenceDataRetrofitModule] for the Retrofit/`HealthApi` layer.
- */
+/** Provides JSON, packaged-config token auth, and the authenticated/localised [OkHttpClient]. */
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
@@ -32,13 +30,14 @@ object NetworkModule {
     @Singleton
     fun provideJson(): Json = Json { ignoreUnknownKeys = true }
 
-    /** Visible for testing both branches without compiling three build variants. */
+    /** Selects the configured stub or missing-token provider. */
     internal fun tokenProviderFor(useStubAuth: Boolean): TokenProvider =
         if (useStubAuth) StubTokenProvider() else MissingTokenProvider()
 
     @Provides
     @Singleton
-    fun provideTokenProvider(): TokenProvider = tokenProviderFor(BuildConfig.USE_STUB_AUTH)
+    fun provideTokenProvider(appConfiguration: AppConfiguration): TokenProvider =
+        tokenProviderFor(appConfiguration.useStubAuth ?: false)
 
     @Provides
     @Singleton

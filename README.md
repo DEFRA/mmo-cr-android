@@ -13,37 +13,41 @@ Fastlane (optional locally, used by CI) additionally needs Ruby 3.3+ and Bundler
 git clone <this-repo-url>
 cd mmo-cr-android
 
-# Build (devDebug — see docs/development/reference-data.md for choosing local/dev/prod)
-./gradlew assembleDevDebug
+# Point debug builds at a backend (git-ignored; see docs/development/reference-data.md)
+#   local.properties: crAppCfg.API_BASE_URL=http://10.0.2.2:3002/  and  crAppCfg.USE_STUB_AUTH=true
+
+# Build
+./gradlew assembleDebug
 
 # Run unit tests
-./gradlew testDevDebugUnitTest
+./gradlew testDebugUnitTest
 
 # Run unit tests + generate coverage report (Kover)
-./gradlew testDevDebugUnitTest koverXmlReportDebug
+./gradlew testDebugUnitTest koverXmlReportDebug
 
 # Lint / static analysis
-./gradlew ktlintCheck detekt lintDevDebug --continue
+./gradlew ktlintCheck detekt lintDebug --continue
 
-# Regenerate the offline map data (also runs automatically before assembleDevDebug/Release)
-./gradlew :app:generateDevDebugMapData
+# Regenerate the offline map data (also runs automatically before assembleDebug/Release)
+./gradlew :app:generateDebugMapData
 
 # Install & run on a connected device/emulator
-./gradlew installDevDebug
+./gradlew installDebug
 ```
 
-The **`environment`** flavor dimension (`local`/`dev`/`prod`) multiplies every task name above (ADR 0016)
-— see [`docs/development/reference-data.md`](docs/development/reference-data.md) for which flavor to pick
-and how to stand up a backend for it.
+There are no build flavors: the backend comes from a packaged app-config asset ([ADR
+0017](docs/adr/0017-packaged-app-configuration.md)) — see
+[`docs/development/reference-data.md`](docs/development/reference-data.md) for which backend to pick and
+how to stand one up. The debug app installs as `mmo.catchrecording.android.debug`, beside the Play build.
 
 The same steps are also exposed as Fastlane lanes, which is exactly what CI runs:
 
 ```powershell
 bundle install
-bundle exec fastlane lint              # ktlintCheck + detekt + lintDevDebug (--continue)
-bundle exec fastlane build             # assembleDevDebug
-bundle exec fastlane test              # testDevDebugUnitTest + koverXmlReportDebug
-bundle exec fastlane instrumented_test # connectedDevDebugAndroidTest
+bundle exec fastlane lint              # ktlintCheck + detekt + lintDebug (--continue)
+bundle exec fastlane build             # assembleDebug
+bundle exec fastlane test              # testDebugUnitTest + koverXmlReportDebug + app-config plugin tests
+bundle exec fastlane instrumented_test # connectedDebugAndroidTest
 ```
 
 Or open the project in Android Studio and use the standard Run/Debug configurations.
@@ -85,7 +89,7 @@ split per feature package, per
   map (no map SDK/tiles/API key/network) with a build-time GeoJSON preprocessing task in the `build-logic/`
   composite Gradle build — see ADR 0013 and [`docs/development/offline-map.md`](docs/development/offline-map.md).
 - **Reference-data API integration** — Retrofit/OkHttp-backed, cache-first (Room) with a bundled offline
-  fallback, across `local`/`dev`/`prod` flavors — see ADR 0015/0016 and
+  fallback; the backend comes from the packaged app config — see ADR 0015/0016/0017 and
   [`docs/development/reference-data.md`](docs/development/reference-data.md) for the developer runbook.
 - Full list of ADRs: [`docs/adr/`](docs/adr/).
 
@@ -122,21 +126,65 @@ split per feature package, per
 | [0014](docs/adr/0014-catch-record-status-audit-and-offline-sync-confirmation.md) | Catch-record status, audit timestamps and offline-sync confirmation |
 | [0015](docs/adr/0015-http-client-retrofit-okhttp.md) | HTTP client: Retrofit + OkHttp |
 | [0016](docs/adr/0016-reference-data-api-integration.md) | Reference-data API integration |
+| [0017](docs/adr/0017-packaged-app-configuration.md) | Packaged app configuration (replaces build flavors) |
+| [0018](docs/adr/0018-android-release-poc.md) | Android release pipeline — POC (version in code, tags, signing, Play tracks) |
 | [0000](docs/adr/0000-ios-adr-references-TBC.md) | iOS ADR references — TBC |
 
 ## CI
 
-`.github/workflows/android-ci.yml` runs lightweight **PR validation only** (static analysis, debug
-assemble, unit tests with coverage, and emulator-based instrumented/accessibility tests). Every Gradle
-invocation goes through a Fastlane lane in `fastlane/Fastfile`, so CI and local runs are identical.
-
-It does **not** perform release signing or Play Store publishing — that is a separate
-release-engineering/DevOps responsibility, out of scope for this workflow.
+`.github/workflows/android-ci.yml` runs on pull requests, the merge queue and `main`: version-bump check
+(PRs, except Dependabot), release tooling tests, static analysis, debug assemble, unit tests with coverage,
+SonarCloud and emulator-based instrumented/accessibility tests. Every Gradle invocation goes through a
+Fastlane lane, so CI and local runs are identical. After a green push to `main` (not a Dependabot merge),
+its `release-tag` job publishes the release tag. CI never starts a release.
 
 Every third-party Action is pinned to a **full commit SHA** (a DEFRA supply-chain requirement) with the
 version in a trailing comment, and `.github/dependabot.yml` keeps those pins current via the
 `github-actions` ecosystem (weekly, grouped). Runners are pinned to **`ubuntu-24.04`** rather than
 `ubuntu-latest` for reproducibility — that pin must be bumped **manually** before GitHub retires the image.
+
+## Release (POC — ADR 0018)
+
+**Version.** [`version.properties`](version.properties) is the single source of `VERSION_NAME` and
+`VERSION_CODE`. Every non-Dependabot PR must raise `VERSION_CODE` (it never resets) and must not lower
+`VERSION_NAME`. When CI passes on `main`, it tags the commit `v<VERSION_NAME>-BUILD_<VERSION_CODE>`, e.g.
+`v1.0.1-BUILD_3`. **POC only:** a manual *Android CI* run (Run workflow → pick the branch → tick
+`publish_release_tag`) tags any branch; this reverts to `main`-only after the POC (ADR 0018).
+
+**Run a release.** Actions → **Android Release** → Run workflow → *Use workflow from* → **Tags** → the
+release tag, then pick a `target`:
+
+| Target | What happens |
+|---|---|
+| `build-only` | Signed AAB kept as a workflow artifact for 1 day (used once, for the manual first upload) |
+| `internal` | Uploaded to the Play **internal testing** track — *parked: needs `PLAY_SERVICE_ACCOUNT_JSON` (ADR 0018)* |
+| `dev` | Uploaded to the Play closed testing track **`dev`** — *parked: needs `PLAY_SERVICE_ACCOUNT_JSON` (ADR 0018)* |
+
+The run refuses a branch, or a tag that doesn't match `version.properties` at that commit. Each upload
+needs an unused `VERSION_CODE`: to send the same code to another track, bump and release the new tag.
+
+**What the `release` lane does** ([`fastlane/lanes/release.rb`](fastlane/lanes/release.rb)): validates
+the `dev` Environment's `CR_APP_CFG_*` variables against
+[`config/app-config.schema.json`](config/app-config.schema.json) before compiling → stops if the
+versionCode is already on a track → builds the unsigned release AAB with that config packaged → signs it
+with the upload key (`jarsigner`; Play App Signing holds the app signing key) → verifies the signature and
+the packaged config → uploads (or keeps the AAB for `build-only`).
+
+**GitHub Environment `dev`** (deployments only from `v*` tags):
+
+| Name | Kind | Value |
+|---|---|---|
+| `CR_APP_CFG_API_BASE_URL` | Variable | Reference-data service root (https) |
+| `CR_APP_CFG_USE_STUB_AUTH` | Variable | `true` / `false` |
+| `UPLOAD_KEYSTORE_BASE64` | Secret | Upload keystore (PKCS12), base64 on one line |
+| `UPLOAD_KEYSTORE_PASSWORD` | Secret | Keystore password |
+| `UPLOAD_KEY_ALIAS` | Secret | Key alias |
+| `UPLOAD_KEY_PASSWORD` | Secret | Key password (same as the keystore's for PKCS12) |
+| `PLAY_SERVICE_ACCOUNT_JSON` | Secret | Play Developer API service-account JSON key — not set yet; until then upload `build-only` artifacts by hand |
+
+**Add a config value.** Set `CR_APP_CFG_<KEY>` on the Environment first, then in one PR declare the key in
+the schema, read it in the app and bump the version. Values are never secrets: anything in the app
+package can be read.
 
 SonarCloud analysis is configured in `sonar-project.properties` and the scan step runs in the workflow, but
 it cannot pass until the `DEFRA_mmo-cr-android` SonarCloud project and the `MMO_CR_SONAR_TOKEN` secret

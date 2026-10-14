@@ -6,6 +6,9 @@ import kotlinx.serialization.decodeFromString
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
+import uk.gov.defra.mmocatchrecord.core.config.AppConfiguration
 import uk.gov.defra.mmocatchrecord.core.language.AppLanguageRepository
 import uk.gov.defra.mmocatchrecord.core.network.AcceptLanguageInterceptor
 import uk.gov.defra.mmocatchrecord.core.network.AuthInterceptor
@@ -41,8 +44,11 @@ class NetworkModuleTests {
     }
 
     @Test
-    fun `provideTokenProvider wires up the stub for this test build flavor`() {
-        assertTrue(NetworkModule.provideTokenProvider() is StubTokenProvider)
+    fun `provideTokenProvider wires up the configured stub`() {
+        val appConfiguration = mock<AppConfiguration>()
+        whenever(appConfiguration.useStubAuth).thenReturn(true)
+
+        assertTrue(NetworkModule.provideTokenProvider(appConfiguration) is StubTokenProvider)
     }
 
     @Test

@@ -9,7 +9,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
-import uk.gov.defra.mmocatchrecord.BuildConfig
+import uk.gov.defra.mmocatchrecord.core.config.AppConfiguration
 import uk.gov.defra.mmocatchrecord.core.network.HealthApi
 import uk.gov.defra.mmocatchrecord.core.network.ReferenceDataServiceConfig
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.remote.ReferenceDataApi
@@ -25,8 +25,8 @@ object ReferenceDataRetrofitModule {
     @Provides
     @Singleton
     @ReferenceDataServiceRoot
-    fun provideReferenceDataServiceRootUrl(): String =
-        ReferenceDataServiceConfig.requireServiceRootUrl(BuildConfig.REFERENCE_DATA_SERVICE_URL)
+    fun provideReferenceDataServiceRootUrl(appConfiguration: AppConfiguration): String =
+        appConfiguration.requireReferenceDataServiceRootUrl()
 
     @Provides
     @Singleton

@@ -7,7 +7,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Rule
 import org.junit.Test
-import uk.gov.defra.mmocatchrecord.BuildConfig
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
+import uk.gov.defra.mmocatchrecord.core.config.AppConfiguration
 import uk.gov.defra.mmocatchrecord.core.network.ReferenceDataServiceConfig
 
 /**
@@ -20,10 +22,12 @@ class ReferenceDataRetrofitModuleTests {
     val serverRule = MockWebServerRule()
 
     @Test
-    fun `provideReferenceDataServiceRootUrl derives from the build flavor's configured url`() {
-        val rootUrl = ReferenceDataRetrofitModule.provideReferenceDataServiceRootUrl()
+    fun `provideReferenceDataServiceRootUrl reads the packaged configuration`() {
+        val serviceRootUrl = "https://example.test/"
+        val appConfiguration = mock<AppConfiguration>()
+        whenever(appConfiguration.requireReferenceDataServiceRootUrl()).thenReturn(serviceRootUrl)
 
-        assertEquals(ReferenceDataServiceConfig.requireServiceRootUrl(BuildConfig.REFERENCE_DATA_SERVICE_URL), rootUrl)
+        assertEquals(serviceRootUrl, ReferenceDataRetrofitModule.provideReferenceDataServiceRootUrl(appConfiguration))
     }
 
     @Test

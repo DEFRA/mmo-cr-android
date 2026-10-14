@@ -4,6 +4,11 @@
 
 Accepted — supersedes [0008](0008-reference-data-stub.md)
 
+> **Amended 2026-10-14 by [0017](0017-packaged-app-configuration.md):** the `local`/`dev`/`prod` product
+> flavors and their `REFERENCE_DATA_SERVICE_URL` / `USE_STUB_AUTH` `BuildConfig` fields are removed. The
+> same values now come from the packaged app config (`API_BASE_URL`, `USE_STUB_AUTH`); the rest of this ADR
+> (contract usage, caching, token abstraction, fail-fast on a missing URL) still applies.
+
 ## Context
 
 A real reference-data service now exists and is reachable from this machine over VPN:
