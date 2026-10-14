@@ -440,7 +440,7 @@ private fun HelpRecordingAccordion() {
         )
         listOf(R.string.help_bullet_1, R.string.help_bullet_2, R.string.help_bullet_3).forEach { bulletRes ->
             Text(
-                text = "Ã¢â‚¬Â¢ " + stringResource(bulletRes),
+                text = "• " + stringResource(bulletRes),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(bottom = Spacing.xxs),
             )
