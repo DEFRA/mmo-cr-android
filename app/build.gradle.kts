@@ -27,15 +27,15 @@ val referenceDataServiceUrlOverride: String? = localProperties.getProperty("refe
 android {
     namespace = "uk.gov.defra.mmocatchrecord"
     // Pinned to 37 due to library AAR metadata requirements (androidx.core, lifecycle, navigation).
-    // Runtime behavior is unchanged; targetSdk remains pinned at 35.
+    // targetSdk is 36 per the Google Play target API level policy.
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "uk.gov.defra.mmocatchrecord"
+        applicationId = "mmo.catchrecording.android"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 2
-        versionName = "1.0.1"
+        versionName = "2.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

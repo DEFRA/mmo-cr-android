@@ -169,8 +169,8 @@ software emulation and is far too slow for CI. `/dev/kvm` is not accessible to t
 so the workflow installs a `udev` rule granting access before the emulator starts. This is the approach
 documented by the action itself.
 
-**Target configuration:** the emulator runs API 35 with the headless-optimised `aosp_atd` system image on
-a `pixel_6` device profile, matching the app's `targetSdk 35`.
+**Target configuration:** the emulator runs API 36 with the headless-optimised `aosp_atd` system image on
+a `pixel_6` device profile, matching the app's `targetSdk 36`.
 
 **Alternative under consideration:** [Gradle Managed Devices](https://developer.android.com/studio/test/gradle-managed-devices)
 would move device definitions into `app/build.gradle.kts` and let AGP provision and tear down emulators,

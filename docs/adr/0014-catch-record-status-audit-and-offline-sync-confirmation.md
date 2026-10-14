@@ -317,13 +317,16 @@ silently-stuck record and no way to act on it.
 
 ### BR-XX: `BackHandler`, not `PredictiveBackHandler` — and no opt-in to predictive back (D1)
 
-The manifest gains **no** `android:enableOnBackInvokedCallback`; `targetSdk 35` does not force predictive
-back (that only applies once an app targets 36), so this is a deliberate non-change, not an oversight.
+The manifest gains **no** `android:enableOnBackInvokedCallback`. Since 2026-10-14 the app targets 36, so
+predictive back is on by default; `BackHandler` still works because it registers via
+`OnBackPressedDispatcher` (androidx.activity 1.13.0), which bridges to `OnBackInvokedCallback`.
 `CatchRecordWizardScaffold` uses `BackHandler(enabled = hasUnsavedChanges)`, called **unconditionally** with
 only `enabled` varying, so callback registration order is never disturbed by the composable
 appearing/disappearing. `PredictiveBackHandler` is rejected: it exists for UI that genuinely animates
 in step with the gesture's progress, and animating *toward* the previous screen only to then refuse to
 leave is a misleading prediction, not an honest one.
+
+_Update 2026-10-14: targetSdk raised to 36; wizard back interception unaffected, system back-to-home/cross-activity animations now shown._
 
 ### Dirty-state tracking must never fire spuriously (D3)
 

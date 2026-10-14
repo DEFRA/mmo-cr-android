@@ -127,7 +127,7 @@ jobs:
       - name: Run instrumented tests (Compose UI + WCAG 2.2 AA semantics)
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
-          api-level: 35
+          api-level: 36
           target: aosp_atd
           arch: x86_64
           profile: pixel_6
