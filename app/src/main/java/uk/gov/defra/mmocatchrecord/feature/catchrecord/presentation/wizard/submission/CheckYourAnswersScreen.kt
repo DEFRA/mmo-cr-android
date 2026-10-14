@@ -28,7 +28,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.gov.defra.mmocatchrecord.R
-import uk.gov.defra.mmocatchrecord.common.design.GdsInsetText
 import uk.gov.defra.mmocatchrecord.common.design.GdsLinkAction
 import uk.gov.defra.mmocatchrecord.common.design.GdsWarningText
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
@@ -253,26 +252,31 @@ private fun CheckYourAnswersRowView(
     }
 }
 
-/**
- * GDS "declaration" panel: an icon + bold intro + bullet list, conveying its meaning via icon **and** text
- * together (see [uk.gov.defra.mmocatchrecord.common.design.GdsInsetText] — not colour alone), per WCAG 2.2
- * AA.
- */
+/** Icon + bold intro ([GdsWarningText]) followed by a plain, unbordered "confirming" paragraph and bullets. */
 @Composable
 private fun DeclarationPanel(modifier: Modifier = Modifier) {
-    GdsInsetText(modifier = modifier.testTag(CheckYourAnswersScreenTestTags.DECLARATION_PANEL)) {
-        Text(
+    Column(
+        modifier = modifier.testTag(CheckYourAnswersScreenTestTags.DECLARATION_PANEL),
+        verticalArrangement = Arrangement.spacedBy(Spacing.m),
+    ) {
+        GdsWarningText(
             text = stringResource(R.string.check_your_answers_declaration_intro),
-            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+            testTag = "${CheckYourAnswersScreenTestTags.DECLARATION_PANEL}_intro",
         )
-        listOf(
-            R.string.check_your_answers_declaration_bullet_weight_accurate,
-            R.string.check_your_answers_declaration_bullet_tolerance,
-            R.string.check_your_answers_declaration_bullet_action,
-        ).forEach { bulletRes ->
-            Row {
-                Text(text = "• ", style = MaterialTheme.typography.bodyLarge)
-                Text(text = stringResource(bulletRes), style = MaterialTheme.typography.bodyLarge)
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            Text(
+                text = stringResource(R.string.check_your_answers_declaration_confirming),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            listOf(
+                R.string.check_your_answers_declaration_bullet_weight_accurate,
+                R.string.check_your_answers_declaration_bullet_tolerance,
+                R.string.check_your_answers_declaration_bullet_action,
+            ).forEach { bulletRes ->
+                Row {
+                    Text(text = "• ", style = MaterialTheme.typography.bodyLarge)
+                    Text(text = stringResource(bulletRes), style = MaterialTheme.typography.bodyLarge)
+                }
             }
         }
     }

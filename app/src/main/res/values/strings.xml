@@ -232,6 +232,7 @@
     <string name="check_your_answers_change_action">Change</string>
     <string name="check_your_answers_change_action_with_label">Change %1$s</string>
     <string name="check_your_answers_declaration_intro">By submitting this record, you agree that the information you\'ve given is complete and correct.</string>
+    <string name="check_your_answers_declaration_confirming">By submitting your catch record, you\'re confirming</string>
     <string name="check_your_answers_declaration_bullet_weight_accurate">The weight of fish you have landed is accurate</string>
     <string name="check_your_answers_declaration_bullet_tolerance">This is within permitted tolerance levels</string>
     <string name="check_your_answers_declaration_bullet_action">Fishing authorities may take action in respect of inaccurate catch recording</string>

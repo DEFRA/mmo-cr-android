@@ -249,6 +249,7 @@
     <string name="check_your_answers_change_action">Newid</string>
     <string name="check_your_answers_change_action_with_label">Newid %1$s</string>
     <string name="check_your_answers_declaration_intro">Drwy gyflwyno\'r cofnod hwn, rydych yn cytuno bod y wybodaeth a roddwyd gennych yn gyflawn ac yn gywir.</string>
+    <string name="check_your_answers_declaration_confirming">Drwy gyflwyno eich cofnod dalfa, rydych yn cadarnhau</string>
     <string name="check_your_answers_declaration_bullet_weight_accurate">Mae pwysau\'r pysgod rydych wedi\'u glanio yn gywir</string>
     <string name="check_your_answers_declaration_bullet_tolerance">Mae hyn o fewn y lefelau goddefiant a ganiateir</string>
     <string name="check_your_answers_declaration_bullet_action">Gall awdurdodau pysgota gymryd camau o ran cofnodi dalfa anghywir</string>
