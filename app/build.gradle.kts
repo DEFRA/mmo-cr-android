@@ -33,6 +33,7 @@ android {
     defaultConfig {
         applicationId = "mmo.catchrecording.android"
         minSdk = 26
+        //noinspection OldTargetApi,EditedTargetSdkVersion
         targetSdk = 36
         versionCode = 2
         versionName = "2.0.0"
