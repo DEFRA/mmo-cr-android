@@ -88,6 +88,7 @@ okhttp-logging-interceptor = { group = "com.squareup.okhttp3", name = "logging-i
 okhttp-mockwebserver3-junit4 = { group = "com.squareup.okhttp3", name = "mockwebserver3-junit4" }
 retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
 retrofit-converter-kotlinx-serialization = { group = "com.squareup.retrofit2", name = "converter-kotlinx-serialization", version.ref = "retrofit" }
+map-data-core = { module = "uk.gov.defra.mmocatchrecord.mapdata:map-data-core" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
