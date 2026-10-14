@@ -9,6 +9,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.text.font.FontWeight
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -111,6 +112,19 @@ class CommonComponentsTests {
         }
 
         composeTestRule.onNodeWithText("More detail").assertIsDisplayed()
+    }
+
+    @Test
+    fun `ExpandableDetails supports custom title font weight`() {
+        composeTestRule.setContent {
+            MmoTheme {
+                ExpandableDetails(title = "Custom weight", titleFontWeight = FontWeight.Bold) {
+                    Text("Hidden content")
+                }
+            }
+        }
+
+        composeTestRule.onNodeWithText("Custom weight").assertIsDisplayed()
     }
 
     @Test

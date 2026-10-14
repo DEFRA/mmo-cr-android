@@ -281,6 +281,7 @@ fun StatusTag(
 fun ExpandableDetails(
     title: String,
     modifier: Modifier = Modifier,
+    titleFontWeight: FontWeight = FontWeight.Normal,
     content: @Composable () -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -312,7 +313,7 @@ fun ExpandableDetails(
                 style =
                     MaterialTheme.typography.bodyLarge.copy(
                         color = MmoColors.GovBlue,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = titleFontWeight,
                         textDecoration = TextDecoration.Underline,
                     ),
             )

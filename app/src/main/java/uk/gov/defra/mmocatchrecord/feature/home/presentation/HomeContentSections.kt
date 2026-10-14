@@ -414,7 +414,10 @@ fun HelpAccordionsSection() {
 @Suppress("FunctionNaming")
 @Composable
 private fun HelpRecordingAccordion() {
-    ExpandableDetails(title = stringResource(R.string.help_with_catch_recording)) {
+    ExpandableDetails(
+        title = stringResource(R.string.help_with_catch_recording),
+        titleFontWeight = FontWeight.Normal,
+    ) {
         Text(
             stringResource(R.string.help_need_to_do),
             style = MaterialTheme.typography.titleMedium,
@@ -469,7 +472,10 @@ private fun HelpRecordingAccordion() {
 @Suppress("FunctionNaming")
 @Composable
 private fun CatchStatusesAccordion() {
-    ExpandableDetails(title = stringResource(R.string.catch_record_statuses)) {
+    ExpandableDetails(
+        title = stringResource(R.string.catch_record_statuses),
+        titleFontWeight = FontWeight.Normal,
+    ) {
         StatusHelpRow(stringResource(R.string.status_draft_title), stringResource(R.string.status_draft_desc))
         StatusHelpRow(
             stringResource(R.string.status_ready_to_submit_title),
