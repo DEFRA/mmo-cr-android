@@ -52,6 +52,14 @@ class NetworkModuleTests {
     }
 
     @Test
+    fun `provideTokenProvider falls back to the missing provider when config is unavailable`() {
+        val appConfiguration = mock<AppConfiguration>()
+        whenever(appConfiguration.useStubAuth).thenReturn(null)
+
+        assertTrue(NetworkModule.provideTokenProvider(appConfiguration) is MissingTokenProvider)
+    }
+
+    @Test
     fun `provideAuthInterceptor wraps the given token provider`() {
         val tokenProvider = StubTokenProvider()
 

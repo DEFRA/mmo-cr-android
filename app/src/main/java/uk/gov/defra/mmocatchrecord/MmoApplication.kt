@@ -1,16 +1,13 @@
 package uk.gov.defra.mmocatchrecord
 
 import android.app.Application
-import android.content.pm.PackageInfo
-import android.content.pm.PackageManager
-import android.os.Build
-import androidx.core.content.pm.PackageInfoCompat
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
 import uk.gov.defra.mmocatchrecord.core.config.AppConfiguration
 import uk.gov.defra.mmocatchrecord.core.logging.ReleaseTree
+import uk.gov.defra.mmocatchrecord.core.logging.StartupMetadataLogger
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.sync.WorkManagerReferenceDataSyncScheduler
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.sync.CatchRecordSyncSweep
 import javax.inject.Inject
@@ -47,33 +44,11 @@ class MmoApplication :
         // Structured, redacted logging (ADR 0011): unrestricted Timber.DebugTree for local development,
         // a redacted, WARN+-only ReleaseTree in release builds — see ReleaseTree's doc comment.
         Timber.plant(if (BuildConfig.DEBUG) Timber.DebugTree() else ReleaseTree())
-        logStartupMetadata()
+        StartupMetadataLogger.log(packageManager, packageName, BuildConfig.GIT_COMMIT_SHA, appConfiguration)
         // Manifest/ETag-driven reference-data cache refresh (ADR 0016): one now, one every ~12h after.
         referenceDataSyncScheduler.scheduleStartupRefresh()
         referenceDataSyncScheduler.schedulePeriodicRefresh()
         // Fire-and-forget reconciliation sweep (FR7, ADR 0014 Phase C) — must not block cold start.
         catchRecordSyncSweep.sweep()
     }
-
-    private fun logStartupMetadata() {
-        val packageInfo = packageInfo()
-        Timber.w(
-            "App startup: versionName=%s versionCode=%d gitCommitSha=%s apiHost=%s useStubAuth=%s",
-            packageInfo.versionName ?: "unknown",
-            PackageInfoCompat.getLongVersionCode(packageInfo),
-            BuildConfig.GIT_COMMIT_SHA,
-            appConfiguration.apiHostForStartupLog() ?: "unavailable",
-            appConfiguration.useStubAuth?.toString() ?: "unavailable",
-        )
-    }
-
-    private fun packageInfo(): PackageInfo =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            packageManager.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0))
-        } else {
-            legacyPackageInfo()
-        }
-
-    @Suppress("DEPRECATION")
-    private fun legacyPackageInfo(): PackageInfo = packageManager.getPackageInfo(packageName, 0)
 }

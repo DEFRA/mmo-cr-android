@@ -37,6 +37,7 @@ class ReferenceDataServiceConfigTests {
     fun `requireServiceRootUrl rejects credentials queries and fragments`() {
         listOf(
             "https://user:password@example.test/",
+            "https://:password@example.test/",
             "https://example.test/?query=value",
             "https://example.test/#fragment",
         ).forEach { configuredUrl ->
