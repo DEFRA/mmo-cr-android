@@ -176,8 +176,7 @@ class CatchRecordFlowViewModelTests {
                 val loaded = awaitItem()
                 assertEquals(WizardStep.DraftResume, loaded.currentStep)
                 assertTrue(loaded.status is UiStatus.Content)
-                assertEquals(DeparturePortEntryMode.SamePortShortcut, loaded.departurePortEntryMode)
-                assertEquals("port-hastings", loaded.samePortCandidate?.id)
+                assertEquals(DeparturePortEntryMode.FavouriteList, loaded.departurePortEntryMode)
             }
         }
 
@@ -200,8 +199,7 @@ class CatchRecordFlowViewModelTests {
                 assertTrue(loaded.isDraftPersisted)
                 assertEquals(chosen.id, (loaded.status as UiStatus.Content).value.id)
                 assertEquals(2, loaded.vessels.size)
-                assertEquals(DeparturePortEntryMode.SamePortShortcut, loaded.departurePortEntryMode)
-                assertEquals("port-hastings", loaded.samePortCandidate?.id)
+                assertEquals(DeparturePortEntryMode.FavouriteList, loaded.departurePortEntryMode)
             }
         }
 
@@ -364,7 +362,14 @@ class CatchRecordFlowViewModelTests {
                 val afterFirstSave = awaitItem()
                 assertTrue(afterFirstSave.isDraftPersisted)
 
-                viewModel.dispatch(CatchRecordFlowEvent.SamePortShortcutAccepted)
+                viewModel.dispatch(
+                    CatchRecordFlowEvent.SaveAndContinue(
+                        (afterFirstSave.status as UiStatus.Content<CatchRecordDraft>).value.copy(
+                            departurePort = PortSelection("port-hastings", PortSelectionMode.Favourite),
+                        ),
+                        WizardStep.ReturnPort,
+                    ),
+                )
                 assertEquals(UiStatus.Loading, awaitItem().status)
                 val afterSecondSave = awaitItem()
                 assertTrue(afterSecondSave.isDraftPersisted)
@@ -443,44 +448,6 @@ class CatchRecordFlowViewModelTests {
                 assertEquals(WizardStep.DepartureDate, updated.currentStep)
                 assertNull(draft.departureDate)
                 assertNull(draft.returnDate)
-            }
-        }
-
-    @Test
-    fun `same port shortcut yes sets both ports and skips to gear search`() =
-        runTest {
-            val dispatcher = StandardTestDispatcher(testScheduler)
-            val repository = FakeCatchRecordDraftRepository()
-            val viewModel = buildViewModel(repository = repository, dispatcher = dispatcher)
-            viewModel.dispatch(CatchRecordFlowEvent.VesselSelected("vessel-achilles"))
-            testScheduler.advanceUntilIdle()
-
-            viewModel.state.test {
-                skipItems(1)
-                viewModel.dispatch(CatchRecordFlowEvent.SamePortShortcutAccepted)
-                assertEquals(UiStatus.Loading, awaitItem().status)
-                val updated = awaitItem()
-                val draft = (updated.status as UiStatus.Content<CatchRecordDraft>).value
-                assertEquals(WizardStep.GearSearch, updated.currentStep)
-                assertEquals("port-hastings", draft.departurePort?.portId)
-                assertEquals("port-hastings", draft.returnPort?.portId)
-            }
-        }
-
-    @Test
-    fun `same port shortcut no falls through to favourites list`() =
-        runTest {
-            val dispatcher = StandardTestDispatcher(testScheduler)
-            val repository = FakeCatchRecordDraftRepository()
-            val viewModel = buildViewModel(repository = repository, dispatcher = dispatcher)
-            viewModel.dispatch(CatchRecordFlowEvent.VesselSelected("vessel-achilles"))
-            testScheduler.advanceUntilIdle()
-
-            viewModel.state.test {
-                skipItems(1)
-                viewModel.dispatch(CatchRecordFlowEvent.SamePortShortcutDeclined)
-                val updated = awaitItem()
-                assertEquals(DeparturePortEntryMode.FavouriteList, updated.departurePortEntryMode)
             }
         }
 
@@ -945,7 +912,13 @@ class CatchRecordFlowViewModelTests {
             repository.failNextOperation = true
             viewModel.state.test {
                 skipItems(1)
-                viewModel.dispatch(CatchRecordFlowEvent.SamePortShortcutAccepted)
+                val currentDraft = (viewModel.state.value.status as UiStatus.Content<CatchRecordDraft>).value
+                viewModel.dispatch(
+                    CatchRecordFlowEvent.SaveAndContinue(
+                        currentDraft.copy(departurePort = PortSelection("port-hastings", PortSelectionMode.Favourite)),
+                        WizardStep.ReturnPort,
+                    ),
+                )
                 assertEquals(UiStatus.Loading, awaitItem().status)
                 val errored = awaitItem()
                 assertTrue(errored.status is UiStatus.Error)

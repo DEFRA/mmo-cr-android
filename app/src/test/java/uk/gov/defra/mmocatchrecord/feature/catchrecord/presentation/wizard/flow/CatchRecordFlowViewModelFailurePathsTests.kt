@@ -128,27 +128,6 @@ class CatchRecordFlowViewModelFailurePathsTests {
             }
         }
 
-    // --- declining the same-port shortcut with no previously-used ports -------------------------
-
-    @Test
-    fun `declining the same port shortcut with no previously used ports falls back to search`() =
-        runTest {
-            val dispatcher = StandardTestDispatcher(testScheduler)
-            val repository = FakeCatchRecordDraftRepository()
-            val viewModel = buildViewModel(repository = repository, dispatcher = dispatcher)
-            viewModel.dispatch(CatchRecordFlowEvent.VesselSelected("vessel-hercules"))
-            testScheduler.advanceUntilIdle()
-            assertTrue(
-                viewModel.state.value.previouslyUsedPorts
-                    .isEmpty(),
-            )
-
-            viewModel.dispatch(CatchRecordFlowEvent.SamePortShortcutDeclined)
-            testScheduler.advanceUntilIdle()
-
-            assertEquals(DeparturePortEntryMode.Search, viewModel.state.value.departurePortEntryMode)
-        }
-
     // --- save and continue failing to start a brand new draft ------------------------------------
 
     @Test

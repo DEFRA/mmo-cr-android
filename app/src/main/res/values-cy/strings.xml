@@ -129,8 +129,6 @@
         <item quantity="other">Teipiwch o leiaf %1$d nod ar gyfer awgrymiadau</item>
     </plurals>
     <string name="port_search_no_matches_found">Ni chanfuwyd porthladdoedd cyfatebol</string>
-    <string name="same_port_shortcut_question">Ai %1$s oedd y porthladd neuâ€™r porthladd agosaf y gwnaethoch adael ohono a dychwelyd iddo?</string>
-    <string name="same_port_shortcut_error">Dewiswch a ddefnyddiwyd yr un porthladd ar gyfer gadael a dychwelyd</string>
     <string name="phase_three_complete_title">Offer wedi\'u hychwanegu</string>
     <string name="phase_three_complete_body">Mae llong, amseriad y daith, dyddiadau, porthladdoedd ac offer y daith wedi\'u cadw bellach. Mae\'r camau ardal ystadegol, rhywogaethau, storio glanio ac adolygu yn parhau y tu allan i gwmpas y cam hwn.</string>
     <string name="gear_search_title">Pa offer wnaethoch chi ei ddefnyddio?</string>

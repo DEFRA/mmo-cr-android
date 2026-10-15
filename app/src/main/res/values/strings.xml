@@ -110,7 +110,7 @@
     <string name="date_error_year_numeric">Year must be a number</string>
     <string name="date_error_invalid_date">Enter a real date</string>
     <string name="date_error_return_before_departure">Return date must be on or after the departure date</string>
-    <string name="departure_port_title">Which port or closest port did you set off from?</string>
+    <string name="departure_port_title">Enter the port or closest port you set off from</string>
     <string name="return_port_title">Which port or closest port did you return to?</string>
     <string name="departure_port_autocomplete_label">Enter the port or closest port you set off from</string>
     <string name="return_port_autocomplete_label">Enter the port or closest port you returned to</string>
@@ -121,8 +121,6 @@
         <item quantity="other">Type at least %1$d characters for suggestions</item>
     </plurals>
     <string name="port_search_no_matches_found">No matching ports found</string>
-    <string name="same_port_shortcut_question">Was %1$s the port or the closest port you set off from and returned to?</string>
-    <string name="same_port_shortcut_error">Select whether you used the same port for departure and return</string>
     <string name="phase_three_complete_title">Gear added</string>
     <string name="phase_three_complete_body">Vessel, trip timing, dates, ports and gear are now saved. Statistical sub-rectangle, species, landing storage and review steps are still out of scope for this phase.</string>
     <string name="gear_search_title">What gear did you use?</string>

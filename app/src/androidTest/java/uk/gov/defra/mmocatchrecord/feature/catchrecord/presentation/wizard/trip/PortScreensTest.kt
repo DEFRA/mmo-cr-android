@@ -7,16 +7,12 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelection
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectionMode
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.DeparturePortEntryMode
 
 class PortScreensTest {
     @get:Rule
@@ -27,35 +23,6 @@ class PortScreensTest {
             Port("port-hastings", "Hastings", "AREA-HASTINGS"),
             Port("port-dover", "Dover", "AREA-DOVER"),
         )
-
-    @Test
-    fun samePortShortcutYesAcceptsAndSkips() {
-        var accepted = false
-        composeTestRule.setContent {
-            MmoTheme {
-                DeparturePortScreenContent(
-                    draft =
-                        CatchRecordDraft(
-                            "draft-1",
-                            "vessel-achilles",
-                            status = DraftStatus.Draft,
-                            modifiedAtEpochMillis = 1L,
-                        ),
-                    allPorts = allPorts,
-                    favouritePorts = allPorts,
-                    entryMode = DeparturePortEntryMode.SamePortShortcut,
-                    samePortCandidate = allPorts.first(),
-                    onSamePortAccepted = { accepted = true },
-                    onSamePortDeclined = {},
-                    onSubmit = {},
-                )
-            }
-        }
-
-        composeTestRule.onNodeWithTag("${DeparturePortScreenTestTags.SAME_PORT_OPTION_PREFIX}_0").performClick()
-        composeTestRule.onNodeWithTag(DeparturePortScreenTestTags.SAVE_ACTION).performClick()
-        assertTrue(accepted)
-    }
 
     @Test
     fun departurePortAutocompleteHappyPathSubmitsFirstTimeSelection() {

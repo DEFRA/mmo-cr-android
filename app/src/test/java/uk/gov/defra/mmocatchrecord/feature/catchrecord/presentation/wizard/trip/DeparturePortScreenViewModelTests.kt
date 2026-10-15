@@ -20,9 +20,9 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardTestTheme
 
 /**
- * Exercises the real, ViewModel-driven [DeparturePortScreen] overload end-to-end (loading/error/content,
- * the same-port shortcut accept/decline branches, and the favourites/search submit path), as opposed to
- * [DeparturePortScreenTests] which drives the stateless content composables directly.
+ * Exercises the real, ViewModel-driven [DeparturePortScreen] overload end-to-end (loading/error/content and
+ * the favourites/search submit path), as opposed to [DeparturePortScreenTests] which drives the stateless
+ * content composables directly.
  */
 @RunWith(RobolectricTestRunner::class)
 class DeparturePortScreenViewModelTests {
@@ -69,7 +69,7 @@ class DeparturePortScreenViewModelTests {
     }
 
     @Test
-    fun acceptingTheSamePortShortcutDispatchesAcceptedAndNavigatesToGearSearch() {
+    fun selectingAFavouritePortNavigatesToReturnPort() {
         val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
         seedActiveDraft(repository, "vessel-achilles")
         val viewModel = buildTripFlowViewModel(draftRepository = repository)
@@ -81,32 +81,6 @@ class DeparturePortScreenViewModelTests {
         }
         viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
         composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.state.value.status is UiStatus.Content<*> }
-        composeTestRule.waitForIdle()
-
-        composeTestRule.onNodeWithTag("${DeparturePortScreenTestTags.SAME_PORT_OPTION_PREFIX}_0").performClick()
-        composeTestRule.onNodeWithTag(DeparturePortScreenTestTags.SAVE_ACTION).performClick()
-        composeTestRule.waitForIdle()
-
-        assertEquals(listOf(WizardStep.GearSearch), navigated)
-    }
-
-    @Test
-    fun decliningTheSamePortShortcutThenSavingAFavouriteNavigatesToReturnPort() {
-        val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
-        seedActiveDraft(repository, "vessel-achilles")
-        val viewModel = buildTripFlowViewModel(draftRepository = repository)
-        val navigated = mutableListOf<WizardStep>()
-        composeTestRule.setContent {
-            WizardTestTheme {
-                DeparturePortScreen(viewModel = viewModel, onNavigate = { navigated += it }, onBack = {})
-            }
-        }
-        viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
-        composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.state.value.status is UiStatus.Content<*> }
-        composeTestRule.waitForIdle()
-
-        composeTestRule.onNodeWithTag("${DeparturePortScreenTestTags.SAME_PORT_OPTION_PREFIX}_1").performClick()
-        composeTestRule.onNodeWithTag(DeparturePortScreenTestTags.SAVE_ACTION).performClick()
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithTag("${DeparturePortScreenTestTags.FAVOURITE_OPTION_PREFIX}_1").performClick()

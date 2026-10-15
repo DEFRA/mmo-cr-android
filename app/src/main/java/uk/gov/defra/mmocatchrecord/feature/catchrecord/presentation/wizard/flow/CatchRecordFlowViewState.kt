@@ -13,7 +13,6 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Vess
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map.MapSupport
 
 enum class DeparturePortEntryMode {
-    SamePortShortcut,
     FavouriteList,
     Search,
 }
@@ -28,7 +27,6 @@ data class CatchRecordFlowViewState(
     val ports: List<Port> = emptyList(),
     val previouslyUsedPorts: List<Port> = emptyList(),
     val departurePortEntryMode: DeparturePortEntryMode = DeparturePortEntryMode.Search,
-    val samePortCandidate: Port? = null,
     val gearTypes: List<GearType> = emptyList(),
     /**
      * The full, global set of statistical sub-rectangles (Phase 4), loaded once alongside ports/gear
@@ -83,12 +81,6 @@ sealed interface CatchRecordFlowEvent {
     data class TripTodayAnswered(
         val isTripToday: Boolean,
     ) : CatchRecordFlowEvent
-
-    /** The user declined the same-port shortcut, so the departure-port step should show favourites/search. */
-    data object SamePortShortcutDeclined : CatchRecordFlowEvent
-
-    /** Persist the same-port shortcut choice and skip directly to the gear-search step. */
-    data object SamePortShortcutAccepted : CatchRecordFlowEvent
 
     /**
      * Persist [updatedDraft] (the "save and continue" autosave) and advance to [nextStep]. Persistence
