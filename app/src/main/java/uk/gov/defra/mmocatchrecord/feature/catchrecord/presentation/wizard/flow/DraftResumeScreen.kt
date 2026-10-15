@@ -46,6 +46,7 @@ fun DraftResumeScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     draftId: String? = null,
+    onDraftDeleted: () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
@@ -54,6 +55,12 @@ fun DraftResumeScreen(
     LaunchedEffect(draftId) {
         if (draftId != null) {
             viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft(draftId))
+        }
+    }
+
+    LaunchedEffect(state.isDraftDeleted) {
+        if (state.isDraftDeleted) {
+            onDraftDeleted()
         }
     }
 
@@ -82,7 +89,6 @@ fun DraftResumeScreen(
                     },
                     onDeleteConfirmed = {
                         viewModel.dispatch(CatchRecordFlowEvent.DeleteDraft)
-                        onNavigate(WizardStep.VesselSelection)
                     },
                 )
         }

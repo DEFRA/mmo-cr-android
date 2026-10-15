@@ -468,6 +468,7 @@ class CatchRecordFlowViewModelTests {
                 val updated = awaitItem()
                 assertEquals(UiStatus.Idle, updated.status)
                 assertEquals(WizardStep.VesselSelection, updated.currentStep)
+                assertTrue(updated.isDraftDeleted)
             }
             assertTrue(repository.deletedDraftIds.contains("draft-1"))
         }

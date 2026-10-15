@@ -197,6 +197,7 @@ class CatchRecordFlowViewModel
                             it.copy(
                                 status = UiStatus.Idle,
                                 currentStep = WizardStep.VesselSelection,
+                                isDraftDeleted = true,
                                 previouslyUsedPorts = emptyList(),
                                 departurePortEntryMode = DeparturePortEntryMode.Search,
                                 isDraftPersisted = false,

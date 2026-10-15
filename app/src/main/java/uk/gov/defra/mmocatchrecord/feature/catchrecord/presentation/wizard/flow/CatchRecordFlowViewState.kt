@@ -47,6 +47,7 @@ data class CatchRecordFlowViewState(
     val pendingGearTypeId: String? = null,
     /** BR-XX: whether the draft currently in [status] has an actual Room row yet — see ADR 0014. */
     val isDraftPersisted: Boolean = false,
+    val isDraftDeleted: Boolean = false,
 ) : ViewState
 
 /**
@@ -69,7 +70,7 @@ sealed interface CatchRecordFlowEvent {
     /** Resume the loaded active draft at its last-reached step. */
     data object ResumeDraft : CatchRecordFlowEvent
 
-    /** Permanently delete the loaded active draft and return the flow to vessel selection. */
+    /** Permanently delete the loaded active draft. */
     data object DeleteDraft : CatchRecordFlowEvent
 
     /** Start or resume the selected vessel's active draft, then continue to the trip-timing step. */

@@ -115,6 +115,12 @@ fun MmoNavHost(
                 DraftResumeScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
                     onNavigate = { navController.navigate(routeFor(it)) },
+                    onDraftDeleted = {
+                        navController.navigate(HomeRoute) {
+                            popUpTo<CatchRecordGraphRoute> { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    },
                     onBack = { navController.popBackStack() },
                     draftId = draftId,
                 )
