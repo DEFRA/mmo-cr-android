@@ -66,7 +66,7 @@ class HomeViewModel
         }
 
         /**
-         * FR9: confirms a draft that was "Waiting to send" has now been submitted automatically (FR7);
+         * FR9: confirms a draft that was "Unsent" has now been submitted automatically (FR7);
          * `null` on an emission with no new transition (including the first, since
          * [lastKnownStatusByDraftId] starts empty so nothing can match `AwaitingSync`).
          */

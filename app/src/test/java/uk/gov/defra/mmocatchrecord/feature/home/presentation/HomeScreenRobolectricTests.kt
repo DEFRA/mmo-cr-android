@@ -81,7 +81,7 @@ class HomeScreenRobolectricTests {
         )
 
     private val statusLabelById =
-        mapOf("1" to "Submitted", "2" to "Ready to submit", "3" to "Draft", "4" to "Waiting to send")
+        mapOf("1" to "Submitted", "2" to "Amended", "3" to "Draft", "4" to "Unsent")
 
     private fun setContent(
         records: List<CatchRecordSummary> = everyStatusRecords,
@@ -331,7 +331,7 @@ class HomeScreenRobolectricTests {
 
         composeTestRule.onNodeWithText("Catch record statuses").performClick()
         composeTestRule.onNodeWithText("Draft:").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Waiting to send:").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Unsent:").assertIsDisplayed()
     }
 
     /** Covers the 4-column table's header/rows/pagination and [formatDmyDate] via the real preview data,

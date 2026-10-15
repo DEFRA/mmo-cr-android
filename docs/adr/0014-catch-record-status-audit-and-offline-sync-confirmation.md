@@ -546,5 +546,21 @@ it still fires for this automatic sync.
 - This is a product descope of FR8, not a DEFRA/GDS/Android standards deviation; flagged here for
   visibility, no governance exception required.
 
+## Decision (Phase H — reinstated "Amended"/"Unsent" display labels)
+
+Per explicit developer instruction, `RecordStatusTag.ReadyToSubmit` and `.AwaitingSync` now display as
+"Amended" and "Unsent" (`status_ready_to_submit`/`status_awaiting_sync` and their `_title` legend
+counterparts, en/cy) to match the reference image's chip wording. This reverses Phase F's stated rationale
+("did not reintroduce Amended/Late") for these two labels only. `RecordStatusTag.Draft` keeps its
+"Draft" label — the reference image shows no draft row — so "Late" is **not** reintroduced. The enum
+constant names, persisted `DraftStatus` values and tag colours are unchanged; this is a label-only reversal,
+not a reintroduction of the deleted `CatchRecordStatus` model.
+
+## Consequences (Phase H)
+
+- Flagged governance exception to Phase F, authorised directly by the developer; raise with Delivery
+  Architecture per DEFRA process if the labels need to diverge from the real state model again.
+- Descriptions (`status_ready_to_submit_desc`/`status_awaiting_sync_desc`) are unchanged — they still
+  accurately describe the real `ReadyToSubmit`/`AwaitingSync` states, independent of their display label.
 
 
