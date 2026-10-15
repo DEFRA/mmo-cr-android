@@ -124,6 +124,7 @@ class GearSpeciesChecklistScreenTests {
                     onRemoveSpecies = {},
                     onAddAnotherSpecies = {},
                     onSubmit = { submitted = it },
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
                 )
             }
         }
@@ -131,8 +132,9 @@ class GearSpeciesChecklistScreenTests {
         composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
         composeTestRule
             .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${cod.id}")
+            .performScrollTo()
             .performTextInput("5.5")
-        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performClick()
+        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performScrollTo().performClick()
 
         val savedEntry =
             submitted
@@ -303,12 +305,13 @@ class GearSpeciesChecklistScreenTests {
                     onRemoveSpecies = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
                 )
             }
         }
 
         composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
-        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performClick()
+        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performScrollTo().performClick()
 
         composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.ERROR_SUMMARY).assertIsDisplayed()
         composeTestRule.onAllNodesWithText("Enter the weight above minimum size retained").onFirst().assertIsDisplayed()
@@ -327,12 +330,13 @@ class GearSpeciesChecklistScreenTests {
                     onRemoveSpecies = {},
                     onAddAnotherSpecies = {},
                     onSubmit = { submitted = it },
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
                 )
             }
         }
 
         composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
-        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performClick()
+        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performScrollTo().performClick()
 
         assertTrue(submitted != null)
         val savedEntry =
@@ -357,6 +361,7 @@ class GearSpeciesChecklistScreenTests {
                     onRemoveSpecies = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
                 )
             }
         }
@@ -364,8 +369,9 @@ class GearSpeciesChecklistScreenTests {
         composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
         composeTestRule
             .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${cod.id}")
+            .performScrollTo()
             .performTextInput("5.55")
-        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performClick()
+        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performScrollTo().performClick()
 
         composeTestRule
             .onAllNodesWithText("Weight for Atlantic cod must be a number with up to 1 decimal place")
@@ -385,6 +391,7 @@ class GearSpeciesChecklistScreenTests {
                     onRemoveSpecies = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
                 )
             }
         }
@@ -392,8 +399,9 @@ class GearSpeciesChecklistScreenTests {
         composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
         composeTestRule
             .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${plaice.id}")
+            .performScrollTo()
             .performTextInput("11")
-        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performClick()
+        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performScrollTo().performClick()
 
         composeTestRule
             .onAllNodesWithText("The weight entered would exceed your quota for this species. Enter a lower weight.")
@@ -413,6 +421,7 @@ class GearSpeciesChecklistScreenTests {
                     onRemoveSpecies = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
                 )
             }
         }
@@ -420,8 +429,9 @@ class GearSpeciesChecklistScreenTests {
         composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
         composeTestRule
             .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${cod.id}")
+            .performScrollTo()
             .performTextInput("0")
-        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performClick()
+        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performScrollTo().performClick()
 
         composeTestRule
             .onAllNodesWithText("Weight for Atlantic cod must be more than 0kg")
@@ -441,6 +451,7 @@ class GearSpeciesChecklistScreenTests {
                     onRemoveSpecies = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
                 )
             }
         }
@@ -448,8 +459,9 @@ class GearSpeciesChecklistScreenTests {
         composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
         composeTestRule
             .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${cod.id}")
+            .performScrollTo()
             .performTextInput("10000.1")
-        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performClick()
+        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performScrollTo().performClick()
 
         composeTestRule
             .onAllNodesWithText("Weight for Atlantic cod must be 10,000kg or less")
@@ -492,12 +504,16 @@ class GearSpeciesChecklistScreenTests {
                     onRemoveSpecies = { updated = it },
                     onAddAnotherSpecies = {},
                     onSubmit = {},
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
                 )
             }
         }
 
         composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
-        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.REMOVE_SPECIES_ACTION).performClick()
+        composeTestRule
+            .onNodeWithTag(GearSpeciesChecklistScreenTestTags.REMOVE_SPECIES_ACTION)
+            .performScrollTo()
+            .performClick()
 
         val remainingSpeciesIds =
             updated
@@ -642,6 +658,7 @@ class GearSpeciesChecklistScreenTests {
                         onAddAnotherSpecies = {},
                         onSubmit = { submitted = it },
                         onDirtyChanged = { lastDirty = it },
+                        modifier = Modifier.verticalScroll(rememberScrollState()),
                     )
                 } else {
                     // A fresh instance for the re-entered edit route — see DepartureDateScreen's equivalent comment.
@@ -661,13 +678,15 @@ class GearSpeciesChecklistScreenTests {
 
         composeTestRule
             .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${cod.id}")
+            .performScrollTo()
             .performTextClearance()
         composeTestRule
             .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${cod.id}")
+            .performScrollTo()
             .performTextInput("6")
         composeTestRule.waitForIdle()
         assertTrue(lastDirty)
-        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performClick()
+        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         assertFalse(lastDirty)
@@ -793,11 +812,12 @@ class GearSpeciesChecklistScreenTests {
                     onRemoveSpecies = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
                 )
             }
         }
 
-        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performClick()
+        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performScrollTo().performClick()
 
         composeTestRule
             .onAllNodesWithText("Weight for Plaice must be a whole number")
@@ -827,6 +847,7 @@ class GearSpeciesChecklistScreenTests {
                     onRemoveSpecies = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
                 )
             }
         }
@@ -834,8 +855,9 @@ class GearSpeciesChecklistScreenTests {
         composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
         composeTestRule
             .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${annualQuotaOnlySpecies.id}")
+            .performScrollTo()
             .performTextInput("21")
-        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performClick()
+        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performScrollTo().performClick()
 
         composeTestRule
             .onAllNodesWithText(

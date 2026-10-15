@@ -30,6 +30,9 @@ import androidx.compose.ui.text.style.TextDecoration
  * repeated many times on one screen (the check-your-answers "Change" links) — GDS guidance is that each
  * repeated link must announce which row it changes (e.g. "Change vessel"), not identical "Change, Change,
  * Change..." — while the visible [text] itself stays the short, repeated "Change" per the design.
+ *
+ * [dimWhenDisabled] defaults to the dimmed-grey disabled look above; set false to keep the link's blue
+ * colour even while [enabled] is false (species-checklist "Remove a species" design calls for this).
  */
 @Composable
 fun GdsLinkAction(
@@ -39,10 +42,11 @@ fun GdsLinkAction(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     accessibleLabel: String? = null,
+    dimWhenDisabled: Boolean = true,
 ) {
     Text(
         text = text,
-        color = if (enabled) MmoColors.Link else MmoColors.Grey1,
+        color = if (enabled || !dimWhenDisabled) MmoColors.Link else MmoColors.Grey1,
         style = MaterialTheme.typography.bodyLarge.copy(textDecoration = TextDecoration.Underline),
         modifier =
             modifier
