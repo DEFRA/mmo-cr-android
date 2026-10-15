@@ -1,0 +1,81 @@
+name: Android Release
+
+on:
+  # Single entry point: Actions → Android Release → Run workflow, with "Use workflow from" set to a v* release tag.
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "build-only = signed AAB artifact; internal / dev = upload to that Play track"
+        type: choice
+        required: true
+        default: build-only
+        options:
+          - build-only
+          - internal
+          - dev
+
+permissions:
+  contents: read
+
+# Release runs must never be auto-cancelled.
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  release:
+    name: Build, sign & release (${{inputs.target }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: dev
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Validate the release tag matches the code
+        run: bash .github/workflows/scripts/validate-release-tag.sh
+
+      - name: Set up JDK 21 (Temurin)
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      # No cache: a release is built only from the tagged sources and locked dependencies.
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-disabled: true
+
+      - name: Set up Ruby and Fastlane
+        uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Build, sign & release (Fastlane)
+        env:
+          # Fastlane keeps only the CR_APP_CFG_* keys allow-listed in config/app-config.schema.json.
+          CR_APP_CFG_VARS: ${{ toJSON(vars) }}
+          UPLOAD_KEYSTORE_BASE64: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
+          UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
+          UPLOAD_KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
+          UPLOAD_KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          RELEASE_TARGET: ${{ inputs.target }}
+        run: bundle exec fastlane release target:"$RELEASE_TARGET"
+
+      # For the one-off manual first upload that enrols Play App Signing.
+      - name: Keep the signed AAB
+        if: ${{ inputs.target == 'build-only' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: signed-aab-${{ github.ref_name }}
+          path: build/release/mmo-cr-android.aab
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Clean up signing key
+        if: ${{ always() }}
+        run: bash .github/workflows/scripts/cleanup-signing-assets.sh

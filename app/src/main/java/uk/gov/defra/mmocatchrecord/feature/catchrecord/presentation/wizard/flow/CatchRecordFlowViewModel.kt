@@ -27,6 +27,8 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftSubmissionValidation
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementValue
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelection
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectionMode
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
@@ -77,9 +79,9 @@ class CatchRecordFlowViewModel
                 is CatchRecordFlowEvent.TripTodayAnswered -> tripTodayAnswered(event.isTripToday)
                 is CatchRecordFlowEvent.SaveAndContinue -> saveAndContinue(event.updatedDraft, event.nextStep)
                 is CatchRecordFlowEvent.GearTypeSelected -> gearTypeSelected(event.gearTypeId)
-                is CatchRecordFlowEvent.GearMeasurementsSubmitted -> gearMeasurementsSubmitted(event.measurements)
+                is CatchRecordFlowEvent.GearMeasurementsSubmitted -> gearMeasurementsSubmitted(event)
                 is CatchRecordFlowEvent.GearRemoved -> persistDraftWithoutStepChange(event, event.updatedDraft)
-                is CatchRecordFlowEvent.SpeciesAddedToCurrentGear -> speciesAddedToCurrentGear(event.speciesId)
+                is CatchRecordFlowEvent.SpeciesAddedToCurrentGear -> speciesAddedToCurrentGear(event)
                 is CatchRecordFlowEvent.SpeciesRemoved -> persistDraftWithoutStepChange(event, event.updatedDraft)
                 CatchRecordFlowEvent.MarkReadyToSubmit -> markReadyToSubmit()
                 CatchRecordFlowEvent.AcceptDeclarationAndSubmit -> acceptDeclarationAndSubmit()
@@ -276,6 +278,7 @@ class CatchRecordFlowViewModel
                             // Only ever meaningful transiently between the gear-search and
                             // gear-measurement steps; harmless to clear unconditionally elsewhere.
                             pendingGearTypeId = null,
+                            pendingGearUseId = null,
                             isDraftPersisted = true,
                         )
                     }
@@ -306,29 +309,48 @@ class CatchRecordFlowViewModel
         private fun gearTypeSelected(gearTypeId: String) {
             val gearType = currentState.gearTypes.firstOrNull { it.id == gearTypeId }
             if (gearType == null || gearType.measurementFields.isEmpty()) {
-                updateState { it.copy(pendingGearTypeId = null) }
+                updateState { it.copy(pendingGearTypeId = null, pendingGearUseId = null) }
                 return
             }
-            updateState { it.copy(pendingGearTypeId = gearTypeId) }
+            updateState { it.copy(pendingGearTypeId = gearTypeId, pendingGearUseId = idFactory()) }
         }
 
-        private fun gearMeasurementsSubmitted(measurements: Map<String, MeasurementValue>) {
+        private fun gearMeasurementsSubmitted(event: CatchRecordFlowEvent.GearMeasurementsSubmitted) {
             val draft = currentDraftOrNull() ?: return
-            val gearTypeId = currentState.pendingGearTypeId ?: return
-            val newGearUse =
-                GearUse(
-                    id = idFactory(),
-                    gearTypeId = gearTypeId,
-                    statisticalSubRectangleCode = null,
-                    measurements = measurements,
-                )
-            val updatedDraft = draft.copy(gearUses = draft.gearUses + newGearUse)
-            saveAndContinue(updatedDraft, WizardStep.GearSummary)
+            val existingGearUse = event.gearUseId?.let { id -> draft.gearUses.firstOrNull { it.id == id } }
+            val updatedGearUses =
+                if (existingGearUse != null) {
+                    draft.gearUses.map {
+                        if (it.id ==
+                            existingGearUse.id
+                        ) {
+                            it.copy(measurements = event.measurements)
+                        } else {
+                            it
+                        }
+                    }
+                } else {
+                    val gearTypeId = event.gearTypeId ?: currentState.pendingGearTypeId ?: return
+                    draft.gearUses +
+                        GearUse(
+                            id = event.gearUseId ?: currentState.pendingGearUseId ?: idFactory(),
+                            gearTypeId = gearTypeId,
+                            statisticalSubRectangleCode = null,
+                            measurements = event.measurements,
+                        )
+                }
+            saveAndContinue(draft.copy(gearUses = updatedGearUses), WizardStep.GearSummary)
         }
 
-        private fun speciesAddedToCurrentGear(speciesId: String) {
+        private fun speciesAddedToCurrentGear(event: CatchRecordFlowEvent.SpeciesAddedToCurrentGear) {
+            val speciesId = event.speciesId
             val draft = currentDraftOrNull() ?: return
-            val currentGearUse = nextGearUsePendingSpecies(draft) ?: return
+            val currentGearUse =
+                if (event.gearUseId != null) {
+                    draft.gearUses.firstOrNull { it.id == event.gearUseId }
+                } else {
+                    nextGearUsePendingSpecies(draft)
+                } ?: return
             val alreadyAdded = currentGearUse.speciesWeights.any { it.speciesId == speciesId }
             val updatedGearUse =
                 if (alreadyAdded) {

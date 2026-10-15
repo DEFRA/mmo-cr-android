@@ -10,10 +10,7 @@ import uk.gov.defra.mmocatchrecord.core.security.FakeBiometricRepository
 import uk.gov.defra.mmocatchrecord.core.security.InMemoryBiometricPreferenceStore
 import uk.gov.defra.mmocatchrecord.core.security.InMemorySessionStore
 
-/**
- * [AppModule] is a plain Hilt `@Module object` — its `@Provides` functions are ordinary functions
- * exercised directly here, the same pattern as [RepositoryModuleTests].
- */
+/** App providers are plain Hilt module methods, so direct calls verify the object wiring. */
 class AppModuleTests {
     @Test
     fun `provideDispatcher wires up the default dispatcher`() {

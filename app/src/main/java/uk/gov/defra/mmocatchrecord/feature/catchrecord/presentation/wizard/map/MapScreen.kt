@@ -56,7 +56,9 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardLoadingState
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardStep
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.catchRecordReference
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.nextGearUsePendingStatRectangle
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.nextWizardStepForDraft
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.rememberWizardGearUse
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip.DeparturePortScreen
 import uk.gov.defra.mmocatchrecord.mapdata.MapDataset
 
@@ -168,7 +170,7 @@ internal fun MapScreen(
     mapDataState: MapDataUiState = MapDataUiState(UiStatus.Loading, {}),
 ) {
     val draft = (state.status as? UiStatus.Content<CatchRecordDraft>)?.value
-    val currentGearUse = MapSupport.currentGearUseFor(draft, editGearUseId)
+    val currentGearUse = rememberWizardGearUse(draft, editGearUseId, null, ::nextGearUsePendingStatRectangle)
     val gearType = currentGearUse?.let { gearUse -> state.gearTypes.firstOrNull { it.id == gearUse.gearTypeId } }
     val gearNameWithMeasurement =
         currentGearUse?.let { MapSupport.gearNameWithIdentifyingMeasurementFor(gearType, it) }

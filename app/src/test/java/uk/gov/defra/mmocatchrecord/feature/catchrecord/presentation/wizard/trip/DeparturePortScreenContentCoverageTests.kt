@@ -20,12 +20,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectio
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectionMode
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
 
-/**
- * Coverage for [DeparturePortScreenContent]'s delegation to [PortSelectionStepContent] and the remaining
- * paths not already exercised by [DeparturePortScreenTests]/[PortSelectionStepContentTests] (favourites
- * submit, the "Add port" switch, the no-selection validation errors, and picking an autocomplete
- * suggestion).
- */
+/** Covers departure-port content branches not reached by the direct screen/content tests. */
 @RunWith(RobolectricTestRunner::class)
 class DeparturePortScreenContentCoverageTests {
     @get:Rule

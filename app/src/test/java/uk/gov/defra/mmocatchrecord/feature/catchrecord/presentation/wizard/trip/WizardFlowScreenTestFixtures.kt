@@ -53,13 +53,7 @@ fun buildTripFlowViewModel(
         Dispatchers.Default,
     )
 
-/**
- * A [ReferenceDataRepository] whose [getVessels] always fails with [failure], so a
- * [CatchRecordFlowViewModel]'s EnterFlow/VesselSelected events surface a
- * [uk.gov.defra.mmocatchrecord.core.architecture.UiStatus.Error]. `SafeErrorMapper` classifies an
- * [java.io.IOException] as retryable/transient and anything else as terminal, so tests pick [failure]'s
- * type to exercise the right branch.
- */
+/** Failing reference data lets tests choose retryable or terminal error branches by exception type. */
 class FailingReferenceDataRepository(
     private val failure: Throwable,
 ) : ReferenceDataRepository {

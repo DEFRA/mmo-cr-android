@@ -37,12 +37,8 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.home.domain.CatchRecordSummary
 import java.io.IOException
 
-/**
- * Covers the `Error`-status branch of the ViewModel-backed wrapper composables
- * ([SubmissionSuccessScreen], [SubmissionPendingSyncScreen], [CheckYourAnswersScreen]) and the entire
- * [LateSubmissionWarningScreen] wrapper, none of which any existing pure `*ScreenContent`-only test
- * reaches, by driving a real [CatchRecordFlowViewModel] directly rather than rendering content in isolation.
- */
+/** Drives a real flow ViewModel to reach result-wrapper error branches absent from content-only tests.
+ * Also covers the late-submission warning wrapper. */
 @RunWith(RobolectricTestRunner::class)
 class WizardResultScreensErrorPathTests {
     @get:Rule

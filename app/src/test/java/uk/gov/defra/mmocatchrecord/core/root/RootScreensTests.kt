@@ -1,10 +1,11 @@
-﻿package uk.gov.defra.mmocatchrecord.core.root
+package uk.gov.defra.mmocatchrecord.core.root
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -31,7 +32,7 @@ class RootScreensTests {
         composeTestRule.onNodeWithText("Unlock the app to continue.").assertIsDisplayed()
         composeTestRule.onNodeWithTag(RootScreenTestTags.APP_LOCK_ACTION).performClick()
 
-        assert(unlocked)
+        assertTrue(unlocked)
     }
 
     @Test

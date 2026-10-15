@@ -160,6 +160,7 @@ fun editRouteFor(
     when (step) {
         WizardStep.GearMeasurement -> GearMeasurementRoute(editGearUseId = gearUseId)
         WizardStep.GearStatRectangle -> GearStatRectangleRoute(editGearUseId = gearUseId)
+        WizardStep.GearSpeciesSearch -> GearSpeciesSearchRoute(editGearUseId = gearUseId)
         WizardStep.GearSpeciesChecklist -> GearSpeciesChecklistRoute(editGearUseId = gearUseId)
         else -> routeFor(step)
     }

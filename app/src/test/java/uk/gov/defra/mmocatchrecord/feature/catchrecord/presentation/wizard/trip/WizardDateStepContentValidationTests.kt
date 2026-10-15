@@ -15,13 +15,8 @@ import org.robolectric.RobolectricTestRunner
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DmyDate
 
-/**
- * Validation-error branch coverage for [WizardDateStepContent]/[DateStepSupport] not already exercised by
- * [WizardDateStepContentTests] (which covers only the dirty-tracking paths): every [DateInputError] message
- * mapping, the error summary's per-field focus `onClick` branches, and clearing errors by editing a field.
- * Each message is rendered twice (error summary item + inline field error), so matches are scoped with
- * [onAllNodesWithText]/[onFirst] - the summary item renders first in the composition.
- */
+/** Covers date validation branches not reached by dirty-tracking tests.
+ * Assertions target first matches because summary and inline errors render the same text. */
 @RunWith(RobolectricTestRunner::class)
 class WizardDateStepContentValidationTests {
     @get:Rule

@@ -1,4 +1,4 @@
-﻿package uk.gov.defra.mmocatchrecord.core.root
+package uk.gov.defra.mmocatchrecord.core.root
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule

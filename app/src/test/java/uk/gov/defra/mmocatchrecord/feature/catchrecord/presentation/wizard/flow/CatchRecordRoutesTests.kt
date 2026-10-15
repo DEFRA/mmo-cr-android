@@ -1,4 +1,4 @@
-﻿package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow
+package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow
 
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -7,11 +7,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-/**
- * Covers [DraftResumeRoute]'s `draftId` default (only exercised when a caller omits the argument),
- * [routeFor]/[editRouteFor] for every [WizardStep] (constructing every route object declared in
- * `CatchRecordRoutes.kt`), and the four `editGearUseId`-carrying route data classes' equality/copy.
- */
+/** Covers default route args and route construction paths not reached by normal constructor tests. */
 class CatchRecordRoutesTests {
     private val allSteps =
         listOf(
@@ -58,6 +54,10 @@ class CatchRecordRoutesTests {
             GearSpeciesChecklistRoute(editGearUseId = "gear-1"),
             editRouteFor(WizardStep.GearSpeciesChecklist, "gear-1"),
         )
+        assertEquals(
+            GearSpeciesSearchRoute(editGearUseId = "gear-1"),
+            editRouteFor(WizardStep.GearSpeciesSearch, "gear-1"),
+        )
     }
 
     @Test
@@ -68,6 +68,7 @@ class CatchRecordRoutesTests {
                     setOf(
                         WizardStep.GearMeasurement,
                         WizardStep.GearStatRectangle,
+                        WizardStep.GearSpeciesSearch,
                         WizardStep.GearSpeciesChecklist,
                     )
             }.forEach { step -> assertEquals(routeFor(step), editRouteFor(step, "gear-1")) }
@@ -92,9 +93,7 @@ class CatchRecordRoutesTests {
         assertNotNull(speciesChecklist.toString())
     }
 
-    /** Navigation Compose serializes typed route args via kotlinx.serialization at runtime - this
-     * round-trip exercises each route's generated serialization constructor (distinct from its
-     * regular/default constructors, and otherwise only reachable through real nav-graph traversal). */
+    /** Navigation serialization uses generated constructors not reached by regular route construction. */
     @Test
     fun `gear route data classes round trip through kotlinx serialization`() {
         val measurement = GearMeasurementRoute(editGearUseId = "a")
@@ -113,9 +112,7 @@ class CatchRecordRoutesTests {
         )
     }
 
-    /** Decoding a JSON object that omits `editGearUseId` exercises each route's generated serialization
-     * constructor's "field not present, fall back to its default" branch - distinct from decoding a JSON
-     * where the field was explicitly present, covered above. */
+    /** Missing editGearUseId JSON covers the generated constructor's default-field branch. */
     @Test
     fun `gear route data classes default editGearUseId to null when absent from the decoded json`() {
         assertNull(Json.decodeFromString<GearMeasurementRoute>("{}").editGearUseId)

@@ -27,6 +27,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordD
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementValue
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldKeys
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Species
@@ -41,10 +42,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardStep
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardTestTheme
 
-/**
- * JVM/Robolectric port of the androidTest `GearSpeciesSearchScreenTest` - see the top-level package doc on
- * [GearSpeciesChecklistScreenTests] for why a `testDebugUnitTest`-reachable equivalent is needed.
- */
+/** JVM coverage for species search paths that instrumented coverage cannot supply to Kover. */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class GearSpeciesSearchScreenTests {
@@ -88,6 +86,40 @@ class GearSpeciesSearchScreenTests {
             gearTypes = listOf(seineNets),
             species = listOf(cod, haddock),
         )
+    }
+
+    @Test
+    fun aRouteBoundCompletedGearIsShownAndSubmitsWithItsGearUseId() {
+        val completeGear =
+            gearUsePendingSpecies().copy(
+                speciesWeights =
+                    listOf(
+                        SpeciesWeightEntry(
+                            id = "species-1",
+                            speciesId = cod.id,
+                            confirmedCaught = true,
+                        ),
+                    ),
+            )
+        var submitted: Pair<String, String>? = null
+        composeTestRule.setContent {
+            WizardTestTheme {
+                GearSpeciesSearchScreen(
+                    state = stateWith(completeGear),
+                    onSubmit = {},
+                    onBack = {},
+                    gearUseId = "gear-use-1",
+                    onGearSubmit = { speciesId, gearUseId -> submitted = speciesId to gearUseId },
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag(GearSpeciesSearchScreenTestTags.ERROR_MESSAGE).assertDoesNotExist()
+        composeTestRule.onNodeWithTag(GearSpeciesSearchScreenTestTags.AUTOCOMPLETE_FIELD).performTextInput("Ha")
+        composeTestRule.onNodeWithTag("${GearSpeciesSearchScreenTestTags.SUGGESTION_PREFIX}_0").performClick()
+        composeTestRule.onNodeWithTag(GearSpeciesSearchScreenTestTags.SAVE_ACTION).performClick()
+
+        assertEquals("species-haddock" to "gear-use-1", submitted)
     }
 
     @Test
@@ -220,10 +252,7 @@ class GearSpeciesSearchScreenTests {
 
     @Test
     fun screenPreviewRendersWithoutError() {
-        // CatchRecordWizardScaffold resolves its language/connectivity state from Hilt view models unless
-        // LocalInspectionMode is true (see that composable's doc comment) - providing it here mirrors what
-        // Android Studio's own @Preview renderer does, letting this Preview composable run under plain
-        // Robolectric without a Hilt component.
+        // LocalInspectionMode mirrors Preview so this composable runs without a Hilt component.
         composeTestRule.setContent {
             CompositionLocalProvider(LocalInspectionMode provides true) {
                 GearSpeciesSearchScreenPreview()
@@ -235,11 +264,7 @@ class GearSpeciesSearchScreenTests {
             .assertIsDisplayed()
     }
 
-    /**
-     * JVM/Robolectric coverage for the Hilt-backed, stateful [GearSpeciesSearchScreen] wrapper's add path:
-     * selecting a species dispatches [CatchRecordFlowEvent.SpeciesAddedToCurrentGear] and navigates to
-     * [WizardStep.GearSpeciesChecklist].
-     */
+    /** Covers add-mode species selection dispatch and navigation from the Hilt-backed wrapper. */
     @Test
     fun viewModelBackedScreenAddPathDispatchesSpeciesAddedToCurrentGearAndNavigates() =
         runTest {
@@ -287,11 +312,7 @@ class GearSpeciesSearchScreenTests {
             )
         }
 
-    /**
-     * JVM/Robolectric coverage for the Hilt-backed, stateful [GearSpeciesSearchScreen] wrapper's edit path
-     * (reached via a check-your-answers "Change" link): dispatches
-     * [CatchRecordFlowEvent.SpeciesAddedToGearUse] for the explicit [editGearUseId], not the pending gear.
-     */
+    /** Covers edit-mode species selection dispatch for the explicit gear use. */
     @Test
     fun viewModelBackedScreenEditPathDispatchesSpeciesAddedToGearUseAndNavigates() =
         runTest {
@@ -344,5 +365,58 @@ class GearSpeciesSearchScreenTests {
                     .single()
                     .speciesId,
             )
+        }
+
+    /**
+     * JVM/Robolectric coverage for the Hilt-backed, stateful [GearSpeciesSearchScreen] wrapper's add path
+     * when re-entered for an explicit, already-bound [gearUseId] (a Back-navigation resume) — the submit
+     * must still target that gear use and navigate via [onNavigateForGear], not the plain [onNavigate].
+     */
+    @Test
+    fun viewModelBackedScreenAddPathWithAnExplicitGearUseIdNavigatesForThatGear() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            repository.startDraft("vessel-achilles")
+            repository.saveDraft(
+                repository.getAnyActiveDraft().getOrThrow()!!.copy(gearUses = listOf(gearUsePendingSpecies())),
+            )
+            val viewModel =
+                CatchRecordFlowViewModel(
+                    repository,
+                    FakeReferenceDataRepository(),
+                    FakeCatchRecordSubmissionRepository(),
+                    FakeNetworkConnectivityChecker(),
+                    FakeCatchRecordSyncScheduler(),
+                    { 0L },
+                    { "gear-use-1" },
+                    dispatcher,
+                )
+            var navigatedStep: WizardStep? = null
+            var navigatedForGear: Pair<WizardStep, String>? = null
+
+            composeTestRule.setContent {
+                WizardTestTheme {
+                    GearSpeciesSearchScreen(
+                        viewModel = viewModel,
+                        onNavigate = { navigatedStep = it },
+                        onNavigateForGear = { step, gearUseId -> navigatedForGear = step to gearUseId },
+                        onBack = {},
+                        gearUseId = "gear-use-1",
+                    )
+                }
+            }
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            testScheduler.advanceUntilIdle()
+            composeTestRule.waitForIdle()
+
+            composeTestRule.onNodeWithTag(GearSpeciesSearchScreenTestTags.AUTOCOMPLETE_FIELD).performTextInput("Co")
+            composeTestRule.onNodeWithTag("${GearSpeciesSearchScreenTestTags.SUGGESTION_PREFIX}_0").performClick()
+            composeTestRule.onNodeWithTag(GearSpeciesSearchScreenTestTags.SAVE_ACTION).performClick()
+            testScheduler.advanceUntilIdle()
+            composeTestRule.waitForIdle()
+
+            assertEquals(WizardStep.GearSpeciesChecklist to "gear-use-1", navigatedForGear)
+            assertNull(navigatedStep)
         }
 }

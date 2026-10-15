@@ -1,36 +1,36 @@
-﻿package uk.gov.defra.mmocatchrecord.common.navigation
+package uk.gov.defra.mmocatchrecord.common.navigation
 
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertSame
 import org.junit.Test
 
-/**
- * References/constructs each root-graph route singleton so its `@Serializable data object` declaration
- * (class `<clinit>`) is exercised - [CatchRecordGraphRoute] is already covered elsewhere (e.g. via
- * `CheckYourAnswersNavigationTests`), so only the remaining three plus [SplashRoute] need a direct test.
- */
+// Navigation Compose encodes typed routes with kotlinx.serialization, so each must round-trip to its singleton.
 class AppRoutesTests {
     @Test
-    fun `SplashRoute is a stable singleton`() {
-        assertEquals(SplashRoute, SplashRoute)
-        assertNotNull(SplashRoute.toString())
+    fun `root routes round trip through kotlinx serialization to the same singleton`() {
+        assertSame(SplashRoute, Json.decodeFromString<SplashRoute>(Json.encodeToString(SplashRoute)))
+        assertSame(SignInRoute, Json.decodeFromString<SignInRoute>(Json.encodeToString(SignInRoute)))
+        assertSame(AppLockRoute, Json.decodeFromString<AppLockRoute>(Json.encodeToString(AppLockRoute)))
+        assertSame(HomeRoute, Json.decodeFromString<HomeRoute>(Json.encodeToString(HomeRoute)))
+        assertSame(
+            CatchRecordGraphRoute,
+            Json.decodeFromString<CatchRecordGraphRoute>(Json.encodeToString(CatchRecordGraphRoute)),
+        )
     }
 
     @Test
-    fun `SignInRoute is a stable singleton`() {
-        assertEquals(SignInRoute, SignInRoute)
-        assertNotNull(SignInRoute.toString())
-    }
+    fun `root routes have distinct readable names for navigation diagnostics`() {
+        val names =
+            listOf(
+                SplashRoute,
+                SignInRoute,
+                AppLockRoute,
+                HomeRoute,
+                CatchRecordGraphRoute,
+            ).map { it.toString() }
 
-    @Test
-    fun `AppLockRoute is a stable singleton`() {
-        assertEquals(AppLockRoute, AppLockRoute)
-        assertNotNull(AppLockRoute.toString())
-    }
-
-    @Test
-    fun `HomeRoute is a stable singleton`() {
-        assertEquals(HomeRoute, HomeRoute)
-        assertNotNull(HomeRoute.toString())
+        assertEquals(listOf("SplashRoute", "SignInRoute", "AppLockRoute", "HomeRoute", "CatchRecordGraphRoute"), names)
     }
 }

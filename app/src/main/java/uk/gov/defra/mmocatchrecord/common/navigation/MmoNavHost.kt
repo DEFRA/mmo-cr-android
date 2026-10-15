@@ -42,6 +42,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.VesselSelectionRoute
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.applySubmissionResultNavOptions
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.editRouteFor
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.gearRouteFor
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.routeFor
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearMeasurementScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearSearchScreen
@@ -200,28 +201,34 @@ fun MmoNavHost(
                 )
             }
             composable<GearSpeciesSearchRoute> { backStackEntry ->
-                val editGearUseId = backStackEntry.toRoute<GearSpeciesSearchRoute>().editGearUseId
+                val route = backStackEntry.toRoute<GearSpeciesSearchRoute>()
+                val editGearUseId = route.editGearUseId
                 GearSpeciesSearchScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
                     editGearUseId = editGearUseId,
+                    gearUseId = route.gearUseId,
                     onNavigate = { step ->
                         navController.navigate(
                             if (editGearUseId != null) editRouteFor(step, editGearUseId) else routeFor(step),
                         )
                     },
+                    onNavigateForGear = { step, gearUseId -> navController.navigate(gearRouteFor(step, gearUseId)) },
                     onBack = { navController.popBackStack() },
                 )
             }
             composable<GearSpeciesChecklistRoute> { backStackEntry ->
-                val editGearUseId = backStackEntry.toRoute<GearSpeciesChecklistRoute>().editGearUseId
+                val route = backStackEntry.toRoute<GearSpeciesChecklistRoute>()
+                val editGearUseId = route.editGearUseId
                 GearSpeciesChecklistScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
                     editGearUseId = editGearUseId,
+                    gearUseId = route.gearUseId,
                     onNavigate = { step ->
                         navController.navigate(
                             if (editGearUseId != null) editRouteFor(step, editGearUseId) else routeFor(step),
                         )
                     },
+                    onNavigateForGear = { step, gearUseId -> navController.navigate(gearRouteFor(step, gearUseId)) },
                     onBack = { navController.popBackStack() },
                 )
             }

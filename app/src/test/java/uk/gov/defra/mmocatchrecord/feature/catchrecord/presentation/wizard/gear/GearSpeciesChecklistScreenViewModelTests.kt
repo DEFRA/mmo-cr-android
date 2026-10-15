@@ -39,11 +39,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardTestTheme
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.nextWizardStepForDraft
 
-/**
- * JVM/Robolectric coverage for the Hilt-backed, stateful [GearSpeciesChecklistScreen] wrapper (as opposed
- * to [GearSpeciesChecklistScreenTests], which exercises the state-independent content composable) — split
- * into its own file purely to keep each test class under the detekt `LargeClass` threshold.
- */
+/** Covers the Hilt-backed checklist wrapper separately to keep test classes below LargeClass limits. */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class GearSpeciesChecklistScreenViewModelTests {
@@ -97,11 +93,7 @@ class GearSpeciesChecklistScreenViewModelTests {
             confirmedUsedOnTrip = true,
         )
 
-    /**
-     * JVM/Robolectric coverage for the Hilt-backed, stateful [GearSpeciesChecklistScreen] wrapper's
-     * create path: submitting dispatches [CatchRecordFlowEvent.SaveAndContinue] and navigates to
-     * whichever step [nextWizardStepForDraft] resolves for the updated draft.
-     */
+    /** Covers create-mode submit dispatch and navigation from the Hilt-backed checklist wrapper. */
     @Test
     fun viewModelBackedScreenCreatePathSubmitsWeightsAndNavigatesToNextStep() =
         runTest {
@@ -152,12 +144,7 @@ class GearSpeciesChecklistScreenViewModelTests {
             )
         }
 
-    /**
-     * JVM/Robolectric coverage for the Hilt-backed, stateful [GearSpeciesChecklistScreen] wrapper's edit
-     * path (reached via a check-your-answers "Change" link): dispatches
-     * [CatchRecordFlowEvent.EditGearSpeciesWeights] for the explicit [editGearUseId] and always navigates
-     * to [WizardStep.CheckYourAnswers].
-     */
+    /** Covers edit-mode dispatch for the explicit gear use and navigation back to check your answers. */
     @Test
     fun viewModelBackedScreenEditPathDispatchesEditGearSpeciesWeightsAndNavigatesToCheckYourAnswers() =
         runTest {

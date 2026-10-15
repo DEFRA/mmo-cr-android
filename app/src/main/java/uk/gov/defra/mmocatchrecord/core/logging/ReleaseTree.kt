@@ -3,13 +3,8 @@ package uk.gov.defra.mmocatchrecord.core.logging
 import android.util.Log
 import timber.log.Timber
 
-/**
- * Release-build [Timber.Tree]: drops [Log.VERBOSE]/[Log.DEBUG] entirely, and for [Log.WARN]/[Log.ERROR]
- * never logs a [Throwable]'s message or stack trace content — only its class name — since a lower layer's
- * exception message may embed data that is not safe to write to a device log (see ADR 0011 and the security
- * instructions "no PII/secrets in logs"). Debug builds use Timber's own [Timber.DebugTree] instead (see
- * `MmoApplication`), which is unrestricted for local development.
- */
+/** Release-build tree: WARN+ only, and a [Throwable] is reduced to its class name (ADR 0011).
+ * Timber appends the full stack trace to the message before [log] runs, so that suffix is cut here. */
 class ReleaseTree : Timber.Tree() {
     override fun isLoggable(
         tag: String?,
@@ -23,7 +18,22 @@ class ReleaseTree : Timber.Tree() {
         t: Throwable?,
     ) {
         if (!isLoggable(tag, priority)) return
-        val throwableSuffix = t?.let { " (${it::class.java.simpleName})" }.orEmpty()
-        Log.println(priority, tag ?: "MMOCatchRecord", "$message$throwableSuffix")
+        val safeMessage = if (t == null) message else withoutStackTrace(message, t)
+        val throwableSuffix = t?.let { "(${it::class.java.simpleName})" }
+        val line = listOfNotNull(safeMessage.ifBlank { null }, throwableSuffix).joinToString(" ")
+        Log.println(priority, tag ?: DEFAULT_TAG, line)
+    }
+
+    private fun withoutStackTrace(
+        message: String,
+        t: Throwable,
+    ): String {
+        // Every printed stack trace starts with Throwable.toString(), which embeds the unsafe message.
+        val traceHead = t.toString()
+        return if (message.startsWith(traceHead)) "" else message.substringBefore("\n$traceHead")
+    }
+
+    private companion object {
+        const val DEFAULT_TAG = "MMOCatchRecord"
     }
 }

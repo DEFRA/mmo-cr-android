@@ -1,4 +1,4 @@
-﻿package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow
+package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow
 
 import androidx.activity.compose.setContent
 import androidx.compose.material3.Text
@@ -11,13 +11,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import uk.gov.defra.mmocatchrecord.core.root.MainActivity
 
-/**
- * Exercises [rememberWizardScaffoldState]'s real, Hilt-backed branch - the one path every other
- * `CatchRecordWizardScaffold` test avoids by providing [LocalWizardScaffoldState] (via [WizardTestTheme])
- * instead. Reuses the real [MainActivity] purely as a Hilt host and replaces its content directly
- * (bypassing `RootNavigation`/`MmoNavHost`, so no Room/SQLCipher access is ever triggered) - the
- * `AppLanguageViewModel`/`ConnectivityViewModel` this resolves are DataStore/connectivity backed only.
- */
+/** Exercises rememberWizardScaffoldState's real Hilt branch while bypassing Room-backed navigation.
+ * MainActivity is used only as a Hilt host so Robolectric never loads SQLCipher. */
 @RunWith(RobolectricTestRunner::class)
 class CatchRecordWizardScaffoldHiltTests {
     @get:Rule

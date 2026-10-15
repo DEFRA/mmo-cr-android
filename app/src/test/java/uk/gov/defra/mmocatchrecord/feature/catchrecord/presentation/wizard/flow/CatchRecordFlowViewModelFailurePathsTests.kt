@@ -25,10 +25,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectio
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectionMode
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
 
-/**
- * Additional failure-path and rarely-dispatched-event coverage for [CatchRecordFlowViewModel], alongside
- * [CatchRecordFlowViewModelTests] -- split out purely to keep that file within detekt's size limits.
- */
+/** Failure-path and rarely-dispatched-event tests, split from [CatchRecordFlowViewModelTests] for size. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class CatchRecordFlowViewModelFailurePathsTests {
     @Before
@@ -477,19 +474,27 @@ class CatchRecordFlowViewModelFailurePathsTests {
     // --- constructor default dispatcher -------------------------------------------------------------
 
     @Test
-    fun `omitting the dispatcher constructor argument defaults to Dispatchers-Default`() {
-        val repository = FakeCatchRecordDraftRepository()
-        val viewModel =
-            CatchRecordFlowViewModel(
-                repository,
-                FakeReferenceDataRepository(),
-                FakeCatchRecordSubmissionRepository(),
-                FakeNetworkConnectivityChecker(),
-                FakeCatchRecordSyncScheduler(),
-                { 0L },
-                { "generated-id" },
-            )
+    fun `omitting the dispatcher argument still loads the draft when entering the flow`() =
+        runTest {
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            repository.startDraft("vessel-achilles")
+            val viewModel =
+                CatchRecordFlowViewModel(
+                    repository,
+                    FakeReferenceDataRepository(),
+                    FakeCatchRecordSubmissionRepository(),
+                    FakeNetworkConnectivityChecker(),
+                    FakeCatchRecordSyncScheduler(),
+                    { 0L },
+                    { "generated-id" },
+                )
 
-        assertEquals(UiStatus.Idle, viewModel.state.value.status)
-    }
+            viewModel.state.test {
+                assertEquals(UiStatus.Idle, awaitItem().status)
+                viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+                var state = awaitItem()
+                while (state.status !is UiStatus.Content<*>) state = awaitItem()
+                assertEquals("draft-1", (state.status as UiStatus.Content<CatchRecordDraft>).value.id)
+            }
+        }
 }

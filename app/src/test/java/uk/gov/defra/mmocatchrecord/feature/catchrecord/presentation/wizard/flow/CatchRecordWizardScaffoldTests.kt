@@ -1,4 +1,4 @@
-﻿package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow
+package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow
 
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler

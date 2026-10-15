@@ -8,12 +8,8 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.CatchRecordDat
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.CatchRecordDraftDao
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.ReferenceDataDao
 
-/**
- * [DatabaseModule] is a plain Hilt `@Module object` — its DAO accessor `@Provides` functions are ordinary
- * functions exercised directly here, the same pattern as [RepositoryModuleTests]. `provideCatchRecordDatabase`
- * itself calls [uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.SqlCipherLibraryLoader] which
- * loads a native library unavailable on the JVM, so it is intentionally not exercised here.
- */
+/** DAO providers are plain Hilt module methods that can be exercised directly.
+ * provideCatchRecordDatabase is skipped because SQLCipher native loading is unavailable on the JVM. */
 class DatabaseModuleTests {
     @Test
     fun `provideCatchRecordDraftDao delegates to the database's dao accessor`() {

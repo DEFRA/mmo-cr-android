@@ -54,6 +54,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.catchRecordReference
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.nextGearUsePendingSpecies
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.nextWizardStepForDraft
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.rememberWizardGearUse
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearSpeciesChecklistSupport.initialDisclosedKeysFor
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearSpeciesChecklistSupport.rawValueKey
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearSpeciesChecklistSupport.rawValuesFor
@@ -95,14 +96,23 @@ fun GearSpeciesChecklistScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     editGearUseId: String? = null,
+    gearUseId: String? = null,
+    onNavigateForGear: (WizardStep, String) -> Unit = { step, _ -> onNavigate(step) },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var hasUnsavedChanges by rememberSaveable { mutableStateOf(false) }
     GearSpeciesChecklistScreen(
         state = state,
         editGearUseId = editGearUseId,
+        gearUseId = gearUseId,
         onRemoveSpecies = { updatedDraft -> viewModel.dispatch(CatchRecordFlowEvent.SpeciesRemoved(updatedDraft)) },
-        onAddAnotherSpecies = { onNavigate(WizardStep.GearSpeciesSearch) },
+        onAddAnotherSpecies = { currentGearUseId ->
+            if (editGearUseId != null) {
+                onNavigate(WizardStep.GearSpeciesSearch)
+            } else {
+                onNavigateForGear(WizardStep.GearSpeciesSearch, currentGearUseId)
+            }
+        },
         onSubmit = { updatedDraft ->
             if (editGearUseId != null) {
                 val speciesWeights = updatedDraft.gearUses.firstOrNull { it.id == editGearUseId }?.speciesWeights
@@ -129,22 +139,18 @@ fun GearSpeciesChecklistScreen(
 private fun GearSpeciesChecklistScreen(
     state: CatchRecordFlowViewState,
     onRemoveSpecies: (CatchRecordDraft) -> Unit,
-    onAddAnotherSpecies: () -> Unit,
+    onAddAnotherSpecies: (gearUseId: String) -> Unit,
     onSubmit: (CatchRecordDraft) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     editGearUseId: String? = null,
+    gearUseId: String? = null,
     onRetry: () -> Unit = {},
     hasUnsavedChanges: Boolean = false,
     onDirtyChanged: (Boolean) -> Unit = {},
 ) {
     val draft = (state.status as? UiStatus.Content<CatchRecordDraft>)?.value
-    val currentGearUse =
-        if (editGearUseId != null) {
-            draft?.gearUses?.firstOrNull { it.id == editGearUseId }
-        } else {
-            draft?.let(::nextGearUsePendingSpecies)
-        }
+    val currentGearUse = rememberWizardGearUse(draft, editGearUseId, gearUseId, ::nextGearUsePendingSpecies)
     val gearType = currentGearUse?.let { gearUse -> state.gearTypes.firstOrNull { it.id == gearUse.gearTypeId } }
     val gearNameWithMeasurement =
         currentGearUse?.let { MapSupport.gearNameWithIdentifyingMeasurementFor(gearType, it) }
@@ -181,7 +187,7 @@ private fun GearSpeciesChecklistScreen(
                         gearUse = currentGearUse,
                         speciesList = state.species,
                         onRemoveSpecies = onRemoveSpecies,
-                        onAddAnotherSpecies = onAddAnotherSpecies,
+                        onAddAnotherSpecies = { onAddAnotherSpecies(currentGearUse.id) },
                         onSubmit = onSubmit,
                         onDirtyChanged = onDirtyChanged,
                     )

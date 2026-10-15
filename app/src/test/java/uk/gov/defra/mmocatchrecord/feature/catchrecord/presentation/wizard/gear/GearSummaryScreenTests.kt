@@ -56,10 +56,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.nextWizardStepForDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.resolveSubmissionStep
 
-/**
- * JVM/Robolectric port of the androidTest `GearScreensTest`'s gear-summary-checklist scenarios (lines
- * 456-622), plus new viewModel-wrapper coverage for [GearSummaryScreen]'s Hilt-backed, stateful entry point.
- */
+/** JVM coverage for gear-summary checklist and Hilt-backed wrapper paths. */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class GearSummaryScreenTests {
