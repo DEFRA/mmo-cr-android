@@ -2,12 +2,16 @@ name: Android Release
 
 on:
   # Single entry point: Actions → Android Release → Run workflow, with "Use workflow from" set to a v* release tag.
+  push:
+    branches: 
+      - feature/release-config
   workflow_dispatch:
     inputs:
       target:
         description: "build-only = signed AAB artifact; internal / dev = upload to that Play track"
         type: choice
         required: true
+        default: build-only
         options:
           - build-only
           - internal
@@ -20,10 +24,11 @@ permissions:
 concurrency:
   group: android-release-${{ github.ref }}
   cancel-in-progress: false
-
+env:
+  target: ${{ github.event_name == 'push' && 'build-only' || inputs.target }}
 jobs:
   release:
-    name: Build, sign & release (${{ inputs.target }})
+    name: Build, sign & release (${{ github.event_name == 'push' && 'build-only' || inputs.target }})
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     environment: dev
@@ -63,12 +68,12 @@ jobs:
           UPLOAD_KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
           UPLOAD_KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
           PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-          RELEASE_TARGET: ${{ inputs.target }}
+          RELEASE_TARGET: ${{ env.target }}
         run: bundle exec fastlane release target:"$RELEASE_TARGET"
 
       # For the one-off manual first upload that enrols Play App Signing.
       - name: Keep the signed AAB
-        if: ${{ inputs.target == 'build-only' }}
+        if: ${{ env.target == 'build-only' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: signed-aab-${{ github.ref_name }}
