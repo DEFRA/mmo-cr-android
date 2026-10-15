@@ -26,9 +26,6 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftInvalid
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftSubmissionValidation
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementValue
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelection
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectionMode
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
