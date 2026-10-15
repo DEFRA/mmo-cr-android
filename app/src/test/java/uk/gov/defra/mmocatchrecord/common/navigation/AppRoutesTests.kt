@@ -13,11 +13,17 @@ class AppRoutesTests {
         assertSame(SplashRoute, Json.decodeFromString<SplashRoute>(Json.encodeToString(SplashRoute)))
         assertSame(SignInRoute, Json.decodeFromString<SignInRoute>(Json.encodeToString(SignInRoute)))
         assertSame(AppLockRoute, Json.decodeFromString<AppLockRoute>(Json.encodeToString(AppLockRoute)))
-        assertSame(HomeRoute, Json.decodeFromString<HomeRoute>(Json.encodeToString(HomeRoute)))
         assertSame(
             CatchRecordGraphRoute,
             Json.decodeFromString<CatchRecordGraphRoute>(Json.encodeToString(CatchRecordGraphRoute)),
         )
+    }
+
+    @Test
+    fun `HomeRoute round trips through kotlinx serialization including its initialTab`() {
+        val route = HomeRoute(initialTab = 2)
+        assertEquals(route, Json.decodeFromString<HomeRoute>(Json.encodeToString(route)))
+        assertEquals(HomeRoute(), Json.decodeFromString<HomeRoute>(Json.encodeToString(HomeRoute())))
     }
 
     @Test
@@ -27,10 +33,13 @@ class AppRoutesTests {
                 SplashRoute,
                 SignInRoute,
                 AppLockRoute,
-                HomeRoute,
+                HomeRoute(),
                 CatchRecordGraphRoute,
             ).map { it.toString() }
 
-        assertEquals(listOf("SplashRoute", "SignInRoute", "AppLockRoute", "HomeRoute", "CatchRecordGraphRoute"), names)
+        assertEquals(
+            listOf("SplashRoute", "SignInRoute", "AppLockRoute", "HomeRoute(initialTab=0)", "CatchRecordGraphRoute"),
+            names,
+        )
     }
 }

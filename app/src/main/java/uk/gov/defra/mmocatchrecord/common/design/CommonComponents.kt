@@ -341,6 +341,29 @@ fun ExpandableDetails(
     }
 }
 
+/**
+ * Shared, centred Royal Crest footer shown at the bottom of every Home-shell tab (Home, Notifications,
+ * Settings) and every Catch Record wizard screen — see [uk.gov.defra.mmocatchrecord.feature.home.presentation.HomeScreen]
+ * and [uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordWizardScaffold].
+ */
+@Suppress("FunctionNaming")
+@Composable
+fun RoyalCrestFooter(
+    testTag: String,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(vertical = Spacing.m)
+                .testTag(testTag),
+        contentAlignment = Alignment.Center,
+    ) {
+        RoyalCrestPlaceholder()
+    }
+}
+
 /** Stable, localisation-independent lookups for [MmoBottomNavigationBar]'s tabs (tests should prefer these). */
 object MmoBottomNavigationBarTestTags {
     const val HOME_TAB = "mmo_bottom_nav_home_tab"

@@ -207,7 +207,7 @@ class DraftResumeScreenTests {
             composeTestRule.setContent {
                 navController = rememberNavController()
                 WizardTestTheme {
-                    NavHost(navController = navController, startDestination = HomeRoute) {
+                    NavHost(navController = navController, startDestination = HomeRoute()) {
                         composable<HomeRoute> {
                             Box(modifier = Modifier.size(50.dp).testTag("home_screen_destination"))
                         }
@@ -217,7 +217,7 @@ class DraftResumeScreenTests {
                                     viewModel = viewModel,
                                     onNavigate = { navController.navigate(routeFor(it)) },
                                     onDraftDeleted = {
-                                        navController.navigate(HomeRoute) {
+                                        navController.navigate(HomeRoute()) {
                                             popUpTo<CatchRecordGraphRoute> { inclusive = true }
                                             launchSingleTop = true
                                         }

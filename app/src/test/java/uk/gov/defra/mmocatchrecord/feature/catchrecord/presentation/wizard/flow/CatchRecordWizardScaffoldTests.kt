@@ -21,6 +21,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.GdsTopAppBarTestTags
+import uk.gov.defra.mmocatchrecord.common.design.MmoBottomNavigationBarTestTags
 import uk.gov.defra.mmocatchrecord.common.design.UnsavedChangesDialogTestTags
 
 /**
@@ -35,22 +36,25 @@ class CatchRecordWizardScaffoldTests {
 
     private var onBackCalls = 0
     private var onDiscardCalls = 0
+    private val tabNavigationCalls = mutableListOf<Int>()
 
     private fun setContent(hasUnsavedChanges: Boolean) {
         composeTestRule.setContent {
             WizardTestTheme {
                 BackHandler(enabled = true) { onBackCalls++ }
-                CatchRecordWizardScaffold(
-                    screenTestTag = "scaffold",
-                    title = "Title",
-                    onBack = { onBackCalls++ },
-                    unsavedChanges =
-                        WizardUnsavedChangesConfig(
-                            hasUnsavedChanges = hasUnsavedChanges,
-                            onDiscardChanges = { onDiscardCalls++ },
-                        ),
-                ) {
-                    Text("content")
+                CompositionLocalProvider(LocalWizardBottomNavAction provides { tab -> tabNavigationCalls.add(tab) }) {
+                    CatchRecordWizardScaffold(
+                        screenTestTag = "scaffold",
+                        title = "Title",
+                        onBack = { onBackCalls++ },
+                        unsavedChanges =
+                            WizardUnsavedChangesConfig(
+                                hasUnsavedChanges = hasUnsavedChanges,
+                                onDiscardChanges = { onDiscardCalls++ },
+                            ),
+                    ) {
+                        Text("content")
+                    }
                 }
             }
         }
@@ -187,5 +191,61 @@ class CatchRecordWizardScaffoldTests {
         composeTestRule.onNodeWithText("Second error").performClick()
 
         assertTrue(clickedMessage == "Second error")
+    }
+
+    @Test
+    fun `scaffold shows bottom navigation and the royal crest footer on every wizard screen`() {
+        setContent(hasUnsavedChanges = false)
+
+        composeTestRule.onNodeWithTag(MmoBottomNavigationBarTestTags.HOME_TAB).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(MmoBottomNavigationBarTestTags.NOTIFICATIONS_TAB).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(MmoBottomNavigationBarTestTags.SETTINGS_TAB).assertIsDisplayed()
+        composeTestRule.onNodeWithTag("scaffold_royal_crest").assertIsDisplayed()
+    }
+
+    @Test
+    fun `cleanStateBottomNavTabTapNavigatesAwayWithNoDialog`() {
+        setContent(hasUnsavedChanges = false)
+
+        composeTestRule.onNodeWithTag(MmoBottomNavigationBarTestTags.SETTINGS_TAB).performClick()
+
+        composeTestRule.onNodeWithTag(UnsavedChangesDialogTestTags.DIALOG).assertDoesNotExist()
+        assertEquals(listOf(2), tabNavigationCalls)
+        assertEquals(0, onBackCalls)
+    }
+
+    @Test
+    fun `dirtyStateBottomNavTabTapShowsDialogAndBlocksNavigation`() {
+        setContent(hasUnsavedChanges = true)
+
+        composeTestRule.onNodeWithTag(MmoBottomNavigationBarTestTags.NOTIFICATIONS_TAB).performClick()
+
+        composeTestRule.onNodeWithTag(UnsavedChangesDialogTestTags.DIALOG).assertIsDisplayed()
+        assertTrue(tabNavigationCalls.isEmpty())
+    }
+
+    @Test
+    fun `leavingViaBottomNavTabDiscardsAndNavigatesToThatTabNotBack`() {
+        setContent(hasUnsavedChanges = true)
+        composeTestRule.onNodeWithTag(MmoBottomNavigationBarTestTags.NOTIFICATIONS_TAB).performClick()
+
+        composeTestRule.onNodeWithTag(UnsavedChangesDialogTestTags.LEAVE_ACTION).performClick()
+
+        composeTestRule.onNodeWithTag(UnsavedChangesDialogTestTags.DIALOG).assertDoesNotExist()
+        assertEquals(listOf(1), tabNavigationCalls)
+        assertEquals(1, onDiscardCalls)
+        assertEquals(0, onBackCalls)
+    }
+
+    @Test
+    fun `stayingOnPageFromABottomNavTabTapKeepsScreenAndDiscardsNothing`() {
+        setContent(hasUnsavedChanges = true)
+        composeTestRule.onNodeWithTag(MmoBottomNavigationBarTestTags.HOME_TAB).performClick()
+
+        composeTestRule.onNodeWithTag(UnsavedChangesDialogTestTags.STAY_ACTION).performClick()
+
+        composeTestRule.onNodeWithTag(UnsavedChangesDialogTestTags.DIALOG).assertDoesNotExist()
+        assertTrue(tabNavigationCalls.isEmpty())
+        assertEquals(0, onDiscardCalls)
     }
 }

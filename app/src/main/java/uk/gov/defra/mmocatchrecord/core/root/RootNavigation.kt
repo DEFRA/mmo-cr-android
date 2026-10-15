@@ -63,7 +63,7 @@ private fun RootPhase.toRoute(): Any =
         RootPhase.SPLASH -> SplashRoute
         RootPhase.SIGN_IN -> SignInRoute
         RootPhase.APP_LOCK -> AppLockRoute
-        RootPhase.HOME -> HomeRoute
+        RootPhase.HOME -> HomeRoute()
     }
 
 /**

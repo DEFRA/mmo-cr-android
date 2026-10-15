@@ -16,9 +16,16 @@ data object SignInRoute
 @Serializable
 data object AppLockRoute
 
-/** Type-safe route for the home screen. */
+/**
+ * Type-safe route for the home screen. [initialTab] selects which Home-shell tab is shown on arrival
+ * (0 Home, 1 Notifications, 2 Settings — see [uk.gov.defra.mmocatchrecord.common.design.MmoBottomNavigationBar]).
+ * Used when exiting the catch-record wizard via its own bottom navigation (see
+ * [uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordWizardScaffold]).
+ */
 @Serializable
-data object HomeRoute
+data class HomeRoute(
+    val initialTab: Int = 0,
+)
 
 /**
  * Type-safe route for the nested catch-record wizard graph (see ADR 0007/0010) — its own destinations are

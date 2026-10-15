@@ -3,6 +3,7 @@
 package uk.gov.defra.mmocatchrecord.common.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -30,6 +31,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.GearStatRectangleRoute
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.GearSummaryRoute
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.LateSubmissionWarningRoute
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.LocalWizardBottomNavAction
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.NotLandedStraightAwayDecisionRoute
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.NotLandedStraightAwaySpeciesRoute
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.PhaseThreeCompleteRoute
@@ -78,219 +80,240 @@ fun MmoNavHost(
     onRootEvent: (RootEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    NavHost(
-        navController = navController,
-        startDestination = startDestination,
-        modifier = modifier,
+    CompositionLocalProvider(
+        LocalWizardBottomNavAction provides { tab ->
+            navController.navigate(HomeRoute(initialTab = tab)) {
+                popUpTo<CatchRecordGraphRoute> { inclusive = true }
+                launchSingleTop = true
+            }
+        },
     ) {
-        composable<SplashRoute> {
-            SplashScreen()
-        }
-        composable<SignInRoute> {
-            SignInScreen(onSignedIn = { onRootEvent(RootEvent.SignedIn) })
-        }
-        composable<AppLockRoute> {
-            AppLockScreen(onUnlock = { onRootEvent(RootEvent.BiometricUnlockRequested) })
-        }
-        composable<HomeRoute> {
-            HomeScreen(
-                onSignOut = { onRootEvent(RootEvent.SignedOut) },
-                onCreateCatchRecord = { navController.navigate(CatchRecordGraphRoute) },
-                onResumeDraft = { draftId -> navController.navigate(DraftResumeRoute(draftId = draftId)) },
-            )
-        }
-        navigation<CatchRecordGraphRoute>(startDestination = CatchRecordEntryRoute) {
-            composable<CatchRecordEntryRoute> { backStackEntry ->
-                val flowViewModel = catchRecordFlowViewModel(navController, backStackEntry)
-                CatchRecordFlowEntryScreen(
-                    viewModel = flowViewModel,
-                    onNavigate = { step ->
-                        navController.navigate(routeFor(step)) {
-                            popUpTo<CatchRecordEntryRoute> { inclusive = true }
-                        }
-                    },
+        NavHost(
+            navController = navController,
+            startDestination = startDestination,
+            modifier = modifier,
+        ) {
+            composable<SplashRoute> {
+                SplashScreen()
+            }
+            composable<SignInRoute> {
+                SignInScreen(onSignedIn = { onRootEvent(RootEvent.SignedIn) })
+            }
+            composable<AppLockRoute> {
+                AppLockScreen(onUnlock = { onRootEvent(RootEvent.BiometricUnlockRequested) })
+            }
+            composable<HomeRoute> { backStackEntry ->
+                val initialTab = backStackEntry.toRoute<HomeRoute>().initialTab
+                HomeScreen(
+                    initialTab = initialTab,
+                    onSignOut = { onRootEvent(RootEvent.SignedOut) },
+                    onCreateCatchRecord = { navController.navigate(CatchRecordGraphRoute) },
+                    onResumeDraft = { draftId -> navController.navigate(DraftResumeRoute(draftId = draftId)) },
                 )
             }
-            composable<DraftResumeRoute> { backStackEntry ->
-                val draftId = backStackEntry.toRoute<DraftResumeRoute>().draftId
-                DraftResumeScreen(
-                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
-                    onNavigate = { navController.navigate(routeFor(it)) },
-                    onDraftDeleted = {
-                        navController.navigate(HomeRoute) {
-                            popUpTo<CatchRecordGraphRoute> { inclusive = true }
-                            launchSingleTop = true
-                        }
-                    },
-                    onBack = { navController.popBackStack() },
-                    draftId = draftId,
-                )
-            }
-            composable<VesselSelectionRoute> { backStackEntry ->
-                VesselSelectionScreen(
-                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
-                    onNavigate = { navController.navigate(routeFor(it)) },
-                    onBack = { navController.popBackStack() },
-                )
-            }
-            composable<TripTodayRoute> { backStackEntry ->
-                TripTodayScreen(
-                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
-                    onNavigate = { navController.navigate(routeFor(it)) },
-                    onBack = { navController.popBackStack() },
-                )
-            }
-            composable<DepartureDateRoute> { backStackEntry ->
-                DepartureDateScreen(
-                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
-                    onNavigate = { navController.navigate(routeFor(it)) },
-                    onBack = { navController.popBackStack() },
-                )
-            }
-            composable<ReturnDateRoute> { backStackEntry ->
-                ReturnDateScreen(
-                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
-                    onNavigate = { navController.navigate(routeFor(it)) },
-                    onBack = { navController.popBackStack() },
-                )
-            }
-            composable<DeparturePortRoute> { backStackEntry ->
-                DeparturePortScreen(
-                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
-                    onNavigate = { navController.navigate(routeFor(it)) },
-                    onBack = { navController.popBackStack() },
-                )
-            }
-            composable<ReturnPortRoute> { backStackEntry ->
-                ReturnPortScreen(
-                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
-                    onNavigate = { navController.navigate(routeFor(it)) },
-                    onBack = { navController.popBackStack() },
-                )
-            }
-            composable<GearSearchRoute> { backStackEntry ->
-                GearSearchScreen(
-                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
-                    onNavigate = { navController.navigate(routeFor(it)) },
-                    onBack = { navController.popBackStack() },
-                )
-            }
-            composable<GearMeasurementRoute> { backStackEntry ->
-                val editGearUseId = backStackEntry.toRoute<GearMeasurementRoute>().editGearUseId
-                GearMeasurementScreen(
-                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
-                    editGearUseId = editGearUseId,
-                    onNavigate = { navController.navigate(routeFor(it)) },
-                    onBack = { navController.popBackStack() },
-                )
-            }
-            composable<GearSummaryRoute> { backStackEntry ->
-                GearSummaryScreen(
-                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
-                    onNavigate = { navController.navigate(routeFor(it)) },
-                    onBack = { navController.popBackStack() },
-                )
-            }
-            composable<GearStatRectangleRoute> { backStackEntry ->
-                val editGearUseId = backStackEntry.toRoute<GearStatRectangleRoute>().editGearUseId
-                MapScreen(
-                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
-                    editGearUseId = editGearUseId,
-                    onNavigate = { navController.navigate(routeFor(it)) },
-                    onBack = { navController.popBackStack() },
-                )
-            }
-            composable<GearSpeciesSearchRoute> { backStackEntry ->
-                val route = backStackEntry.toRoute<GearSpeciesSearchRoute>()
-                val editGearUseId = route.editGearUseId
-                GearSpeciesSearchScreen(
-                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
-                    editGearUseId = editGearUseId,
-                    gearUseId = route.gearUseId,
-                    onNavigate = { step ->
-                        navController.navigate(
-                            if (editGearUseId != null) editRouteFor(step, editGearUseId) else routeFor(step),
-                        )
-                    },
-                    onNavigateForGear = { step, gearUseId -> navController.navigate(gearRouteFor(step, gearUseId)) },
-                    onBack = { navController.popBackStack() },
-                )
-            }
-            composable<GearSpeciesChecklistRoute> { backStackEntry ->
-                val route = backStackEntry.toRoute<GearSpeciesChecklistRoute>()
-                val editGearUseId = route.editGearUseId
-                GearSpeciesChecklistScreen(
-                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
-                    editGearUseId = editGearUseId,
-                    gearUseId = route.gearUseId,
-                    onNavigate = { step ->
-                        navController.navigate(
-                            if (editGearUseId != null) editRouteFor(step, editGearUseId) else routeFor(step),
-                        )
-                    },
-                    onNavigateForGear = { step, gearUseId -> navController.navigate(gearRouteFor(step, gearUseId)) },
-                    onBack = { navController.popBackStack() },
-                )
-            }
-            composable<NotLandedStraightAwayDecisionRoute> { backStackEntry ->
-                NotLandedStraightAwayDecisionScreen(
-                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
-                    onNavigate = { navController.navigate(routeFor(it)) },
-                    onBack = { navController.popBackStack() },
-                )
-            }
-            composable<NotLandedStraightAwaySpeciesRoute> { backStackEntry ->
-                NotLandedStraightAwaySpeciesScreen(
-                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
-                    onNavigate = { navController.navigate(routeFor(it)) },
-                    onBack = { navController.popBackStack() },
-                )
-            }
-            composable<PhaseThreeCompleteRoute> { backStackEntry ->
-                PhaseThreeCompleteScreen(
-                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
-                    onBack = { navController.popBackStack() },
-                )
-            }
-            composable<LateSubmissionWarningRoute> { backStackEntry ->
-                LateSubmissionWarningScreen(
-                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
-                    onNavigate = { navController.navigate(routeFor(it)) },
-                    onBack = { navController.popBackStack() },
-                )
-            }
-            composable<CheckYourAnswersRoute> { backStackEntry ->
-                CheckYourAnswersScreen(
-                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
-                    onNavigate = { step ->
-                        navController.navigate(routeFor(step)) { applySubmissionResultNavOptions(step) }
-                    },
-                    onNavigateToEdit = { step, gearUseId -> navController.navigate(editRouteFor(step, gearUseId)) },
-                    onBack = { navController.popBackStack() },
-                )
-            }
-            composable<SubmissionSuccessRoute> { backStackEntry ->
-                SubmissionSuccessScreen(
-                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
-                    // Clears the wizard graph so the user cannot navigate "back" into a submitted draft.
-                    onViewRecords = {
-                        navController.navigate(HomeRoute) {
-                            popUpTo<CatchRecordGraphRoute> { inclusive = true }
-                        }
-                    },
-                    onBack = { navController.popBackStack() },
-                )
-            }
-            composable<SubmissionPendingSyncRoute> { backStackEntry ->
-                SubmissionPendingSyncScreen(
-                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
-                    onViewRecords = {
-                        navController.navigate(HomeRoute) {
-                            popUpTo<CatchRecordGraphRoute> { inclusive = true }
-                        }
-                    },
-                    onBack = { navController.popBackStack() },
-                )
+            navigation<CatchRecordGraphRoute>(startDestination = CatchRecordEntryRoute) {
+                composable<CatchRecordEntryRoute> { backStackEntry ->
+                    val flowViewModel = catchRecordFlowViewModel(navController, backStackEntry)
+                    CatchRecordFlowEntryScreen(
+                        viewModel = flowViewModel,
+                        onNavigate = { step ->
+                            navController.navigate(routeFor(step)) {
+                                popUpTo<CatchRecordEntryRoute> { inclusive = true }
+                            }
+                        },
+                    )
+                }
+                composable<DraftResumeRoute> { backStackEntry ->
+                    val draftId = backStackEntry.toRoute<DraftResumeRoute>().draftId
+                    DraftResumeScreen(
+                        viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                        onNavigate = { navController.navigate(routeFor(it)) },
+                        onDraftDeleted = {
+                            navController.navigate(HomeRoute()) {
+                                popUpTo<CatchRecordGraphRoute> { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        },
+                        onBack = { navController.popBackStack() },
+                        draftId = draftId,
+                    )
+                }
+                composable<VesselSelectionRoute> { backStackEntry ->
+                    VesselSelectionScreen(
+                        viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                        onNavigate = { navController.navigate(routeFor(it)) },
+                        onBack = { navController.popBackStack() },
+                    )
+                }
+                composable<TripTodayRoute> { backStackEntry ->
+                    TripTodayScreen(
+                        viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                        onNavigate = { navController.navigate(routeFor(it)) },
+                        onBack = { navController.popBackStack() },
+                    )
+                }
+                composable<DepartureDateRoute> { backStackEntry ->
+                    DepartureDateScreen(
+                        viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                        onNavigate = { navController.navigate(routeFor(it)) },
+                        onBack = { navController.popBackStack() },
+                    )
+                }
+                composable<ReturnDateRoute> { backStackEntry ->
+                    ReturnDateScreen(
+                        viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                        onNavigate = { navController.navigate(routeFor(it)) },
+                        onBack = { navController.popBackStack() },
+                    )
+                }
+                composable<DeparturePortRoute> { backStackEntry ->
+                    DeparturePortScreen(
+                        viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                        onNavigate = { navController.navigate(routeFor(it)) },
+                        onBack = { navController.popBackStack() },
+                    )
+                }
+                composable<ReturnPortRoute> { backStackEntry ->
+                    ReturnPortScreen(
+                        viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                        onNavigate = { navController.navigate(routeFor(it)) },
+                        onBack = { navController.popBackStack() },
+                    )
+                }
+                composable<GearSearchRoute> { backStackEntry ->
+                    GearSearchScreen(
+                        viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                        onNavigate = { navController.navigate(routeFor(it)) },
+                        onBack = { navController.popBackStack() },
+                    )
+                }
+                composable<GearMeasurementRoute> { backStackEntry ->
+                    val editGearUseId = backStackEntry.toRoute<GearMeasurementRoute>().editGearUseId
+                    GearMeasurementScreen(
+                        viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                        editGearUseId = editGearUseId,
+                        onNavigate = { navController.navigate(routeFor(it)) },
+                        onBack = { navController.popBackStack() },
+                    )
+                }
+                composable<GearSummaryRoute> { backStackEntry ->
+                    GearSummaryScreen(
+                        viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                        onNavigate = { navController.navigate(routeFor(it)) },
+                        onBack = { navController.popBackStack() },
+                    )
+                }
+                composable<GearStatRectangleRoute> { backStackEntry ->
+                    val editGearUseId = backStackEntry.toRoute<GearStatRectangleRoute>().editGearUseId
+                    MapScreen(
+                        viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                        editGearUseId = editGearUseId,
+                        onNavigate = { navController.navigate(routeFor(it)) },
+                        onBack = { navController.popBackStack() },
+                    )
+                }
+                composable<GearSpeciesSearchRoute> { backStackEntry ->
+                    val route = backStackEntry.toRoute<GearSpeciesSearchRoute>()
+                    val editGearUseId = route.editGearUseId
+                    GearSpeciesSearchScreen(
+                        viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                        editGearUseId = editGearUseId,
+                        gearUseId = route.gearUseId,
+                        onNavigate = { step ->
+                            navController.navigate(
+                                if (editGearUseId != null) editRouteFor(step, editGearUseId) else routeFor(step),
+                            )
+                        },
+                        onNavigateForGear = {
+                            step,
+                            gearUseId,
+                            ->
+                            navController.navigate(gearRouteFor(step, gearUseId))
+                        },
+                        onBack = { navController.popBackStack() },
+                    )
+                }
+                composable<GearSpeciesChecklistRoute> { backStackEntry ->
+                    val route = backStackEntry.toRoute<GearSpeciesChecklistRoute>()
+                    val editGearUseId = route.editGearUseId
+                    GearSpeciesChecklistScreen(
+                        viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                        editGearUseId = editGearUseId,
+                        gearUseId = route.gearUseId,
+                        onNavigate = { step ->
+                            navController.navigate(
+                                if (editGearUseId != null) editRouteFor(step, editGearUseId) else routeFor(step),
+                            )
+                        },
+                        onNavigateForGear = {
+                            step,
+                            gearUseId,
+                            ->
+                            navController.navigate(gearRouteFor(step, gearUseId))
+                        },
+                        onBack = { navController.popBackStack() },
+                    )
+                }
+                composable<NotLandedStraightAwayDecisionRoute> { backStackEntry ->
+                    NotLandedStraightAwayDecisionScreen(
+                        viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                        onNavigate = { navController.navigate(routeFor(it)) },
+                        onBack = { navController.popBackStack() },
+                    )
+                }
+                composable<NotLandedStraightAwaySpeciesRoute> { backStackEntry ->
+                    NotLandedStraightAwaySpeciesScreen(
+                        viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                        onNavigate = { navController.navigate(routeFor(it)) },
+                        onBack = { navController.popBackStack() },
+                    )
+                }
+                composable<PhaseThreeCompleteRoute> { backStackEntry ->
+                    PhaseThreeCompleteScreen(
+                        viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                        onBack = { navController.popBackStack() },
+                    )
+                }
+                composable<LateSubmissionWarningRoute> { backStackEntry ->
+                    LateSubmissionWarningScreen(
+                        viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                        onNavigate = { navController.navigate(routeFor(it)) },
+                        onBack = { navController.popBackStack() },
+                    )
+                }
+                composable<CheckYourAnswersRoute> { backStackEntry ->
+                    CheckYourAnswersScreen(
+                        viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                        onNavigate = { step ->
+                            navController.navigate(routeFor(step)) { applySubmissionResultNavOptions(step) }
+                        },
+                        onNavigateToEdit = { step, gearUseId -> navController.navigate(editRouteFor(step, gearUseId)) },
+                        onBack = { navController.popBackStack() },
+                    )
+                }
+                composable<SubmissionSuccessRoute> { backStackEntry ->
+                    SubmissionSuccessScreen(
+                        viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                        // Clears the wizard graph so the user cannot navigate "back" into a submitted draft.
+                        onViewRecords = {
+                            navController.navigate(HomeRoute()) {
+                                popUpTo<CatchRecordGraphRoute> { inclusive = true }
+                            }
+                        },
+                        onBack = { navController.popBackStack() },
+                    )
+                }
+                composable<SubmissionPendingSyncRoute> { backStackEntry ->
+                    SubmissionPendingSyncScreen(
+                        viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                        onViewRecords = {
+                            navController.navigate(HomeRoute()) {
+                                popUpTo<CatchRecordGraphRoute> { inclusive = true }
+                            }
+                        },
+                        onBack = { navController.popBackStack() },
+                    )
+                }
             }
         }
     }

@@ -174,4 +174,15 @@ class CommonComponentsTests {
 
         composeTestRule.onNodeWithTag(MmoBottomNavigationBarTestTags.SETTINGS_TAB).assertIsDisplayed()
     }
+
+    @Test
+    fun `RoyalCrestFooter renders under its given test tag`() {
+        composeTestRule.setContent {
+            MmoTheme {
+                RoyalCrestFooter(testTag = "royal_crest_footer")
+            }
+        }
+
+        composeTestRule.onNodeWithTag("royal_crest_footer").assertIsDisplayed()
+    }
 }

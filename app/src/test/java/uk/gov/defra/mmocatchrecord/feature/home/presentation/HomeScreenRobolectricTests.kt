@@ -587,9 +587,39 @@ class HomeScreenRobolectricTests {
 
             composeTestRule.onNodeWithTag(MmoBottomNavigationBarTestTags.NOTIFICATIONS_TAB).performClick()
             composeTestRule.onNodeWithTag(HomeScreenTestTags.NOTIFICATIONS_TAB_HEADING).assertIsDisplayed()
+            composeTestRule.onNodeWithTag(HomeScreenTestTags.NOTIFICATIONS_ROYAL_CREST).assertIsDisplayed()
 
             composeTestRule.onNodeWithTag(GdsTopAppBarTestTags.BACK_BUTTON).performClick()
             composeTestRule.onNodeWithTag(HomeScreenTestTags.TAB_LIST).assertIsDisplayed()
             assertFalse("back from a non-home tab must not sign the user out", signedOut)
+        }
+
+    /** HomeRoute(initialTab) lands the wrapper directly on a non-home tab (see MmoNavHost). */
+    @Test
+    fun `home screen wrapper honours its initialTab parameter`() =
+        runTest {
+            val repository = FakeHomeRepository()
+            repository.emit(HomeSummary(signedInUserId = "alice", catchRecords = everyStatusRecords))
+            val homeViewModel = buildHomeViewModel(repository, dispatcher = StandardTestDispatcher(testScheduler))
+            val languageViewModel = AppLanguageViewModel(FakeAppLanguageRepository())
+            val connectivityViewModel = ConnectivityViewModel(FakeConnectivityObserver(initiallyOnline = true))
+
+            composeTestRule.setContent {
+                MmoTheme {
+                    HomeScreen(
+                        onSignOut = {},
+                        onCreateCatchRecord = {},
+                        onResumeDraft = {},
+                        initialTab = 2,
+                        viewModel = homeViewModel,
+                        languageViewModel = languageViewModel,
+                        connectivityViewModel = connectivityViewModel,
+                    )
+                }
+            }
+            testScheduler.advanceUntilIdle()
+            composeTestRule.waitForIdle()
+
+            composeTestRule.onNodeWithTag(SettingsScreenTestTags.SCREEN).assertIsDisplayed()
         }
 }
