@@ -136,7 +136,7 @@ fun DeparturePortScreenContent(
         initialSelection = draft.departurePort,
         allPorts = allPorts,
         favouritePorts = favouritePorts,
-        autocompleteLabel = stringResource(R.string.departure_port_autocomplete_label),
+        autocompletePlaceholder = stringResource(R.string.autocomplete_search_placeholder),
         autocompleteFieldTag = DeparturePortScreenTestTags.AUTOCOMPLETE_FIELD,
         liveRegionTag = DeparturePortScreenTestTags.LIVE_REGION,
         suggestionPrefix = DeparturePortScreenTestTags.SUGGESTION_PREFIX,
@@ -156,7 +156,7 @@ fun PortSelectionStepContent(
     initialSelection: PortSelection?,
     allPorts: List<Port>,
     favouritePorts: List<Port>,
-    autocompleteLabel: String,
+    autocompletePlaceholder: String,
     autocompleteFieldTag: String,
     liveRegionTag: String,
     suggestionPrefix: String,
@@ -228,7 +228,7 @@ fun PortSelectionStepContent(
             )
         } else {
             GdsAutocompleteField(
-                label = autocompleteLabel,
+                placeholder = autocompletePlaceholder,
                 value = searchQuery,
                 options = suggestions.map { GdsAutocompleteOption(it.id, it.name) },
                 onValueChange = {

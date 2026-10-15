@@ -39,7 +39,7 @@ class PortSelectionStepContentTests {
                     initialSelection = initialSelection,
                     allPorts = allPorts,
                     favouritePorts = favouritePorts,
-                    autocompleteLabel = "Enter port",
+                    autocompletePlaceholder = "Enter port",
                     autocompleteFieldTag = DeparturePortScreenTestTags.AUTOCOMPLETE_FIELD,
                     liveRegionTag = DeparturePortScreenTestTags.LIVE_REGION,
                     suggestionPrefix = DeparturePortScreenTestTags.SUGGESTION_PREFIX,

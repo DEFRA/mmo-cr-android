@@ -65,7 +65,7 @@ fun ReturnPortScreen(
                     initialSelection = status.value.returnPort,
                     allPorts = state.ports,
                     favouritePorts = state.previouslyUsedPorts,
-                    autocompleteLabel = stringResource(R.string.return_port_autocomplete_label),
+                    autocompletePlaceholder = stringResource(R.string.autocomplete_search_placeholder),
                     autocompleteFieldTag = ReturnPortScreenTestTags.AUTOCOMPLETE_FIELD,
                     liveRegionTag = ReturnPortScreenTestTags.LIVE_REGION,
                     suggestionPrefix = ReturnPortScreenTestTags.SUGGESTION_PREFIX,

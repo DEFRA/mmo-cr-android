@@ -47,7 +47,7 @@ class GdsAutocompleteFieldTest {
                         }
                     }
                 GdsAutocompleteField(
-                    label = "Enter port",
+                    placeholder = "Enter port",
                     value = value,
                     options = options,
                     onValueChange = { value = it },
@@ -113,7 +113,7 @@ class GdsAutocompleteFieldTest {
                         GdsAutocompleteOption(it.id, it.name)
                     }
                 GdsAutocompleteField(
-                    label = "Enter port",
+                    placeholder = "Enter port",
                     value = value,
                     options = options,
                     onValueChange = { value = it },

@@ -112,8 +112,7 @@
     <string name="date_error_return_before_departure">Return date must be on or after the departure date</string>
     <string name="departure_port_title">Enter the port or closest port you set off from</string>
     <string name="return_port_title">Which port or closest port did you return to?</string>
-    <string name="departure_port_autocomplete_label">Enter the port or closest port you set off from</string>
-    <string name="return_port_autocomplete_label">Enter the port or closest port you returned to</string>
+    <string name="autocomplete_search_placeholder">Type to search (minimum 2 characters)</string>
     <string name="add_port">Add port</string>
     <string name="port_selection_error">Select a port or choose one from the list</string>
     <plurals name="port_search_type_more_characters">
@@ -156,7 +155,6 @@
     <string name="gear_stat_rectangle_body_other_hint">If it is not listed, select Other to enter it.</string>
     <string name="gear_stat_rectangle_body_select_other">Select the area where most of your catch was caught. If it is not listed, select Other to enter it.</string>
     <string name="gear_stat_rectangle_other_option">Other</string>
-    <string name="gear_stat_rectangle_autocomplete_label">Type to search (minimum 2 characters)</string>
     <string name="gear_stat_rectangle_no_matches_found">No matching statistical sub-rectangles found</string>
     <string name="gear_stat_rectangle_error_required">Select a statistical subrectangle</string>
     <string name="gear_stat_rectangle_error_format">Enter a statistical subrectangle in the correct format, for example 38E84</string>
@@ -167,7 +165,6 @@
     <string name="gear_stat_rectangle_map_choose_from_list_action">Choose a statistical sub-area from a list</string>
     <string name="gear_species_search_title">Which species did you catch with %1$s?</string>
     <string name="gear_species_search_title_fallback">Which species did you catch?</string>
-    <string name="gear_species_search_autocomplete_label">Type to search (minimum 2 characters)</string>
     <string name="gear_species_search_no_matches_found">No matching species found</string>
     <string name="gear_species_search_error_empty">Enter the species you want to add</string>
     <string name="gear_species_search_error_no_selection">Select a species to add</string>

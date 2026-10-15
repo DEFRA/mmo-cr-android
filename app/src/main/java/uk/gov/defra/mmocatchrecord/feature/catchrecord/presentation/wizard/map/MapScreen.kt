@@ -475,7 +475,7 @@ private fun MapAutocompleteContent(
             )
         }
         GdsAutocompleteField(
-            label = stringResource(R.string.gear_stat_rectangle_autocomplete_label),
+            placeholder = stringResource(R.string.autocomplete_search_placeholder),
             value = searchQuery,
             options = suggestions.map { GdsAutocompleteOption(it.id, it.code) },
             onValueChange = {

@@ -136,7 +136,7 @@ fun GdsAutocompleteFieldPreview() {
     MmoTheme {
         var value by remember { mutableStateOf("Ha") }
         GdsAutocompleteField(
-            label = "Enter a port",
+            placeholder = "Type to search",
             value = value,
             options = listOf(GdsAutocompleteOption("port-hastings", "Hastings")),
             onValueChange = { value = it },

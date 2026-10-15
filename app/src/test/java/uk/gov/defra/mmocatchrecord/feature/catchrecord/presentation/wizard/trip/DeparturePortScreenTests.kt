@@ -26,7 +26,7 @@ class DeparturePortScreenTests {
                     initialSelection = null,
                     allPorts = emptyList(),
                     favouritePorts = emptyList(),
-                    autocompleteLabel = "Departure port",
+                    autocompletePlaceholder = "Departure port",
                     autocompleteFieldTag = DeparturePortScreenTestTags.AUTOCOMPLETE_FIELD,
                     liveRegionTag = DeparturePortScreenTestTags.LIVE_REGION,
                     suggestionPrefix = DeparturePortScreenTestTags.SUGGESTION_PREFIX,

@@ -52,7 +52,7 @@ class GdsAutocompleteFieldTests {
                         }
                     }
                 GdsAutocompleteField(
-                    label = "Enter port",
+                    placeholder = "Enter port",
                     value = value,
                     options = options,
                     onValueChange = { value = it },
@@ -128,7 +128,7 @@ class GdsAutocompleteFieldTests {
             MmoTheme {
                 var value by remember { mutableStateOf("") }
                 GdsAutocompleteField(
-                    label = "Enter port",
+                    placeholder = "Enter port",
                     value = value,
                     options = emptyList(),
                     onValueChange = { value = it },
@@ -160,7 +160,7 @@ class GdsAutocompleteFieldTests {
                         GdsAutocompleteOption(it.id, it.name)
                     }
                 GdsAutocompleteField(
-                    label = "Enter port",
+                    placeholder = "Enter port",
                     value = value,
                     options = options,
                     onValueChange = { value = it },

@@ -58,9 +58,9 @@ fun GdsAutocompleteField(
     suggestionTestTagPrefix: String,
     noMatchesTestTag: String,
     modifier: Modifier = Modifier,
-    // Null omits the visible label entirely — the gear search screen relies on its wizard heading alone
-    // and doesn't repeat it as a field label (see GearSearchScreen).
-    label: String? = null,
+    // Shown as grey hint text inside the box (not a label above it) — the wizard heading above the field
+    // already serves as the GDS question/label for these single-question-per-page screens.
+    placeholder: String? = null,
     errorText: String? = null,
     // Both default to the existing port-search behaviour so every current call site (port screens,
     // GdsAutocompleteFieldTest) is unaffected; gear search overrides only [noMatchesText] since the
@@ -95,9 +95,6 @@ fun GdsAutocompleteField(
         )
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-        if (label != null) {
-            Text(text = label, style = MaterialTheme.typography.bodyLarge)
-        }
         OutlinedTextField(
             value = textFieldValue,
             onValueChange = onValueChange@{ newValue ->
@@ -114,6 +111,12 @@ fun GdsAutocompleteField(
             isError = errorText != null,
             shape = RectangleShape,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            placeholder =
+                placeholder?.let {
+                    {
+                        Text(text = it, style = MaterialTheme.typography.bodyLarge, color = MmoColors.Grey1)
+                    }
+                },
             colors =
                 OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = if (errorText == null) MmoColors.Text else MmoColors.ErrorRed,
