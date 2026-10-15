@@ -88,8 +88,6 @@ fun HomeScreen(
         onSignOut = onSignOut,
         onCreateCatchRecord = onCreateCatchRecord,
         onResumeDraft = onResumeDraft,
-        onRetry = { draftId -> viewModel.dispatch(HomeEvent.RetrySubmission(draftId)) },
-        onDismissOfflineMessage = { viewModel.dispatch(HomeEvent.OfflineRetryMessageShown) },
         onDismissSyncConfirmationMessage = { viewModel.dispatch(HomeEvent.SyncConfirmationMessageShown) },
         debugSettingsSection = viewModel.debugSettingsSection,
         modifier = modifier,
@@ -110,8 +108,6 @@ fun HomeScreenContent(
     onCreateCatchRecord: () -> Unit,
     onResumeDraft: (String) -> Unit,
     modifier: Modifier = Modifier,
-    onRetry: (String) -> Unit = {},
-    onDismissOfflineMessage: () -> Unit = {},
     onDismissSyncConfirmationMessage: () -> Unit = {},
     debugSettingsSection: DebugSettingsSection = noOpDebugSettingsSectionPreview,
 ) {
@@ -145,8 +141,6 @@ fun HomeScreenContent(
                                     onSignOut = onSignOut,
                                     onCreateCatchRecord = onCreateCatchRecord,
                                     onResumeDraft = onResumeDraft,
-                                    onRetry = onRetry,
-                                    onDismissOfflineMessage = onDismissOfflineMessage,
                                     onDismissSyncConfirmationMessage = onDismissSyncConfirmationMessage,
                                     catchRecordsPage = catchRecordsPage,
                                     onCatchRecordsPageChange = { catchRecordsPage = it },
@@ -170,8 +164,6 @@ private fun HomeTabContent(
     onSignOut: () -> Unit,
     onCreateCatchRecord: () -> Unit,
     onResumeDraft: (String) -> Unit,
-    onRetry: (String) -> Unit,
-    onDismissOfflineMessage: () -> Unit,
     onDismissSyncConfirmationMessage: () -> Unit,
     catchRecordsPage: Int,
     onCatchRecordsPageChange: (Int) -> Unit,
@@ -182,9 +174,6 @@ private fun HomeTabContent(
         verticalArrangement = Arrangement.spacedBy(Spacing.m),
     ) {
         item { ImportantBannerSection() }
-        state.offlineRetryMessage?.let { message ->
-            item { OfflineRetryMessage(message = message, onDismissed = onDismissOfflineMessage) }
-        }
         state.syncConfirmationMessage?.let { message ->
             item { SyncConfirmationMessage(message = message, onDismissed = onDismissSyncConfirmationMessage) }
         }
@@ -204,8 +193,6 @@ private fun HomeTabContent(
                 catchRecordsListSection(
                     records = status.value.catchRecords,
                     onRecordClick = onResumeDraft,
-                    onRetry = onRetry,
-                    retryingIds = state.retryingIds,
                     currentPage = catchRecordsPage,
                     onPageChange = onCatchRecordsPageChange,
                     horizontalScrollState = catchRecordsHorizontalScrollState,

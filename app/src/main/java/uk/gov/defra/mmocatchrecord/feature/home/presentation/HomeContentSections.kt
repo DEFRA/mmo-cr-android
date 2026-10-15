@@ -21,7 +21,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -103,8 +102,6 @@ object CatchRecordsListSectionTestTags {
 
     fun row(id: String) = "catch_record_row_$id"
 
-    fun retry(id: String) = "catch_record_retry_$id"
-
     fun createdBy(id: String) = "catch_record_created_by_$id"
 }
 
@@ -126,8 +123,6 @@ private val TableColumnGap: Dp = Spacing.xs
 fun LazyListScope.catchRecordsListSection(
     records: List<CatchRecordSummary>,
     onRecordClick: (String) -> Unit,
-    onRetry: (String) -> Unit = {},
-    retryingIds: Set<String> = emptySet(),
     currentPage: Int = 0,
     onPageChange: (Int) -> Unit = {},
     horizontalScrollState: ScrollState = ScrollState(0),
@@ -160,8 +155,6 @@ fun LazyListScope.catchRecordsListSection(
                 record = record,
                 horizontalScrollState = horizontalScrollState,
                 onClick = onRecordClick,
-                onRetry = onRetry,
-                isRetrying = record.id in retryingIds,
             )
             HorizontalDivider(color = MmoColors.Grey3)
         }
@@ -222,8 +215,6 @@ private fun CatchRecordTableRow(
     record: CatchRecordSummary,
     horizontalScrollState: ScrollState,
     onClick: (String) -> Unit,
-    onRetry: (String) -> Unit,
-    isRetrying: Boolean,
 ) {
     val isResumable = record.status == RecordStatusTag.Draft || record.status == RecordStatusTag.ReadyToSubmit
     val minTouchTarget = LocalMinimumInteractiveComponentSize.current
@@ -245,7 +236,7 @@ private fun CatchRecordTableRow(
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.width(VesselColumnWidth).padding(end = TableColumnGap),
         )
-        StatusCell(record, isRetrying, minTouchTarget) { onRetry(record.id) }
+        StatusCell(record)
         Text(
             text = createdByLabel,
             style = MaterialTheme.typography.bodyLarge,
@@ -287,28 +278,9 @@ private fun TripEndDateCell(
 
 @Suppress("FunctionNaming")
 @Composable
-private fun StatusCell(
-    record: CatchRecordSummary,
-    isRetrying: Boolean,
-    minTouchTarget: Dp,
-    onRetry: () -> Unit,
-) {
+private fun StatusCell(record: CatchRecordSummary) {
     Column(modifier = Modifier.width(StatusColumnWidth).padding(end = TableColumnGap)) {
         StatusTag(status = record.status)
-        if (record.status == RecordStatusTag.AwaitingSync) {
-            OutlinedButton(
-                onClick = onRetry,
-                enabled = !isRetrying,
-                modifier =
-                    Modifier
-                        .padding(top = Spacing.xxs)
-                        .sizeIn(minWidth = minTouchTarget, minHeight = minTouchTarget)
-                        .testTag(CatchRecordsListSectionTestTags.retry(record.id)),
-            ) {
-                val label = if (isRetrying) R.string.records_retry_pending else R.string.records_retry_action
-                Text(stringResource(label))
-            }
-        }
     }
 }
 
@@ -576,8 +548,6 @@ fun CatchRecordTableRowPreview() {
                 record = previewCatchRecords[3],
                 horizontalScrollState = scrollState,
                 onClick = {},
-                onRetry = {},
-                isRetrying = false,
             )
         }
     }

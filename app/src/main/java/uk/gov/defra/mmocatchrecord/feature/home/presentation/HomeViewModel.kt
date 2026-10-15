@@ -12,8 +12,6 @@ import uk.gov.defra.mmocatchrecord.common.design.DebugSettingsSection
 import uk.gov.defra.mmocatchrecord.common.design.RecordStatusTag
 import uk.gov.defra.mmocatchrecord.core.architecture.BaseViewModel
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.RetryCatchRecordSubmissionResult
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.RetryCatchRecordSubmissionUseCase
 import uk.gov.defra.mmocatchrecord.feature.home.domain.CatchRecordSummary
 import uk.gov.defra.mmocatchrecord.feature.home.domain.HomeSummary
 import uk.gov.defra.mmocatchrecord.feature.home.domain.ObserveHomeSummaryUseCase
@@ -25,7 +23,6 @@ class HomeViewModel
     @Inject
     constructor(
         private val observeHomeSummaryUseCase: ObserveHomeSummaryUseCase,
-        private val retryCatchRecordSubmissionUseCase: RetryCatchRecordSubmissionUseCase,
         val debugSettingsSection: DebugSettingsSection,
         @ApplicationContext private val context: Context,
         defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
@@ -38,22 +35,8 @@ class HomeViewModel
 
         override fun dispatch(event: HomeEvent) {
             when (event) {
-                is HomeEvent.RetrySubmission -> retrySubmission(event.draftId)
-                HomeEvent.OfflineRetryMessageShown -> updateState { it.copy(offlineRetryMessage = null) }
                 HomeEvent.SyncConfirmationMessageShown -> updateState { it.copy(syncConfirmationMessage = null) }
             }
-        }
-
-        private fun retrySubmission(draftId: String) {
-            if (draftId in currentState.retryingIds) return
-            val result = retryCatchRecordSubmissionUseCase(draftId)
-            val offlineMessage =
-                if (result == RetryCatchRecordSubmissionResult.EnqueuedWhileOffline) {
-                    context.getString(R.string.records_retry_offline_message)
-                } else {
-                    currentState.offlineRetryMessage
-                }
-            updateState { it.copy(retryingIds = it.retryingIds + draftId, offlineRetryMessage = offlineMessage) }
         }
 
         private fun observeSummary() {
@@ -65,13 +48,9 @@ class HomeViewModel
             }
         }
 
-        /** Clears a retrying id only once its draft's status actually changes (brief: FR8 double-tap guard). */
+        /** Detects a draft transitioning from `AwaitingSync` to `Submitted` (automatic background sync). */
         private fun applySummary(summary: HomeSummary) {
             val newStatusByDraftId = summary.catchRecords.associate { it.id to it.status }
-            val stillRetrying =
-                currentState.retryingIds.filterTo(mutableSetOf()) { draftId ->
-                    newStatusByDraftId[draftId] == lastKnownStatusByDraftId[draftId]
-                }
             val newlySynced =
                 summary.catchRecords.filter { record ->
                     record.status == RecordStatusTag.Submitted &&
@@ -81,16 +60,15 @@ class HomeViewModel
             updateState {
                 it.copy(
                     status = UiStatus.Content(summary),
-                    retryingIds = stillRetrying,
                     syncConfirmationMessage = syncConfirmationMessage(newlySynced) ?: it.syncConfirmationMessage,
                 )
             }
         }
 
         /**
-         * FR9: confirms a draft that was "Waiting to send" has now been submitted — fires for both FR7
-         * automatic sync and FR8 manual retry; `null` on an emission with no new transition (including the
-         * first, since [lastKnownStatusByDraftId] starts empty so nothing can match `AwaitingSync`).
+         * FR9: confirms a draft that was "Waiting to send" has now been submitted automatically (FR7);
+         * `null` on an emission with no new transition (including the first, since
+         * [lastKnownStatusByDraftId] starts empty so nothing can match `AwaitingSync`).
          */
         private fun syncConfirmationMessage(newlySynced: List<CatchRecordSummary>): String? {
             if (newlySynced.isEmpty()) return null

@@ -16,9 +16,6 @@
     <string name="records_reference_pending">Reference not yet assigned</string>
     <string name="records_trip_end_date_not_set">Not entered yet</string>
     <string name="records_created_by_you">You</string>
-    <string name="records_retry_action">Retry</string>
-    <string name="records_retry_pending">Retrying…</string>
-    <string name="records_retry_offline_message">You\'re offline. This catch record is saved on your device and will be sent automatically when you\'re back online.</string>
     <string name="pagination_showing">Showing %1$d to %2$d of %3$d</string>
     <string name="pagination_previous">Previous</string>
     <string name="pagination_next">Next</string>

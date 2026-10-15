@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted (Phase A, Phase B, Phase C, Phase D, Phase E and Phase F).
+Accepted (Phase A, Phase B, Phase C, Phase D, Phase E and Phase F). Phase G supersedes Phase C's manual
+retry button.
 
 ## Context
 
@@ -521,5 +522,29 @@ The reference image's status chips read "Submitted"/"Amended"/"Unsent"/"Late". P
   `performScrollToNode` to reach off-screen rows in tests.
 - Welsh translations for the new strings are best-effort and not yet reviewed by a Welsh-language
   specialist.
+
+## Decision (Phase G — removal of the manual retry button)
+
+Phase C's FR8 manual "Retry" button under each `AwaitingSync` row (`StatusCell`), its disabling
+`HomeViewState.retryingIds` guard, the `HomeEvent.RetrySubmission`/`OfflineRetryMessageShown` events, the
+`RetryCatchRecordSubmissionUseCase` and the `OfflineRetryMessage` banner are all removed. Automatic sync
+already covers the "submit once back online" requirement without a manual action: `CatchRecordSyncWorker`
+is enqueued via `CatchRecordSyncScheduler` with a `NetworkType.CONNECTED` constraint the moment a draft
+first goes offline (`CatchRecordFlowViewModel.enqueuePendingSync`), and `CatchRecordSyncSweep` re-enqueues
+any stranded `AwaitingSync` draft on app start — so WorkManager alone delivers automatic submission the
+instant the device regains connectivity, making the manual retry affordance redundant. The FR9
+`syncConfirmationMessage` plumbing (`HomeViewModel.applySummary`/`syncConfirmationMessage`) is unchanged —
+it still fires for this automatic sync.
+
+## Consequences (Phase G)
+
+- This supersedes Phase C's "two layers of double-tap protection" decision — `ExistingWorkPolicy.KEEP`
+  alone (already noted in Phase C as sufficient on its own) is now the only safeguard against a duplicate
+  enqueue.
+- `records_retry_action`/`records_retry_pending`/`records_retry_offline_message` strings (en/cy) are
+  removed as unused.
+- This is a product descope of FR8, not a DEFRA/GDS/Android standards deviation; flagged here for
+  visibility, no governance exception required.
+
 
 
