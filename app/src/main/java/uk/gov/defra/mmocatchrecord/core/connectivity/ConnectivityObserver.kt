@@ -1,6 +1,6 @@
 package uk.gov.defra.mmocatchrecord.core.connectivity
 
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Continuous, real-time observation of device network connectivity — used to drive the persistent
@@ -10,6 +10,6 @@ import kotlinx.coroutines.flow.Flow
  * long as a wizard screen is on screen.
  */
 interface ConnectivityObserver {
-    /** Emits the current connectivity state immediately, then again whenever it changes. */
-    val isOnline: Flow<Boolean>
+    /** Current validated-internet state, tracked from app start and updated whenever it changes. */
+    val isOnline: StateFlow<Boolean>
 }
