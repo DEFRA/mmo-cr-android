@@ -8,8 +8,9 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
@@ -53,7 +54,7 @@ class GdsAutocompleteFieldTests {
                         }
                     }
                 GdsAutocompleteField(
-                    label = "Enter port",
+                    placeholder = "Enter port",
                     value = value,
                     options = options,
                     onValueChange = { value = it },
@@ -145,7 +146,7 @@ class GdsAutocompleteFieldTests {
             MmoTheme {
                 var value by remember { mutableStateOf("") }
                 GdsAutocompleteField(
-                    label = "Enter port",
+                    placeholder = "Enter port",
                     value = value,
                     options = emptyList(),
                     onValueChange = { value = it },
@@ -163,6 +164,31 @@ class GdsAutocompleteFieldTests {
         composeTestRule.onNodeWithTag("port_no_matches").assertExists()
     }
 
+    @Test
+    fun `field without a placeholder renders and accepts input`() {
+        composeTestRule.setContent {
+            MmoTheme {
+                var value by remember { mutableStateOf("") }
+                GdsAutocompleteField(
+                    value = value,
+                    options = emptyList(),
+                    onValueChange = { value = it },
+                    onOptionSelected = {},
+                    fieldTestTag = "port_field",
+                    liveRegionTestTag = "port_live_region",
+                    suggestionTestTagPrefix = "port_suggestion",
+                    noMatchesTestTag = "port_no_matches",
+                )
+            }
+        }
+
+        composeTestRule.onAllNodesWithText("Enter port").assertCountEquals(0)
+        composeTestRule.onNodeWithTag("port_field").performTextInput("Do")
+        composeTestRule
+            .onNodeWithTag("port_field")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText, AnnotatedString("Do")))
+    }
+
     private fun setPortAutocompleteContent() {
         composeTestRule.setContent {
             MmoTheme {
@@ -177,7 +203,7 @@ class GdsAutocompleteFieldTests {
                         GdsAutocompleteOption(it.id, it.name)
                     }
                 GdsAutocompleteField(
-                    label = "Enter port",
+                    placeholder = "Enter port",
                     value = value,
                     options = options,
                     onValueChange = { value = it },

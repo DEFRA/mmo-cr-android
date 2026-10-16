@@ -47,8 +47,10 @@ import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.AppLanguageProvider
 import uk.gov.defra.mmocatchrecord.common.design.CustomWarningIcon
 import uk.gov.defra.mmocatchrecord.common.design.GdsTopAppBar
+import uk.gov.defra.mmocatchrecord.common.design.MmoBottomNavigationBar
 import uk.gov.defra.mmocatchrecord.common.design.MmoColors
 import uk.gov.defra.mmocatchrecord.common.design.OfflineBanner
+import uk.gov.defra.mmocatchrecord.common.design.RoyalCrestFooter
 import uk.gov.defra.mmocatchrecord.common.design.SecondaryActionButton
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
 import uk.gov.defra.mmocatchrecord.common.design.UnsavedChangesDialog
@@ -73,6 +75,21 @@ data class WizardScaffoldState(
     val onLanguageToggle: () -> Unit,
     val isOffline: Boolean,
 )
+
+/**
+ * Exit action for [CatchRecordWizardScaffold]'s bottom navigation tabs: `0` Home, `1` Notifications,
+ * `2` Settings. [uk.gov.defra.mmocatchrecord.common.navigation.MmoNavHost] supplies the real
+ * implementation (navigate to [uk.gov.defra.mmocatchrecord.common.navigation.HomeRoute] on that tab,
+ * clearing the wizard graph); the default no-op keeps previews/tests that don't provide one safe.
+ */
+val LocalWizardBottomNavAction = staticCompositionLocalOf<(Int) -> Unit> { {} }
+
+/**
+ * Sentinel shared by two unrelated concerns, both meaning "not one of the three Home-shell tabs": the
+ * wizard's bottom nav never shows a tab as selected (the wizard isn't any of the three), and a pending
+ * "leave" confirmation of `null` target (back button) uses the same value rather than a second enum.
+ */
+private const val WIZARD_BACK_LEAVE_TARGET = -1
 
 /**
  * Optional explicit [WizardScaffoldState] for [CatchRecordWizardScaffold]. `null` (the default, and always
@@ -136,8 +153,14 @@ fun CatchRecordWizardScaffold(
     // app-wide/DataStore-persisted; this is purely "how does a preview safely opt out of Hilt".
     val scaffoldState = rememberWizardScaffoldState()
     val scrollState = rememberScrollState()
-    val showUnsavedChangesDialog = rememberWizardBackHandlerDialogState(unsavedChanges.hasUnsavedChanges)
-    val attemptBack = { if (unsavedChanges.hasUnsavedChanges) showUnsavedChangesDialog.value = true else onBack() }
+    val onNavigateToTab = LocalWizardBottomNavAction.current
+    val pendingLeaveTarget = rememberWizardLeaveTarget(unsavedChanges.hasUnsavedChanges)
+    val attemptBack = {
+        if (unsavedChanges.hasUnsavedChanges) pendingLeaveTarget.value = WIZARD_BACK_LEAVE_TARGET else onBack()
+    }
+    val attemptNavigateToTab = { tab: Int ->
+        if (unsavedChanges.hasUnsavedChanges) pendingLeaveTarget.value = tab else onNavigateToTab(tab)
+    }
 
     AppLanguageProvider(language = scaffoldState.currentLanguage) {
         Scaffold(
@@ -148,66 +171,88 @@ fun CatchRecordWizardScaffold(
                     onBackClick = attemptBack,
                 )
             },
+            bottomBar = {
+                // selectedItem is always "none" — the wizard isn't any of the three Home-shell tabs.
+                MmoBottomNavigationBar(selectedItem = WIZARD_BACK_LEAVE_TARGET, onItemClick = attemptNavigateToTab)
+            },
             modifier = modifier.fillMaxSize().testTag(screenTestTag),
         ) { innerPadding ->
             Column(
+                // innerPadding (which now reserves space for the bottom nav bar) must be applied before
+                // verticalScroll, or the scrollable viewport stays full-screen and scrolled content can
+                // render behind the bottom bar, swallowing its clicks.
                 modifier =
                     Modifier
                         .fillMaxSize()
                         .background(
                             MmoColors.White,
-                        ).verticalScroll(scrollState)
-                        .padding(innerPadding)
+                        ).padding(innerPadding)
+                        .verticalScroll(scrollState)
                         .padding(Spacing.m),
                 verticalArrangement = Arrangement.spacedBy(Spacing.m),
             ) {
                 if (scaffoldState.isOffline) {
                     OfflineBanner()
                 }
-                if (title.isNotBlank()) {
-                    if (referenceNumber != null) {
-                        Text(
-                            text = referenceNumber,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MmoColors.Grey1,
-                            modifier = Modifier.testTag("${screenTestTag}_reference_number"),
-                        )
-                    }
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
-                        modifier = Modifier.semantics { heading() },
-                    )
-                }
+                WizardTitleSection(title, referenceNumber, screenTestTag)
                 content()
+                RoyalCrestFooter(testTag = "${screenTestTag}_royal_crest")
             }
         }
-        WizardUnsavedChangesDialogHost(showUnsavedChangesDialog, unsavedChanges, onBack)
+        WizardUnsavedChangesDialogHost(pendingLeaveTarget, unsavedChanges, onBack, onNavigateToTab)
     }
+}
+
+/** Renders [title] (and the optional [referenceNumber] caption above it) when [title] is non-blank — see the doc comment on [CatchRecordWizardScaffold] for when it's blank. */
+@Composable
+private fun WizardTitleSection(
+    title: String,
+    referenceNumber: String?,
+    screenTestTag: String,
+) {
+    if (title.isBlank()) return
+    if (referenceNumber != null) {
+        Text(
+            text = referenceNumber,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MmoColors.Grey1,
+            modifier = Modifier.testTag("${screenTestTag}_reference_number"),
+        )
+    }
+    Text(
+        text = title,
+        style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
+        modifier = Modifier.semantics { heading() },
+    )
 }
 
 /** BR-XX (ADR 0014, Phase D): [BackHandler] is called unconditionally, only `enabled` varies. */
 @Composable
-private fun rememberWizardBackHandlerDialogState(hasUnsavedChanges: Boolean): MutableState<Boolean> {
-    val showDialog = rememberSaveable { mutableStateOf(false) }
-    BackHandler(enabled = hasUnsavedChanges) { showDialog.value = true }
-    return showDialog
+private fun rememberWizardLeaveTarget(hasUnsavedChanges: Boolean): MutableState<Int?> {
+    val pendingLeaveTarget = rememberSaveable { mutableStateOf<Int?>(null) }
+    BackHandler(enabled = hasUnsavedChanges) { pendingLeaveTarget.value = WIZARD_BACK_LEAVE_TARGET }
+    return pendingLeaveTarget
 }
 
-/** Renders [UnsavedChangesDialog] when [showDialog] is true, wired to discard-then-leave or stay. */
+/**
+ * Renders [UnsavedChangesDialog] when a leave is pending, wired to discard-then-leave or stay. The pending
+ * target is either [WIZARD_BACK_LEAVE_TARGET] (the back button/hardware back was pressed) or a Home-shell
+ * tab index (a bottom nav tab was tapped) — both abandon the current unsaved step the same way.
+ */
 @Composable
 private fun WizardUnsavedChangesDialogHost(
-    showDialog: MutableState<Boolean>,
+    pendingLeaveTarget: MutableState<Int?>,
     unsavedChanges: WizardUnsavedChangesConfig,
     onBack: () -> Unit,
+    onNavigateToTab: (Int) -> Unit,
 ) {
-    if (!showDialog.value) return
+    val target = pendingLeaveTarget.value ?: return
     UnsavedChangesDialog(
-        onStay = { showDialog.value = false },
+        onStay = { pendingLeaveTarget.value = null },
         onLeave = {
-            showDialog.value = false
+            pendingLeaveTarget.value = null
             unsavedChanges.onDiscardChanges()
-            onBack()
+            if (target == WIZARD_BACK_LEAVE_TARGET) onBack() else onNavigateToTab(target)
         },
     )
 }

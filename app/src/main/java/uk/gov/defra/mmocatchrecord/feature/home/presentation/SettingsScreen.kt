@@ -37,7 +37,7 @@ import uk.gov.defra.mmocatchrecord.common.design.DebugSettingsSection
 import uk.gov.defra.mmocatchrecord.common.design.GdsLinkAction
 import uk.gov.defra.mmocatchrecord.common.design.MmoColors
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
-import uk.gov.defra.mmocatchrecord.common.design.RoyalCrestPlaceholder
+import uk.gov.defra.mmocatchrecord.common.design.RoyalCrestFooter
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
 
 /** Compose test tags for [SettingsTabContent] — see the "Your settings" design screenshot. */
@@ -50,6 +50,7 @@ object SettingsScreenTestTags {
     const val PRIVACY_NOTICE_LINK = "settings_feature_privacy_notice_link"
     const val SUPPORT_INFORMATION_LINK = "settings_feature_support_information_link"
     const val SIGN_OUT_LINK = "settings_feature_sign_out_link"
+    const val ROYAL_CREST = "settings_feature_royal_crest"
 }
 
 /** Default [DebugSettingsSection] for call sites not supplying a real one — renders nothing. */
@@ -125,9 +126,7 @@ fun SettingsTabContent(
 
         debugSettingsSection.Render()
 
-        Box(modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.m), contentAlignment = Alignment.Center) {
-            RoyalCrestPlaceholder()
-        }
+        RoyalCrestFooter(testTag = SettingsScreenTestTags.ROYAL_CREST)
     }
 }
 

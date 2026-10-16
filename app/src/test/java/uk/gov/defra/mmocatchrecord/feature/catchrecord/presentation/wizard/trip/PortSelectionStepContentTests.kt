@@ -1,6 +1,6 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip
 
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
@@ -39,7 +39,7 @@ class PortSelectionStepContentTests {
                     initialSelection = initialSelection,
                     allPorts = allPorts,
                     favouritePorts = favouritePorts,
-                    autocompleteLabel = "Enter port",
+                    autocompletePlaceholder = "Enter port",
                     autocompleteFieldTag = DeparturePortScreenTestTags.AUTOCOMPLETE_FIELD,
                     liveRegionTag = DeparturePortScreenTestTags.LIVE_REGION,
                     suggestionPrefix = DeparturePortScreenTestTags.SUGGESTION_PREFIX,

@@ -33,7 +33,7 @@ work, or delegate to the **Android Planner** for **Complex** work — then obtai
 > **Status: ✅ Confirmed on 2026-09-04 by developer via orchestrator, DI reverted to Hilt on 2026-09-07,
 > catch-record persistence encryption confirmed on 2026-09-11 via orchestrator-approved E4-S01 plan** —
 > remaining deviations from §5 defaults: Mockito instead of MockK (testing; Robolectric added for JVM-side
-> Room DAO tests), targetSdk 35 (compileSdk 36/37 — see `app/build.gradle.kts` note, minSdk 26), and
+> Room DAO tests), compileSdk 37 (see `app/build.gradle.kts` note; targetSdk 36 since 2026-10-14 per Play target API policy, minSdk 26), and
 > **SQLCipher (`net.zetetic:sqlcipher-android`) added to Room via `SupportFactory`, with the passphrase
 > wrapped by a non-auth-bound Android Keystore key, for at-rest encryption of the catch-record draft** —
 > this supersedes/clarifies ADR-0003's "Room stub" and confirms **`androidx.security-crypto` (Jetpack

@@ -27,15 +27,16 @@ val referenceDataServiceUrlOverride: String? = localProperties.getProperty("refe
 android {
     namespace = "uk.gov.defra.mmocatchrecord"
     // Pinned to 37 due to library AAR metadata requirements (androidx.core, lifecycle, navigation).
-    // Runtime behavior is unchanged; targetSdk remains pinned at 35.
+    // targetSdk is 36 per the Google Play target API level policy.
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "uk.gov.defra.mmocatchrecord"
+        applicationId = "mmo.catchrecording.android"
         minSdk = 26
-        targetSdk = 35
+        //noinspection OldTargetApi,EditedTargetSdkVersion
+        targetSdk = 36
         versionCode = 2
-        versionName = "1.0.1"
+        versionName = "2.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -88,7 +89,7 @@ android {
 
     sourceSets {
         // Bundles the exported Room schema JSON into the test APK so MigrationTestHelper can read it.
-        getByName("androidTest").assets.srcDirs("$projectDir/schemas")
+        getByName("androidTest").assets.directories.add("$projectDir/schemas")
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
@@ -122,9 +123,7 @@ room {
     schemaDirectory("$projectDir/schemas")
 }
 
-// Report variant alias so CI/Sonar's existing `app/build/reports/kover/reportDebug.xml` path survives
-// adding product flavors (no real "debug"-only variant exists once flavors are introduced). JaCoCo
-// engine filters Compose-compiler synthetic branches ($changed/$default/skipping) that tests cannot reach.
+// "debug" alias keeps CI/Sonar's reportDebug.xml path; JaCoCo skips Compose synthetic branches.
 kover {
     useJacoco(libs.versions.jacoco.get())
     currentProject {
@@ -178,7 +177,7 @@ dependencies {
 
     // Shared offline-map pure parsing/geometry/generator code (build-time preprocessing task + on-device
     // runtime fallback parser) — see docs/adr/0013-offline-fisheries-map-rendering.md.
-    implementation("uk.gov.defra.mmocatchrecord.mapdata:map-data-core")
+    implementation(libs.map.data.core)
 
     // Structured, redacted logging (see ADR 0011 / security instructions "no PII/secrets in logs").
     implementation(libs.timber)
@@ -211,11 +210,7 @@ dependencies {
     testImplementation(platform(libs.okhttp.bom))
     testImplementation(libs.okhttp.mockwebserver3.junit4)
 
-    // Compose UI testing on the JVM via Robolectric: coverage from `testDebugUnitTest` is what
-    // Kover reports and SonarCloud imports, whereas `connectedDebugAndroidTest` coverage is not
-    // merged in. Compose screens therefore need Robolectric unit tests under `src/test` to count
-    // towards the quality gate. The BoM keeps these aligned with the implementation Compose
-    // artifacts; `ui-test-manifest` is already supplied via `debugImplementation` below.
+    // Robolectric Compose tests count toward Kover/Sonar coverage; connected tests aren't merged.
     testImplementation(platform(libs.androidx.compose.bom))
     testImplementation(libs.androidx.compose.ui.test.junit4)
 

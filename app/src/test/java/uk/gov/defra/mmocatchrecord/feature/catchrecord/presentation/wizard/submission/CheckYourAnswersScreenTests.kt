@@ -4,7 +4,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -129,7 +129,7 @@ class CheckYourAnswersScreenTests {
 
         composeTestRule.onNodeWithText("The Providence").assertIsDisplayed()
         composeTestRule.onNodeWithText("Newlyn").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Plymouth").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Plymouth").performScrollTo().assertIsDisplayed()
         composeTestRule.onNodeWithText("38E9").performScrollTo().assertIsDisplayed()
         composeTestRule.onNodeWithText("4").performScrollTo().assertIsDisplayed()
         composeTestRule.onNodeWithText("50 mm").performScrollTo().assertIsDisplayed()
@@ -180,10 +180,20 @@ class CheckYourAnswersScreenTests {
         setContent(onChangeRow = { changedTo = it.changeStep })
 
         composeTestRule
-            .onNodeWithTag("${CheckYourAnswersScreenTestTags.CHANGE_ACTION_PREFIX}_${CheckYourAnswersFieldKind.Vessel}")
-            .performClick()
+            .onNodeWithTag(
+                "${CheckYourAnswersScreenTestTags.CHANGE_ACTION_PREFIX}_${CheckYourAnswersFieldKind.DeparturePort}",
+            ).performClick()
 
-        assertEquals(WizardStep.VesselSelection, changedTo)
+        assertEquals(WizardStep.DeparturePort, changedTo)
+    }
+
+    @Test
+    fun vesselRowHasNoChangeAction() {
+        setContent()
+
+        composeTestRule
+            .onNodeWithTag("${CheckYourAnswersScreenTestTags.CHANGE_ACTION_PREFIX}_${CheckYourAnswersFieldKind.Vessel}")
+            .assertDoesNotExist()
     }
 
     @Test
@@ -205,8 +215,8 @@ class CheckYourAnswersScreenTests {
     fun everyChangeLinkHasADistinctAccessibleLabel() {
         setContent()
 
-        composeTestRule.onNodeWithContentDescription("Change Vessel").assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription("Change Departure port").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Change Return port").assertIsDisplayed()
     }
 
     @Test

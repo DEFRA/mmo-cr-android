@@ -165,7 +165,7 @@ fun GearSpeciesSearchScreenContent(
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
         GdsAutocompleteField(
-            label = stringResource(R.string.gear_species_search_autocomplete_label),
+            placeholder = stringResource(R.string.autocomplete_search_placeholder),
             value = searchQuery,
             options = suggestions.map { GdsAutocompleteOption(it.id, it.name) },
             onValueChange = {

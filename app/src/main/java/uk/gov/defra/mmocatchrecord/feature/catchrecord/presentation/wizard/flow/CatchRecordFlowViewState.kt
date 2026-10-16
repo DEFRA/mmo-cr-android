@@ -13,7 +13,6 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Vess
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map.MapSupport
 
 enum class DeparturePortEntryMode {
-    SamePortShortcut,
     FavouriteList,
     Search,
 }
@@ -28,7 +27,6 @@ data class CatchRecordFlowViewState(
     val ports: List<Port> = emptyList(),
     val previouslyUsedPorts: List<Port> = emptyList(),
     val departurePortEntryMode: DeparturePortEntryMode = DeparturePortEntryMode.Search,
-    val samePortCandidate: Port? = null,
     val gearTypes: List<GearType> = emptyList(),
     /**
      * The full, global set of statistical sub-rectangles (Phase 4), loaded once alongside ports/gear
@@ -51,6 +49,7 @@ data class CatchRecordFlowViewState(
     val pendingGearUseId: String? = null,
     /** BR-XX: whether the draft currently in [status] has an actual Room row yet — see ADR 0014. */
     val isDraftPersisted: Boolean = false,
+    val isDraftDeleted: Boolean = false,
 ) : ViewState
 
 /**
@@ -73,7 +72,7 @@ sealed interface CatchRecordFlowEvent {
     /** Resume the loaded active draft at its last-reached step. */
     data object ResumeDraft : CatchRecordFlowEvent
 
-    /** Permanently delete the loaded active draft and return the flow to vessel selection. */
+    /** Permanently delete the loaded active draft. */
     data object DeleteDraft : CatchRecordFlowEvent
 
     /** Start or resume the selected vessel's active draft, then continue to the trip-timing step. */
@@ -85,12 +84,6 @@ sealed interface CatchRecordFlowEvent {
     data class TripTodayAnswered(
         val isTripToday: Boolean,
     ) : CatchRecordFlowEvent
-
-    /** The user declined the same-port shortcut, so the departure-port step should show favourites/search. */
-    data object SamePortShortcutDeclined : CatchRecordFlowEvent
-
-    /** Persist the same-port shortcut choice and skip directly to the gear-search step. */
-    data object SamePortShortcutAccepted : CatchRecordFlowEvent
 
     /**
      * Persist [updatedDraft] (the "save and continue" autosave) and advance to [nextStep]. Persistence

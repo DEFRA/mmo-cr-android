@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted (Phase A, Phase B, Phase C, Phase D, Phase E and Phase F).
+Accepted (Phase A, Phase B, Phase C, Phase D, Phase E and Phase F). Phase G supersedes Phase C's manual
+retry button.
 
 ## Context
 
@@ -317,13 +318,16 @@ silently-stuck record and no way to act on it.
 
 ### BR-XX: `BackHandler`, not `PredictiveBackHandler` — and no opt-in to predictive back (D1)
 
-The manifest gains **no** `android:enableOnBackInvokedCallback`; `targetSdk 35` does not force predictive
-back (that only applies once an app targets 36), so this is a deliberate non-change, not an oversight.
+The manifest gains **no** `android:enableOnBackInvokedCallback`. Since 2026-10-14 the app targets 36, so
+predictive back is on by default; `BackHandler` still works because it registers via
+`OnBackPressedDispatcher` (androidx.activity 1.13.0), which bridges to `OnBackInvokedCallback`.
 `CatchRecordWizardScaffold` uses `BackHandler(enabled = hasUnsavedChanges)`, called **unconditionally** with
 only `enabled` varying, so callback registration order is never disturbed by the composable
 appearing/disappearing. `PredictiveBackHandler` is rejected: it exists for UI that genuinely animates
 in step with the gesture's progress, and animating *toward* the previous screen only to then refuse to
 leave is a misleading prediction, not an honest one.
+
+_Update 2026-10-14: targetSdk raised to 36; wizard back interception unaffected, system back-to-home/cross-activity animations now shown._
 
 ### Dirty-state tracking must never fire spuriously (D3)
 
@@ -518,5 +522,45 @@ The reference image's status chips read "Submitted"/"Amended"/"Unsent"/"Late". P
   `performScrollToNode` to reach off-screen rows in tests.
 - Welsh translations for the new strings are best-effort and not yet reviewed by a Welsh-language
   specialist.
+
+## Decision (Phase G — removal of the manual retry button)
+
+Phase C's FR8 manual "Retry" button under each `AwaitingSync` row (`StatusCell`), its disabling
+`HomeViewState.retryingIds` guard, the `HomeEvent.RetrySubmission`/`OfflineRetryMessageShown` events, the
+`RetryCatchRecordSubmissionUseCase` and the `OfflineRetryMessage` banner are all removed. Automatic sync
+already covers the "submit once back online" requirement without a manual action: `CatchRecordSyncWorker`
+is enqueued via `CatchRecordSyncScheduler` with a `NetworkType.CONNECTED` constraint the moment a draft
+first goes offline (`CatchRecordFlowViewModel.enqueuePendingSync`), and `CatchRecordSyncSweep` re-enqueues
+any stranded `AwaitingSync` draft on app start — so WorkManager alone delivers automatic submission the
+instant the device regains connectivity, making the manual retry affordance redundant. The FR9
+`syncConfirmationMessage` plumbing (`HomeViewModel.applySummary`/`syncConfirmationMessage`) is unchanged —
+it still fires for this automatic sync.
+
+## Consequences (Phase G)
+
+- This supersedes Phase C's "two layers of double-tap protection" decision — `ExistingWorkPolicy.KEEP`
+  alone (already noted in Phase C as sufficient on its own) is now the only safeguard against a duplicate
+  enqueue.
+- `records_retry_action`/`records_retry_pending`/`records_retry_offline_message` strings (en/cy) are
+  removed as unused.
+- This is a product descope of FR8, not a DEFRA/GDS/Android standards deviation; flagged here for
+  visibility, no governance exception required.
+
+## Decision (Phase H — reinstated "Amended"/"Unsent" display labels)
+
+Per explicit developer instruction, `RecordStatusTag.ReadyToSubmit` and `.AwaitingSync` now display as
+"Amended" and "Unsent" (`status_ready_to_submit`/`status_awaiting_sync` and their `_title` legend
+counterparts, en/cy) to match the reference image's chip wording. This reverses Phase F's stated rationale
+("did not reintroduce Amended/Late") for these two labels only. `RecordStatusTag.Draft` keeps its
+"Draft" label — the reference image shows no draft row — so "Late" is **not** reintroduced. The enum
+constant names, persisted `DraftStatus` values and tag colours are unchanged; this is a label-only reversal,
+not a reintroduction of the deleted `CatchRecordStatus` model.
+
+## Consequences (Phase H)
+
+- Flagged governance exception to Phase F, authorised directly by the developer; raise with Delivery
+  Architecture per DEFRA process if the labels need to diverge from the real state model again.
+- Descriptions (`status_ready_to_submit_desc`/`status_awaiting_sync_desc`) are unchanged — they still
+  accurately describe the real `ReadyToSubmit`/`AwaitingSync` states, independent of their display label.
 
 

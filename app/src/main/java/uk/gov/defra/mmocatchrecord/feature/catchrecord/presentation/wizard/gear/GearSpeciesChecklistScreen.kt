@@ -30,7 +30,6 @@ import uk.gov.defra.mmocatchrecord.common.design.GdsNumericFieldKind
 import uk.gov.defra.mmocatchrecord.common.design.MmoColors
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
-import uk.gov.defra.mmocatchrecord.common.design.SecondaryActionButton
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
@@ -308,6 +307,11 @@ fun GearSpeciesChecklistScreenContent(
             },
         )
         GdsLinkAction(
+            text = stringResource(R.string.add_a_species_action),
+            onClick = onAddAnotherSpecies,
+            testTag = GearSpeciesChecklistScreenTestTags.ADD_SPECIES_ACTION,
+        )
+        GdsLinkAction(
             text = stringResource(R.string.remove_a_species_action),
             onClick = {
                 val updatedGearUse =
@@ -317,6 +321,7 @@ fun GearSpeciesChecklistScreenContent(
             },
             testTag = GearSpeciesChecklistScreenTestTags.REMOVE_SPECIES_ACTION,
             enabled = checkedIds.isNotEmpty(),
+            dimWhenDisabled = false,
         )
         PrimaryActionButton(
             text = stringResource(R.string.save_and_continue),
@@ -342,11 +347,6 @@ fun GearSpeciesChecklistScreenContent(
                 }
             },
             modifier = Modifier.testTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION),
-        )
-        SecondaryActionButton(
-            text = stringResource(R.string.add_a_species_action),
-            onClick = onAddAnotherSpecies,
-            modifier = Modifier.testTag(GearSpeciesChecklistScreenTestTags.ADD_SPECIES_ACTION),
         )
     }
 }

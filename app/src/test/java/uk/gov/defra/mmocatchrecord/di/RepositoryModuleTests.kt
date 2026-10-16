@@ -2,6 +2,9 @@ package uk.gov.defra.mmocatchrecord.di
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -91,7 +94,12 @@ class RepositoryModuleTests {
 
     @Test
     fun `provideConnectivityObserver wires up the Android-backed implementation`() {
-        assertTrue(RepositoryModule.provideConnectivityObserver(context) is AndroidConnectivityObserver)
+        val scope = CoroutineScope(Job())
+        try {
+            assertTrue(RepositoryModule.provideConnectivityObserver(context, scope) is AndroidConnectivityObserver)
+        } finally {
+            scope.cancel()
+        }
     }
 
     @Test

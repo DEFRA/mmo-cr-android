@@ -2,7 +2,7 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip
 
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import org.junit.Rule
@@ -26,7 +26,7 @@ class DeparturePortScreenTests {
                     initialSelection = null,
                     allPorts = emptyList(),
                     favouritePorts = emptyList(),
-                    autocompleteLabel = "Departure port",
+                    autocompletePlaceholder = "Departure port",
                     autocompleteFieldTag = DeparturePortScreenTestTags.AUTOCOMPLETE_FIELD,
                     liveRegionTag = DeparturePortScreenTestTags.LIVE_REGION,
                     suggestionPrefix = DeparturePortScreenTestTags.SUGGESTION_PREFIX,

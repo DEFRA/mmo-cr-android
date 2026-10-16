@@ -7,7 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -46,10 +46,10 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Gear
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordFlowEvent
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordFlowViewModel
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CheckYourAnswersRoute
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.DeparturePortRoute
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.GearSpeciesChecklistRoute
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.SubmissionPendingSyncRoute
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.SubmissionSuccessRoute
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.VesselSelectionRoute
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardStep
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardTestTheme
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.applySubmissionResultNavOptions
@@ -225,8 +225,8 @@ class CheckYourAnswersNavigationTests {
                     // additional state/constructor params): just enough for onNavigate/onNavigateToEdit's
                     // real navigate() calls to resolve to a destination that actually exists in this
                     // harness's graph, so the "Change" link branch under test can be exercised end-to-end.
-                    composable<VesselSelectionRoute> {
-                        Box(modifier = Modifier.testTag("placeholder_vessel_selection"))
+                    composable<DeparturePortRoute> {
+                        Box(modifier = Modifier.testTag("placeholder_departure_port"))
                     }
                     composable<GearSpeciesChecklistRoute> {
                         Box(modifier = Modifier.testTag("placeholder_gear_species_checklist"))
@@ -338,9 +338,9 @@ class CheckYourAnswersNavigationTests {
 
     @Test
     fun tappingAChangeLinkWithNoGearUseEditContextNavigatesViaOnNavigate() {
-        // The "Vessel" row has no `changeGearUseId`, so `CheckYourAnswersScreen`'s own `onChangeRow` lambda
-        // must route it through `onNavigate(row.changeStep)`, not `onNavigateToEdit` — exercising the real
-        // branch inside `CheckYourAnswersScreen` itself (not the pure `CheckYourAnswersScreenContent`).
+        // The "Departure port" row has no `changeGearUseId`, so `CheckYourAnswersScreen`'s own `onChangeRow`
+        // lambda must route it through `onNavigate(row.changeStep)`, not `onNavigateToEdit` — exercising the
+        // real branch inside `CheckYourAnswersScreen` itself (not the pure `CheckYourAnswersScreenContent`).
         val seedDraft = completeDraft()
         val draftRepository = FakeDraftRepository(seedDraft)
         val viewModel =
@@ -354,16 +354,17 @@ class CheckYourAnswersNavigationTests {
         val navController = launchHarnessAndReachCheckYourAnswers(viewModel) { editObserved = it }
 
         composeTestRule
-            .onNodeWithTag("${CheckYourAnswersScreenTestTags.CHANGE_ACTION_PREFIX}_${CheckYourAnswersFieldKind.Vessel}")
-            .performScrollTo()
+            .onNodeWithTag(
+                "${CheckYourAnswersScreenTestTags.CHANGE_ACTION_PREFIX}_${CheckYourAnswersFieldKind.DeparturePort}",
+            ).performScrollTo()
             .performClick()
 
         composeTestRule.waitUntil(timeoutMillis = 5_000) {
-            navController.currentDestination?.hasRoute<VesselSelectionRoute>() == true
+            navController.currentDestination?.hasRoute<DeparturePortRoute>() == true
         }
         composeTestRule.waitForIdle()
 
-        // onNavigate (not onNavigateToEdit) drove this: the destination is the plain VesselSelection route,
+        // onNavigate (not onNavigateToEdit) drove this: the destination is the plain DeparturePort route,
         // and the edit-context callback was never invoked.
         assertEquals(null, editObserved)
     }

@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -41,7 +40,7 @@ import uk.gov.defra.mmocatchrecord.common.design.MmoColors
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.common.design.OfflineBanner
 import uk.gov.defra.mmocatchrecord.common.design.RecordStatusTag
-import uk.gov.defra.mmocatchrecord.common.design.RoyalCrestPlaceholder
+import uk.gov.defra.mmocatchrecord.common.design.RoyalCrestFooter
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.core.connectivity.ConnectivityViewModel
@@ -57,18 +56,20 @@ object HomeScreenTestTags {
     const val TAB_LIST = "home_tab_list"
     const val ROYAL_CREST = "home_feature_royal_crest"
     const val NOTIFICATIONS_TAB_HEADING = "home_feature_notifications_tab_heading"
+    const val NOTIFICATIONS_ROYAL_CREST = "home_feature_notifications_royal_crest"
 }
 
 /** Default [DebugSettingsSection] for previews/call sites not supplying a real one — renders nothing. */
 private val noOpDebugSettingsSectionPreview = DebugSettingsSection {}
 
-@Suppress("FunctionNaming")
+@Suppress("FunctionNaming", "LongParameterList")
 @Composable
 fun HomeScreen(
     onSignOut: () -> Unit,
     onCreateCatchRecord: () -> Unit,
     onResumeDraft: (String) -> Unit,
     modifier: Modifier = Modifier,
+    initialTab: Int = 0,
     viewModel: HomeViewModel = hiltViewModel(),
     languageViewModel: AppLanguageViewModel = hiltViewModel(),
     connectivityViewModel: ConnectivityViewModel = hiltViewModel(),
@@ -76,7 +77,7 @@ fun HomeScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val currentLanguage by languageViewModel.language.collectAsStateWithLifecycle()
     val isOffline by connectivityViewModel.isOffline.collectAsStateWithLifecycle()
-    var selectedTab by remember { mutableIntStateOf(0) }
+    var selectedTab by remember { mutableIntStateOf(initialTab) }
 
     HomeScreenContent(
         state = state,
@@ -88,8 +89,6 @@ fun HomeScreen(
         onSignOut = onSignOut,
         onCreateCatchRecord = onCreateCatchRecord,
         onResumeDraft = onResumeDraft,
-        onRetry = { draftId -> viewModel.dispatch(HomeEvent.RetrySubmission(draftId)) },
-        onDismissOfflineMessage = { viewModel.dispatch(HomeEvent.OfflineRetryMessageShown) },
         onDismissSyncConfirmationMessage = { viewModel.dispatch(HomeEvent.SyncConfirmationMessageShown) },
         debugSettingsSection = viewModel.debugSettingsSection,
         modifier = modifier,
@@ -110,8 +109,6 @@ fun HomeScreenContent(
     onCreateCatchRecord: () -> Unit,
     onResumeDraft: (String) -> Unit,
     modifier: Modifier = Modifier,
-    onRetry: (String) -> Unit = {},
-    onDismissOfflineMessage: () -> Unit = {},
     onDismissSyncConfirmationMessage: () -> Unit = {},
     debugSettingsSection: DebugSettingsSection = noOpDebugSettingsSectionPreview,
 ) {
@@ -145,8 +142,6 @@ fun HomeScreenContent(
                                     onSignOut = onSignOut,
                                     onCreateCatchRecord = onCreateCatchRecord,
                                     onResumeDraft = onResumeDraft,
-                                    onRetry = onRetry,
-                                    onDismissOfflineMessage = onDismissOfflineMessage,
                                     onDismissSyncConfirmationMessage = onDismissSyncConfirmationMessage,
                                     catchRecordsPage = catchRecordsPage,
                                     onCatchRecordsPageChange = { catchRecordsPage = it },
@@ -170,8 +165,6 @@ private fun HomeTabContent(
     onSignOut: () -> Unit,
     onCreateCatchRecord: () -> Unit,
     onResumeDraft: (String) -> Unit,
-    onRetry: (String) -> Unit,
-    onDismissOfflineMessage: () -> Unit,
     onDismissSyncConfirmationMessage: () -> Unit,
     catchRecordsPage: Int,
     onCatchRecordsPageChange: (Int) -> Unit,
@@ -182,9 +175,6 @@ private fun HomeTabContent(
         verticalArrangement = Arrangement.spacedBy(Spacing.m),
     ) {
         item { ImportantBannerSection() }
-        state.offlineRetryMessage?.let { message ->
-            item { OfflineRetryMessage(message = message, onDismissed = onDismissOfflineMessage) }
-        }
         state.syncConfirmationMessage?.let { message ->
             item { SyncConfirmationMessage(message = message, onDismissed = onDismissSyncConfirmationMessage) }
         }
@@ -204,8 +194,6 @@ private fun HomeTabContent(
                 catchRecordsListSection(
                     records = status.value.catchRecords,
                     onRecordClick = onResumeDraft,
-                    onRetry = onRetry,
-                    retryingIds = state.retryingIds,
                     currentPage = catchRecordsPage,
                     onPageChange = onCatchRecordsPageChange,
                     horizontalScrollState = catchRecordsHorizontalScrollState,
@@ -223,23 +211,8 @@ private fun HomeTabContent(
             ) {}
         }
         item {
-            RoyalCrestItem()
+            RoyalCrestFooter(testTag = HomeScreenTestTags.ROYAL_CREST)
         }
-    }
-}
-
-@Suppress("FunctionNaming")
-@Composable
-private fun RoyalCrestItem() {
-    Box(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(vertical = Spacing.m)
-                .testTag(HomeScreenTestTags.ROYAL_CREST),
-        contentAlignment = Alignment.Center,
-    ) {
-        RoyalCrestPlaceholder()
     }
 }
 
@@ -256,6 +229,7 @@ fun NotificationsTabContent() {
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.testTag(HomeScreenTestTags.NOTIFICATIONS_TAB_HEADING),
         )
+        RoyalCrestFooter(testTag = HomeScreenTestTags.NOTIFICATIONS_ROYAL_CREST)
     }
 }
 

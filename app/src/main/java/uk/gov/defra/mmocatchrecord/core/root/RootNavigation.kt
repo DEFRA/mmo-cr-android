@@ -2,6 +2,7 @@ package uk.gov.defra.mmocatchrecord.core.root
 
 import android.os.SystemClock
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -18,10 +19,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.delay
 import uk.gov.defra.mmocatchrecord.common.navigation.AppLockRoute
+import uk.gov.defra.mmocatchrecord.common.navigation.CatchRecordGraphRoute
 import uk.gov.defra.mmocatchrecord.common.navigation.HomeRoute
 import uk.gov.defra.mmocatchrecord.common.navigation.MmoNavHost
 import uk.gov.defra.mmocatchrecord.common.navigation.SignInRoute
 import uk.gov.defra.mmocatchrecord.common.navigation.SplashRoute
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.LocalWizardBottomNavAction
 
 /**
  * Minimum time [RootPhase.SPLASH] (the GOV.UK wordmark + crown, see [SplashScreen]) stays on screen
@@ -63,7 +66,7 @@ private fun RootPhase.toRoute(): Any =
         RootPhase.SPLASH -> SplashRoute
         RootPhase.SIGN_IN -> SignInRoute
         RootPhase.APP_LOCK -> AppLockRoute
-        RootPhase.HOME -> HomeRoute
+        RootPhase.HOME -> HomeRoute()
     }
 
 /**
@@ -139,13 +142,24 @@ fun RootNavigation(
         }
     }
 
-    MmoNavHost(
-        navController = navController,
-        // Deliberately NOT uiState.phase.toRoute() — see the root-cause note above. Hardcoding SplashRoute
-        // guarantees SplashScreen (the GOV.UK wordmark + crown) is always composed first, immune to how
-        // fast SessionCoordinator resolves the real phase.
-        startDestination = SplashRoute,
-        onRootEvent = sessionCoordinator::dispatch,
-        modifier = modifier,
-    )
+    // Lets the home bottom-nav bar (rendered deep inside the wizard graph) switch tabs by re-navigating
+    // to HomeRoute, without threading an onNavigateToTab callback through every intermediate screen.
+    CompositionLocalProvider(
+        LocalWizardBottomNavAction provides { tab ->
+            navController.navigate(HomeRoute(initialTab = tab)) {
+                popUpTo<CatchRecordGraphRoute> { inclusive = true }
+                launchSingleTop = true
+            }
+        },
+    ) {
+        MmoNavHost(
+            navController = navController,
+            // Deliberately NOT uiState.phase.toRoute() — see the root-cause note above. Hardcoding
+            // SplashRoute guarantees SplashScreen (the GOV.UK wordmark + crown) is always composed first,
+            // immune to how fast SessionCoordinator resolves the real phase.
+            startDestination = SplashRoute,
+            onRootEvent = sessionCoordinator::dispatch,
+            modifier = modifier,
+        )
+    }
 }

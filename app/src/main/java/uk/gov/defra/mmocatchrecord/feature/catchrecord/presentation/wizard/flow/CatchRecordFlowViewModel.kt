@@ -26,8 +26,6 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftInvalid
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftSubmissionValidation
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelection
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectionMode
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
@@ -76,8 +74,6 @@ class CatchRecordFlowViewModel
                 CatchRecordFlowEvent.DeleteDraft -> deleteDraft()
                 is CatchRecordFlowEvent.VesselSelected -> vesselSelected(event.vesselId)
                 is CatchRecordFlowEvent.TripTodayAnswered -> tripTodayAnswered(event.isTripToday)
-                CatchRecordFlowEvent.SamePortShortcutDeclined -> declineSamePortShortcut()
-                CatchRecordFlowEvent.SamePortShortcutAccepted -> acceptSamePortShortcut()
                 is CatchRecordFlowEvent.SaveAndContinue -> saveAndContinue(event.updatedDraft, event.nextStep)
                 is CatchRecordFlowEvent.GearTypeSelected -> gearTypeSelected(event.gearTypeId)
                 is CatchRecordFlowEvent.GearMeasurementsSubmitted -> gearMeasurementsSubmitted(event)
@@ -137,7 +133,6 @@ class CatchRecordFlowViewModel
                             species = referenceData.species,
                             previouslyUsedPorts = previouslyUsedPorts,
                             departurePortEntryMode = deriveDeparturePortEntryMode(previouslyUsedPorts),
-                            samePortCandidate = previouslyUsedPorts.firstOrNull(),
                             isDraftPersisted = existingDraft != null,
                         )
                     }
@@ -177,7 +172,6 @@ class CatchRecordFlowViewModel
                             species = referenceData.species,
                             previouslyUsedPorts = previouslyUsedPorts,
                             departurePortEntryMode = deriveDeparturePortEntryMode(previouslyUsedPorts),
-                            samePortCandidate = previouslyUsedPorts.firstOrNull(),
                             isDraftPersisted = true,
                         )
                     }
@@ -202,9 +196,9 @@ class CatchRecordFlowViewModel
                             it.copy(
                                 status = UiStatus.Idle,
                                 currentStep = WizardStep.VesselSelection,
+                                isDraftDeleted = true,
                                 previouslyUsedPorts = emptyList(),
                                 departurePortEntryMode = DeparturePortEntryMode.Search,
-                                samePortCandidate = null,
                                 isDraftPersisted = false,
                             )
                         }
@@ -246,30 +240,6 @@ class CatchRecordFlowViewModel
                     draft.copy(isTripToday = false, departureDate = null, returnDate = null)
                 }
             saveAndContinue(updatedDraft, if (isTripToday) WizardStep.DeparturePort else WizardStep.DepartureDate)
-        }
-
-        private fun declineSamePortShortcut() {
-            updateState {
-                it.copy(
-                    departurePortEntryMode =
-                        if (it.previouslyUsedPorts.isEmpty()) {
-                            DeparturePortEntryMode.Search
-                        } else {
-                            DeparturePortEntryMode.FavouriteList
-                        },
-                )
-            }
-        }
-
-        private fun acceptSamePortShortcut() {
-            val draft = currentDraftOrNull() ?: return
-            val selectedPort = currentState.samePortCandidate ?: return
-            val updatedDraft =
-                draft.copy(
-                    departurePort = PortSelection(selectedPort.id, PortSelectionMode.Favourite),
-                    returnPort = PortSelection(selectedPort.id, PortSelectionMode.Favourite),
-                )
-            saveAndContinue(updatedDraft, WizardStep.GearSearch)
         }
 
         private fun saveAndContinue(
@@ -565,7 +535,6 @@ class CatchRecordFlowViewModel
                     currentStep = nextStep,
                     previouslyUsedPorts = previouslyUsedPorts,
                     departurePortEntryMode = deriveDeparturePortEntryMode(previouslyUsedPorts),
-                    samePortCandidate = previouslyUsedPorts.firstOrNull(),
                     gearTypes = gearTypes ?: it.gearTypes,
                     isDraftPersisted = isDraftPersisted,
                 )
@@ -576,8 +545,7 @@ class CatchRecordFlowViewModel
             if (previouslyUsedPorts.isEmpty()) {
                 DeparturePortEntryMode.Search
             } else {
-                // First previously-used port is treated as the most likely candidate and offered once.
-                DeparturePortEntryMode.SamePortShortcut
+                DeparturePortEntryMode.FavouriteList
             }
 
         private fun currentDate(): DmyDate {

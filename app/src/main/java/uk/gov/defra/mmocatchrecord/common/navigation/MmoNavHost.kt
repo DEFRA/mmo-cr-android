@@ -92,8 +92,10 @@ fun MmoNavHost(
         composable<AppLockRoute> {
             AppLockScreen(onUnlock = { onRootEvent(RootEvent.BiometricUnlockRequested) })
         }
-        composable<HomeRoute> {
+        composable<HomeRoute> { backStackEntry ->
+            val initialTab = backStackEntry.toRoute<HomeRoute>().initialTab
             HomeScreen(
+                initialTab = initialTab,
                 onSignOut = { onRootEvent(RootEvent.SignedOut) },
                 onCreateCatchRecord = { navController.navigate(CatchRecordGraphRoute) },
                 onResumeDraft = { draftId -> navController.navigate(DraftResumeRoute(draftId = draftId)) },
@@ -116,6 +118,12 @@ fun MmoNavHost(
                 DraftResumeScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
                     onNavigate = { navController.navigate(routeFor(it)) },
+                    onDraftDeleted = {
+                        navController.navigate(HomeRoute()) {
+                            popUpTo<CatchRecordGraphRoute> { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    },
                     onBack = { navController.popBackStack() },
                     draftId = draftId,
                 )
@@ -268,7 +276,7 @@ fun MmoNavHost(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
                     // Clears the wizard graph so the user cannot navigate "back" into a submitted draft.
                     onViewRecords = {
-                        navController.navigate(HomeRoute) {
+                        navController.navigate(HomeRoute()) {
                             popUpTo<CatchRecordGraphRoute> { inclusive = true }
                         }
                     },
@@ -279,7 +287,7 @@ fun MmoNavHost(
                 SubmissionPendingSyncScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
                     onViewRecords = {
-                        navController.navigate(HomeRoute) {
+                        navController.navigate(HomeRoute()) {
                             popUpTo<CatchRecordGraphRoute> { inclusive = true }
                         }
                     },

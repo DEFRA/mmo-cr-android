@@ -27,7 +27,7 @@ class ConnectivityViewModel
                 .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
-                    initialValue = false,
+                    initialValue = !observer.isOnline.value,
                 )
 
         private companion object {

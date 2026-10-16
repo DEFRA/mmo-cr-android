@@ -47,7 +47,6 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 
 object DeparturePortScreenTestTags {
     const val SCREEN = "departure_port_screen"
-    const val SAME_PORT_OPTION_PREFIX = "departure_port_same_port_option"
     const val FAVOURITE_OPTION_PREFIX = "departure_port_favourite_option"
     const val AUTOCOMPLETE_FIELD = "departure_port_autocomplete_field"
     const val LIVE_REGION = "departure_port_live_region"
@@ -70,11 +69,6 @@ fun DeparturePortScreen(
     var hasUnsavedChanges by rememberSaveable { mutableStateOf(false) }
     DeparturePortScreen(
         state = state,
-        onSamePortAccepted = {
-            viewModel.dispatch(CatchRecordFlowEvent.SamePortShortcutAccepted)
-            onNavigate(WizardStep.GearSearch)
-        },
-        onSamePortDeclined = { viewModel.dispatch(CatchRecordFlowEvent.SamePortShortcutDeclined) },
         onSubmit = { updatedDraft ->
             viewModel.dispatch(CatchRecordFlowEvent.SaveAndContinue(updatedDraft, WizardStep.ReturnPort))
             onNavigate(WizardStep.ReturnPort)
@@ -91,8 +85,6 @@ fun DeparturePortScreen(
 @Composable
 private fun DeparturePortScreen(
     state: CatchRecordFlowViewState,
-    onSamePortAccepted: () -> Unit,
-    onSamePortDeclined: () -> Unit,
     onSubmit: (CatchRecordDraft) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -122,10 +114,6 @@ private fun DeparturePortScreen(
                     draft = status.value,
                     allPorts = state.ports,
                     favouritePorts = state.previouslyUsedPorts,
-                    entryMode = state.departurePortEntryMode,
-                    samePortCandidate = state.samePortCandidate,
-                    onSamePortAccepted = onSamePortAccepted,
-                    onSamePortDeclined = onSamePortDeclined,
                     onSubmit = onSubmit,
                     onDirtyChanged = onDirtyChanged,
                 )
@@ -133,36 +121,22 @@ private fun DeparturePortScreen(
     }
 }
 
-@Suppress("FunctionNaming", "LongParameterList")
+@Suppress("FunctionNaming")
 @Composable
 fun DeparturePortScreenContent(
     draft: CatchRecordDraft,
     allPorts: List<Port>,
     favouritePorts: List<Port>,
-    entryMode: DeparturePortEntryMode,
-    samePortCandidate: Port?,
-    onSamePortAccepted: () -> Unit,
-    onSamePortDeclined: () -> Unit,
     onSubmit: (CatchRecordDraft) -> Unit,
     modifier: Modifier = Modifier,
     onDirtyChanged: (Boolean) -> Unit = {},
 ) {
-    if (entryMode == DeparturePortEntryMode.SamePortShortcut && samePortCandidate != null) {
-        DepartureSamePortShortcutContent(
-            portName = samePortCandidate.name,
-            onSamePortAccepted = onSamePortAccepted,
-            onSamePortDeclined = onSamePortDeclined,
-            modifier = modifier,
-        )
-        return
-    }
-
     PortSelectionStepContent(
         modifier = modifier,
         initialSelection = draft.departurePort,
         allPorts = allPorts,
         favouritePorts = favouritePorts,
-        autocompleteLabel = stringResource(R.string.departure_port_autocomplete_label),
+        autocompletePlaceholder = stringResource(R.string.autocomplete_search_placeholder),
         autocompleteFieldTag = DeparturePortScreenTestTags.AUTOCOMPLETE_FIELD,
         liveRegionTag = DeparturePortScreenTestTags.LIVE_REGION,
         suggestionPrefix = DeparturePortScreenTestTags.SUGGESTION_PREFIX,
@@ -176,64 +150,13 @@ fun DeparturePortScreenContent(
     )
 }
 
-@Suppress("FunctionNaming")
-@Composable
-private fun DepartureSamePortShortcutContent(
-    portName: String,
-    onSamePortAccepted: () -> Unit,
-    onSamePortDeclined: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var selectedOptionId by rememberSaveable { mutableStateOf<String?>(null) }
-    var showError by rememberSaveable { mutableStateOf(false) }
-
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-        GdsRadioGroup(
-            options =
-                listOf(
-                    GdsRadioOption("yes", stringResource(R.string.yes)),
-                    GdsRadioOption("no", stringResource(R.string.no)),
-                ),
-            selectedOptionId = selectedOptionId,
-            onOptionSelected = {
-                selectedOptionId = it
-                showError = false
-            },
-            optionTestTagPrefix = DeparturePortScreenTestTags.SAME_PORT_OPTION_PREFIX,
-        )
-        Text(
-            text = stringResource(R.string.same_port_shortcut_question, portName),
-            style = MaterialTheme.typography.bodyLarge,
-        )
-        if (showError) {
-            Text(
-                text = stringResource(R.string.same_port_shortcut_error),
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.testTag(DeparturePortScreenTestTags.ERROR_MESSAGE),
-            )
-        }
-        PrimaryActionButton(
-            text = stringResource(R.string.save_and_continue),
-            onClick = {
-                when (selectedOptionId) {
-                    "yes" -> onSamePortAccepted()
-                    "no" -> onSamePortDeclined()
-                    else -> showError = true
-                }
-            },
-            modifier = Modifier.testTag(DeparturePortScreenTestTags.SAVE_ACTION),
-        )
-    }
-}
-
 @Suppress("FunctionNaming", "LongParameterList", "LongMethod")
 @Composable
 fun PortSelectionStepContent(
     initialSelection: PortSelection?,
     allPorts: List<Port>,
     favouritePorts: List<Port>,
-    autocompleteLabel: String,
+    autocompletePlaceholder: String,
     autocompleteFieldTag: String,
     liveRegionTag: String,
     suggestionPrefix: String,
@@ -305,7 +228,7 @@ fun PortSelectionStepContent(
             )
         } else {
             GdsAutocompleteField(
-                label = autocompleteLabel,
+                placeholder = autocompletePlaceholder,
                 value = searchQuery,
                 options = suggestions.map { GdsAutocompleteOption(it.id, it.name) },
                 onValueChange = {
@@ -378,45 +301,6 @@ fun DeparturePortScreen_SearchPreview() {
         AppLanguageProvider(language = "en") {
             DeparturePortScreen(
                 state = state,
-                onSamePortAccepted = {},
-                onSamePortDeclined = {},
-                onSubmit = {},
-                onBack = {},
-            )
-        }
-    }
-}
-
-@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
-@Suppress("FunctionNaming")
-@Composable
-fun DeparturePortScreen_SamePortShortcutPreview() {
-    val samplePorts =
-        listOf(
-            Port("port-hastings", "Hastings", "AREA-HASTINGS"),
-            Port("port-dover", "Dover", "AREA-DOVER"),
-        )
-    val sampleDraft =
-        CatchRecordDraft(
-            id = "draft-1",
-            vesselId = "vessel-1",
-            modifiedAtEpochMillis = 1605830400000L,
-            status = DraftStatus.Draft,
-        )
-    val state =
-        CatchRecordFlowViewState(
-            status = UiStatus.Content(sampleDraft),
-            ports = samplePorts,
-            previouslyUsedPorts = listOf(samplePorts.first()),
-            departurePortEntryMode = DeparturePortEntryMode.SamePortShortcut,
-            samePortCandidate = samplePorts.first(),
-        )
-    MmoTheme {
-        AppLanguageProvider(language = "en") {
-            DeparturePortScreen(
-                state = state,
-                onSamePortAccepted = {},
-                onSamePortDeclined = {},
                 onSubmit = {},
                 onBack = {},
             )
@@ -451,8 +335,6 @@ fun DeparturePortScreen_FavouritesPreview() {
         AppLanguageProvider(language = "en") {
             DeparturePortScreen(
                 state = state,
-                onSamePortAccepted = {},
-                onSamePortDeclined = {},
                 onSubmit = {},
                 onBack = {},
             )
@@ -472,8 +354,6 @@ fun DeparturePortScreen_ErrorPreview() {
         AppLanguageProvider(language = "en") {
             DeparturePortScreen(
                 state = state,
-                onSamePortAccepted = {},
-                onSamePortDeclined = {},
                 onSubmit = {},
                 onBack = {},
             )

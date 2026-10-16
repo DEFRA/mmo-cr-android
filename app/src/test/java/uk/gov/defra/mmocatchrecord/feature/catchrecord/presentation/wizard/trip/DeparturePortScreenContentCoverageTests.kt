@@ -3,13 +3,12 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -20,7 +19,6 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelection
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectionMode
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.DeparturePortEntryMode
 
 /** Covers departure-port content branches not reached by the direct screen/content tests. */
 @RunWith(RobolectricTestRunner::class)
@@ -44,20 +42,15 @@ class DeparturePortScreenContentCoverageTests {
         )
 
     @Test
-    fun samePortShortcutModeWithNoSelectionShowsErrorThenAcceptsOnceChosen() {
-        var accepted = false
-        var declined = false
+    fun favouritesModeWithNoSelectionShowsErrorThenSubmitsOnceChosen() {
+        var submitted: CatchRecordDraft? = null
         composeTestRule.setContent {
             MmoTheme {
                 DeparturePortScreenContent(
                     draft = sampleDraft(),
                     allPorts = allPorts,
                     favouritePorts = allPorts,
-                    entryMode = DeparturePortEntryMode.SamePortShortcut,
-                    samePortCandidate = allPorts.first(),
-                    onSamePortAccepted = { accepted = true },
-                    onSamePortDeclined = { declined = true },
-                    onSubmit = {},
+                    onSubmit = { submitted = it },
                 )
             }
         }
@@ -65,39 +58,14 @@ class DeparturePortScreenContentCoverageTests {
         composeTestRule.onNodeWithTag(DeparturePortScreenTestTags.SAVE_ACTION).performClick()
         composeTestRule.onNodeWithTag(DeparturePortScreenTestTags.ERROR_MESSAGE).assertIsDisplayed()
 
-        composeTestRule.onNodeWithTag("${DeparturePortScreenTestTags.SAME_PORT_OPTION_PREFIX}_0").performClick()
+        composeTestRule.onNodeWithTag("${DeparturePortScreenTestTags.FAVOURITE_OPTION_PREFIX}_0").performClick()
         composeTestRule.onNodeWithTag(DeparturePortScreenTestTags.SAVE_ACTION).performClick()
 
-        assertTrue(accepted)
-        assertTrue(!declined)
+        assertEquals(PortSelection("port-hastings", PortSelectionMode.Favourite), submitted?.departurePort)
     }
 
     @Test
-    fun samePortShortcutDeclinedInvokesTheDeclineCallback() {
-        var declined = false
-        composeTestRule.setContent {
-            MmoTheme {
-                DeparturePortScreenContent(
-                    draft = sampleDraft(),
-                    allPorts = allPorts,
-                    favouritePorts = allPorts,
-                    entryMode = DeparturePortEntryMode.SamePortShortcut,
-                    samePortCandidate = allPorts.first(),
-                    onSamePortAccepted = {},
-                    onSamePortDeclined = { declined = true },
-                    onSubmit = {},
-                )
-            }
-        }
-
-        composeTestRule.onNodeWithTag("${DeparturePortScreenTestTags.SAME_PORT_OPTION_PREFIX}_1").performClick()
-        composeTestRule.onNodeWithTag(DeparturePortScreenTestTags.SAVE_ACTION).performClick()
-
-        assertTrue(declined)
-    }
-
-    @Test
-    fun searchEntryModeDelegatesToPortSelectionStepContentAndWrapsTheSubmittedDraft() {
+    fun noFavouritesDelegatesToPortSelectionStepContentAndWrapsTheSubmittedDraft() {
         var submitted: CatchRecordDraft? = null
         composeTestRule.setContent {
             MmoTheme {
@@ -105,10 +73,6 @@ class DeparturePortScreenContentCoverageTests {
                     draft = sampleDraft(),
                     allPorts = allPorts,
                     favouritePorts = emptyList(),
-                    entryMode = DeparturePortEntryMode.Search,
-                    samePortCandidate = null,
-                    onSamePortAccepted = {},
-                    onSamePortDeclined = {},
                     onSubmit = { submitted = it },
                 )
             }
@@ -130,7 +94,7 @@ class DeparturePortScreenContentCoverageTests {
                     initialSelection = null,
                     allPorts = allPorts,
                     favouritePorts = allPorts,
-                    autocompleteLabel = "Enter port",
+                    autocompletePlaceholder = "Enter port",
                     autocompleteFieldTag = DeparturePortScreenTestTags.AUTOCOMPLETE_FIELD,
                     liveRegionTag = DeparturePortScreenTestTags.LIVE_REGION,
                     suggestionPrefix = DeparturePortScreenTestTags.SUGGESTION_PREFIX,
@@ -161,7 +125,7 @@ class DeparturePortScreenContentCoverageTests {
                     initialSelection = null,
                     allPorts = allPorts,
                     favouritePorts = allPorts,
-                    autocompleteLabel = "Enter port",
+                    autocompletePlaceholder = "Enter port",
                     autocompleteFieldTag = DeparturePortScreenTestTags.AUTOCOMPLETE_FIELD,
                     liveRegionTag = DeparturePortScreenTestTags.LIVE_REGION,
                     suggestionPrefix = DeparturePortScreenTestTags.SUGGESTION_PREFIX,
@@ -189,7 +153,7 @@ class DeparturePortScreenContentCoverageTests {
                     initialSelection = null,
                     allPorts = allPorts,
                     favouritePorts = emptyList(),
-                    autocompleteLabel = "Enter port",
+                    autocompletePlaceholder = "Enter port",
                     autocompleteFieldTag = DeparturePortScreenTestTags.AUTOCOMPLETE_FIELD,
                     liveRegionTag = DeparturePortScreenTestTags.LIVE_REGION,
                     suggestionPrefix = DeparturePortScreenTestTags.SUGGESTION_PREFIX,
@@ -215,15 +179,6 @@ class DeparturePortScreenContentCoverageTests {
         composeTestRule.setContent {
             CompositionLocalProvider(LocalInspectionMode provides true) {
                 DeparturePortScreen_SearchPreview()
-            }
-        }
-    }
-
-    @Test
-    fun theSamePortShortcutPreviewRendersWithoutThrowing() {
-        composeTestRule.setContent {
-            CompositionLocalProvider(LocalInspectionMode provides true) {
-                DeparturePortScreen_SamePortShortcutPreview()
             }
         }
     }

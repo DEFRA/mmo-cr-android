@@ -4,7 +4,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -182,10 +182,20 @@ class CheckYourAnswersScreenTest {
         setContent(onChangeRow = { changedTo = it.changeStep })
 
         composeTestRule
-            .onNodeWithTag("${CheckYourAnswersScreenTestTags.CHANGE_ACTION_PREFIX}_${CheckYourAnswersFieldKind.Vessel}")
-            .performClick()
+            .onNodeWithTag(
+                "${CheckYourAnswersScreenTestTags.CHANGE_ACTION_PREFIX}_${CheckYourAnswersFieldKind.DeparturePort}",
+            ).performClick()
 
-        assertEquals(WizardStep.VesselSelection, changedTo)
+        assertEquals(WizardStep.DeparturePort, changedTo)
+    }
+
+    @Test
+    fun vesselRowHasNoChangeAction() {
+        setContent()
+
+        composeTestRule
+            .onNodeWithTag("${CheckYourAnswersScreenTestTags.CHANGE_ACTION_PREFIX}_${CheckYourAnswersFieldKind.Vessel}")
+            .assertDoesNotExist()
     }
 
     @Test
@@ -209,8 +219,8 @@ class CheckYourAnswersScreenTest {
 
         // Every repeated "Change" link's own TalkBack label must name which row it changes (WCAG 2.2 AA —
         // not "Change, Change, Change..." for every row) — see GdsLinkAction's accessibleLabel parameter.
-        composeTestRule.onNodeWithContentDescription("Change Vessel").assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription("Change Departure port").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Change Return port").assertIsDisplayed()
     }
 
     @Test

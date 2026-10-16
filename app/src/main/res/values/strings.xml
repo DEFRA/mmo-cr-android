@@ -16,9 +16,6 @@
     <string name="records_reference_pending">Reference not yet assigned</string>
     <string name="records_trip_end_date_not_set">Not entered yet</string>
     <string name="records_created_by_you">You</string>
-    <string name="records_retry_action">Retry</string>
-    <string name="records_retry_pending">Retrying…</string>
-    <string name="records_retry_offline_message">You\'re offline. This catch record is saved on your device and will be sent automatically when you\'re back online.</string>
     <string name="pagination_showing">Showing %1$d to %2$d of %3$d</string>
     <string name="pagination_previous">Previous</string>
     <string name="pagination_next">Next</string>
@@ -31,15 +28,15 @@
     <string name="home_summary_load_error">We could not load your catch records. Please try again.</string>
     <string name="status_submitted">Submitted</string>
     <string name="status_draft">Draft</string>
-    <string name="status_ready_to_submit">Ready to submit</string>
-    <string name="status_awaiting_sync">Waiting to send</string>
+    <string name="status_ready_to_submit">Amended</string>
+    <string name="status_awaiting_sync">Unsent</string>
     <string name="help_with_catch_recording">Help with catch recording</string>
     <string name="catch_record_statuses">Catch record statuses</string>
     <string name="status_draft_title">Draft:</string>
     <string name="status_draft_desc">Record started but not completed.</string>
-    <string name="status_ready_to_submit_title">Ready to submit:</string>
+    <string name="status_ready_to_submit_title">Amended:</string>
     <string name="status_ready_to_submit_desc">Complete but not yet submitted.</string>
-    <string name="status_awaiting_sync_title">Waiting to send:</string>
+    <string name="status_awaiting_sync_title">Unsent:</string>
     <string name="status_awaiting_sync_desc">Submission attempted but not sent.</string>
     <string name="status_submitted_title">Submitted:</string>
     <string name="status_submitted_desc">Successfully submitted.</string>
@@ -110,10 +107,9 @@
     <string name="date_error_year_numeric">Year must be a number</string>
     <string name="date_error_invalid_date">Enter a real date</string>
     <string name="date_error_return_before_departure">Return date must be on or after the departure date</string>
-    <string name="departure_port_title">Which port or closest port did you set off from?</string>
+    <string name="departure_port_title">Enter the port or closest port you set off from</string>
     <string name="return_port_title">Which port or closest port did you return to?</string>
-    <string name="departure_port_autocomplete_label">Enter the port or closest port you set off from</string>
-    <string name="return_port_autocomplete_label">Enter the port or closest port you returned to</string>
+    <string name="autocomplete_search_placeholder">Type to search (minimum 2 characters)</string>
     <string name="add_port">Add port</string>
     <string name="port_selection_error">Select a port or choose one from the list</string>
     <plurals name="port_search_type_more_characters">
@@ -121,13 +117,10 @@
         <item quantity="other">Type at least %1$d characters for suggestions</item>
     </plurals>
     <string name="port_search_no_matches_found">No matching ports found</string>
-    <string name="same_port_shortcut_question">Was %1$s the port or the closest port you set off from and returned to?</string>
-    <string name="same_port_shortcut_error">Select whether you used the same port for departure and return</string>
     <string name="phase_three_complete_title">Gear added</string>
     <string name="phase_three_complete_body">Vessel, trip timing, dates, ports and gear are now saved. Statistical sub-rectangle, species, landing storage and review steps are still out of scope for this phase.</string>
     <string name="gear_search_title">What gear did you use?</string>
     <string name="gear_search_title_add_another">Add gear to your list</string>
-    <string name="gear_search_autocomplete_label">Enter the gear you used</string>
     <string name="gear_search_no_matches_found">No matching gear types found</string>
     <string name="gear_selection_error">Select a gear type or choose one from the list</string>
     <string name="gear_measurement_title">Enter the measurements for %1$s</string>
@@ -159,7 +152,6 @@
     <string name="gear_stat_rectangle_body_other_hint">If it is not listed, select Other to enter it.</string>
     <string name="gear_stat_rectangle_body_select_other">Select the area where most of your catch was caught. If it is not listed, select Other to enter it.</string>
     <string name="gear_stat_rectangle_other_option">Other</string>
-    <string name="gear_stat_rectangle_autocomplete_label">Type to search (minimum 2 characters)</string>
     <string name="gear_stat_rectangle_no_matches_found">No matching statistical sub-rectangles found</string>
     <string name="gear_stat_rectangle_error_required">Select a statistical subrectangle</string>
     <string name="gear_stat_rectangle_error_format">Enter a statistical subrectangle in the correct format, for example 38E84</string>
@@ -170,7 +162,6 @@
     <string name="gear_stat_rectangle_map_choose_from_list_action">Choose a statistical sub-area from a list</string>
     <string name="gear_species_search_title">Which species did you catch with %1$s?</string>
     <string name="gear_species_search_title_fallback">Which species did you catch?</string>
-    <string name="gear_species_search_autocomplete_label">Type to search (minimum 2 characters)</string>
     <string name="gear_species_search_no_matches_found">No matching species found</string>
     <string name="gear_species_search_error_empty">Enter the species you want to add</string>
     <string name="gear_species_search_error_no_selection">Select a species to add</string>
@@ -233,6 +224,7 @@
     <string name="check_your_answers_change_action">Change</string>
     <string name="check_your_answers_change_action_with_label">Change %1$s</string>
     <string name="check_your_answers_declaration_intro">By submitting this record, you agree that the information you\'ve given is complete and correct.</string>
+    <string name="check_your_answers_declaration_confirming">By submitting your catch record, you\'re confirming</string>
     <string name="check_your_answers_declaration_bullet_weight_accurate">The weight of fish you have landed is accurate</string>
     <string name="check_your_answers_declaration_bullet_tolerance">This is within permitted tolerance levels</string>
     <string name="check_your_answers_declaration_bullet_action">Fishing authorities may take action in respect of inaccurate catch recording</string>

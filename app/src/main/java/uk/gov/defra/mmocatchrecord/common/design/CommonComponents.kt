@@ -48,6 +48,7 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontWeight.Companion.Normal
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -196,7 +197,7 @@ fun PrimaryActionButton(
             text = text,
             style =
                 MaterialTheme.typography.bodyLarge.copy(
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = Normal,
                     color = MmoColors.White,
                 ),
         )
@@ -267,7 +268,7 @@ fun StatusTag(
             style =
                 MaterialTheme.typography.labelLarge.copy(
                     color = textCol,
-                    fontWeight = FontWeight.Normal,
+                    fontWeight = Normal,
                     fontSize = 13.sp,
                 ),
             modifier = Modifier.padding(horizontal = Spacing.xxs, vertical = 2.dp),
@@ -281,6 +282,7 @@ fun StatusTag(
 fun ExpandableDetails(
     title: String,
     modifier: Modifier = Modifier,
+    titleFontWeight: FontWeight = Normal,
     content: @Composable () -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -312,7 +314,7 @@ fun ExpandableDetails(
                 style =
                     MaterialTheme.typography.bodyLarge.copy(
                         color = MmoColors.GovBlue,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = titleFontWeight,
                         textDecoration = TextDecoration.Underline,
                     ),
             )
@@ -336,6 +338,29 @@ fun ExpandableDetails(
                 content()
             }
         }
+    }
+}
+
+/**
+ * Shared, centred Royal Crest footer shown at the bottom of every Home-shell tab (Home, Notifications,
+ * Settings) and every Catch Record wizard screen — see [uk.gov.defra.mmocatchrecord.feature.home.presentation.HomeScreen]
+ * and [uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordWizardScaffold].
+ */
+@Suppress("FunctionNaming")
+@Composable
+fun RoyalCrestFooter(
+    testTag: String,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(vertical = Spacing.m)
+                .testTag(testTag),
+        contentAlignment = Alignment.Center,
+    ) {
+        RoyalCrestPlaceholder()
     }
 }
 
@@ -436,7 +461,7 @@ private fun BottomNavItem(
                 MaterialTheme.typography.labelLarge.copy(
                     fontSize = 11.sp,
                     color = col,
-                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                    fontWeight = if (selected) FontWeight.Bold else Normal,
                 ),
         )
     }
