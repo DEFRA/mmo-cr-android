@@ -1,5 +1,6 @@
 package uk.gov.defra.mmocatchrecord.core.connectivity
 
+import android.app.Application
 import android.content.Context
 import android.content.ContextWrapper
 import android.net.ConnectivityManager
@@ -20,20 +21,23 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowConnectivityManager
 import org.robolectric.shadows.ShadowNetwork
 import org.robolectric.shadows.ShadowNetworkCapabilities
 import org.robolectric.shadows.ShadowNetworkInfo
 
-// Shadow state is static, so it is reset before each test to stop a registered callback leaking across tests.
+// Plain Application: MmoApplication's Hilt observer registers a callback on Dispatchers.IO, racing these asserts.
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
+@Config(application = Application::class)
 class AndroidConnectivityObserverTests {
     private val context = RuntimeEnvironment.getApplication()
     private val connectivityManager =
         context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
     private val shadowManager = shadowOf(connectivityManager)
 
+    // Shadow state is static, so reset it to stop a registered callback leaking across tests.
     @Before
     fun resetShadowConnectivityState() {
         ShadowConnectivityManager.reset()
