@@ -85,7 +85,7 @@ fun HomeScreen(
         onLanguageToggle = languageViewModel::toggleLanguage,
         isOffline = isOffline,
         selectedTab = selectedTab,
-        onTabSelected = { selectedTab = it },
+        onTabSelected = { },
         onSignOut = onSignOut,
         onCreateCatchRecord = onCreateCatchRecord,
         onResumeDraft = onResumeDraft,
@@ -132,7 +132,7 @@ fun HomeScreenContent(
             Box(modifier = Modifier.fillMaxSize().background(MmoColors.White).padding(innerPadding)) {
                 Column(modifier = Modifier.fillMaxSize()) {
                     if (isOffline) {
-                        OfflineBanner()
+                        OfflineBanner(modifier = Modifier.padding(start = Spacing.m, top = Spacing.m, end = Spacing.m))
                     }
                     Box(modifier = Modifier.weight(1f)) {
                         when (selectedTab) {
