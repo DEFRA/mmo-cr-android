@@ -1,5 +1,6 @@
 package uk.gov.defra.mmocatchrecord.common.design
 
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -180,6 +181,17 @@ class CommonComponentsTests {
         composeTestRule.setContent {
             MmoTheme {
                 RoyalCrestFooter(testTag = "royal_crest_footer")
+            }
+        }
+
+        composeTestRule.onNodeWithTag("royal_crest_footer").assertIsDisplayed()
+    }
+
+    @Test
+    fun `RoyalCrestFooter applies a caller-supplied modifier`() {
+        composeTestRule.setContent {
+            MmoTheme {
+                RoyalCrestFooter(testTag = "royal_crest_footer", modifier = Modifier.padding(Spacing.xs))
             }
         }
 
