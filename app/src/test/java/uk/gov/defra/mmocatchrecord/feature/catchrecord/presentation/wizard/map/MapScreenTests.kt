@@ -259,8 +259,10 @@ class MapScreenTests {
             }
         }
 
-        composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_SAVE_ACTION).performClick()
-        composeTestRule.onNodeWithTag(MapScreenTestTags.ERROR_MESSAGE).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_SAVE_ACTION).performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+        // The error message appears below the Save action, which the bottom nav bar can push below the fold.
+        composeTestRule.onNodeWithTag(MapScreenTestTags.ERROR_MESSAGE).performScrollTo().assertIsDisplayed()
         assertNull(submittedDraft)
     }
 
@@ -282,7 +284,8 @@ class MapScreenTests {
         }
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.MAP_ERROR).assertIsDisplayed()
-        composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).assertIsDisplayed()
+        // The bottom nav bar can push the "Other" action below the fold.
+        composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -438,12 +441,17 @@ class MapScreenTests {
             .onNodeWithText(
                 "Select the area where most of your catch was caught. If it is not listed, select Other to enter it.",
             ).assertIsDisplayed()
+        // Later radio options can sit below the fold now the bottom nav bar takes up screen space.
         sampleRectangles.forEachIndexed { index, rectangle ->
-            composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_$index").assertIsDisplayed()
+            composeTestRule
+                .onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_$index")
+                .performScrollTo()
+                .assertIsDisplayed()
             composeTestRule.onNodeWithText(rectangle.code).assertIsDisplayed()
         }
         composeTestRule
             .onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_${sampleRectangles.size}")
+            .performScrollTo()
             .assertIsDisplayed()
         composeTestRule.onNodeWithText("Other").assertIsDisplayed()
     }

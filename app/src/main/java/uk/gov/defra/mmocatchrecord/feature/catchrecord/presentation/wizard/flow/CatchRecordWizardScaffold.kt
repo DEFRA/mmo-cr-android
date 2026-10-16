@@ -178,13 +178,16 @@ fun CatchRecordWizardScaffold(
             modifier = modifier.fillMaxSize().testTag(screenTestTag),
         ) { innerPadding ->
             Column(
+                // innerPadding (which now reserves space for the bottom nav bar) must be applied before
+                // verticalScroll, or the scrollable viewport stays full-screen and scrolled content can
+                // render behind the bottom bar, swallowing its clicks.
                 modifier =
                     Modifier
                         .fillMaxSize()
                         .background(
                             MmoColors.White,
-                        ).verticalScroll(scrollState)
-                        .padding(innerPadding)
+                        ).padding(innerPadding)
+                        .verticalScroll(scrollState)
                         .padding(Spacing.m),
                 verticalArrangement = Arrangement.spacedBy(Spacing.m),
             ) {
