@@ -5,13 +5,13 @@ package uk.gov.defra.mmocatchrecord.common.design
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -94,7 +94,8 @@ fun GdsAutocompleteField(
             noMatchesText = noMatchesText,
         )
 
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+    // No spacing: the suggestion list must sit flush against the bottom edge of the field.
+    Column(modifier = modifier) {
         OutlinedTextField(
             value = textFieldValue,
             onValueChange = onValueChange@{ newValue ->
@@ -129,17 +130,10 @@ fun GdsAutocompleteField(
                 ),
             modifier = Modifier.fillMaxWidth().heightIn(min = Spacing.minTouchTarget).testTag(fieldTestTag),
         )
-        Text(
-            text = announcement,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.alpha(0f).testTag(liveRegionTestTag).semantics { liveRegion = LiveRegionMode.Polite },
-        )
-        if (errorText != null) {
-            Text(text = errorText, color = MmoColors.ErrorRed, style = MaterialTheme.typography.bodyMedium)
-        }
         if (showSuggestions) {
             AutocompleteSuggestions(
                 options = options,
+                highlightedIndex = AutocompleteBestMatch.indexOf(trimmedQuery, options.map { it.label }),
                 suggestionTestTagPrefix = suggestionTestTagPrefix,
                 onOptionSelected = { option ->
                     // Also covers picking an option whose label equals the typed text.
@@ -155,9 +149,22 @@ fun GdsAutocompleteField(
             Text(
                 text = noMatchesText,
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.testTag(noMatchesTestTag),
+                modifier = Modifier.padding(top = Spacing.xs).testTag(noMatchesTestTag),
             )
         }
+        if (errorText != null) {
+            Text(
+                text = errorText,
+                color = MmoColors.ErrorRed,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = Spacing.xs),
+            )
+        }
+        Text(
+            text = announcement,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.alpha(0f).testTag(liveRegionTestTag).semantics { liveRegion = LiveRegionMode.Polite },
+        )
     }
 }
 
@@ -181,6 +188,7 @@ private fun autocompleteAnnouncementFor(
 @Composable
 private fun AutocompleteSuggestions(
     options: List<GdsAutocompleteOption>,
+    highlightedIndex: Int?,
     suggestionTestTagPrefix: String,
     onOptionSelected: (GdsAutocompleteOption) -> Unit,
 ) {
@@ -188,16 +196,25 @@ private fun AutocompleteSuggestions(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .border(
-                    width = 1.dp,
-                    color = MmoColors.Grey2,
-                ).background(MmoColors.White),
+                .border(width = 1.dp, color = MmoColors.Text)
+                .background(MmoColors.White),
     ) {
         options.forEachIndexed { index, option ->
+            val isHighlighted = index == highlightedIndex
+            val rowBackground =
+                when {
+                    isHighlighted -> MmoColors.GovBlue
+                    index % 2 == 1 -> MmoColors.AutocompleteOddRow
+                    else -> MmoColors.White
+                }
+            if (index > 0) {
+                HorizontalDivider(thickness = 1.dp, color = MmoColors.Text)
+            }
             Row(
                 modifier =
                     Modifier
                         .fillMaxWidth()
+                        .background(rowBackground)
                         .heightIn(min = Spacing.minTouchTarget)
                         .clickable { onOptionSelected(option) }
                         .padding(
@@ -209,7 +226,11 @@ private fun AutocompleteSuggestions(
                         },
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(text = option.label, style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    text = option.label,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = if (isHighlighted) MmoColors.White else MmoColors.Text,
+                )
             }
         }
     }

@@ -189,15 +189,30 @@ class GdsAutocompleteFieldTests {
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText, AnnotatedString("Do")))
     }
 
-    private fun setPortAutocompleteContent() {
+    @Test
+    fun `multiple suggestions with a highlighted best match remain clickable`() {
+        setPortAutocompleteContent(
+            listOf(Port("port-a", "Doverhaven", "A"), Port("port-b", "Dover", "B")),
+        )
+
+        composeTestRule.onNodeWithTag("port_field").performTextInput("Dov")
+        composeTestRule.onNodeWithTag("port_suggestion_1").performClick()
+
+        composeTestRule
+            .onNodeWithTag("port_field")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText, AnnotatedString("Doverhaven")))
+    }
+
+    private fun setPortAutocompleteContent(
+        ports: List<Port> =
+            listOf(
+                Port("port-hastings", "Hastings", "AREA-HASTINGS"),
+                Port("port-dover", "Dover", "AREA-DOVER"),
+            ),
+    ) {
         composeTestRule.setContent {
             MmoTheme {
                 var value by remember { mutableStateOf("") }
-                val ports =
-                    listOf(
-                        Port("port-hastings", "Hastings", "AREA-HASTINGS"),
-                        Port("port-dover", "Dover", "AREA-DOVER"),
-                    )
                 val options =
                     PortSearch.filterSuggestions(value, ports).map {
                         GdsAutocompleteOption(it.id, it.name)

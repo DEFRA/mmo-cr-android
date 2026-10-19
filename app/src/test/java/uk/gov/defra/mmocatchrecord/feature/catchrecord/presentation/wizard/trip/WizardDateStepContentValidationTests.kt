@@ -53,7 +53,7 @@ class WizardDateStepContentValidationTests {
         composeTestRule.onNodeWithTag(departureTags.saveAction).performClick()
 
         composeTestRule.onNodeWithTag(departureTags.summary).assertIsDisplayed()
-        composeTestRule.onAllNodesWithText("Select a date and press Ok").onFirst().performClick()
+        composeTestRule.onAllNodesWithText("Select a date and press OK").onFirst().performClick()
         assertNull(submitted)
     }
 
