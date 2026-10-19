@@ -79,13 +79,14 @@ fun HomeScreen(
     val isOffline by connectivityViewModel.isOffline.collectAsStateWithLifecycle()
     var selectedTab by remember { mutableIntStateOf(initialTab) }
 
+    @Suppress("AssignedValueIsNeverRead")
     HomeScreenContent(
         state = state,
         currentLanguage = currentLanguage,
         onLanguageToggle = languageViewModel::toggleLanguage,
         isOffline = isOffline,
         selectedTab = selectedTab,
-        onTabSelected = { },
+        onTabSelected = { selectedTab = it },
         onSignOut = onSignOut,
         onCreateCatchRecord = onCreateCatchRecord,
         onResumeDraft = onResumeDraft,

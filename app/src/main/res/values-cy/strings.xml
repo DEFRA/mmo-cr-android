@@ -103,12 +103,9 @@
     <string name="date_month_label">Mis</string>
     <string name="date_year_label">Blwyddyn</string>
     <string name="error_summary_title">Mae problem</string>
-    <string name="date_error_day_required">Rhowch ddiwrnod</string>
-    <string name="date_error_month_required">Rhowch fis</string>
-    <string name="date_error_year_required">Rhowch flwyddyn</string>
-    <string name="date_error_day_numeric">Rhaid iâ€™r diwrnod fod yn rhif</string>
-    <string name="date_error_month_numeric">Rhaid iâ€™r mis fod yn rhif</string>
-    <string name="date_error_year_numeric">Rhaid iâ€™r flwyddyn fod yn rhif</string>
+    <string name="date_error_not_confirmed">Dewiswch ddyddiad a phwyso Iawn</string>
+    <string name="date_picker_ok">Iawn</string>
+    <string name="date_picker_selected">Dyddiad a ddewiswyd: %1$s</string>
     <string name="date_error_invalid_date">Rhowch ddyddiad go iawn</string>
     <string name="date_error_return_before_departure">Rhaid iâ€™r dyddiad dychwelyd fod ar neu ar Ã´l y dyddiad gadael</string>
     <string name="departure_port_title">Pa borthladd neuâ€™r porthladd agosaf y gwnaethoch adael ohono?</string>

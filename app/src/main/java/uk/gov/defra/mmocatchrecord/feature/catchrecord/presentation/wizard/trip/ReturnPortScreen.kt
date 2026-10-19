@@ -61,6 +61,7 @@ fun ReturnPortScreen(
                     onRetry = { viewModel.dispatch(CatchRecordFlowEvent.Retry) },
                 )
             is UiStatus.Content ->
+                @Suppress("AssignedValueIsNeverRead")
                 PortSelectionStepContent(
                     initialSelection = status.value.returnPort,
                     allPorts = state.ports,

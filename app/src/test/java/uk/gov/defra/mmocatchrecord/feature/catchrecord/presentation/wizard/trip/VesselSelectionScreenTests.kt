@@ -1,9 +1,7 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip
 
-import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import org.junit.Assert.assertEquals
@@ -23,25 +21,7 @@ class VesselSelectionScreenTests {
     val composeTestRule = createComposeRule()
 
     @Test
-    fun noSaveActionIsShownUntilAVesselIsSelected() {
-        composeTestRule.setContent {
-            MmoTheme {
-                VesselSelectionScreenContent(
-                    vessels = listOf(Vessel("vessel-achilles", "ACHILLES")),
-                    onSubmit = {},
-                )
-            }
-        }
-
-        composeTestRule.onAllNodesWithTag(VesselSelectionScreenTestTags.SAVE_ACTION).assertCountEquals(0)
-
-        composeTestRule.onNodeWithTag("${VesselSelectionScreenTestTags.OPTION_PREFIX}_0").performClick()
-
-        composeTestRule.onNodeWithTag(VesselSelectionScreenTestTags.SAVE_ACTION).assertIsDisplayed()
-    }
-
-    @Test
-    fun selectingAVesselAndSavingSubmitsItsId() {
+    fun selectingAVesselImmediatelySubmitsItsId() {
         var submitted: String? = null
         composeTestRule.setContent {
             MmoTheme {
@@ -53,7 +33,6 @@ class VesselSelectionScreenTests {
         }
 
         composeTestRule.onNodeWithTag("${VesselSelectionScreenTestTags.OPTION_PREFIX}_1").performClick()
-        composeTestRule.onNodeWithTag(VesselSelectionScreenTestTags.SAVE_ACTION).performClick()
 
         assertEquals("vessel-hercules", submitted)
     }
@@ -87,7 +66,6 @@ class VesselSelectionScreenTests {
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithTag("${VesselSelectionScreenTestTags.OPTION_PREFIX}_0").performClick()
-        composeTestRule.onNodeWithTag(VesselSelectionScreenTestTags.SAVE_ACTION).performClick()
         composeTestRule.waitForIdle()
 
         assertEquals(listOf(WizardStep.TripToday), navigated)

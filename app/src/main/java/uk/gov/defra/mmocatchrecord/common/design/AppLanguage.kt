@@ -1,5 +1,6 @@
 package uk.gov.defra.mmocatchrecord.common.design
 
+import android.annotation.SuppressLint
 import android.content.res.Configuration
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -41,3 +42,8 @@ fun AppLanguageProvider(
         }
     }
 }
+
+/** The active app locale; [AppLanguageProvider] only overrides LocalContext, so it must be read from there. */
+@SuppressLint("LocalContextConfigurationRead")
+@Composable
+fun appLocale(): Locale = LocalContext.current.resources.configuration.locales[0] ?: Locale.UK
