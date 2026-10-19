@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -92,6 +93,16 @@ class WizardDateStepContentTests {
         composeTestRule.waitForIdle()
 
         assertTrue(lastDirty)
+    }
+
+    @Test
+    fun previewRendersWithoutError() {
+        // WizardDateStepContentPreview otherwise stays uncounted new code (no coverage merged
+        // from connectedDebugAndroidTest) — see GdsAutocompleteFieldTests's equivalent doc comment.
+        composeTestRule.setContent { WizardDateStepContentPreview() }
+
+        // The preview hardcodes its own tags ("save" etc.), distinct from the outer `tags` fixture.
+        composeTestRule.onNodeWithTag("save").assertIsDisplayed()
     }
 
     @Test

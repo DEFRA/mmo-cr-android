@@ -28,6 +28,15 @@ class VesselSelectionScreenTests {
     val composeTestRule = createComposeRule()
 
     @Test
+    fun previewRendersWithoutError() {
+        // VesselSelectionScreenContentPreview otherwise stays uncounted new code — see
+        // GdsAutocompleteFieldTests's equivalent doc comment.
+        composeTestRule.setContent { VesselSelectionScreenContentPreview() }
+
+        composeTestRule.onNodeWithTag("${VesselSelectionScreenTestTags.OPTION_PREFIX}_0").assertIsDisplayed()
+    }
+
+    @Test
     fun selectingAVesselImmediatelySubmitsItsId() {
         var submitted: String? = null
         composeTestRule.setContent {

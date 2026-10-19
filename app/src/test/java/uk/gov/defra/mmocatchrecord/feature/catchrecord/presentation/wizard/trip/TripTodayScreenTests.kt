@@ -23,6 +23,15 @@ class TripTodayScreenTests {
     val composeTestRule = createComposeRule()
 
     @Test
+    fun previewRendersWithoutError() {
+        // TripTodayScreenContentPreview otherwise stays uncounted new code — see
+        // GdsAutocompleteFieldTests's equivalent doc comment.
+        composeTestRule.setContent { TripTodayScreenContentPreview() }
+
+        composeTestRule.onNodeWithTag("${TripTodayScreenTestTags.OPTION_PREFIX}_0").assertIsDisplayed()
+    }
+
+    @Test
     fun selectingNoImmediatelySubmitsFalse() {
         var submitted: Boolean? = null
         composeTestRule.setContent {

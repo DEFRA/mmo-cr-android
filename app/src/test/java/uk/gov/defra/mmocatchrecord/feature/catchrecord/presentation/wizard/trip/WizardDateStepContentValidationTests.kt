@@ -69,6 +69,31 @@ class WizardDateStepContentValidationTests {
     }
 
     @Test
+    fun anInvalidlySavedDateFallsBackToTheWheelStartingOnToday() {
+        var submitted: DmyDate? = null
+        // 31 February can never be a valid LocalDate, exercising toLocalDateOrNull's failure path.
+        setDepartureContent(initialDate = DmyDate(31, 2, 2026), onSubmit = { submitted = it })
+
+        composeTestRule.onNodeWithTag(departureTags.okAction).performClick()
+        composeTestRule.onNodeWithTag(departureTags.saveAction).performClick()
+
+        assertEquals(DmyDate(16, 10, 2026), submitted)
+    }
+
+    @Test
+    fun cancellingAfterConfirmingViaOkRevertsToTheConfirmedDateNotTheStartDate() {
+        var submitted: DmyDate? = null
+        setDepartureContent(onSubmit = { submitted = it })
+
+        composeTestRule.spinToAndConfirm(departureTags, DmyDate(20, 3, 2026))
+        composeTestRule.setWheel(departureTags.dayWheel, 25)
+        composeTestRule.onNodeWithTag(departureTags.cancelAction).performClick()
+        composeTestRule.onNodeWithTag(departureTags.saveAction).performClick()
+
+        assertEquals(DmyDate(20, 3, 2026), submitted)
+    }
+
+    @Test
     fun okThenSaveSubmitsTheConfirmedDateAndShowsIt() {
         var submitted: DmyDate? = null
         setDepartureContent(onSubmit = { submitted = it })
