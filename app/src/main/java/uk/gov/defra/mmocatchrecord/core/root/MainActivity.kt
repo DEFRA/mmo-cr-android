@@ -4,10 +4,14 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.getValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dagger.hilt.android.AndroidEntryPoint
+import uk.gov.defra.mmocatchrecord.common.design.AppLanguageProvider
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
+import uk.gov.defra.mmocatchrecord.core.language.AppLanguageViewModel
 
 /**
  * Single-activity host for the app. All navigation happens within Compose via [RootNavigation].
@@ -48,11 +52,16 @@ class MainActivity : ComponentActivity() {
         splashScreen.setOnExitAnimationListener { splashScreenView -> splashScreenView.remove() }
 
         setContent {
-            MmoTheme {
-                RootNavigation(
-                    sessionCoordinator = hiltViewModel(),
-                    onFirstFrameRendered = { isFirstComposeFrameRendered = true },
-                )
+            // App-wide so strings resolved outside a screen's own provider (e.g. wizard titles) are localised too.
+            val languageViewModel: AppLanguageViewModel = hiltViewModel()
+            val language by languageViewModel.language.collectAsStateWithLifecycle()
+            AppLanguageProvider(language = language) {
+                MmoTheme {
+                    RootNavigation(
+                        sessionCoordinator = hiltViewModel(),
+                        onFirstFrameRendered = { isFirstComposeFrameRendered = true },
+                    )
+                }
             }
         }
     }

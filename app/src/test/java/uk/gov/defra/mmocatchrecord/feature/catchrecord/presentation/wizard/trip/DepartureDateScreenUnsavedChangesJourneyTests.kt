@@ -11,8 +11,6 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTextClearance
-import androidx.compose.ui.test.performTextInput
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -47,6 +45,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardStep
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardTestTheme
 import uk.gov.defra.mmocatchrecord.feature.home.domain.CatchRecordSummary
+import java.time.LocalDate
 
 /**
  * BR-XX (ADR 0014, Phase D) end-to-end journey: unlike [WizardDateStepContentTests] (which exercises the
@@ -58,6 +57,8 @@ import uk.gov.defra.mmocatchrecord.feature.home.domain.CatchRecordSummary
 class DepartureDateScreenUnsavedChangesJourneyTests {
     @get:Rule
     val composeTestRule = createComposeRule()
+
+    private val year = LocalDate.now().year
 
     private class FakeDraftRepository(
         seed: CatchRecordDraft,
@@ -187,8 +188,7 @@ class DepartureDateScreenUnsavedChangesJourneyTests {
         val viewModel = buildViewModel(draftRepository)
         launchOnDepartureDateScreen(viewModel)
 
-        composeTestRule.onNodeWithTag(DepartureDateScreenTestTags.DAY_FIELD).performTextClearance()
-        composeTestRule.onNodeWithTag(DepartureDateScreenTestTags.DAY_FIELD).performTextInput("04")
+        composeTestRule.setWheel(DepartureDateScreenTestTags.DAY_WHEEL, 4)
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithText("Back").performClick()
@@ -200,7 +200,7 @@ class DepartureDateScreenUnsavedChangesJourneyTests {
 
         composeTestRule.onNodeWithTag(UnsavedChangesDialogTestTags.DIALOG).assertDoesNotExist()
         composeTestRule.onNodeWithTag(DepartureDateScreenTestTags.SCREEN).assertIsDisplayed()
-        composeTestRule.onNodeWithTag(DepartureDateScreenTestTags.DAY_FIELD).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(DepartureDateScreenTestTags.DAY_WHEEL).assertIsDisplayed()
     }
 
     @Test
@@ -209,8 +209,7 @@ class DepartureDateScreenUnsavedChangesJourneyTests {
         val viewModel = buildViewModel(draftRepository)
         val navController = launchOnDepartureDateScreen(viewModel)
 
-        composeTestRule.onNodeWithTag(DepartureDateScreenTestTags.DAY_FIELD).performTextClearance()
-        composeTestRule.onNodeWithTag(DepartureDateScreenTestTags.DAY_FIELD).performTextInput("04")
+        composeTestRule.setWheel(DepartureDateScreenTestTags.DAY_WHEEL, 4)
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithText("Back").performClick()
@@ -228,15 +227,13 @@ class DepartureDateScreenUnsavedChangesJourneyTests {
         val viewModel = buildViewModel(draftRepository)
         val navController = launchOnDepartureDateScreen(viewModel)
 
-        composeTestRule.onNodeWithTag(DepartureDateScreenTestTags.DAY_FIELD).performTextInput("11")
-        composeTestRule.onNodeWithTag(DepartureDateScreenTestTags.MONTH_FIELD).performTextInput("09")
-        composeTestRule.onNodeWithTag(DepartureDateScreenTestTags.YEAR_FIELD).performTextInput("2026")
+        composeTestRule.spinToAndConfirm(DepartureDateScreenTestTags.stepTags, DmyDate(11, 9, year))
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithTag(DepartureDateScreenTestTags.SAVE_ACTION).performClick()
+        composeTestRule.saveAndContinue(DepartureDateScreenTestTags.stepTags)
         composeTestRule.waitForIdle()
 
         assertTrue(navController.currentDestination?.hasRoute<ReturnDateRoute>() == true)
-        assertEquals(DmyDate(11, 9, 2026), draftRepository.currentDepartureDate("draft-1"))
+        assertEquals(DmyDate(11, 9, year), draftRepository.currentDepartureDate("draft-1"))
 
         navController.popBackStack()
         composeTestRule.waitForIdle()

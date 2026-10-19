@@ -1,9 +1,7 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip
 
-import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import kotlinx.coroutines.runBlocking
@@ -25,22 +23,16 @@ class TripTodayScreenTests {
     val composeTestRule = createComposeRule()
 
     @Test
-    fun noSaveActionIsShownUntilAnOptionIsSelected() {
-        composeTestRule.setContent {
-            MmoTheme {
-                TripTodayScreenContent(initialValue = null, onSubmit = {})
-            }
-        }
+    fun previewRendersWithoutError() {
+        // TripTodayScreenContentPreview otherwise stays uncounted new code — see
+        // GdsAutocompleteFieldTests's equivalent doc comment.
+        composeTestRule.setContent { TripTodayScreenContentPreview() }
 
-        composeTestRule.onAllNodesWithTag(TripTodayScreenTestTags.SAVE_ACTION).assertCountEquals(0)
-
-        composeTestRule.onNodeWithTag("${TripTodayScreenTestTags.OPTION_PREFIX}_0").performClick()
-
-        composeTestRule.onNodeWithTag(TripTodayScreenTestTags.SAVE_ACTION).assertIsDisplayed()
+        composeTestRule.onNodeWithTag("${TripTodayScreenTestTags.OPTION_PREFIX}_0").assertIsDisplayed()
     }
 
     @Test
-    fun selectingNoAndSavingSubmitsFalse() {
+    fun selectingNoImmediatelySubmitsFalse() {
         var submitted: Boolean? = null
         composeTestRule.setContent {
             MmoTheme {
@@ -49,20 +41,8 @@ class TripTodayScreenTests {
         }
 
         composeTestRule.onNodeWithTag("${TripTodayScreenTestTags.OPTION_PREFIX}_1").performClick()
-        composeTestRule.onNodeWithTag(TripTodayScreenTestTags.SAVE_ACTION).performClick()
 
         assertEquals(false, submitted)
-    }
-
-    @Test
-    fun aPrefilledValueShowsTheSaveActionImmediately() {
-        composeTestRule.setContent {
-            MmoTheme {
-                TripTodayScreenContent(initialValue = true, onSubmit = {})
-            }
-        }
-
-        composeTestRule.onNodeWithTag(TripTodayScreenTestTags.SAVE_ACTION).assertIsDisplayed()
     }
 
     @Test
@@ -113,7 +93,6 @@ class TripTodayScreenTests {
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithTag("${TripTodayScreenTestTags.OPTION_PREFIX}_0").performClick()
-        composeTestRule.onNodeWithTag(TripTodayScreenTestTags.SAVE_ACTION).performClick()
         composeTestRule.waitForIdle()
 
         assertEquals(listOf(WizardStep.DeparturePort), navigated)
@@ -135,7 +114,6 @@ class TripTodayScreenTests {
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithTag("${TripTodayScreenTestTags.OPTION_PREFIX}_1").performClick()
-        composeTestRule.onNodeWithTag(TripTodayScreenTestTags.SAVE_ACTION).performClick()
         composeTestRule.waitForIdle()
 
         assertEquals(listOf(WizardStep.DepartureDate), navigated)

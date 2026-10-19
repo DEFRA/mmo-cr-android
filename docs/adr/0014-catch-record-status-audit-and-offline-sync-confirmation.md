@@ -2,8 +2,8 @@
 
 ## Status
 
-Accepted (Phase A, Phase B, Phase C, Phase D, Phase E and Phase F). Phase G supersedes Phase C's manual
-retry button.
+Accepted (Phase A, Phase B, Phase C, Phase D, Phase E, Phase F, Phase G and Phase H). **Phase A's "Draft
+materialisation moved to the first Save and continue (BR-XX)" decision below is superseded by Phase I.**
 
 ## Context
 
@@ -562,5 +562,35 @@ not a reintroduction of the deleted `CatchRecordStatus` model.
   Architecture per DEFRA process if the labels need to diverge from the real state model again.
 - Descriptions (`status_ready_to_submit_desc`/`status_awaiting_sync_desc`) are unchanged — they still
   accurately describe the real `ReadyToSubmit`/`AwaitingSync` states, independent of their display label.
+
+## Decision (Phase I — reversal of Phase A's BR-XX deferral: persist on vessel selection)
+
+A reported data-loss bug showed Phase A's deferral (§"Draft materialisation moved to the first Save and
+continue") was wrong in practice: `VesselSelectionScreen`'s radio option has no separate confirmation step —
+selecting it both answers and immediately advances the wizard, so from the user's perspective that tap
+*is* the explicit "Save and continue" action BR-XX refers to, not the *next* screen's answer. Because
+`vesselSelected()` held the new draft only in memory until the following `TripTodayAnswered`, a user who
+selected a vessel and immediately navigated back (or left the app) lost the selection entirely instead of it
+being resumable from the records list, contradicting the ticket's expected behaviour. `vesselSelected()` now
+calls the race-safe `CatchRecordDraftRepository.startDraft` immediately when no active draft exists for the
+vessel (the same path `saveAndContinue` already used), and `CatchRecordFlowViewState.isDraftPersisted` is
+always `true` once a draft is loaded. `CatchRecordDraftFactory.newDraft` is unchanged — only how soon its
+result is persisted — and `saveAndContinue`'s `wasDraftPersisted` branch is retained unchanged since it is
+still exercised by `EnterFlowForDraft`/`ResumeDraft` resuming an existing draft.
+
+## Consequences (Phase I)
+
+- This reverses Phase A's BR-XX rationale ("abandoned vessel selection left an empty draft polluting the
+  records list"): an abandoned vessel selection is now intentionally visible in the Drafts list so it can be
+  resumed, trading that previously-accepted "pollution" concern for data-loss prevention. Flagged as a
+  governance-exception reversal of a settled ADR decision; raise with Delivery Architecture
+  (`delivery.architecture@defra.gov.uk`) per DEFRA process.
+- `persistDraftWithoutStepChange`/`persistGearEdit`'s `!isDraftPersisted` early-return guards are retained as
+  defence-in-depth but are no longer reachable via normal navigation (a draft always exists and is persisted
+  by the time those screens can dispatch), only via a direct/bypassed event dispatch.
+- `CatchRecordFlowViewModelTests` is updated: the Phase A regression tests asserting zero `startDraft` calls
+  and `isDraftPersisted == false` immediately after `VesselSelected` are replaced with tests asserting the
+  opposite (persisted immediately, exactly one `startDraft` call); the two guard no-op tests now simulate "no
+  draft exists yet" directly rather than via `VesselSelected`, since that state is no longer reachable that way.
 
 

@@ -10,13 +10,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.GdsRadioGroup
 import uk.gov.defra.mmocatchrecord.common.design.GdsRadioOption
-import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
+import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordFlowEvent
@@ -30,7 +30,6 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 object TripTodayScreenTestTags {
     const val SCREEN = "trip_today_screen"
     const val OPTION_PREFIX = "trip_today_option"
-    const val SAVE_ACTION = "trip_today_save_action"
     const val ERROR_MESSAGE = "trip_today_error_message"
 }
 
@@ -88,16 +87,23 @@ fun TripTodayScreenContent(
                     GdsRadioOption("false", stringResource(R.string.no)),
                 ),
             selectedOptionId = selectedOptionId,
-            onOptionSelected = { selectedOptionId = it },
+            onOptionSelected = {
+                selectedOptionId = it
+                onSubmit(it == "true")
+            },
             optionTestTagPrefix = TripTodayScreenTestTags.OPTION_PREFIX,
         )
-        when (selectedOptionId) {
-            "true", "false" ->
-                PrimaryActionButton(
-                    text = stringResource(R.string.save_and_continue),
-                    onClick = { onSubmit(selectedOptionId == "true") },
-                    modifier = Modifier.testTag(TripTodayScreenTestTags.SAVE_ACTION),
-                )
-        }
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Suppress("FunctionNaming")
+@Composable
+fun TripTodayScreenContentPreview() {
+    MmoTheme {
+        TripTodayScreenContent(
+            initialValue = null,
+            onSubmit = {},
+        )
     }
 }

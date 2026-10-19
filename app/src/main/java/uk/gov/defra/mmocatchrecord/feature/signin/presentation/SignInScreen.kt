@@ -73,23 +73,21 @@ fun SignInScreen(
         onSignedIn()
     }
 
-    AppLanguageProvider(language = currentLanguage) {
-        Scaffold(
-            modifier =
-                modifier
-                    .fillMaxSize()
-                    .testTag(SignInScreenTestTags.SCREEN),
-        ) { innerPadding ->
-            SignInContent(
-                state = state,
-                currentLanguage = currentLanguage,
-                onLanguageToggle = languageViewModel::toggleLanguage,
-                onUsernameChanged = { viewModel.dispatch(SignInEvent.UsernameChanged(it)) },
-                onPasswordChanged = { viewModel.dispatch(SignInEvent.PasswordChanged(it)) },
-                onSubmit = { viewModel.dispatch(SignInEvent.SubmitRequested) },
-                modifier = Modifier.padding(innerPadding),
-            )
-        }
+    Scaffold(
+        modifier =
+            modifier
+                .fillMaxSize()
+                .testTag(SignInScreenTestTags.SCREEN),
+    ) { innerPadding ->
+        SignInContent(
+            state = state,
+            currentLanguage = currentLanguage,
+            onLanguageToggle = languageViewModel::toggleLanguage,
+            onUsernameChanged = { viewModel.dispatch(SignInEvent.UsernameChanged(it)) },
+            onPasswordChanged = { viewModel.dispatch(SignInEvent.PasswordChanged(it)) },
+            onSubmit = { viewModel.dispatch(SignInEvent.SubmitRequested) },
+            modifier = Modifier.padding(innerPadding),
+        )
     }
 }
 
