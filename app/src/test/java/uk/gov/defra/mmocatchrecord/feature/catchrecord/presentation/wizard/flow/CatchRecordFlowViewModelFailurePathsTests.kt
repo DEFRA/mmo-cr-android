@@ -125,27 +125,25 @@ class CatchRecordFlowViewModelFailurePathsTests {
             }
         }
 
-    // --- save and continue failing to start a brand new draft ------------------------------------
+    // --- vessel selection failing to start a brand new draft ----------------------------------------
 
     @Test
-    fun `save and continue surfaces a retryable error when starting a brand new draft fails`() =
+    fun `vessel selected surfaces a retryable error when starting a brand new draft fails`() =
         runTest {
             val dispatcher = StandardTestDispatcher(testScheduler)
             val repository = FakeCatchRecordDraftRepository()
             val viewModel = buildViewModel(repository = repository, dispatcher = dispatcher)
-            viewModel.dispatch(CatchRecordFlowEvent.VesselSelected("vessel-hercules"))
-            testScheduler.advanceUntilIdle()
-            assertFalse(viewModel.state.value.isDraftPersisted)
 
             repository.failNextOperation = true
             viewModel.state.test {
                 skipItems(1)
-                viewModel.dispatch(CatchRecordFlowEvent.TripTodayAnswered(true))
+                viewModel.dispatch(CatchRecordFlowEvent.VesselSelected("vessel-hercules"))
                 assertEquals(UiStatus.Loading, awaitItem().status)
                 val errored = awaitItem()
                 assertTrue(errored.status is UiStatus.Error)
                 assertTrue((errored.status as UiStatus.Error).isRetryable)
             }
+            assertFalse(viewModel.state.value.isDraftPersisted)
         }
 
     // --- species added to the current pending gear (SpeciesAddedToCurrentGear) -------------------
