@@ -2,6 +2,7 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import uk.gov.defra.mmocatchrecord.common.design.AppLanguageProvider
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.core.language.AppLanguage
 
@@ -26,6 +27,6 @@ fun WizardTestTheme(
                 isOffline = isOffline,
             ),
     ) {
-        MmoTheme(content = content)
+        AppLanguageProvider(language = language) { MmoTheme(content = content) }
     }
 }

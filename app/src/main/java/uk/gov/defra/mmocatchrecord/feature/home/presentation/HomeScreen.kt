@@ -32,7 +32,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.gov.defra.mmocatchrecord.R
-import uk.gov.defra.mmocatchrecord.common.design.AppLanguageProvider
 import uk.gov.defra.mmocatchrecord.common.design.DebugSettingsSection
 import uk.gov.defra.mmocatchrecord.common.design.GdsTopAppBar
 import uk.gov.defra.mmocatchrecord.common.design.MmoBottomNavigationBar
@@ -113,44 +112,42 @@ fun HomeScreenContent(
     onDismissSyncConfirmationMessage: () -> Unit = {},
     debugSettingsSection: DebugSettingsSection = noOpDebugSettingsSectionPreview,
 ) {
-    AppLanguageProvider(language = currentLanguage) {
-        var catchRecordsPage by rememberSaveable { mutableIntStateOf(0) }
-        val catchRecordsHorizontalScrollState = rememberScrollState()
-        Scaffold(
-            topBar = {
-                GdsTopAppBar(
-                    currentLanguage = currentLanguage,
-                    onLanguageToggle = onLanguageToggle,
-                    onBackClick = { if (selectedTab == 0) onSignOut() else onTabSelected(0) },
-                    showBackButton = selectedTab != 0,
-                )
-            },
-            bottomBar = {
-                MmoBottomNavigationBar(selectedItem = selectedTab, onItemClick = onTabSelected)
-            },
-            modifier = modifier.fillMaxSize().testTag(HomeScreenTestTags.SCREEN),
-        ) { innerPadding ->
-            Box(modifier = Modifier.fillMaxSize().background(MmoColors.White).padding(innerPadding)) {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    if (isOffline) {
-                        OfflineBanner(modifier = Modifier.padding(start = Spacing.m, top = Spacing.m, end = Spacing.m))
-                    }
-                    Box(modifier = Modifier.weight(1f)) {
-                        when (selectedTab) {
-                            0 ->
-                                HomeTabContent(
-                                    state = state,
-                                    onSignOut = onSignOut,
-                                    onCreateCatchRecord = onCreateCatchRecord,
-                                    onResumeDraft = onResumeDraft,
-                                    onDismissSyncConfirmationMessage = onDismissSyncConfirmationMessage,
-                                    catchRecordsPage = catchRecordsPage,
-                                    onCatchRecordsPageChange = { catchRecordsPage = it },
-                                    catchRecordsHorizontalScrollState = catchRecordsHorizontalScrollState,
-                                )
-                            1 -> NotificationsTabContent()
-                            2 -> SettingsTabContent(onSignOut = onSignOut, debugSettingsSection = debugSettingsSection)
-                        }
+    var catchRecordsPage by rememberSaveable { mutableIntStateOf(0) }
+    val catchRecordsHorizontalScrollState = rememberScrollState()
+    Scaffold(
+        topBar = {
+            GdsTopAppBar(
+                currentLanguage = currentLanguage,
+                onLanguageToggle = onLanguageToggle,
+                onBackClick = { if (selectedTab == 0) onSignOut() else onTabSelected(0) },
+                showBackButton = selectedTab != 0,
+            )
+        },
+        bottomBar = {
+            MmoBottomNavigationBar(selectedItem = selectedTab, onItemClick = onTabSelected)
+        },
+        modifier = modifier.fillMaxSize().testTag(HomeScreenTestTags.SCREEN),
+    ) { innerPadding ->
+        Box(modifier = Modifier.fillMaxSize().background(MmoColors.White).padding(innerPadding)) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                if (isOffline) {
+                    OfflineBanner(modifier = Modifier.padding(start = Spacing.m, top = Spacing.m, end = Spacing.m))
+                }
+                Box(modifier = Modifier.weight(1f)) {
+                    when (selectedTab) {
+                        0 ->
+                            HomeTabContent(
+                                state = state,
+                                onSignOut = onSignOut,
+                                onCreateCatchRecord = onCreateCatchRecord,
+                                onResumeDraft = onResumeDraft,
+                                onDismissSyncConfirmationMessage = onDismissSyncConfirmationMessage,
+                                catchRecordsPage = catchRecordsPage,
+                                onCatchRecordsPageChange = { catchRecordsPage = it },
+                                catchRecordsHorizontalScrollState = catchRecordsHorizontalScrollState,
+                            )
+                        1 -> NotificationsTabContent()
+                        2 -> SettingsTabContent(onSignOut = onSignOut, debugSettingsSection = debugSettingsSection)
                     }
                 }
             }
