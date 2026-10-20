@@ -12,9 +12,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.GdsLinkAction
+import uk.gov.defra.mmocatchrecord.common.design.MmoColors
+import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
@@ -61,9 +68,10 @@ fun LateSubmissionWarningScreen(
     val nowEpochMillis = System.currentTimeMillis()
     val draft = (state.status as? UiStatus.Content)?.value
     val daysSinceReturn = draft?.returnDate?.let { LateSubmissionSupport.daysSinceReturn(it, nowEpochMillis) } ?: 0
+    val title = pluralStringResource(R.plurals.late_submission_warning_title, daysSinceReturn, daysSinceReturn)
     CatchRecordWizardScaffold(
         screenTestTag = LateSubmissionWarningScreenTestTags.SCREEN,
-        title = pluralStringResource(R.plurals.late_submission_warning_title, daysSinceReturn, daysSinceReturn),
+        title = highlightDayCount(title, daysSinceReturn),
         onBack = onBack,
         modifier = modifier,
         referenceNumber = state.catchRecordReference,
@@ -91,6 +99,28 @@ fun LateSubmissionWarningScreen(
     }
 }
 
+/**
+ * Colours the day-count digits within the already-substituted plural [title] in [MmoColors.LinkVisited] (the
+ * GOV.UK "visited link" purple), matching the confirmed screenshot's emphasised day count. Falls back to the
+ * plain, unstyled title if [daysSinceReturn]'s digits can't be found verbatim (translated word order could in
+ * theory separate them, though neither the English nor Welsh plurals resource does).
+ */
+private fun highlightDayCount(
+    title: String,
+    daysSinceReturn: Int,
+): AnnotatedString {
+    val dayCountText = daysSinceReturn.toString()
+    val highlightStart = title.indexOf(dayCountText)
+    if (highlightStart < 0) return AnnotatedString(title)
+    return buildAnnotatedString {
+        append(title.substring(0, highlightStart))
+        withStyle(SpanStyle(color = MmoColors.LinkVisited)) {
+            append(dayCountText)
+        }
+        append(title.substring(highlightStart + dayCountText.length))
+    }
+}
+
 @Suppress("FunctionNaming")
 @Composable
 fun LateSubmissionWarningScreenContent(
@@ -115,6 +145,18 @@ fun LateSubmissionWarningScreenContent(
             text = stringResource(R.string.save_and_continue),
             onClick = onSubmit,
             modifier = Modifier.testTag(LateSubmissionWarningScreenTestTags.SAVE_ACTION),
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Suppress("FunctionNaming")
+@Composable
+fun LateSubmissionWarningScreenContentPreview() {
+    MmoTheme {
+        LateSubmissionWarningScreenContent(
+            onCheckTripEndDate = {},
+            onSubmit = {},
         )
     }
 }
