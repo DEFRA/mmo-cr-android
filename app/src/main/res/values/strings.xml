@@ -182,6 +182,7 @@
     <string name="species_weight_error_above_maximum">Weight for %1$s must be 10,000kg or less</string>
     <string name="species_weight_error_whole_number">Weight for %1$s must be a whole number</string>
     <string name="species_weight_error_one_decimal">Weight for %1$s must be a number with up to 1 decimal place</string>
+    <string name="species_weight_error_discarded_exceeds_retained">Weight above minimum size retained must be higher than weight legally discarded</string>
     <string name="species_weight_error_monthly_quota">The weight entered would exceed your quota for this species. Enter a lower weight.</string>
     <string name="species_weight_error_annual_quota">The weight entered would exceed your annual quota for this species. Enter a lower weight.</string>
     <string name="not_landed_straight_away_decision_title">Is there any catch from this trip that you will not be landing straight away?</string>
