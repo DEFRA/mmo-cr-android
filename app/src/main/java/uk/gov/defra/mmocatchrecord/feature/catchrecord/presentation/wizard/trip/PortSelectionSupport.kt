@@ -48,10 +48,10 @@ internal fun portSelectionScaffoldTitle(
         stringResource(defaultTitleRes)
     }
 
-/** The Yes/No radio pair asking whether the sole previously used port is still correct for this leg of the
- *  trip (see [PortSelectionStepContent]'s single-port-confirmation branch). */
+/** The Yes/No radio pair for the single-port confirmation; [question] labels the group for TalkBack. */
 @Composable
 internal fun SinglePortConfirmationOptions(
+    question: String,
     isSelectedYes: Boolean,
     onAnswered: (confirmedYes: Boolean) -> Unit,
     optionTestTagPrefix: String,
@@ -65,6 +65,7 @@ internal fun SinglePortConfirmationOptions(
         selectedOptionId = if (isSelectedYes) "true" else null,
         onOptionSelected = { onAnswered(it == "true") },
         optionTestTagPrefix = optionTestTagPrefix,
+        groupLabel = question,
     )
 }
 

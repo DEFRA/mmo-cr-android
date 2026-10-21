@@ -113,15 +113,16 @@ class CatchRecordFlowViewModel
             ports: List<Port>,
         ): List<Port> = draft?.let { previouslyUsedPortsForVessel(it.vesselId, ports) }.orEmpty()
 
-        /** Prefers the vessel's own submitted-trip history; falls back to reference data if it has none. */
+        /** Prefers the vessel's own submitted-trip history; the reference-data fallback applies only with no history. */
         private suspend fun previouslyUsedPortsForVessel(
             vesselId: String,
             ports: List<Port>,
         ): List<Port> {
-            val portsById = ports.associateBy { it.id }
-            val fromHistory =
-                draftRepository.getPreviouslyUsedPortIds(vesselId).getOrThrow().mapNotNull { portsById[it] }
-            return fromHistory.ifEmpty { referenceDataRepository.getPreviouslyUsedPorts(vesselId).getOrThrow() }
+            val historyIds = draftRepository.getPreviouslyUsedPortIds(vesselId).getOrThrow()
+            if (historyIds.isEmpty()) return referenceDataRepository.getPreviouslyUsedPorts(vesselId).getOrThrow()
+            val knownPorts = ports.ifEmpty { referenceDataRepository.getPorts().getOrThrow() }
+            val portsById = knownPorts.associateBy { it.id }
+            return historyIds.mapNotNull { portsById[it] }
         }
 
         private fun enterFlow() {

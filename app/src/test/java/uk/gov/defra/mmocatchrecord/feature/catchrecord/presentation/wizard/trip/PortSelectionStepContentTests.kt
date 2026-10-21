@@ -1,5 +1,10 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip
 
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -179,6 +184,21 @@ class PortSelectionStepContentTests {
 
         assertTrue(visibilityChanges.first())
         assertFalse(visibilityChanges.last())
+    }
+
+    @Test
+    fun confirmationRadioGroupIsLabelledWithTheQuestionForAssistiveTech() {
+        setContent(initialSelection = null, favouritePorts = listOf(allPorts[0]))
+
+        composeTestRule
+            .onNode(
+                hasContentDescription(
+                    "Was Hastings the port or the closest port you set off from and returned to?",
+                ),
+            ).assertExists()
+        composeTestRule
+            .onNodeWithTag("${DeparturePortScreenTestTags.CONFIRM_OPTION_PREFIX}_0")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton))
     }
 
     @Test

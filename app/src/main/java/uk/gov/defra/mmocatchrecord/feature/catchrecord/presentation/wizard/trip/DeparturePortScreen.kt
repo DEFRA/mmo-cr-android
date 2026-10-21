@@ -221,6 +221,7 @@ fun PortSelectionStepContent(
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
         if (isSinglePortConfirmation && onlyFavourite != null) {
             SinglePortConfirmationOptions(
+                question = stringResource(R.string.port_selection_confirm_title, onlyFavourite.name),
                 isSelectedYes = selectedFavouriteId == onlyFavourite.id,
                 onAnswered = { confirmedYes ->
                     if (confirmedYes) selectedFavouriteId = onlyFavourite.id else showSearch = true
