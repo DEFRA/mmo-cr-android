@@ -214,17 +214,17 @@ fun PortSelectionStepContent(
     LaunchedEffect(isDirty) { onDirtyChanged(isDirty) }
     // A single previously used port gets a Yes/No confirmation instead of a one-option list;
     // "No" reveals the normal search field.
-    val onlyFavourite = favouritePorts.singleOrNull()
-    val isSinglePortConfirmation = !showSearch && onlyFavourite != null
+    val confirmationPort = favouritePorts.singleOrNull()?.takeIf { !showSearch }
+    val isSinglePortConfirmation = confirmationPort != null
     LaunchedEffect(isSinglePortConfirmation) { onShowingPortConfirmationChanged(isSinglePortConfirmation) }
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-        if (isSinglePortConfirmation && onlyFavourite != null) {
+        if (confirmationPort != null) {
             SinglePortConfirmationOptions(
-                question = stringResource(R.string.port_selection_confirm_title, onlyFavourite.name),
-                isSelectedYes = selectedFavouriteId == onlyFavourite.id,
+                question = stringResource(R.string.port_selection_confirm_title, confirmationPort.name),
+                isSelectedYes = selectedFavouriteId == confirmationPort.id,
                 onAnswered = { confirmedYes ->
-                    if (confirmedYes) selectedFavouriteId = onlyFavourite.id else showSearch = true
+                    if (confirmedYes) selectedFavouriteId = confirmationPort.id else showSearch = true
                     showError = false
                 },
                 optionTestTagPrefix = confirmOptionPrefix,
@@ -275,7 +275,7 @@ fun PortSelectionStepContent(
             )
         }
         // Mirrors TripTodayScreen: hide "Save and continue" until the Yes/No question is answered.
-        if (!isSinglePortConfirmation || selectedFavouriteId == onlyFavourite?.id) {
+        if (confirmationPort == null || selectedFavouriteId == confirmationPort.id) {
             PrimaryActionButton(
                 text = stringResource(R.string.save_and_continue),
                 onClick = {
@@ -362,7 +362,7 @@ fun DeparturePortScreen_FavouritesPreview() {
 @Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
 @Suppress("FunctionNaming")
 @Composable
-fun DeparturePortScreen_ConfirmPreviousPortPreview() {
+fun DeparturePortScreenConfirmPreviousPortPreview() {
     val samplePorts = listOf(Port("port-hastings", "Hastings", "AREA-HASTINGS"))
     val sampleDraft =
         CatchRecordDraft(

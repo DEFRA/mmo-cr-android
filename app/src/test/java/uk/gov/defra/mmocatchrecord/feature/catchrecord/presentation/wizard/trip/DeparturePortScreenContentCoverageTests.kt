@@ -4,6 +4,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
@@ -199,5 +201,19 @@ class DeparturePortScreenContentCoverageTests {
                 DeparturePortScreen_ErrorPreview()
             }
         }
+    }
+
+    @Test
+    fun theConfirmPreviousPortPreviewShowsTheQuestionAsTheTitle() {
+        composeTestRule.setContent {
+            CompositionLocalProvider(LocalInspectionMode provides true) {
+                DeparturePortScreenConfirmPreviousPortPreview()
+            }
+        }
+
+        composeTestRule
+            .onAllNodesWithText("Was Hastings the port or the closest port you set off from and returned to?")
+            .onFirst()
+            .assertIsDisplayed()
     }
 }
