@@ -13,6 +13,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import java.time.LocalDate
 
 /**
  * Compose @Preview harnesses for the reusable GOV.UK design-system components. Preview-only â€”
@@ -113,17 +114,26 @@ fun GdsRadioGroupPreview() {
     }
 }
 
-@Preview(name = "Date input", showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Preview(name = "Date wheel picker", showBackground = true, backgroundColor = 0xFFFFFFFF)
 @Suppress("FunctionNaming")
 @Composable
-fun GdsDateInputPreview() {
+fun GdsDateWheelPickerPreview() {
     MmoTheme {
-        GdsDateInput(
-            value = GdsDateInputValue(day = "11", month = "09", year = "2026"),
-            onValueChange = {},
-            dayTestTag = "preview_day",
-            monthTestTag = "preview_month",
-            yearTestTag = "preview_year",
+        var value by remember { mutableStateOf(LocalDate.of(2026, 1, 31)) }
+        GdsDateWheelPicker(
+            value = value,
+            onValueChange = { value = it },
+            yearRange = 2025..2027,
+            onConfirm = {},
+            onCancel = {},
+            testTags =
+                GdsDateWheelPickerTestTags(
+                    monthWheel = "preview_month",
+                    dayWheel = "preview_day",
+                    yearWheel = "preview_year",
+                    okAction = "preview_ok",
+                    cancelAction = "preview_cancel",
+                ),
             modifier = Modifier.padding(Spacing.m),
         )
     }

@@ -10,25 +10,23 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.GdsRadioGroup
 import uk.gov.defra.mmocatchrecord.common.design.GdsRadioOption
-import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
+import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Vessel
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordFlowEvent
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordFlowViewModel
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordWizardScaffold
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardStep
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.catchRecordReference
 
 object VesselSelectionScreenTestTags {
     const val SCREEN = "vessel_selection_screen"
     const val OPTION_PREFIX = "vessel_selection_option"
-    const val SAVE_ACTION = "vessel_selection_save_action"
 }
 
 @Suppress("FunctionNaming")
@@ -45,7 +43,6 @@ fun VesselSelectionScreen(
         title = stringResource(R.string.vessel_selection_title),
         onBack = onBack,
         modifier = modifier,
-        referenceNumber = state.catchRecordReference,
     ) {
         VesselSelectionScreenContent(
             vessels = state.vessels,
@@ -70,15 +67,23 @@ fun VesselSelectionScreenContent(
         GdsRadioGroup(
             options = vessels.map { GdsRadioOption(it.id, it.name) },
             selectedOptionId = selectedVesselId,
-            onOptionSelected = { selectedVesselId = it },
+            onOptionSelected = {
+                selectedVesselId = it
+                onSubmit(it)
+            },
             optionTestTagPrefix = VesselSelectionScreenTestTags.OPTION_PREFIX,
         )
-        selectedVesselId?.let { vesselId ->
-            PrimaryActionButton(
-                text = stringResource(R.string.save_and_continue),
-                onClick = { onSubmit(vesselId) },
-                modifier = Modifier.testTag(VesselSelectionScreenTestTags.SAVE_ACTION),
-            )
-        }
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Suppress("FunctionNaming")
+@Composable
+fun VesselSelectionScreenContentPreview() {
+    MmoTheme {
+        VesselSelectionScreenContent(
+            vessels = listOf(Vessel("vessel-achilles", "ACHILLES"), Vessel("vessel-hercules", "HERCULES")),
+            onSubmit = {},
+        )
     }
 }

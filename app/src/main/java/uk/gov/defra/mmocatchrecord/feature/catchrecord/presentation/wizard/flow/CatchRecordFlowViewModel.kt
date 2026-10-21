@@ -213,22 +213,37 @@ class CatchRecordFlowViewModel
             launchInViewModelScope {
                 runCatching {
                     val existingDraft = draftRepository.getActiveDraft(vesselId).getOrThrow()
-                    val draft = existingDraft ?: newUnpersistedDraftCandidate(vesselId)
+                    val draft = existingDraft ?: startNewDraft(vesselId)
                     val previouslyUsedPorts = referenceDataRepository.getPreviouslyUsedPorts(vesselId).getOrThrow()
                     val vesselLength = currentState.vessels.firstOrNull { it.id == vesselId }?.lengthOverallMetres
                     val gearTypes = referenceDataRepository.getGearTypes(vesselLength).getOrThrow()
-                    emitLoadedDraft(draft, WizardStep.TripToday, previouslyUsedPorts, existingDraft != null, gearTypes)
+                    emitLoadedDraft(
+                        draft,
+                        WizardStep.TripToday,
+                        previouslyUsedPorts,
+                        isDraftPersisted = true,
+                        gearTypes,
+                    )
                 }.onFailure { emitLoadError(CatchRecordFlowEvent.VesselSelected(vesselId), it) }
             }
         }
 
-        /** BR-XX: builds an unpersisted candidate — no database write until "Save and continue". */
-        private fun newUnpersistedDraftCandidate(vesselId: String): CatchRecordDraft =
-            CatchRecordDraftFactory.newDraft(
-                vesselId = vesselId,
-                id = idFactory(),
-                reference = CatchRecordReferenceGenerator.generate(clock()),
-            )
+        /**
+         * Persists a brand-new draft candidate the moment a vessel is chosen (race-safe via
+         * [CatchRecordDraftRepository.startDraft]), so the selection survives a back-navigation or app exit
+         * before the user answers a later wizard question — fixes a data-loss bug where an abandoned
+         * selection was silently discarded. This supersedes ADR 0014's original BR-XX deferral, which only
+         * persisted on the *next* step's "Save and continue"; see that ADR for the superseded rationale.
+         */
+        private suspend fun startNewDraft(vesselId: String): CatchRecordDraft =
+            draftRepository
+                .startDraft(
+                    CatchRecordDraftFactory.newDraft(
+                        vesselId = vesselId,
+                        id = idFactory(),
+                        reference = CatchRecordReferenceGenerator.generate(clock()),
+                    ),
+                ).getOrThrow()
 
         private fun tripTodayAnswered(isTripToday: Boolean) {
             val draft = currentDraftOrNull() ?: return

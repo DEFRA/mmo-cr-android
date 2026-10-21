@@ -214,6 +214,7 @@ fun NotLandedStraightAwaySpeciesScreen(
                     onRetry = { viewModel.dispatch(CatchRecordFlowEvent.Retry) },
                 )
             is UiStatus.Content ->
+                @Suppress("AssignedValueIsNeverRead")
                 NotLandedStraightAwaySpeciesScreenContent(
                     draft = status.value,
                     speciesList = state.species,

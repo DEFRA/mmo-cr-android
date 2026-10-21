@@ -45,7 +45,6 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.gov.defra.mmocatchrecord.R
-import uk.gov.defra.mmocatchrecord.common.design.AppLanguageProvider
 import uk.gov.defra.mmocatchrecord.common.design.CustomWarningIcon
 import uk.gov.defra.mmocatchrecord.common.design.GdsTopAppBar
 import uk.gov.defra.mmocatchrecord.common.design.MmoBottomNavigationBar
@@ -188,45 +187,43 @@ fun CatchRecordWizardScaffold(
         if (unsavedChanges.hasUnsavedChanges) pendingLeaveTarget.value = tab else onNavigateToTab(tab)
     }
 
-    AppLanguageProvider(language = scaffoldState.currentLanguage) {
-        Scaffold(
-            topBar = {
-                GdsTopAppBar(
-                    currentLanguage = scaffoldState.currentLanguage,
-                    onLanguageToggle = scaffoldState.onLanguageToggle,
-                    onBackClick = attemptBack,
-                )
-            },
-            bottomBar = {
-                // selectedItem is always "none" — the wizard isn't any of the three Home-shell tabs.
-                MmoBottomNavigationBar(selectedItem = WIZARD_BACK_LEAVE_TARGET, onItemClick = attemptNavigateToTab)
-            },
-            modifier = modifier.fillMaxSize().testTag(screenTestTag),
-        ) { innerPadding ->
-            Column(
-                // innerPadding (which now reserves space for the bottom nav bar) must be applied before
-                // verticalScroll, or the scrollable viewport stays full-screen and scrolled content can
-                // render behind the bottom bar, swallowing its clicks.
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .background(
-                            MmoColors.White,
-                        ).padding(innerPadding)
-                        .verticalScroll(scrollState)
-                        .padding(Spacing.m),
-                verticalArrangement = Arrangement.spacedBy(Spacing.m),
-            ) {
-                if (scaffoldState.isOffline) {
-                    OfflineBanner()
-                }
-                WizardTitleSection(title, referenceNumber, screenTestTag)
-                content()
-                RoyalCrestFooter(testTag = "${screenTestTag}_royal_crest")
+    Scaffold(
+        topBar = {
+            GdsTopAppBar(
+                currentLanguage = scaffoldState.currentLanguage,
+                onLanguageToggle = scaffoldState.onLanguageToggle,
+                onBackClick = attemptBack,
+            )
+        },
+        bottomBar = {
+            // selectedItem is always "none" — the wizard isn't any of the three Home-shell tabs.
+            MmoBottomNavigationBar(selectedItem = WIZARD_BACK_LEAVE_TARGET, onItemClick = attemptNavigateToTab)
+        },
+        modifier = modifier.fillMaxSize().testTag(screenTestTag),
+    ) { innerPadding ->
+        Column(
+            // innerPadding (which now reserves space for the bottom nav bar) must be applied before
+            // verticalScroll, or the scrollable viewport stays full-screen and scrolled content can
+            // render behind the bottom bar, swallowing its clicks.
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(
+                        MmoColors.White,
+                    ).padding(innerPadding)
+                    .verticalScroll(scrollState)
+                    .padding(Spacing.m),
+            verticalArrangement = Arrangement.spacedBy(Spacing.m),
+        ) {
+            if (scaffoldState.isOffline) {
+                OfflineBanner()
             }
+            WizardTitleSection(title, referenceNumber, screenTestTag)
+            content()
+            RoyalCrestFooter(testTag = "${screenTestTag}_royal_crest")
         }
-        WizardUnsavedChangesDialogHost(pendingLeaveTarget, unsavedChanges, onBack, onNavigateToTab)
     }
+    WizardUnsavedChangesDialogHost(pendingLeaveTarget, unsavedChanges, onBack, onNavigateToTab)
 }
 
 /** Renders [title] (and the optional [referenceNumber] caption above it) when [title] is non-blank — see the doc comment on [CatchRecordWizardScaffold] for when it's blank. */

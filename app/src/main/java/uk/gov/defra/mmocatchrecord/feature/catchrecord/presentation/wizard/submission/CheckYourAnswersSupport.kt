@@ -189,10 +189,11 @@ object CheckYourAnswersSupport {
                     changeGearUseId = gearUse.id,
                 )
         }
+        // No `heading` here: the gear name is already shown by the GearType row above, so a heading
+        // would only ever duplicate it verbatim — the row (with its own "Change" link) is authoritative.
         return CheckYourAnswersSection(
             kind = CheckYourAnswersSectionKind.GearUsed,
             rows = rows,
-            heading = displayGearNameFor(gearUse, gearTypes),
         )
     }
 

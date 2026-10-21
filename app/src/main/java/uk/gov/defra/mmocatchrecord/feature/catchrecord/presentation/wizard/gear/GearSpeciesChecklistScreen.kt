@@ -101,6 +101,7 @@ fun GearSpeciesChecklistScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var hasUnsavedChanges by rememberSaveable { mutableStateOf(false) }
+    @Suppress("AssignedValueIsNeverRead")
     GearSpeciesChecklistScreen(
         state = state,
         editGearUseId = editGearUseId,

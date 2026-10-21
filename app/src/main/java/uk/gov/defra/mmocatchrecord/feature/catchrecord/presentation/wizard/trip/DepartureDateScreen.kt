@@ -24,11 +24,26 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 object DepartureDateScreenTestTags {
     const val SCREEN = "departure_date_screen"
     const val ERROR_SUMMARY = "departure_date_error_summary"
-    const val DAY_FIELD = "departure_date_day_field"
-    const val MONTH_FIELD = "departure_date_month_field"
-    const val YEAR_FIELD = "departure_date_year_field"
+    const val MONTH_WHEEL = "departure_date_month_wheel"
+    const val DAY_WHEEL = "departure_date_day_wheel"
+    const val YEAR_WHEEL = "departure_date_year_wheel"
+    const val OK_ACTION = "departure_date_ok_action"
+    const val CANCEL_ACTION = "departure_date_cancel_action"
+    const val CONFIRMED_DATE = "departure_date_confirmed_date"
     const val SAVE_ACTION = "departure_date_save_action"
     const val ERROR_MESSAGE = "departure_date_error_message"
+
+    val stepTags =
+        WizardDateStepTestTags(
+            summary = ERROR_SUMMARY,
+            monthWheel = MONTH_WHEEL,
+            dayWheel = DAY_WHEEL,
+            yearWheel = YEAR_WHEEL,
+            okAction = OK_ACTION,
+            cancelAction = CANCEL_ACTION,
+            saveAction = SAVE_ACTION,
+            confirmedDate = CONFIRMED_DATE,
+        )
 }
 
 @Suppress("FunctionNaming")
@@ -59,16 +74,10 @@ fun DepartureDateScreen(
                     onRetry = { viewModel.dispatch(CatchRecordFlowEvent.Retry) },
                 )
             is UiStatus.Content ->
+                @Suppress("AssignedValueIsNeverRead")
                 WizardDateStepContent(
                     initialDate = status.value.departureDate,
-                    testTags =
-                        WizardDateStepTestTags(
-                            summary = DepartureDateScreenTestTags.ERROR_SUMMARY,
-                            dayField = DepartureDateScreenTestTags.DAY_FIELD,
-                            monthField = DepartureDateScreenTestTags.MONTH_FIELD,
-                            yearField = DepartureDateScreenTestTags.YEAR_FIELD,
-                            saveAction = DepartureDateScreenTestTags.SAVE_ACTION,
-                        ),
+                    testTags = DepartureDateScreenTestTags.stepTags,
                     onSubmit = { date ->
                         viewModel.dispatch(
                             CatchRecordFlowEvent.SaveAndContinue(
