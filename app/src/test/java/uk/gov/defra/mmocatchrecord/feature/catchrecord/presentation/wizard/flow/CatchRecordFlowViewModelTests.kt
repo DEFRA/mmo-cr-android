@@ -163,6 +163,45 @@ class CatchRecordFlowViewModelTests {
         }
 
     @Test
+    fun `selecting a vessel uses its submitted trip history for previously used ports`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-past" })
+            val past = repository.startDraft("vessel-hercules").getOrThrow()
+            repository.saveDraft(past.asSubmissionReady().copy(status = DraftStatus.Submitted)).getOrThrow()
+            val viewModel =
+                buildViewModel(repository = repository, idFactory = { "draft-new" }, dispatcher = dispatcher)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            testScheduler.advanceUntilIdle()
+
+            viewModel.dispatch(CatchRecordFlowEvent.VesselSelected("vessel-hercules"))
+            testScheduler.advanceUntilIdle()
+
+            val state = viewModel.state.value
+            assertEquals(listOf("port-hastings"), state.previouslyUsedPorts.map { it.id })
+            assertEquals(DeparturePortEntryMode.FavouriteList, state.departurePortEntryMode)
+        }
+
+    @Test
+    fun `selecting a vessel with no trip history falls back to reference data previously used ports`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository()
+            val viewModel = buildViewModel(repository = repository, dispatcher = dispatcher)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            testScheduler.advanceUntilIdle()
+
+            viewModel.dispatch(CatchRecordFlowEvent.VesselSelected("vessel-achilles"))
+            testScheduler.advanceUntilIdle()
+
+            assertEquals(
+                listOf("port-hastings", "port-dover"),
+                viewModel.state.value.previouslyUsedPorts
+                    .map { it.id },
+            )
+        }
+
+    @Test
     fun `enter flow with active draft goes to draft resume`() =
         runTest {
             val dispatcher = StandardTestDispatcher(testScheduler)

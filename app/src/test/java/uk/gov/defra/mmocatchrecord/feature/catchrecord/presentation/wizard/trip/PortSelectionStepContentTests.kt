@@ -31,7 +31,9 @@ class PortSelectionStepContentTests {
     private fun setContent(
         initialSelection: PortSelection?,
         favouritePorts: List<Port>,
-        onDirtyChanged: (Boolean) -> Unit,
+        onDirtyChanged: (Boolean) -> Unit = {},
+        onSubmit: (PortSelection) -> Unit = {},
+        onShowingPortConfirmationChanged: (Boolean) -> Unit = {},
     ) {
         composeTestRule.setContent {
             MmoTheme {
@@ -45,11 +47,13 @@ class PortSelectionStepContentTests {
                     suggestionPrefix = DeparturePortScreenTestTags.SUGGESTION_PREFIX,
                     noMatchesTag = DeparturePortScreenTestTags.NO_MATCHES,
                     optionPrefix = DeparturePortScreenTestTags.FAVOURITE_OPTION_PREFIX,
+                    confirmOptionPrefix = DeparturePortScreenTestTags.CONFIRM_OPTION_PREFIX,
                     addPortTag = DeparturePortScreenTestTags.ADD_PORT_ACTION,
                     saveTag = DeparturePortScreenTestTags.SAVE_ACTION,
                     errorTag = DeparturePortScreenTestTags.ERROR_MESSAGE,
-                    onSubmit = {},
+                    onSubmit = onSubmit,
                     onDirtyChanged = onDirtyChanged,
+                    onShowingPortConfirmationChanged = onShowingPortConfirmationChanged,
                 )
             }
         }
@@ -111,5 +115,77 @@ class PortSelectionStepContentTests {
         composeTestRule.waitForIdle()
 
         assertFalse(lastDirty)
+    }
+
+    @Test
+    fun singleFavouriteRendersConfirmationNotFavouritesList() {
+        setContent(initialSelection = null, favouritePorts = listOf(allPorts[0]))
+
+        composeTestRule.onNodeWithTag("${DeparturePortScreenTestTags.CONFIRM_OPTION_PREFIX}_0").assertExists()
+        composeTestRule.onNodeWithTag("${DeparturePortScreenTestTags.FAVOURITE_OPTION_PREFIX}_0").assertDoesNotExist()
+    }
+
+    @Test
+    fun confirmationYesSubmitsTheSoleFavouriteAsFavouriteSelection() {
+        var submitted: PortSelection? = null
+        setContent(
+            initialSelection = null,
+            favouritePorts = listOf(allPorts[0]),
+            onSubmit = { submitted = it },
+        )
+
+        composeTestRule.onNodeWithTag("${DeparturePortScreenTestTags.CONFIRM_OPTION_PREFIX}_0").performClick()
+        composeTestRule.onNodeWithTag(DeparturePortScreenTestTags.SAVE_ACTION).performClick()
+        composeTestRule.waitForIdle()
+
+        assertTrue(submitted == PortSelection(allPorts[0].id, PortSelectionMode.Favourite))
+    }
+
+    @Test
+    fun confirmationNoRevealsTheSearchFieldAndHidesConfirmation() {
+        setContent(initialSelection = null, favouritePorts = listOf(allPorts[0]))
+
+        composeTestRule.onNodeWithTag("${DeparturePortScreenTestTags.CONFIRM_OPTION_PREFIX}_1").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag(DeparturePortScreenTestTags.AUTOCOMPLETE_FIELD).assertExists()
+        composeTestRule.onNodeWithTag("${DeparturePortScreenTestTags.CONFIRM_OPTION_PREFIX}_0").assertDoesNotExist()
+    }
+
+    @Test
+    fun saveButtonIsHiddenUntilTheConfirmationIsAnswered() {
+        setContent(initialSelection = null, favouritePorts = listOf(allPorts[0]))
+
+        composeTestRule.onNodeWithTag(DeparturePortScreenTestTags.SAVE_ACTION).assertDoesNotExist()
+
+        composeTestRule.onNodeWithTag("${DeparturePortScreenTestTags.CONFIRM_OPTION_PREFIX}_0").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag(DeparturePortScreenTestTags.SAVE_ACTION).assertExists()
+    }
+
+    @Test
+    fun reportsConfirmationVisibilityAndClearsItOnceSearchIsRevealed() {
+        val visibilityChanges = mutableListOf<Boolean>()
+        setContent(
+            initialSelection = null,
+            favouritePorts = listOf(allPorts[0]),
+            onShowingPortConfirmationChanged = { visibilityChanges.add(it) },
+        )
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("${DeparturePortScreenTestTags.CONFIRM_OPTION_PREFIX}_1").performClick()
+        composeTestRule.waitForIdle()
+
+        assertTrue(visibilityChanges.first())
+        assertFalse(visibilityChanges.last())
+    }
+
+    @Test
+    fun twoOrMoreFavouritesStillRenderTheFavouritesListNotConfirmation() {
+        setContent(initialSelection = null, favouritePorts = allPorts)
+
+        composeTestRule.onNodeWithTag("${DeparturePortScreenTestTags.FAVOURITE_OPTION_PREFIX}_0").assertExists()
+        composeTestRule.onNodeWithTag("${DeparturePortScreenTestTags.CONFIRM_OPTION_PREFIX}_0").assertDoesNotExist()
     }
 }

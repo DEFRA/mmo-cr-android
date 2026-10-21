@@ -100,6 +100,41 @@ class RoomCatchRecordDraftRepositoryTests {
         }
 
     @Test
+    fun `previously used port ids come from submitted trips only, most recent first and distinct`() =
+        runTest {
+            val older = repository.startDraft("vessel-achilles").getOrThrow()
+            repository
+                .saveDraft(
+                    older.copy(
+                        status = DraftStatus.Submitted,
+                        departurePort = PortSelection("port-dover", PortSelectionMode.FirstTime),
+                        returnPort = PortSelection("port-hastings", PortSelectionMode.FirstTime),
+                    ),
+                ).getOrThrow()
+            clockMillis = 2_000L
+            val newer = repository.startDraft("vessel-achilles").getOrThrow()
+            repository
+                .saveDraft(
+                    newer.copy(
+                        status = DraftStatus.PendingSync,
+                        departurePort = PortSelection("port-hastings", PortSelectionMode.FirstTime),
+                        returnPort = PortSelection("port-hastings", PortSelectionMode.FirstTime),
+                    ),
+                ).getOrThrow()
+            clockMillis = 3_000L
+            val active = repository.startDraft("vessel-achilles").getOrThrow()
+            repository
+                .saveDraft(active.copy(departurePort = PortSelection("port-active", PortSelectionMode.FirstTime)))
+                .getOrThrow()
+
+            assertEquals(
+                listOf("port-hastings", "port-dover"),
+                repository.getPreviouslyUsedPortIds("vessel-achilles").getOrThrow(),
+            )
+            assertEquals(emptyList<String>(), repository.getPreviouslyUsedPortIds("vessel-hercules").getOrThrow())
+        }
+
+    @Test
     fun `getActiveDraft returns null when the vessel has no active draft`() =
         runTest {
             val result = repository.getActiveDraft("vessel-with-no-draft")

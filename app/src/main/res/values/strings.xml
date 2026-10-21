@@ -106,6 +106,7 @@
     <string name="date_error_return_before_departure">Return date must be on or after the departure date</string>
     <string name="departure_port_title">Enter the port or closest port you set off from</string>
     <string name="return_port_title">Which port or closest port did you return to?</string>
+    <string name="port_selection_confirm_title">Was %1$s the port or the closest port you set off from and returned to?</string>
     <string name="autocomplete_search_placeholder">Type to search (minimum 2 characters)</string>
     <string name="add_port">Add port</string>
     <string name="port_selection_error">Select a port or choose one from the list</string>

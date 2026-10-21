@@ -20,13 +20,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.AppLanguageProvider
-import uk.gov.defra.mmocatchrecord.common.design.GdsAutocompleteField
-import uk.gov.defra.mmocatchrecord.common.design.GdsAutocompleteOption
-import uk.gov.defra.mmocatchrecord.common.design.GdsRadioGroup
-import uk.gov.defra.mmocatchrecord.common.design.GdsRadioOption
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
-import uk.gov.defra.mmocatchrecord.common.design.SecondaryActionButton
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
@@ -48,6 +43,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 object DeparturePortScreenTestTags {
     const val SCREEN = "departure_port_screen"
     const val FAVOURITE_OPTION_PREFIX = "departure_port_favourite_option"
+    const val CONFIRM_OPTION_PREFIX = "departure_port_confirm_option"
     const val AUTOCOMPLETE_FIELD = "departure_port_autocomplete_field"
     const val LIVE_REGION = "departure_port_live_region"
     const val SUGGESTION_PREFIX = "departure_port_suggestion"
@@ -93,9 +89,12 @@ private fun DeparturePortScreen(
     hasUnsavedChanges: Boolean = false,
     onDirtyChanged: (Boolean) -> Unit = {},
 ) {
+    val favouritePorts = state.previouslyUsedPorts
+    val initialDeparturePort = (state.status as? UiStatus.Content)?.value?.departurePort
+    var showingPortConfirmation by rememberPortConfirmationVisible(favouritePorts, initialDeparturePort)
     CatchRecordWizardScaffold(
         screenTestTag = DeparturePortScreenTestTags.SCREEN,
-        title = stringResource(R.string.departure_port_title),
+        title = portSelectionScaffoldTitle(showingPortConfirmation, favouritePorts, R.string.departure_port_title),
         onBack = onBack,
         modifier = modifier,
         referenceNumber = state.catchRecordReference,
@@ -114,15 +113,16 @@ private fun DeparturePortScreen(
                 DeparturePortScreenContent(
                     draft = status.value,
                     allPorts = state.ports,
-                    favouritePorts = state.previouslyUsedPorts,
+                    favouritePorts = favouritePorts,
                     onSubmit = onSubmit,
                     onDirtyChanged = onDirtyChanged,
+                    onShowingPortConfirmationChanged = { showingPortConfirmation = it },
                 )
         }
     }
 }
 
-@Suppress("FunctionNaming")
+@Suppress("FunctionNaming", "LongParameterList")
 @Composable
 fun DeparturePortScreenContent(
     draft: CatchRecordDraft,
@@ -131,6 +131,7 @@ fun DeparturePortScreenContent(
     onSubmit: (CatchRecordDraft) -> Unit,
     modifier: Modifier = Modifier,
     onDirtyChanged: (Boolean) -> Unit = {},
+    onShowingPortConfirmationChanged: (Boolean) -> Unit = {},
 ) {
     PortSelectionStepContent(
         modifier = modifier,
@@ -143,11 +144,13 @@ fun DeparturePortScreenContent(
         suggestionPrefix = DeparturePortScreenTestTags.SUGGESTION_PREFIX,
         noMatchesTag = DeparturePortScreenTestTags.NO_MATCHES,
         optionPrefix = DeparturePortScreenTestTags.FAVOURITE_OPTION_PREFIX,
+        confirmOptionPrefix = DeparturePortScreenTestTags.CONFIRM_OPTION_PREFIX,
         addPortTag = DeparturePortScreenTestTags.ADD_PORT_ACTION,
         saveTag = DeparturePortScreenTestTags.SAVE_ACTION,
         errorTag = DeparturePortScreenTestTags.ERROR_MESSAGE,
         onSubmit = { selection -> onSubmit(draft.copy(departurePort = selection)) },
         onDirtyChanged = onDirtyChanged,
+        onShowingPortConfirmationChanged = onShowingPortConfirmationChanged,
     )
 }
 
@@ -168,7 +171,9 @@ fun PortSelectionStepContent(
     errorTag: String,
     onSubmit: (PortSelection) -> Unit,
     modifier: Modifier = Modifier,
+    confirmOptionPrefix: String = "",
     onDirtyChanged: (Boolean) -> Unit = {},
+    onShowingPortConfirmationChanged: (Boolean) -> Unit = {},
 ) {
     val initialPortName =
         remember(initialSelection, allPorts) {
@@ -207,37 +212,49 @@ fun PortSelectionStepContent(
     // (see D3 scope) can hold genuinely uncommitted input.
     val isDirty = showSearch && !searchQuery.trim().equals(initialPortName.trim(), ignoreCase = true)
     LaunchedEffect(isDirty) { onDirtyChanged(isDirty) }
+    // A single previously used port gets a Yes/No confirmation instead of a one-option list;
+    // "No" reveals the normal search field.
+    val onlyFavourite = favouritePorts.singleOrNull()
+    val isSinglePortConfirmation = !showSearch && onlyFavourite != null
+    LaunchedEffect(isSinglePortConfirmation) { onShowingPortConfirmationChanged(isSinglePortConfirmation) }
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-        if (!showSearch && favouritePorts.isNotEmpty()) {
-            GdsRadioGroup(
-                options = favouritePorts.map { GdsRadioOption(it.id, it.name) },
-                selectedOptionId = selectedFavouriteId,
+        if (isSinglePortConfirmation && onlyFavourite != null) {
+            SinglePortConfirmationOptions(
+                isSelectedYes = selectedFavouriteId == onlyFavourite.id,
+                onAnswered = { confirmedYes ->
+                    if (confirmedYes) selectedFavouriteId = onlyFavourite.id else showSearch = true
+                    showError = false
+                },
+                optionTestTagPrefix = confirmOptionPrefix,
+            )
+        } else if (!showSearch && favouritePorts.isNotEmpty()) {
+            PortSelectionFavouritesList(
+                favouritePorts = favouritePorts,
+                selectedFavouriteId = selectedFavouriteId,
                 onOptionSelected = {
                     selectedFavouriteId = it
                     showError = false
                 },
-                optionTestTagPrefix = optionPrefix,
-            )
-            SecondaryActionButton(
-                text = stringResource(R.string.add_port),
-                onClick = {
+                onAddPort = {
                     showSearch = true
                     showError = false
                 },
-                modifier = Modifier.testTag(addPortTag),
+                optionTestTagPrefix = optionPrefix,
+                addPortTag = addPortTag,
             )
         } else {
-            GdsAutocompleteField(
-                placeholder = autocompletePlaceholder,
-                value = searchQuery,
-                options = suggestions.map { GdsAutocompleteOption(it.id, it.name) },
-                onValueChange = {
-                    searchQuery = it
-                    selectedSearchId = allPorts.firstOrNull { port -> port.name.equals(it, ignoreCase = true) }?.id
+            PortSelectionSearchField(
+                autocompletePlaceholder = autocompletePlaceholder,
+                allPorts = allPorts,
+                suggestions = suggestions,
+                searchQuery = searchQuery,
+                onQueryChanged = { query, matchedPortId ->
+                    searchQuery = query
+                    selectedSearchId = matchedPortId
                     showError = false
                 },
-                onOptionSelected = {
+                onSuggestionSelected = {
                     searchQuery = it.label
                     selectedSearchId = it.id
                     showError = false
@@ -256,23 +273,21 @@ fun PortSelectionStepContent(
                 modifier = Modifier.testTag(errorTag),
             )
         }
-        PrimaryActionButton(
-            text = stringResource(R.string.save_and_continue),
-            onClick = {
-                val selection =
-                    if (showSearch) {
-                        selectedSearchId?.let { PortSelection(it, PortSelectionMode.FirstTime) }
+        // Mirrors TripTodayScreen: hide "Save and continue" until the Yes/No question is answered.
+        if (!isSinglePortConfirmation || selectedFavouriteId == onlyFavourite?.id) {
+            PrimaryActionButton(
+                text = stringResource(R.string.save_and_continue),
+                onClick = {
+                    val selection = resolvePortSelection(showSearch, selectedSearchId, selectedFavouriteId)
+                    if (selection == null) {
+                        showError = true
                     } else {
-                        selectedFavouriteId?.let { PortSelection(it, PortSelectionMode.Favourite) }
+                        onSubmit(selection)
                     }
-                if (selection == null) {
-                    showError = true
-                } else {
-                    onSubmit(selection)
-                }
-            },
-            modifier = Modifier.testTag(saveTag),
-        )
+                },
+                modifier = Modifier.testTag(saveTag),
+            )
+        }
     }
 }
 
@@ -318,6 +333,36 @@ fun DeparturePortScreen_FavouritesPreview() {
             Port("port-hastings", "Hastings", "AREA-HASTINGS"),
             Port("port-dover", "Dover", "AREA-DOVER"),
         )
+    val sampleDraft =
+        CatchRecordDraft(
+            id = "draft-1",
+            vesselId = "vessel-1",
+            modifiedAtEpochMillis = 1605830400000L,
+            status = DraftStatus.Draft,
+        )
+    val state =
+        CatchRecordFlowViewState(
+            status = UiStatus.Content(sampleDraft),
+            ports = samplePorts,
+            previouslyUsedPorts = samplePorts,
+            departurePortEntryMode = DeparturePortEntryMode.FavouriteList,
+        )
+    MmoTheme {
+        AppLanguageProvider(language = "en") {
+            DeparturePortScreen(
+                state = state,
+                onSubmit = {},
+                onBack = {},
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Suppress("FunctionNaming")
+@Composable
+fun DeparturePortScreen_ConfirmPreviousPortPreview() {
+    val samplePorts = listOf(Port("port-hastings", "Hastings", "AREA-HASTINGS"))
     val sampleDraft =
         CatchRecordDraft(
             id = "draft-1",

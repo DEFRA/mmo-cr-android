@@ -43,4 +43,7 @@ interface CatchRecordDraftRepository {
 
     /** Reactive list-projection summaries for the Home records list (CRAR-152 Phase B); excludes Discarded. */
     fun observeRecordSummaries(): Flow<List<CatchRecordSummary>>
+
+    /** Distinct port ids from the vessel's submitted trips, most recent first; empty if it has no history. */
+    suspend fun getPreviouslyUsedPortIds(vesselId: String): Result<List<String>> = Result.success(emptyList())
 }
