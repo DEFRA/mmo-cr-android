@@ -2,24 +2,25 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.subm
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.gov.defra.mmocatchrecord.R
-import uk.gov.defra.mmocatchrecord.common.design.GdsLinkAction
 import uk.gov.defra.mmocatchrecord.common.design.MmoColors
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
@@ -155,26 +156,34 @@ fun LateSubmissionWarningScreenContent(
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-        // No gap here (unlike spacedBy(Spacing.m) below) — GdsLinkAction's own touch-target padding already
-        // supplies separation, so body + link read as one flowing paragraph per the confirmed screenshot.
-        Column {
-            Text(
-                text = stringResource(R.string.late_submission_warning_body),
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                GdsLinkAction(
-                    text = stringResource(R.string.late_submission_warning_check_trip_end_date),
-                    onClick = onCheckTripEndDate,
-                    testTag = LateSubmissionWarningScreenTestTags.CHECK_TRIP_END_DATE_LINK,
-                )
-                Text(
-                    text = " " + stringResource(R.string.late_submission_warning_check_trip_end_date_suffix),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
+    val bodyText = stringResource(R.string.late_submission_warning_body)
+    val linkText = stringResource(R.string.late_submission_warning_check_trip_end_date)
+    val suffixText = stringResource(R.string.late_submission_warning_check_trip_end_date_suffix)
+    val body =
+        buildAnnotatedString {
+            append(bodyText)
+            append(" ")
+            withLink(
+                LinkAnnotation.Clickable(
+                    tag = LateSubmissionWarningScreenTestTags.CHECK_TRIP_END_DATE_LINK,
+                    styles =
+                        TextLinkStyles(
+                            style = SpanStyle(color = MmoColors.Link, textDecoration = TextDecoration.Underline),
+                        ),
+                    linkInteractionListener = { onCheckTripEndDate() },
+                ),
+            ) {
+                append(linkText)
             }
+            append(" ")
+            append(suffixText)
         }
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+        Text(
+            text = body,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.testTag(LateSubmissionWarningScreenTestTags.CHECK_TRIP_END_DATE_LINK),
+        )
         PrimaryActionButton(
             text = stringResource(R.string.save_and_continue),
             onClick = onSubmit,

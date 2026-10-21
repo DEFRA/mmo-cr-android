@@ -10,6 +10,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performFirstLinkClick
 import androidx.compose.ui.test.performScrollTo
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -259,7 +260,7 @@ class SubmissionScreensTests {
 
         composeTestRule
             .onNodeWithTag(LateSubmissionWarningScreenTestTags.CHECK_TRIP_END_DATE_LINK)
-            .performClick()
+            .performFirstLinkClick()
         composeTestRule.onNodeWithTag(LateSubmissionWarningScreenTestTags.SAVE_ACTION).performClick()
 
         assertTrue(checkedTripEndDate)
