@@ -110,8 +110,8 @@ internal class CachingReferenceDataRepository
             )
         }
 
-        /** [stub] is keyed by stub vessel ids only, so a live vessel always (correctly) yields no favourites
-         *  yet — no local source exists (ADR 0016 follow-up: derive from draft/submission history). */
+        /** [stub] is keyed by stub vessel ids only; the view model prefers the vessel's own submitted-trip
+         *  history (see `CatchRecordDraftRepository.getPreviouslyUsedPortIds`) and only falls back to this. */
         override suspend fun getPreviouslyUsedPorts(vesselId: String): Result<List<Port>> =
             stub.getPreviouslyUsedPorts(vesselId)
 

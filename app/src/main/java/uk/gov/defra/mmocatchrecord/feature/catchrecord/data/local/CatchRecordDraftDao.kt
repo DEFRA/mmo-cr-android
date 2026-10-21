@@ -32,6 +32,13 @@ interface CatchRecordDraftDao {
     @Query("SELECT * FROM catch_record_draft WHERE vesselId = :vesselId AND $ACTIVE_STATUSES_CLAUSE LIMIT 1")
     suspend fun findActiveDraftEntity(vesselId: String): DraftEntity?
 
+    @Query(
+        "SELECT departurePortId, returnPortId FROM catch_record_draft " +
+            "WHERE vesselId = :vesselId AND status IN ('PendingSync', 'Submitted') " +
+            "ORDER BY modifiedAtEpochMillis DESC, id DESC",
+    )
+    suspend fun findSubmittedTripPorts(vesselId: String): List<TripPortsRow>
+
     /** App-start reconciliation sweep target rows (CRAR-152 Phase C FR7) — see [CatchRecordSyncSweep]. */
     @Query("SELECT id FROM catch_record_draft WHERE status = 'PendingSync'")
     suspend fun findPendingSyncDraftIds(): List<String>

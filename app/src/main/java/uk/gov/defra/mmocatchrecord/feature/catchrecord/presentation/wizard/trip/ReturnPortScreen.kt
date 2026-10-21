@@ -24,6 +24,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 object ReturnPortScreenTestTags {
     const val SCREEN = "return_port_screen"
     const val FAVOURITE_OPTION_PREFIX = "return_port_favourite_option"
+    const val CONFIRM_OPTION_PREFIX = "return_port_confirm_option"
     const val AUTOCOMPLETE_FIELD = "return_port_autocomplete_field"
     const val LIVE_REGION = "return_port_live_region"
     const val SUGGESTION_PREFIX = "return_port_suggestion"
@@ -43,9 +44,12 @@ fun ReturnPortScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var hasUnsavedChanges by rememberSaveable { mutableStateOf(false) }
+    val favouritePorts = state.previouslyUsedPorts
+    val initialReturnPort = (state.status as? UiStatus.Content)?.value?.returnPort
+    var showingPortConfirmation by rememberPortConfirmationVisible(favouritePorts, initialReturnPort)
     CatchRecordWizardScaffold(
         screenTestTag = ReturnPortScreenTestTags.SCREEN,
-        title = stringResource(R.string.return_port_title),
+        title = portSelectionScaffoldTitle(showingPortConfirmation, favouritePorts, R.string.return_port_title),
         onBack = onBack,
         modifier = modifier,
         referenceNumber = state.catchRecordReference,
@@ -65,13 +69,14 @@ fun ReturnPortScreen(
                 PortSelectionStepContent(
                     initialSelection = status.value.returnPort,
                     allPorts = state.ports,
-                    favouritePorts = state.previouslyUsedPorts,
+                    favouritePorts = favouritePorts,
                     autocompletePlaceholder = stringResource(R.string.autocomplete_search_placeholder),
                     autocompleteFieldTag = ReturnPortScreenTestTags.AUTOCOMPLETE_FIELD,
                     liveRegionTag = ReturnPortScreenTestTags.LIVE_REGION,
                     suggestionPrefix = ReturnPortScreenTestTags.SUGGESTION_PREFIX,
                     noMatchesTag = ReturnPortScreenTestTags.NO_MATCHES,
                     optionPrefix = ReturnPortScreenTestTags.FAVOURITE_OPTION_PREFIX,
+                    confirmOptionPrefix = ReturnPortScreenTestTags.CONFIRM_OPTION_PREFIX,
                     addPortTag = ReturnPortScreenTestTags.ADD_PORT_ACTION,
                     saveTag = ReturnPortScreenTestTags.SAVE_ACTION,
                     errorTag = ReturnPortScreenTestTags.ERROR_MESSAGE,
@@ -85,6 +90,7 @@ fun ReturnPortScreen(
                         onNavigate(WizardStep.GearSearch)
                     },
                     onDirtyChanged = { hasUnsavedChanges = it },
+                    onShowingPortConfirmationChanged = { showingPortConfirmation = it },
                 )
         }
     }

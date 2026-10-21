@@ -302,6 +302,87 @@ class SpeciesWeightValidatorTests {
         assertEquals(SpeciesWeightFieldError.BelowMinimum, result.errors[SpeciesWeightFieldKind.AboveMinimumSize])
     }
 
+    // --- Cross-field: discarded must not exceed retained (AC7) ----------------------------------
+
+    @Test
+    fun `discarded weight exceeding retained weight is rejected with a discarded-exceeds-retained error`() {
+        val result =
+            SpeciesWeightValidator.validateEntry(
+                species = wholeNumberSpecies,
+                rawValuesByField =
+                    mapOf(
+                        SpeciesWeightFieldKind.AboveMinimumSize to "5",
+                        SpeciesWeightFieldKind.LegallyDiscarded to "10",
+                    ),
+            )
+
+        assertEquals(
+            SpeciesWeightFieldError.DiscardedExceedsRetained,
+            result.errors[SpeciesWeightFieldKind.LegallyDiscarded],
+        )
+        assertTrue(!result.isValid)
+    }
+
+    @Test
+    fun `discarded weight equal to retained weight is rejected with a discarded-exceeds-retained error`() {
+        val result =
+            SpeciesWeightValidator.validateEntry(
+                species = wholeNumberSpecies,
+                rawValuesByField =
+                    mapOf(
+                        SpeciesWeightFieldKind.AboveMinimumSize to "5",
+                        SpeciesWeightFieldKind.LegallyDiscarded to "5",
+                    ),
+            )
+
+        assertEquals(
+            SpeciesWeightFieldError.DiscardedExceedsRetained,
+            result.errors[SpeciesWeightFieldKind.LegallyDiscarded],
+        )
+    }
+
+    @Test
+    fun `discarded weight lower than retained weight is valid`() {
+        val result =
+            SpeciesWeightValidator.validateEntry(
+                species = wholeNumberSpecies,
+                rawValuesByField =
+                    mapOf(
+                        SpeciesWeightFieldKind.AboveMinimumSize to "10",
+                        SpeciesWeightFieldKind.LegallyDiscarded to "5",
+                    ),
+            )
+
+        assertTrue(result.isValid)
+    }
+
+    @Test
+    fun `discarded-exceeds-retained check is skipped when the discarded field is not active`() {
+        val result =
+            SpeciesWeightValidator.validateEntry(
+                species = wholeNumberSpecies,
+                rawValuesByField = mapOf(SpeciesWeightFieldKind.AboveMinimumSize to "5"),
+            )
+
+        assertTrue(result.isValid)
+    }
+
+    @Test
+    fun `discarded-exceeds-retained check does not run when a field already failed range or precision validation`() {
+        val result =
+            SpeciesWeightValidator.validateEntry(
+                species = wholeNumberSpecies,
+                rawValuesByField =
+                    mapOf(
+                        SpeciesWeightFieldKind.AboveMinimumSize to "0",
+                        SpeciesWeightFieldKind.LegallyDiscarded to "10",
+                    ),
+            )
+
+        assertEquals(SpeciesWeightFieldError.BelowMinimum, result.errors[SpeciesWeightFieldKind.AboveMinimumSize])
+        assertNull(result.errors[SpeciesWeightFieldKind.LegallyDiscarded])
+    }
+
     // --- Multiple fields / values map behaviour --------------------------------------------------
 
     @Test

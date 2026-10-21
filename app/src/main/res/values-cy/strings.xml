@@ -110,6 +110,7 @@
     <string name="date_error_return_before_departure">Rhaid i’r dyddiad dychwelyd fod ar neu ar ôl y dyddiad gadael</string>
     <string name="departure_port_title">Pa borthladd neu’r porthladd agosaf y gwnaethoch adael ohono?</string>
     <string name="return_port_title">Pa borthladd neu’r porthladd agosaf y gwnaethoch ddychwelyd iddo?</string>
+    <string name="port_selection_confirm_title">Ai %1$s oedd y porthladd neu’r porthladd agosaf y gwnaethoch adael ohono a dychwelyd iddo?</string>
     <string name="autocomplete_search_placeholder">Teipiwch i chwilio (isafswm 2 nod)</string>
     <string name="add_port">Ychwanegu porthladd</string>
     <string name="port_selection_error">Dewiswch borthladd neu ddewiswch un o’r rhestr</string>
@@ -188,6 +189,7 @@
     <string name="species_weight_error_above_maximum">Rhaid i\'r pwysau ar gyfer %1$s fod yn 10,000kg neu lai</string>
     <string name="species_weight_error_whole_number">Rhaid i\'r pwysau ar gyfer %1$s fod yn rif cyfan</string>
     <string name="species_weight_error_one_decimal">Rhaid i\'r pwysau ar gyfer %1$s fod yn rif hyd at 1 lle degol</string>
+    <string name="species_weight_error_discarded_exceeds_retained">Rhaid i\'r pwysau uwchlaw\'r maint lleiaf a gedwir fod yn uwch na\'r pwysau a waredwyd yn gyfreithlon</string>
     <string name="species_weight_error_monthly_quota">Byddai\'r pwysau a nodwyd yn fwy na\'ch cwota ar gyfer y rhywogaeth hon. Nodwch bwysau is.</string>
     <string name="species_weight_error_annual_quota">Byddai\'r pwysau a nodwyd yn fwy na\'ch cwota blynyddol ar gyfer y rhywogaeth hon. Nodwch bwysau is.</string>
     <string name="not_landed_straight_away_decision_title">A oes unrhyw ddaliad o\'r daith hon na fyddwch yn ei lanio ar unwaith?</string>

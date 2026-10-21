@@ -45,7 +45,13 @@ fun GdsNumericField(
             singleLine = true,
             isError = errorText != null,
             shape = RectangleShape,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = imeAction),
+            // Decimal must use KeyboardType.Decimal, not Number, or most on-screen keyboards omit the "." key.
+            keyboardOptions =
+                KeyboardOptions(
+                    keyboardType =
+                        if (kind == GdsNumericFieldKind.Decimal) KeyboardType.Decimal else KeyboardType.Number,
+                    imeAction = imeAction,
+                ),
             colors =
                 OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = if (errorText == null) MmoColors.Text else MmoColors.ErrorRed,

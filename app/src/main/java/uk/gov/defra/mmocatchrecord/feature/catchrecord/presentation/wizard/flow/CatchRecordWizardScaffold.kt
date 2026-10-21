@@ -39,6 +39,7 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -145,6 +146,31 @@ fun CatchRecordWizardScaffold(
     referenceNumber: String? = null,
     unsavedChanges: WizardUnsavedChangesConfig = WizardUnsavedChangesConfig(),
     content: @Composable ColumnScope.() -> Unit,
+) = CatchRecordWizardScaffold(
+    screenTestTag = screenTestTag,
+    title = AnnotatedString(title),
+    onBack = onBack,
+    modifier = modifier,
+    referenceNumber = referenceNumber,
+    unsavedChanges = unsavedChanges,
+    content = content,
+)
+
+/**
+ * [AnnotatedString] overload of the above, used only where part of [title] needs distinct styling (e.g. the
+ * late-submission warning's highlighted day count, see `LateSubmissionWarningScreen`) — the plain-`String`
+ * overload just wraps its argument in an unstyled [AnnotatedString] and delegates here.
+ */
+@Suppress("FunctionNaming")
+@Composable
+fun CatchRecordWizardScaffold(
+    screenTestTag: String,
+    title: AnnotatedString,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    referenceNumber: String? = null,
+    unsavedChanges: WizardUnsavedChangesConfig = WizardUnsavedChangesConfig(),
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     // hiltViewModel() is unavailable in @Preview/inspection composition (no Hilt component present) — see
     // every wizard screen's *_Preview composable, which already renders via the state-based overload rather
@@ -203,11 +229,11 @@ fun CatchRecordWizardScaffold(
 /** Renders [title] (and the optional [referenceNumber] caption above it) when [title] is non-blank — see the doc comment on [CatchRecordWizardScaffold] for when it's blank. */
 @Composable
 private fun WizardTitleSection(
-    title: String,
+    title: AnnotatedString,
     referenceNumber: String?,
     screenTestTag: String,
 ) {
-    if (title.isBlank()) return
+    if (title.text.isBlank()) return
     if (referenceNumber != null) {
         Text(
             text = referenceNumber,

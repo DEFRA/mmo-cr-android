@@ -5,6 +5,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performFirstLinkClick
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -33,6 +34,7 @@ class LateSubmissionWarningScreenTest {
         composeTestRule
             .onNodeWithText(
                 "Catch records must be submitted within 24 hours of a trip ending.",
+                substring = true,
             ).assertIsDisplayed()
         composeTestRule.onNodeWithTag(LateSubmissionWarningScreenTestTags.CHECK_TRIP_END_DATE_LINK).assertIsDisplayed()
         composeTestRule.onNodeWithTag(LateSubmissionWarningScreenTestTags.SAVE_ACTION).assertIsDisplayed()
@@ -50,7 +52,9 @@ class LateSubmissionWarningScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithTag(LateSubmissionWarningScreenTestTags.CHECK_TRIP_END_DATE_LINK).performClick()
+        composeTestRule
+            .onNodeWithTag(LateSubmissionWarningScreenTestTags.CHECK_TRIP_END_DATE_LINK)
+            .performFirstLinkClick()
 
         assertTrue(checkedTripEndDate)
     }

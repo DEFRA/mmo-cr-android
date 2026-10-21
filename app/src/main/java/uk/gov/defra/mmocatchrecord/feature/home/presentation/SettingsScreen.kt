@@ -83,48 +83,58 @@ fun SettingsTabContent(
                 .fillMaxSize()
                 .testTag(SettingsScreenTestTags.SCREEN)
                 .verticalScroll(rememberScrollState())
-                .padding(Spacing.m),
+                .padding(vertical = Spacing.m),
         verticalArrangement = Arrangement.spacedBy(Spacing.m),
     ) {
         Text(
             text = stringResource(R.string.settings_title),
             style = MaterialTheme.typography.headlineLarge,
-            modifier = Modifier.testTag(SettingsScreenTestTags.TITLE).semantics { heading() },
+            modifier =
+                Modifier
+                    .padding(horizontal = Spacing.m)
+                    .testTag(SettingsScreenTestTags.TITLE)
+                    .semantics { heading() },
         )
 
         AnalyticsConsentSection(
             enabled = analyticsEnabled,
             onEnabledChange = { analyticsEnabled = it },
+            modifier = Modifier.padding(horizontal = Spacing.m),
         )
 
+        // Full-bleed divider/list section — edges touch the screen, unlike the rest of the content.
         HorizontalDivider(color = MmoColors.Grey3)
 
-        SettingsLinkRow(
-            number = 1,
-            label = stringResource(R.string.settings_my_account),
-            testTag = SettingsScreenTestTags.MY_ACCOUNT_LINK,
-            onClick = {},
-        )
-        SettingsLinkRow(
-            number = 2,
-            label = stringResource(R.string.settings_privacy_notice),
-            testTag = SettingsScreenTestTags.PRIVACY_NOTICE_LINK,
-            onClick = {},
-        )
-        SettingsLinkRow(
-            number = 3,
-            label = stringResource(R.string.settings_support_information),
-            testTag = SettingsScreenTestTags.SUPPORT_INFORMATION_LINK,
-            onClick = {},
-        )
-        SettingsLinkRow(
-            number = 4,
-            label = stringResource(R.string.sign_out),
-            testTag = SettingsScreenTestTags.SIGN_OUT_LINK,
-            onClick = onSignOut,
-        )
+        Column {
+            SettingsLinkRow(
+                number = 1,
+                label = stringResource(R.string.settings_my_account),
+                testTag = SettingsScreenTestTags.MY_ACCOUNT_LINK,
+                onClick = {},
+            )
+            SettingsLinkRow(
+                number = 2,
+                label = stringResource(R.string.settings_privacy_notice),
+                testTag = SettingsScreenTestTags.PRIVACY_NOTICE_LINK,
+                onClick = {},
+            )
+            SettingsLinkRow(
+                number = 3,
+                label = stringResource(R.string.settings_support_information),
+                testTag = SettingsScreenTestTags.SUPPORT_INFORMATION_LINK,
+                onClick = {},
+            )
+            SettingsLinkRow(
+                number = 4,
+                label = stringResource(R.string.sign_out),
+                testTag = SettingsScreenTestTags.SIGN_OUT_LINK,
+                onClick = onSignOut,
+            )
+        }
 
-        debugSettingsSection.Render()
+        Column(modifier = Modifier.padding(horizontal = Spacing.m)) {
+            debugSettingsSection.Render()
+        }
 
         RoyalCrestFooter(testTag = SettingsScreenTestTags.ROYAL_CREST)
     }
@@ -135,9 +145,10 @@ fun SettingsTabContent(
 private fun AnalyticsConsentSection(
     enabled: Boolean,
     onEnabledChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val heading = stringResource(R.string.settings_analytics_heading)
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(Spacing.m),
@@ -188,21 +199,25 @@ private fun SettingsLinkRow(
 ) {
     Column {
         Row(
-            modifier = Modifier.fillMaxWidth().heightIn(min = Spacing.minTouchTarget),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = Spacing.minTouchTarget)
+                    .padding(horizontal = Spacing.m),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.s),
         ) {
             // Purely a visual ordinal — the link text itself already fully describes the row to
             // assistive tech, so the number is not exposed separately (avoids "1, My account" clutter).
             Text(
                 text = "$number)",
                 style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.clearAndSetSemantics {},
+                modifier = Modifier.weight(1f).clearAndSetSemantics {},
             )
             GdsLinkAction(
                 text = label,
                 onClick = onClick,
                 testTag = testTag,
+                modifier = Modifier.weight(1f),
             )
         }
         HorizontalDivider(color = MmoColors.Grey3)

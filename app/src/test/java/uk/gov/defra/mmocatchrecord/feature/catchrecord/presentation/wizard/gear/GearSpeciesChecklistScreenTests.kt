@@ -797,9 +797,77 @@ class GearSpeciesChecklistScreenTests {
     }
 
     @Test
-    fun wholeNumberSpeciesRejectsADecimalWeightWithAPrecisionError() {
-        // The UI's GdsNumericField filters non-digit input for a WholeNumber species, so a decimal value
-        // can only reach validation via a pre-existing saved raw value (e.g. a reopened draft) — not typed.
+    fun wholeNumberSpeciesRejectsATypedDecimalWeightWithAPrecisionError() {
+        // AC8: the field must not block typing a ".", so an out-of-precision value can reach validation.
+        val gearUse = gearUseWithAddedSpecies(listOf(plaice.id))
+        composeTestRule.setContent {
+            MmoTheme {
+                GearSpeciesChecklistScreenContent(
+                    draft = draftWith(gearUse),
+                    gearUse = gearUse,
+                    speciesList = speciesList,
+                    onRemoveSpecies = {},
+                    onAddAnotherSpecies = {},
+                    onSubmit = {},
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
+        composeTestRule
+            .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${plaice.id}")
+            .performScrollTo()
+            .performTextInput("10.55")
+        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performScrollTo().performClick()
+
+        composeTestRule
+            .onAllNodesWithText("Weight for Plaice must be a whole number")
+            .onFirst()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun discardedWeightExceedingRetainedWeightShowsADiscardedExceedsRetainedError() {
+        // AC7: discarded weight must be strictly lower than the weight above minimum size retained.
+        val gearUse = gearUseWithAddedSpecies(listOf(cod.id))
+        composeTestRule.setContent {
+            MmoTheme {
+                GearSpeciesChecklistScreenContent(
+                    draft = draftWith(gearUse),
+                    gearUse = gearUse,
+                    speciesList = speciesList,
+                    onRemoveSpecies = {},
+                    onAddAnotherSpecies = {},
+                    onSubmit = {},
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
+        composeTestRule
+            .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${cod.id}")
+            .performScrollTo()
+            .performTextInput("5")
+        composeTestRule
+            .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ADD_DISCARDED_ACTION_PREFIX}_${cod.id}")
+            .performScrollTo()
+            .performClick()
+        composeTestRule
+            .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.DISCARDED_FIELD_PREFIX}_${cod.id}")
+            .performScrollTo()
+            .performTextInput("10")
+        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performScrollTo().performClick()
+
+        composeTestRule
+            .onAllNodesWithText("Weight above minimum size retained must be higher than weight legally discarded")
+            .onFirst()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun aPreExistingOutOfPrecisionWeightStillShowsAPrecisionErrorOnReopen() {
         val gearUse =
             GearUse(
                 id = "gear-use-1",

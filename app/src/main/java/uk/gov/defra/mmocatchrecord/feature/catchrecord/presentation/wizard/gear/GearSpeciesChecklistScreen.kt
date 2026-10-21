@@ -392,12 +392,9 @@ private fun SpeciesWeightFields(
     onToggleDisclosed: (key: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val numericKind =
-        if (species.weightPrecision == SpeciesWeightPrecision.WholeNumber) {
-            GdsNumericFieldKind.Integer
-        } else {
-            GdsNumericFieldKind.Decimal
-        }
+    // Precision (whole vs one-decimal) is a save-time SpeciesWeightValidator rule, not an input-time
+    // filter — blocking "." at input time would stop an invalid value ever reaching that validation (AC8).
+    val numericKind = GdsNumericFieldKind.Decimal
     val aboveKey = rawValueKey(speciesId, SpeciesWeightFieldKind.AboveMinimumSize)
     val belowKey = rawValueKey(speciesId, SpeciesWeightFieldKind.BelowMinimumSize)
     val discardedKey = rawValueKey(speciesId, SpeciesWeightFieldKind.LegallyDiscarded)
@@ -501,6 +498,8 @@ internal fun speciesWeightErrorMessage(
             }
         SpeciesWeightFieldError.MonthlyQuotaExceeded -> stringResource(R.string.species_weight_error_monthly_quota)
         SpeciesWeightFieldError.AnnualQuotaExceeded -> stringResource(R.string.species_weight_error_annual_quota)
+        SpeciesWeightFieldError.DiscardedExceedsRetained ->
+            stringResource(R.string.species_weight_error_discarded_exceeds_retained)
     }
 }
 

@@ -108,8 +108,22 @@ class CatchRecordFlowViewModel
                 species = referenceDataRepository.getSpecies().getOrThrow(),
             )
 
-        private suspend fun previouslyUsedPortsFor(draft: CatchRecordDraft?): List<Port> =
-            draft?.let { referenceDataRepository.getPreviouslyUsedPorts(it.vesselId).getOrThrow() }.orEmpty()
+        private suspend fun previouslyUsedPortsFor(
+            draft: CatchRecordDraft?,
+            ports: List<Port>,
+        ): List<Port> = draft?.let { previouslyUsedPortsForVessel(it.vesselId, ports) }.orEmpty()
+
+        /** Prefers the vessel's own submitted-trip history; the reference-data fallback applies only with no history. */
+        private suspend fun previouslyUsedPortsForVessel(
+            vesselId: String,
+            ports: List<Port>,
+        ): List<Port> {
+            val historyIds = draftRepository.getPreviouslyUsedPortIds(vesselId).getOrThrow()
+            if (historyIds.isEmpty()) return referenceDataRepository.getPreviouslyUsedPorts(vesselId).getOrThrow()
+            val knownPorts = ports.ifEmpty { referenceDataRepository.getPorts().getOrThrow() }
+            val portsById = knownPorts.associateBy { it.id }
+            return historyIds.mapNotNull { portsById[it] }
+        }
 
         private fun enterFlow() {
             updateState { it.copy(status = UiStatus.Loading) }
@@ -120,7 +134,7 @@ class CatchRecordFlowViewModel
                         draftRepository.getAnyActiveDraft().getOrThrow()?.let {
                             reconcileAgainstLiveGearTypes(it, referenceData.gearTypes)
                         }
-                    val previouslyUsedPorts = previouslyUsedPortsFor(existingDraft)
+                    val previouslyUsedPorts = previouslyUsedPortsFor(existingDraft, referenceData.ports)
                     updateState {
                         it.copy(
                             status = existingDraft?.let { draft -> UiStatus.Content(draft) } ?: UiStatus.Idle,
@@ -160,7 +174,7 @@ class CatchRecordFlowViewModel
                         draftRepository.getDraftById(draftId).getOrThrow()
                             ?: error("Draft '$draftId' was not found")
                     val reconciledDraft = reconcileAgainstLiveGearTypes(draft, referenceData.gearTypes)
-                    val previouslyUsedPorts = previouslyUsedPortsFor(reconciledDraft)
+                    val previouslyUsedPorts = previouslyUsedPortsFor(reconciledDraft, referenceData.ports)
                     updateState {
                         it.copy(
                             status = UiStatus.Content(reconciledDraft),
@@ -214,7 +228,7 @@ class CatchRecordFlowViewModel
                 runCatching {
                     val existingDraft = draftRepository.getActiveDraft(vesselId).getOrThrow()
                     val draft = existingDraft ?: startNewDraft(vesselId)
-                    val previouslyUsedPorts = referenceDataRepository.getPreviouslyUsedPorts(vesselId).getOrThrow()
+                    val previouslyUsedPorts = previouslyUsedPortsForVessel(vesselId, currentState.ports)
                     val vesselLength = currentState.vessels.firstOrNull { it.id == vesselId }?.lengthOverallMetres
                     val gearTypes = referenceDataRepository.getGearTypes(vesselLength).getOrThrow()
                     emitLoadedDraft(

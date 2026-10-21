@@ -35,6 +35,9 @@ enum class SpeciesWeightFieldError {
 
     /** Cumulative weight for this species across the whole draft would exceed its annual quota. */
     AnnualQuotaExceeded,
+
+    /** AC7: weight legally discarded is not strictly less than weight above minimum size retained. */
+    DiscardedExceedsRetained,
 }
 
 /** Result of validating one species' full set of active weight fields — see [SpeciesWeightValidator.validateEntry]. */
@@ -90,39 +93,60 @@ object SpeciesWeightValidator {
         val errors = linkedMapOf<SpeciesWeightFieldKind, SpeciesWeightFieldError>()
 
         rawValuesByField.forEach { (fieldKind, rawValue) ->
-            val trimmed = rawValue.trim()
-            when {
-                trimmed.isEmpty() && fieldKind in mandatoryFields ->
-                    errors[fieldKind] = SpeciesWeightFieldError.Required
-
-                trimmed.isEmpty() -> values[fieldKind] = null
-
-                else -> {
-                    val parsed = trimmed.toDoubleOrNull()
-                    when {
-                        parsed == null || parsed <= MIN_WEIGHT_KG ->
-                            errors[fieldKind] = SpeciesWeightFieldError.BelowMinimum
-
-                        parsed > MAX_WEIGHT_KG ->
-                            errors[fieldKind] = SpeciesWeightFieldError.AboveMaximum
-
-                        !matchesPrecision(parsed, species.weightPrecision) ->
-                            errors[fieldKind] = SpeciesWeightFieldError.Precision
-
-                        else -> values[fieldKind] = parsed
-                    }
-                }
-            }
+            validateField(rawValue, fieldKind, mandatoryFields, species, values, errors)
         }
 
         if (applyQuotaCheck && errors.isEmpty()) {
             applyQuotaCheckIfNeeded(species, values, cumulativeOtherEntriesKg, errors)
         }
 
+        if (errors.isEmpty()) {
+            applyDiscardedNotExceedingRetainedCheck(values, errors)
+        }
+
         return SpeciesWeightEntryValidationResult(
             values = if (errors.isEmpty()) values else emptyMap(),
             errors = errors,
         )
+    }
+
+    @Suppress("LongParameterList")
+    private fun validateField(
+        rawValue: String,
+        fieldKind: SpeciesWeightFieldKind,
+        mandatoryFields: Set<SpeciesWeightFieldKind>,
+        species: Species,
+        values: MutableMap<SpeciesWeightFieldKind, Double?>,
+        errors: MutableMap<SpeciesWeightFieldKind, SpeciesWeightFieldError>,
+    ) {
+        val trimmed = rawValue.trim()
+        if (trimmed.isEmpty()) {
+            if (fieldKind in mandatoryFields) {
+                errors[fieldKind] = SpeciesWeightFieldError.Required
+            } else {
+                values[fieldKind] = null
+            }
+            return
+        }
+        val parsed = trimmed.toDoubleOrNull()
+        when {
+            parsed == null || parsed <= MIN_WEIGHT_KG -> errors[fieldKind] = SpeciesWeightFieldError.BelowMinimum
+            parsed > MAX_WEIGHT_KG -> errors[fieldKind] = SpeciesWeightFieldError.AboveMaximum
+            !matchesPrecision(parsed, species.weightPrecision) -> errors[fieldKind] = SpeciesWeightFieldError.Precision
+            else -> values[fieldKind] = parsed
+        }
+    }
+
+    // AC7: weight legally discarded must be strictly less than weight above minimum size retained.
+    private fun applyDiscardedNotExceedingRetainedCheck(
+        values: Map<SpeciesWeightFieldKind, Double?>,
+        errors: MutableMap<SpeciesWeightFieldKind, SpeciesWeightFieldError>,
+    ) {
+        val retained = values[SpeciesWeightFieldKind.AboveMinimumSize] ?: return
+        val discarded = values[SpeciesWeightFieldKind.LegallyDiscarded] ?: return
+        if (discarded >= retained) {
+            errors[SpeciesWeightFieldKind.LegallyDiscarded] = SpeciesWeightFieldError.DiscardedExceedsRetained
+        }
     }
 
     private fun applyQuotaCheckIfNeeded(
