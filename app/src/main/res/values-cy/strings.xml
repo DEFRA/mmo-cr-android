@@ -150,7 +150,7 @@
     <string name="remove_gear">Tynnu offer</string>
     <string name="add_another_gear">Ychwanegu offer arall</string>
     <string name="gear_stat_rectangle_grid_title">Ble cafodd y rhan fwyaf o\'ch dalfa ei dal gan ddefnyddio %1$s?</string>
-    <string name="gear_stat_rectangle_other_title">Dewiswch yr is-ardal ystadegol lle cafodd y rhan fwyaf o\'ch dalfa ei dal gan ddefnyddio %1$s?</string>
+    <string name="gear_stat_rectangle_other_title">Dewiswch yr is-ardal ystadegol lle cafodd y rhan fwyaf o\'ch dalfa ei dal gan ddefnyddio %1$s.</string>
     <string name="gear_stat_rectangle_title_fallback">Ble cafodd y rhan fwyaf o\'ch dalfa ei dal gan ddefnyddio\'r offer hwn?</string>
     <string name="gear_stat_rectangle_missing_gear">Methu llwytho ardal ystadegol yr offer hwn. Ewch yn ôl a rhowch gynnig arall arni.</string>
     <string name="gear_stat_rectangle_body_nearby">Dangosir yr ardaloedd ystadegol agosaf at eich porthladd ymadael isod.</string>
@@ -158,15 +158,31 @@
     <string name="gear_stat_rectangle_body_other_hint">Os nad yw wedi\'i restru, dewiswch Arall i\'w nodi.</string>
     <string name="gear_stat_rectangle_body_select_other">Dewiswch yr ardal lle cafodd y rhan fwyaf o\'ch dalfa ei dal. Os nad yw wedi\'i restru, dewiswch Arall i\'w nodi.</string>
     <string name="gear_stat_rectangle_other_option">Arall</string>
-    <string name="gear_stat_rectangle_no_matches_found">Ni chanfuwyd is-barthau ystadegol cyfatebol</string>
-    <string name="gear_stat_rectangle_error_required">Dewiswch is-barth ystadegol</string>
-    <string name="gear_stat_rectangle_error_format">Nodwch is-barth ystadegol yn y fformat cywir, er enghraifft 38E84</string>
+    <string name="gear_stat_rectangle_no_matches_found">Ni chanfuwyd is-ardaloedd ystadegol cyfatebol</string>
+    <string name="gear_stat_rectangle_error_required">Dewiswch is-ardal ystadegol</string>
+    <string name="gear_stat_rectangle_error_format">Nodwch is-ardal ystadegol yn y fformat cywir, er enghraifft 38E84</string>
+    <string name="gear_stat_rectangle_error_not_found">Nodwch god is-ardal ystadegol dilys.</string>
     <string name="gear_stat_rectangle_selected_area">Ardal a ddewiswyd: %1$s</string>
     <string name="gear_stat_rectangle_selected_area_none">Dim ardal wedi\'i dewis</string>
-    <string name="gear_stat_rectangle_map_unavailable">Ni ellid llwytho\'r map. Dewiswch Arall i ddewis is-barth ystadegol o restr yn lle hynny.</string>
-    <string name="gear_stat_rectangle_map_content_description">Map o is-barthau ystadegol pysgodfeydd ger eich porthladd ymadael. %1$s Llusgwch i banio a phinsiwch i chwyddo. Dewiswch Arall am restr y gallwch chwilio ynddi heb ddefnyddio\'r map.</string>
+    <string name="gear_stat_rectangle_map_unavailable">Ni ellid llwytho\'r map. Dewiswch Arall i ddewis is-ardal ystadegol o restr yn lle hynny.</string>
+    <string name="gear_stat_rectangle_map_content_description">Map o is-ardaloedd ystadegol pysgodfeydd ger eich porthladd ymadael. %1$s Llusgwch i banio a phinsiwch i chwyddo. Dewiswch Arall am restr y gallwch chwilio ynddi heb ddefnyddio\'r map.</string>
     <!-- Known limitation: machine-translated placeholder pending professional Welsh translation review. -->
     <string name="gear_stat_rectangle_map_choose_from_list_action">Dewiswch is-ardal ystadegol o restr</string>
+    <!-- Known limitation: machine-translated placeholder pending professional Welsh translation review. -->
+    <string name="coordinate_north">G</string>
+    <string name="coordinate_south">D</string>
+    <string name="coordinate_east">Dn</string>
+    <string name="coordinate_west">Gn</string>
+    <string name="coordinate_north_spoken">gogledd</string>
+    <string name="coordinate_south_spoken">de</string>
+    <string name="coordinate_east_spoken">dwyrain</string>
+    <string name="coordinate_west_spoken">gorllewin</string>
+    <string name="gear_stat_rectangle_coordinates">Canol yr ardal: %1$s°%2$s, %3$s°%4$s</string>
+    <string name="gear_stat_rectangle_coordinates_spoken">Canol yr ardal, %1$s gradd %2$s, %3$s gradd %4$s</string>
+    <string name="gear_stat_rectangle_suggestion_secondary">Petryal ICES %1$s, canol %2$s°%3$s, %4$s°%5$s</string>
+    <string name="gear_stat_rectangle_suggestion_secondary_no_ices">Canol %1$s°%2$s, %3$s°%4$s</string>
+    <string name="gear_stat_rectangle_suggestion_accessibility">%1$s, petryal ICES %2$s, canol %3$s gradd %4$s, %5$s gradd %6$s</string>
+    <string name="gear_stat_rectangle_suggestion_accessibility_no_ices">%1$s, canol %2$s gradd %3$s, %4$s gradd %5$s</string>
     <string name="gear_species_search_title">Pa rywogaethau wnaethoch chi ddal gyda %1$s?</string>
     <string name="gear_species_search_title_fallback">Pa rywogaethau wnaethoch chi ddal?</string>
     <string name="gear_species_search_no_matches_found">Dim rhywogaethau cyfatebol wedi\'u canfod</string>

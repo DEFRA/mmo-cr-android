@@ -333,7 +333,7 @@ class MapScreenTest {
 
         composeTestRule
             .onNodeWithText(
-                "Select the statistical sub area where the majority of your catch was caught using seine nets (mesh size 100mm)?",
+                "Select the statistical sub area where the majority of your catch was caught using seine nets (mesh size 100mm).",
             ).assertIsDisplayed()
         composeTestRule
             .onNodeWithText(
@@ -381,9 +381,9 @@ class MapScreenTest {
         setMapScreen(onSubmit = { submittedDraft = it })
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
-        // Radio option index 3 is the trailing "Other" entry (3 nearby codes at indices 0-2).
+        // Radio option index 3 is the trailing "Other" entry (3 nearby codes at indices 0-2). Selecting it
+        // reveals the autocomplete search immediately (Scenario 1/FR2) — no "Save and continue" click needed.
         composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_3").performClick()
-        composeTestRule.onNodeWithTag(MapScreenTestTags.RADIO_SAVE_ACTION).performClick()
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).assertIsDisplayed()
         assertNull(submittedDraft)
@@ -404,9 +404,9 @@ class MapScreenTest {
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
         composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_3").performClick()
-        composeTestRule.onNodeWithTag(MapScreenTestTags.RADIO_SAVE_ACTION).performClick()
 
-        // A code not present in the local nearby/stub list, entered via free text.
+        // A code not present in the local nearby/stub list, entered via free text. The default
+        // mapDataState (Loading) means existence validation isn't active here.
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).performTextInput("99Z99")
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_SAVE_ACTION).performClick()
 
@@ -423,12 +423,11 @@ class MapScreenTest {
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
         composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_3").performClick()
-        composeTestRule.onNodeWithTag(MapScreenTestTags.RADIO_SAVE_ACTION).performClick()
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_SAVE_ACTION).performClick()
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.ERROR_SUMMARY).assertIsDisplayed()
-        composeTestRule.onNodeWithText("Select a statistical subrectangle").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Select a statistical sub area").assertIsDisplayed()
     }
 
     @Test
@@ -441,14 +440,40 @@ class MapScreenTest {
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
         composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_3").performClick()
-        composeTestRule.onNodeWithTag(MapScreenTestTags.RADIO_SAVE_ACTION).performClick()
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).performTextInput("not-a-code")
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_SAVE_ACTION).performClick()
 
         composeTestRule
-            .onNodeWithText("Enter a statistical subrectangle in the correct format, for example 38E84")
+            .onNodeWithText("Enter a statistical sub area in the correct format, for example 38E84")
             .assertIsDisplayed()
+    }
+
+    // --- FR5/FR6: coordinates and ICES rectangle in search results -------------------------------------
+
+    @Test
+    fun autocompleteScreenShowsCoordinatesAndIcesRectangleForAMatchedCode() {
+        composeTestRule.setContent {
+            WizardTestTheme {
+                MapScreen(
+                    state = stateWith(pendingGearUse()),
+                    onSubmit = {},
+                    onBack = {},
+                    mapDataState = MapDataUiState(UiStatus.Content(mapDatasetFixture()), onRetryMapData = {}),
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
+        composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_0").performClick()
+        composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).performTextInput("38E9")
+
+        composeTestRule.onNodeWithText("ICES rectangle Test area, centre 55.00°N, 0.00°E").assertIsDisplayed()
+
+        composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).performTextInput("5")
+        composeTestRule
+            .onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_COORDINATES)
+            .assertTextContains("Centre of area: 55.00°N, 0.00°E")
     }
 
     // --- Defensive fallback -----------------------------------------------------------------------------

@@ -166,6 +166,8 @@ sealed interface CatchRecordFlowEvent {
     data class EditGearStatRectangle(
         val gearUseId: String,
         val statisticalSubRectangleCode: String,
+        val statisticalSubRectangleLatitude: Double? = null,
+        val statisticalSubRectangleLongitude: Double? = null,
     ) : CatchRecordFlowEvent
 
     /**

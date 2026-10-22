@@ -1062,6 +1062,35 @@ class CatchRecordFlowViewModelTests {
             }
         }
 
+    /** ADR 0017/R7: the Check-your-answers "Change" edit path must carry coordinates alongside the code —
+     *  without this, editing an already-completed gear's rectangle would silently drop/stale its
+     *  coordinates, since this is a separate dispatch path from the normal add-path [CatchRecordFlowEvent.SaveAndContinue]. */
+    @Test
+    fun `editing a gear's statistical sub-rectangle persists its centre coordinates too`() =
+        runTest {
+            val (viewModel, gearOne, _) = setUpTwoConfirmedGearsAwaitingStatRectangle()
+
+            viewModel.state.test {
+                awaitItem()
+                viewModel.dispatch(
+                    CatchRecordFlowEvent.EditGearStatRectangle(
+                        gearUseId = gearOne.id,
+                        statisticalSubRectangleCode = "38E95",
+                        statisticalSubRectangleLatitude = 50.9,
+                        statisticalSubRectangleLongitude = 0.6,
+                    ),
+                )
+                assertEquals(UiStatus.Loading, awaitItem().status)
+                val edited = awaitItem()
+                assertEquals(WizardStep.CheckYourAnswers, edited.currentStep)
+                val editedGearUse =
+                    (edited.status as UiStatus.Content<CatchRecordDraft>).value.gearUses.first { it.id == gearOne.id }
+                assertEquals("38E95", editedGearUse.statisticalSubRectangleCode)
+                assertEquals(50.9, editedGearUse.statisticalSubRectangleLatitude)
+                assertEquals(0.6, editedGearUse.statisticalSubRectangleLongitude)
+            }
+        }
+
     // --- Phase 8: accept-declaration-and-submit online/offline branching -------------------------
 
     @Test

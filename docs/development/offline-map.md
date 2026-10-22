@@ -152,6 +152,12 @@ the current stub reference data:
   real map would be incorrect — flagged as a governance item against ADR-0008 for whoever next revisits the
   reference-data stub.
 
+**Update (CRAR Other-journey QA fixes):** the radio-list/autocomplete "Other" sub-screens (screens 2/3) no
+longer use the stub's `statisticalAreaId` grouping for their nearby list or search/existence validation once
+this dataset has loaded — see `MapSupport.nearbyRectanglesFromDataset`/`allRectanglesFromDataset`, which
+match the departure port by name against `dataset.ports` (as above) and rank by real centroid distance
+instead. The stub-grouped `nearbyRectanglesFor` remains only as the fallback while the dataset hasn't loaded.
+
 ## Regenerating this documentation's numbers
 
 Run `.\gradlew.bat :app:generateDebugMapData --rerun-tasks --info` and look for the single summary line the
@@ -160,3 +166,15 @@ task logs, e.g.:
 ```text
 MapData: land=7 (skipped 0), subrects=3465 (skipped 0, reprojected-coords=17325, inland=608), ports=938 (skipped 0)
 ```
+
+## Update (CRAR Track B: coordinates and ICES rectangle display)
+
+`StatisticalSubRectangle` now carries the generated dataset's `centroidLatitude`/`centroidLongitude`/
+`icesRectangleName` (via `MapSupport.toStatisticalSubRectangle`), so the "Other" autocomplete search
+(screen 3) shows each suggestion's ICES rectangle and centre coordinates (FR5), displays the matched code's
+coordinates live as the user types an exact code (FR6), and persists those coordinates alongside the code
+on `GearUse` (FR7, DB v8→v9 — see
+[ADR-0017](../adr/0017-statistical-sub-area-coordinates-and-ices-rectangle-display.md)). The displayed
+coordinates are always the sub-rectangle's **centroid**, not a point the fisher actually fished at — this
+convention is flagged in the ADR as a governance item for Delivery Architecture to confirm against the
+live Catch Recording service's own definition.
