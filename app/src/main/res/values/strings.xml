@@ -66,7 +66,6 @@
     <string name="settings_my_account">My account</string>
     <string name="settings_privacy_notice">Privacy notice</string>
     <string name="settings_support_information">Support information</string>
-    <string name="settings_debug_force_failures">Force submission failures (debug only)</string>
     <string name="signin_title">Sign in</string>
     <string name="email_address">Email address</string>
     <string name="password">Password</string>
@@ -104,8 +103,8 @@
     <string name="date_picker_selected">Selected date: %1$s</string>
     <string name="date_error_invalid_date">Enter a real date</string>
     <string name="date_error_return_before_departure">Return date must be on or after the departure date</string>
-    <string name="departure_port_title">Enter the port or closest port you set off from</string>
-    <string name="return_port_title">Which port or closest port did you return to?</string>
+    <string name="departure_port_title">Select the port you set off from</string>
+    <string name="return_port_title">Select the port you returned to</string>
     <string name="port_selection_confirm_title">Was %1$s the port or the closest port you set off from and returned to?</string>
     <string name="autocomplete_search_placeholder">Type to search (minimum 2 characters)</string>
     <string name="add_port">Add port</string>

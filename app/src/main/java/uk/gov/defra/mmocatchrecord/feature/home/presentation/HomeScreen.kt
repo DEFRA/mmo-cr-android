@@ -32,7 +32,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.gov.defra.mmocatchrecord.R
-import uk.gov.defra.mmocatchrecord.common.design.DebugSettingsSection
 import uk.gov.defra.mmocatchrecord.common.design.GdsTopAppBar
 import uk.gov.defra.mmocatchrecord.common.design.MmoBottomNavigationBar
 import uk.gov.defra.mmocatchrecord.common.design.MmoColors
@@ -57,9 +56,6 @@ object HomeScreenTestTags {
     const val NOTIFICATIONS_TAB_HEADING = "home_feature_notifications_tab_heading"
     const val NOTIFICATIONS_ROYAL_CREST = "home_feature_notifications_royal_crest"
 }
-
-/** Default [DebugSettingsSection] for previews/call sites not supplying a real one — renders nothing. */
-private val noOpDebugSettingsSectionPreview = DebugSettingsSection {}
 
 @Suppress("FunctionNaming", "LongParameterList")
 @Composable
@@ -90,7 +86,6 @@ fun HomeScreen(
         onCreateCatchRecord = onCreateCatchRecord,
         onResumeDraft = onResumeDraft,
         onDismissSyncConfirmationMessage = { viewModel.dispatch(HomeEvent.SyncConfirmationMessageShown) },
-        debugSettingsSection = viewModel.debugSettingsSection,
         modifier = modifier,
     )
 }
@@ -110,7 +105,6 @@ fun HomeScreenContent(
     onResumeDraft: (String) -> Unit,
     modifier: Modifier = Modifier,
     onDismissSyncConfirmationMessage: () -> Unit = {},
-    debugSettingsSection: DebugSettingsSection = noOpDebugSettingsSectionPreview,
 ) {
     var catchRecordsPage by rememberSaveable { mutableIntStateOf(0) }
     val catchRecordsHorizontalScrollState = rememberScrollState()
@@ -147,7 +141,7 @@ fun HomeScreenContent(
                                 catchRecordsHorizontalScrollState = catchRecordsHorizontalScrollState,
                             )
                         1 -> NotificationsTabContent()
-                        2 -> SettingsTabContent(onSignOut = onSignOut, debugSettingsSection = debugSettingsSection)
+                        2 -> SettingsTabContent(onSignOut = onSignOut)
                     }
                 }
             }

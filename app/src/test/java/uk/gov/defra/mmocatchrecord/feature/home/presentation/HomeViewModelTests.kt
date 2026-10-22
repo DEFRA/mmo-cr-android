@@ -18,7 +18,6 @@ import org.junit.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import uk.gov.defra.mmocatchrecord.R
-import uk.gov.defra.mmocatchrecord.common.design.DebugSettingsSection
 import uk.gov.defra.mmocatchrecord.common.design.RecordStatusTag
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DmyDate
@@ -26,12 +25,6 @@ import uk.gov.defra.mmocatchrecord.feature.home.data.FakeHomeRepository
 import uk.gov.defra.mmocatchrecord.feature.home.domain.CatchRecordSummary
 import uk.gov.defra.mmocatchrecord.feature.home.domain.HomeSummary
 import uk.gov.defra.mmocatchrecord.feature.home.domain.ObserveHomeSummaryUseCase
-
-/** No-op test double — the real debug/release bindings live in build-type source sets, not `src/test`. */
-private object NoOpDebugSettingsSectionFake : DebugSettingsSection {
-    @androidx.compose.runtime.Composable
-    override fun Render() = Unit
-}
 
 private fun recordWithEveryStatus() =
     listOf(
@@ -63,7 +56,6 @@ private fun buildViewModel(
 ): HomeViewModel =
     HomeViewModel(
         ObserveHomeSummaryUseCase(repository),
-        NoOpDebugSettingsSectionFake,
         context,
         dispatcher,
     )

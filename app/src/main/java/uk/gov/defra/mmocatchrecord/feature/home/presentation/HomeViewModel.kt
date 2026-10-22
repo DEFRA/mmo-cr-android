@@ -8,7 +8,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.catch
 import timber.log.Timber
 import uk.gov.defra.mmocatchrecord.R
-import uk.gov.defra.mmocatchrecord.common.design.DebugSettingsSection
 import uk.gov.defra.mmocatchrecord.common.design.RecordStatusTag
 import uk.gov.defra.mmocatchrecord.core.architecture.BaseViewModel
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
@@ -23,7 +22,6 @@ class HomeViewModel
     @Inject
     constructor(
         private val observeHomeSummaryUseCase: ObserveHomeSummaryUseCase,
-        val debugSettingsSection: DebugSettingsSection,
         @ApplicationContext private val context: Context,
         defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
     ) : BaseViewModel<HomeViewState, HomeEvent>(HomeViewState(), defaultDispatcher) {
