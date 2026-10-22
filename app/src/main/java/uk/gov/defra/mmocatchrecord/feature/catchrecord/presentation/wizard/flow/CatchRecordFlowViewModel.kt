@@ -148,6 +148,7 @@ class CatchRecordFlowViewModel
                             previouslyUsedPorts = previouslyUsedPorts,
                             departurePortEntryMode = deriveDeparturePortEntryMode(previouslyUsedPorts),
                             isDraftPersisted = existingDraft != null,
+                            isFlowEntered = true,
                         )
                     }
                 }.onFailure { emitLoadError(CatchRecordFlowEvent.EnterFlow, it) }

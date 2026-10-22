@@ -50,6 +50,8 @@ data class CatchRecordFlowViewState(
     /** BR-XX: whether the draft currently in [status] has an actual Room row yet — see ADR 0014. */
     val isDraftPersisted: Boolean = false,
     val isDraftDeleted: Boolean = false,
+    /** True once EnterFlow has resolved, so the entry screen never routes on the default initial state. */
+    val isFlowEntered: Boolean = false,
 ) : ViewState
 
 /**
