@@ -26,7 +26,6 @@ import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -57,36 +56,30 @@ import kotlin.math.hypot
 
 private const val MAP_BORDER_DP = 1.5f
 private const val GRID_STROKE_DP = 1f
-private const val GRID_FILL_ALPHA = 0.06f
-private const val SELECTED_FILL_ALPHA = 0.35f
-private const val SELECTED_STROKE_MULTIPLIER = 3f
+private const val SELECTED_STROKE_DP = 1.5f
 private const val LAND_STROKE_DP = 0.6f
 private const val PORT_DOT_RADIUS_DP = 3.5f
-private const val LABEL_TEXT_SIZE_SP = 12f
-private const val PORT_LABEL_TEXT_SIZE_SP = 11f
+private const val LABEL_TEXT_SIZE_SP = 14f
+private const val LABEL_BASELINE_OFFSET_DIVISOR = 3f
 private const val TAP_SLOP_PX = 24f
 private const val MAX_VISIBLE_LABELS = 60
 private const val MAX_VISIBLE_PORTS = 120
-private const val PORT_LABEL_OFFSET_DP = 6f
-private const val PILL_PADDING_DP = 6f
-private const val HALO_STROKE_WIDTH_DP = 3f
-private const val PILL_TEXT_BASELINE_OFFSET_DIVISOR = 3f
 
-/** Groups [camera] with its change callback — keeps [MapCanvas]'s parameter count within the kotlin:S107
+/** Groups [camera] with its change callback â€” keeps [MapCanvas]'s parameter count within the kotlin:S107
  * limit instead of passing both separately. */
 data class MapCameraState(
     val camera: MapCamera,
     val onCameraChange: (MapCamera) -> Unit,
 )
 
-/** Groups the selected statistical sub-rectangle code with its change callback — see [MapCameraState]. */
+/** Groups the selected statistical sub-rectangle code with its change callback â€” see [MapCameraState]. */
 data class MapSelectionState(
     val selectedCode: String?,
     val onCodeSelected: (String?) -> Unit,
 )
 
 /**
- * The latest camera/selection/accessibility-action callbacks — read by the long-lived gesture coroutine
+ * The latest camera/selection/accessibility-action callbacks â€” read by the long-lived gesture coroutine
  * below on every recomposition rather than the values captured when `pointerInput` first started (see
  * [MapCanvas]'s single `rememberUpdatedState` call).
  */
@@ -98,9 +91,9 @@ private data class MapCanvasLatest(
 
 /**
  * Renders the offline fisheries statistical sub-rectangle map (see docs/development/offline-map.md) using
- * `Canvas` only — no map SDK/tiles. Draw order bottom-to-top: sea background, land, sub-rectangle grid,
- * selected highlight, labels, ports. A single Compose semantics node describes the whole map for TalkBack;
- * selection changes are announced via a polite live region.
+ * `Canvas` only â€” no map SDK/tiles. Draw order bottom-to-top: sea background, sub-rectangle grid and
+ * selected highlight, land (masking the grid), sea labels, port dots. A single Compose semantics node
+ * describes the whole map for TalkBack; selection changes are announced via a polite live region.
  */
 @Composable
 @Suppress("FunctionNaming")
@@ -148,7 +141,7 @@ fun MapCanvas(
                 Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f / MAP_ASPECT_RATIO_HEIGHT_OVER_WIDTH)
-                    // Canvas does not clip by default — without this, land/grid/labels spill across the screen.
+                    // Canvas does not clip by default â€” without this, land/grid/labels spill across the screen.
                     .clipToBounds()
                     .border(MAP_BORDER_DP.dp, Color.Black)
                     .background(Color.White)
@@ -178,19 +171,32 @@ fun MapCanvas(
 
 private const val MAP_ASPECT_RATIO_HEIGHT_OVER_WIDTH = 1.35f
 
-/** Precomputed, dataset-derived geometry — built once per [MapDataset], never rebuilt on selection change. */
+/** Precomputed, dataset-derived geometry â€” built once per [MapDataset], never rebuilt on selection change. */
 private class MapCanvasGeometry(
     val land: List<MultiPolygon>,
     val subRectangles: List<Pair<SerializableSubRectangle, MultiPolygon>>,
     val ports: List<SerializablePort>,
+    val labelledCodes: Set<String>,
 ) {
     companion object {
-        fun from(dataset: MapDataset): MapCanvasGeometry =
-            MapCanvasGeometry(
-                land = dataset.land.map { it.toMultiPolygon() },
-                subRectangles = dataset.subRectangles.map { it to it.geometry.toMultiPolygon() },
-                ports = dataset.ports,
-            )
+        fun from(dataset: MapDataset): MapCanvasGeometry {
+            val land = dataset.land.map { it.toMultiPolygon() }
+            val landBounds = land.map { landBBox(it) }
+            val subRectangles = dataset.subRectangles.map { it to it.geometry.toMultiPolygon() }
+            // Labels only go on sea: skip cells whose label anchor falls on land.
+            val labelledCodes =
+                subRectangles
+                    .filter { (subRect, _) ->
+                        val anchor = subRect.centroid.toGeoPointLocal()
+                        subRect.isSeaOverlapping &&
+                            land.indices.none { landBounds[it].contains(anchor) && land[it].containsPoint(anchor) }
+                    }.map { it.first.code }
+                    .toSet()
+            return MapCanvasGeometry(land, subRectangles, dataset.ports, labelledCodes)
+        }
+
+        private fun landBBox(multiPolygon: MultiPolygon): BBox =
+            BBox.of(multiPolygon.polygons.flatMap { it.shell.points })
     }
 }
 
@@ -223,7 +229,7 @@ private suspend fun PointerInputScope.handleMapGestures(
     }
 }
 
-/** Camera plus the canvas pixel dimensions it's projecting into — bundled since nearly every draw/hit-test
+/** Camera plus the canvas pixel dimensions it's projecting into â€” bundled since nearly every draw/hit-test
  * helper below needs all three together (see kotlin:S107 parameter-count limit). */
 private data class MapProjection(
     val camera: MapCamera,
@@ -261,8 +267,12 @@ private fun DrawScope.drawMap(
     val projection = MapProjection(camera, size.width, size.height)
     val viewport = viewportBBox(projection.camera, projection.widthPx, projection.heightPx)
 
+    val visibleSubRectangles =
+        geometry.subRectangles.filter { (subRect, _) -> isSubRectangleInViewport(subRect, viewport) }
+
+    drawGridAndSelection(visibleSubRectangles, projection, selectedCode, density)
     drawLand(geometry, projection, density)
-    drawGridAndSelection(geometry, projection, viewport, selectedCode, density)
+    drawSeaLabels(geometry, visibleSubRectangles, projection, density)
     drawPorts(geometry, projection, viewport, density)
 }
 
@@ -284,46 +294,59 @@ private fun DrawScope.drawLand(
     }
 }
 
-/** Draws every viewport-culled sub-rectangle's grid line/fill, plus the amber selected highlight and its
- * pill label — see requirement #6's draw order (grid, then selected, then labels). */
+/** Draws grid lines, then the selected cell's tint and border on top; land is drawn afterwards to mask both. */
 private fun DrawScope.drawGridAndSelection(
-    geometry: MapCanvasGeometry,
+    visibleSubRectangles: List<Pair<SerializableSubRectangle, MultiPolygon>>,
     projection: MapProjection,
-    viewport: BBox,
     selectedCode: String?,
     density: Density,
 ) {
-    var visibleLabels = 0
-    val visibleSubRectangles =
-        geometry.subRectangles.filter { (subRect, _) ->
-            isSubRectangleInViewport(subRect, viewport)
-        }
-    visibleSubRectangles.forEach { (subRect, multiPolygon) ->
-        val isSelected = subRect.code == selectedCode
-        val strokeWidthDp = if (isSelected) GRID_STROKE_DP * SELECTED_STROKE_MULTIPLIER else GRID_STROKE_DP
-        val colour = if (isSelected) MmoColors.MapSelectedFill else MmoColors.MapGridLine
-        val fillAlpha = if (isSelected) SELECTED_FILL_ALPHA else GRID_FILL_ALPHA
-        drawMultiPolygon(multiPolygon, projection, colour, filled = true, fillAlpha = fillAlpha)
+    visibleSubRectangles.forEach { (_, multiPolygon) ->
         drawMultiPolygon(
             multiPolygon,
             projection,
-            colour,
+            MmoColors.MapGridLine,
             filled = false,
-            strokeWidthDp = strokeWidthDp,
+            strokeWidthDp = GRID_STROKE_DP,
             density = density,
         )
+    }
+    visibleSubRectangles.firstOrNull { it.first.code == selectedCode }?.let { (_, multiPolygon) ->
+        drawMultiPolygon(multiPolygon, projection, MmoColors.MapSelectedFill, filled = true)
+        drawMultiPolygon(
+            multiPolygon,
+            projection,
+            MmoColors.MapSelectedStroke,
+            filled = false,
+            strokeWidthDp = SELECTED_STROKE_DP,
+            density = density,
+        )
+    }
+}
 
-        if (!isSelected && subRect.isSeaOverlapping && visibleLabels < MAX_VISIBLE_LABELS) {
-            drawSubRectangleLabel(subRect, projection, density, isSelected = false)
-            visibleLabels++
+private fun DrawScope.drawSeaLabels(
+    geometry: MapCanvasGeometry,
+    visibleSubRectangles: List<Pair<SerializableSubRectangle, MultiPolygon>>,
+    projection: MapProjection,
+    density: Density,
+) {
+    val paint = textPaint(with(density) { LABEL_TEXT_SIZE_SP.sp.toPx() }, android.graphics.Color.BLACK)
+    val baselineOffset = paint.textSize / LABEL_BASELINE_OFFSET_DIVISOR
+    visibleSubRectangles
+        .asSequence()
+        .map { it.first }
+        .filter { it.code in geometry.labelledCodes }
+        .take(MAX_VISIBLE_LABELS)
+        .forEach { subRect ->
+            val screen =
+                CameraMath.geoToScreen(
+                    subRect.centroid.toGeoPointLocal(),
+                    projection.camera,
+                    projection.widthPx,
+                    projection.heightPx,
+                )
+            drawContext.canvas.nativeCanvas.drawText(subRect.code, screen[0], screen[1] + baselineOffset, paint)
         }
-    }
-    // Selected label drawn last (on top) as the amber "pill".
-    selectedCode?.let { code ->
-        geometry.subRectangles.firstOrNull { it.first.code == code }?.let { (subRect, _) ->
-            drawSubRectangleLabel(subRect, projection, density, isSelected = true)
-        }
-    }
 }
 
 private fun DrawScope.drawPorts(
@@ -334,23 +357,15 @@ private fun DrawScope.drawPorts(
 ) {
     geometry.ports
         .asSequence()
-        .map { it to GeoPoint(it.point.lon, it.point.lat) }
-        .filter { (_, point) -> viewport.contains(point) }
+        .map { GeoPoint(it.point.lon, it.point.lat) }
+        .filter { viewport.contains(it) }
         .take(MAX_VISIBLE_PORTS)
-        .forEach { (port, point) ->
+        .forEach { point ->
             val screen = CameraMath.geoToScreen(point, projection.camera, projection.widthPx, projection.heightPx)
             drawCircle(
                 color = MmoColors.MapPortDot,
                 radius = with(density) { PORT_DOT_RADIUS_DP.dp.toPx() },
                 center = Offset(screen[0], screen[1]),
-            )
-            drawHaloText(
-                port.name,
-                screen[0] + with(density) { PORT_LABEL_OFFSET_DP.dp.toPx() },
-                screen[1],
-                PORT_LABEL_TEXT_SIZE_SP,
-                android.graphics.Color.BLACK,
-                density,
             )
         }
 }
@@ -362,7 +377,6 @@ private fun DrawScope.drawMultiPolygon(
     projection: MapProjection,
     color: Color,
     filled: Boolean,
-    fillAlpha: Float = 1f,
     strokeWidthDp: Float = 1f,
     density: Density? = null,
 ) {
@@ -370,7 +384,7 @@ private fun DrawScope.drawMultiPolygon(
     multiPolygon.polygons.forEach { polygon ->
         val path = polygonPath(polygon, projection)
         if (filled) {
-            drawPath(path, color = color.copy(alpha = fillAlpha))
+            drawPath(path, color = color)
         } else {
             drawPath(path, color = color, style = Stroke(width = strokeWidthPx))
         }
@@ -405,87 +419,12 @@ private fun appendRing(
     path.close()
 }
 
-private fun DrawScope.drawSubRectangleLabel(
-    subRect: SerializableSubRectangle,
-    projection: MapProjection,
-    density: Density,
-    isSelected: Boolean,
-) {
-    val screen =
-        CameraMath.geoToScreen(
-            subRect.centroid.toGeoPointLocal(),
-            projection.camera,
-            projection.widthPx,
-            projection.heightPx,
-        )
-    if (isSelected) {
-        drawSelectedPillLabel(subRect.code, screen[0], screen[1], density)
-    } else {
-        drawHaloText(subRect.code, screen[0], screen[1], LABEL_TEXT_SIZE_SP, MmoColors.MapGridLine.toArgb(), density)
-    }
-}
-
 private fun textPaint(
     sizePx: Float,
     color: Int,
-    bold: Boolean = false,
 ) = Paint().apply {
     this.color = color
     textSize = sizePx
-    isFakeBoldText = bold
     isAntiAlias = true
     textAlign = Paint.Align.CENTER
-}
-
-private fun DrawScope.drawSelectedPillLabel(
-    code: String,
-    x: Float,
-    y: Float,
-    density: Density,
-) {
-    val textSizePx = with(density) { LABEL_TEXT_SIZE_SP.sp.toPx() }
-    val paint = textPaint(textSizePx, android.graphics.Color.WHITE, bold = true)
-    val pillPaint =
-        Paint().apply {
-            color = MmoColors.MapSelectedFill.toArgb()
-            isAntiAlias = true
-        }
-    val textWidth = paint.measureText(code)
-    val padding = with(density) { PILL_PADDING_DP.dp.toPx() }
-
-    drawContext.canvas.nativeCanvas.apply {
-        drawRoundRect(
-            x - textWidth / 2f - padding,
-            y - textSizePx / 2f - padding / 2f,
-            x + textWidth / 2f + padding,
-            y + textSizePx / 2f + padding / 2f,
-            padding,
-            padding,
-            pillPaint,
-        )
-        drawText(code, x, y + textSizePx / PILL_TEXT_BASELINE_OFFSET_DIVISOR, paint)
-    }
-}
-
-private fun DrawScope.drawHaloText(
-    text: String,
-    x: Float,
-    y: Float,
-    sizeSp: Float,
-    color: Int,
-    density: Density,
-) {
-    val textSizePx = with(density) { sizeSp.sp.toPx() }
-    val strokeWidthPx = with(density) { HALO_STROKE_WIDTH_DP.dp.toPx() }
-    val halo =
-        textPaint(textSizePx, android.graphics.Color.WHITE).apply {
-            style = Paint.Style.STROKE
-            strokeWidth = strokeWidthPx
-        }
-    val fill = textPaint(textSizePx, color)
-
-    drawContext.canvas.nativeCanvas.apply {
-        drawText(text, x, y, halo)
-        drawText(text, x, y, fill)
-    }
 }

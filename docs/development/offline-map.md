@@ -94,14 +94,15 @@ dataset is cached in memory for the remaining lifetime of the process.
 
 Bottom → top, single `Canvas` draw pass, viewport-clipped:
 
-1. Pale sea background.
-2. Land polygons (`MmoColors.MapLand`, dark teal fill + thin black outline).
-3. Sub-rectangle grid (`MmoColors.MapGridLine`, thin green stroke + very low alpha fill).
-4. Selected sub-rectangle highlight (`MmoColors.MapSelected`, amber ~35% fill + ~3× stroke).
-5. Sub-rectangle labels — zoom-gated and viewport-culled; never drawn for inland (non-selectable) cells; the
-   selected cell's label is a solid amber pill with white bold text (selection is never colour-only).
-6. Ports — zoom-gated, viewport-culled, cyan dot + haloed port name; display-only, single draw pass, never
-   intercept taps.
+1. White sea background.
+2. Sub-rectangle grid (`MmoColors.MapGridLine`, thin pale green stroke, no fill).
+3. Selected sub-rectangle highlight (`MmoColors.MapSelectedFill` pale blue fill + `MapSelectedStroke` GOV.UK
+   blue border; selection is also announced via TalkBack, so it is never colour-only).
+4. Land polygons (`MmoColors.MapLand`, dark teal fill + thin black outline) — drawn over the grid so no
+   rectangles or selection appear on land.
+5. Sub-rectangle labels — plain black text, no halo; viewport-culled; drawn only for sea-overlapping cells
+   whose centroid is not on land.
+6. Ports — viewport-culled cyan dots only (no place names); display-only, never intercept taps.
 7. A ~1.5dp black border around the whole viewport.
 
 ## Selection semantics

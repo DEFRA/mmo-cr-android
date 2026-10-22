@@ -48,11 +48,14 @@ object MmoColors {
     /** Land fill. */
     val MapLand = Color(0xFF0B4143)
 
-    /** Sub-rectangle grid line stroke and (at low alpha) fill, and sub_code label text. */
-    val MapGridLine = Color(0xFF0B6B3A)
+    /** Sub-rectangle grid line stroke (thin pale green, sea only — land masks it). */
+    val MapGridLine = Color(0xFF9CC9A0)
 
-    /** Selected sub-rectangle fill/stroke and its label "pill" background. */
-    val MapSelectedFill = Color(0xFFE8A63A)
+    /** Selected sub-rectangle fill (pale GOV.UK blue tint). */
+    val MapSelectedFill = Color(0xFFBDD3EA)
+
+    /** Selected sub-rectangle border. */
+    val MapSelectedStroke = GovBlue
 
     /** Port marker dot fill. */
     val MapPortDot = Color(0xFF01FEE2)
