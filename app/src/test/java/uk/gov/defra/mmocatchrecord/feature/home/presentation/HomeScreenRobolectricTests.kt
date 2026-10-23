@@ -10,7 +10,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasTestTag
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
@@ -35,7 +35,6 @@ import org.junit.runner.RunWith
 import org.mockito.kotlin.mock
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import uk.gov.defra.mmocatchrecord.common.design.DebugSettingsSection
 import uk.gov.defra.mmocatchrecord.common.design.GdsTopAppBarTestTags
 import uk.gov.defra.mmocatchrecord.common.design.MmoBottomNavigationBarTestTags
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
@@ -47,9 +46,6 @@ import uk.gov.defra.mmocatchrecord.core.language.AppLanguage
 import uk.gov.defra.mmocatchrecord.core.language.AppLanguageViewModel
 import uk.gov.defra.mmocatchrecord.core.language.FakeAppLanguageRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DmyDate
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.RetryCatchRecordSubmissionUseCase
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.FakeCatchRecordSyncScheduler
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.FakeNetworkConnectivityChecker
 import uk.gov.defra.mmocatchrecord.feature.home.data.FakeHomeRepository
 import uk.gov.defra.mmocatchrecord.feature.home.domain.CatchRecordSummary
 import uk.gov.defra.mmocatchrecord.feature.home.domain.HomeSummary
@@ -84,7 +80,7 @@ class HomeScreenRobolectricTests {
         )
 
     private val statusLabelById =
-        mapOf("1" to "Submitted", "2" to "Ready to submit", "3" to "Draft", "4" to "Waiting to send")
+        mapOf("1" to "Submitted", "2" to "Amended", "3" to "Draft", "4" to "Unsent")
 
     private fun setContent(
         records: List<CatchRecordSummary> = everyStatusRecords,
@@ -119,13 +115,9 @@ class HomeScreenRobolectricTests {
         repository: FakeHomeRepository,
         dispatcher: CoroutineDispatcher,
         context: Context = mock(),
-        syncScheduler: FakeCatchRecordSyncScheduler = FakeCatchRecordSyncScheduler(),
-        connectivityChecker: FakeNetworkConnectivityChecker = FakeNetworkConnectivityChecker(),
     ): HomeViewModel =
         HomeViewModel(
             ObserveHomeSummaryUseCase(repository),
-            RetryCatchRecordSubmissionUseCase(syncScheduler, connectivityChecker),
-            DebugSettingsSection {},
             context,
             dispatcher,
         )
@@ -146,19 +138,6 @@ class HomeScreenRobolectricTests {
             composeTestRule.onNodeWithTag(CatchRecordsListSectionTestTags.row(record.id)).assertIsDisplayed()
             composeTestRule.onNodeWithText(statusLabelById.getValue(record.id)).assertIsDisplayed()
         }
-    }
-
-    @Test
-    fun `retry button is shown only for the awaiting-sync row`() {
-        setContent()
-
-        listOf("1", "2", "3").forEach { id ->
-            scrollToRow(id)
-            composeTestRule.onNodeWithTag(CatchRecordsListSectionTestTags.row(id)).assertIsDisplayed()
-            composeTestRule.onNodeWithTag(CatchRecordsListSectionTestTags.retry(id)).assertDoesNotExist()
-        }
-        scrollToRow("4")
-        composeTestRule.onNodeWithTag(CatchRecordsListSectionTestTags.retry("4")).assertIsDisplayed()
     }
 
     /** ADR-0014 Phase F: the table must fit a typical ~412dp-wide phone without a manual horizontal
@@ -256,34 +235,6 @@ class HomeScreenRobolectricTests {
         composeTestRule.onNodeWithText("We could not load records").assertIsDisplayed()
     }
 
-    /** ADR 0014 Phase C: the FR8 "retried while offline" message renders alongside the records list. */
-    @Test
-    fun `offline retry message is shown when present`() {
-        composeTestRule.setContent {
-            MmoTheme {
-                HomeScreenContent(
-                    state =
-                        HomeViewState(
-                            status = UiStatus.Content(HomeSummary("alice", everyStatusRecords)),
-                            offlineRetryMessage = "Catch record retry will resume when you're back online",
-                        ),
-                    currentLanguage = "en",
-                    onLanguageToggle = {},
-                    isOffline = false,
-                    selectedTab = 0,
-                    onTabSelected = {},
-                    onSignOut = {},
-                    onCreateCatchRecord = {},
-                    onResumeDraft = {},
-                )
-            }
-        }
-        composeTestRule.onNodeWithTag(OfflineRetryMessageTestTags.MESSAGE).assertIsDisplayed()
-        composeTestRule
-            .onNodeWithText("Catch record retry will resume when you're back online")
-            .assertIsDisplayed()
-    }
-
     @Test
     fun `notifications tab shows the notifications tab content`() {
         composeTestRule.setContent {
@@ -304,10 +255,8 @@ class HomeScreenRobolectricTests {
         composeTestRule.onNodeWithTag(HomeScreenTestTags.NOTIFICATIONS_TAB_HEADING).assertIsDisplayed()
     }
 
-    /** Covers [SettingsTabContent]'s own default [uk.gov.defra.mmocatchrecord.common.design.DebugSettingsSection]
-     * seam — the Settings tab is reached via [HomeScreenContent] with its own default, a separate no-op object. */
     @Test
-    fun `settings tab shows the settings tab content with the default debug settings section`() {
+    fun `settings tab shows the settings tab content`() {
         composeTestRule.setContent {
             MmoTheme {
                 HomeScreenContent(
@@ -327,7 +276,7 @@ class HomeScreenRobolectricTests {
     }
 
     @Test
-    fun `settings tab content renders with its own default debug settings section when none is supplied`() {
+    fun `settings tab content renders standalone`() {
         composeTestRule.setContent {
             MmoTheme {
                 SettingsTabContent(onSignOut = {})
@@ -378,7 +327,7 @@ class HomeScreenRobolectricTests {
 
         composeTestRule.onNodeWithText("Catch record statuses").performClick()
         composeTestRule.onNodeWithText("Draft:").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Waiting to send:").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Unsent:").assertIsDisplayed()
     }
 
     /** Covers the 4-column table's header/rows/pagination and [formatDmyDate] via the real preview data,
@@ -489,21 +438,6 @@ class HomeScreenRobolectricTests {
         composeTestRule.onAllNodesWithText("Draft:").onFirst().assertIsDisplayed()
     }
 
-    /** Exercises the `LaunchedEffect`/`delay` auto-dismiss branch, otherwise unreachable within a normal
-     * test's real-time duration — advances the Compose test clock past the 6s delay instead. */
-    @Test
-    fun `offline retry message auto-dismisses itself after its delay`() {
-        composeTestRule.mainClock.autoAdvance = false
-        var dismissed = false
-        composeTestRule.setContent {
-            MmoTheme { OfflineRetryMessage(message = "Retry queued", onDismissed = { dismissed = true }) }
-        }
-
-        composeTestRule.mainClock.advanceTimeBy(6_000L)
-        composeTestRule.waitForIdle()
-        assertTrue(dismissed)
-    }
-
     @Test
     fun `sync confirmation message auto-dismisses itself after its delay`() {
         composeTestRule.mainClock.autoAdvance = false
@@ -538,32 +472,6 @@ class HomeScreenRobolectricTests {
             .onNodeWithTag(HomeScreenTestTags.TAB_LIST)
             .performScrollToNode(hasTestTag("home_loading_indicator"))
         composeTestRule.onNodeWithTag("home_loading_indicator").assertIsDisplayed()
-    }
-
-    @Test
-    fun `retrying row shows the pending retry label and a disabled retry button`() {
-        composeTestRule.setContent {
-            MmoTheme {
-                HomeScreenContent(
-                    state =
-                        HomeViewState(
-                            status = UiStatus.Content(HomeSummary("alice", everyStatusRecords)),
-                            retryingIds = setOf("4"),
-                        ),
-                    currentLanguage = "en",
-                    onLanguageToggle = {},
-                    isOffline = false,
-                    selectedTab = 0,
-                    onTabSelected = {},
-                    onSignOut = {},
-                    onCreateCatchRecord = {},
-                    onResumeDraft = {},
-                )
-            }
-        }
-        scrollToRow("4")
-        composeTestRule.onNodeWithTag(CatchRecordsListSectionTestTags.retry("4")).assertIsNotEnabled()
-        composeTestRule.onNodeWithText("Retrying…").assertIsDisplayed()
     }
 
     /** With exactly one page of records, both pagination links are disabled at once (ADR-0014 Phase F). */
@@ -675,26 +583,20 @@ class HomeScreenRobolectricTests {
 
             composeTestRule.onNodeWithTag(MmoBottomNavigationBarTestTags.NOTIFICATIONS_TAB).performClick()
             composeTestRule.onNodeWithTag(HomeScreenTestTags.NOTIFICATIONS_TAB_HEADING).assertIsDisplayed()
+            composeTestRule.onNodeWithTag(HomeScreenTestTags.NOTIFICATIONS_ROYAL_CREST).assertIsDisplayed()
 
             composeTestRule.onNodeWithTag(GdsTopAppBarTestTags.BACK_BUTTON).performClick()
             composeTestRule.onNodeWithTag(HomeScreenTestTags.TAB_LIST).assertIsDisplayed()
             assertFalse("back from a non-home tab must not sign the user out", signedOut)
         }
 
-    /** Covers the wrapper's `onRetry` wiring — dispatching [HomeEvent.RetrySubmission] on the real
-     * [HomeViewModel] (not a test-local lambda) and its `retryingIds` round-trip into the rendered row. */
+    /** HomeRoute(initialTab) lands the wrapper directly on a non-home tab (see MmoNavHost). */
     @Test
-    fun `home screen wrapper retry action dispatches RetrySubmission on the real view model`() =
+    fun `home screen wrapper honours its initialTab parameter`() =
         runTest {
             val repository = FakeHomeRepository()
             repository.emit(HomeSummary(signedInUserId = "alice", catchRecords = everyStatusRecords))
-            val syncScheduler = FakeCatchRecordSyncScheduler()
-            val homeViewModel =
-                buildHomeViewModel(
-                    repository,
-                    dispatcher = StandardTestDispatcher(testScheduler),
-                    syncScheduler = syncScheduler,
-                )
+            val homeViewModel = buildHomeViewModel(repository, dispatcher = StandardTestDispatcher(testScheduler))
             val languageViewModel = AppLanguageViewModel(FakeAppLanguageRepository())
             val connectivityViewModel = ConnectivityViewModel(FakeConnectivityObserver(initiallyOnline = true))
 
@@ -704,6 +606,7 @@ class HomeScreenRobolectricTests {
                         onSignOut = {},
                         onCreateCatchRecord = {},
                         onResumeDraft = {},
+                        initialTab = 2,
                         viewModel = homeViewModel,
                         languageViewModel = languageViewModel,
                         connectivityViewModel = connectivityViewModel,
@@ -713,13 +616,6 @@ class HomeScreenRobolectricTests {
             testScheduler.advanceUntilIdle()
             composeTestRule.waitForIdle()
 
-            scrollToRow("4")
-            composeTestRule.onNodeWithTag(CatchRecordsListSectionTestTags.retry("4")).performClick()
-            testScheduler.advanceUntilIdle()
-            composeTestRule.waitForIdle()
-
-            assertEquals(listOf("4"), syncScheduler.scheduledDraftIds)
-            scrollToRow("4")
-            composeTestRule.onNodeWithTag(CatchRecordsListSectionTestTags.retry("4")).assertIsNotEnabled()
+            composeTestRule.onNodeWithTag(SettingsScreenTestTags.SCREEN).assertIsDisplayed()
         }
 }

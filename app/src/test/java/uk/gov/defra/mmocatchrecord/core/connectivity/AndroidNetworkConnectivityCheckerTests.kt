@@ -81,7 +81,7 @@ class AndroidNetworkConnectivityCheckerTests {
     }
 
     @Test
-    fun `isConnected is true when the active network has the internet capability`() {
+    fun `isConnected is false when the active network has internet but is not validated`() {
         val network = ShadowNetwork.newInstance(ConnectivityManager.TYPE_WIFI)
         val info =
             ShadowNetworkInfo.newInstance(
@@ -96,6 +96,28 @@ class AndroidNetworkConnectivityCheckerTests {
         shadowManager.setDefaultNetworkActive(true)
         val capabilities = ShadowNetworkCapabilities.newInstance()
         shadowOf(capabilities).addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        shadowManager.setNetworkCapabilities(network, capabilities)
+
+        assertFalse(AndroidNetworkConnectivityChecker(context).isConnected())
+    }
+
+    @Test
+    fun `isConnected is true when the active network has validated internet`() {
+        val network = ShadowNetwork.newInstance(ConnectivityManager.TYPE_WIFI)
+        val info =
+            ShadowNetworkInfo.newInstance(
+                NetworkInfo.DetailedState.CONNECTED,
+                ConnectivityManager.TYPE_WIFI,
+                0,
+                true,
+                true,
+            )
+        shadowManager.addNetwork(network, info)
+        shadowManager.setActiveNetworkInfo(info)
+        shadowManager.setDefaultNetworkActive(true)
+        val capabilities = ShadowNetworkCapabilities.newInstance()
+        shadowOf(capabilities).addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        shadowOf(capabilities).addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
         shadowManager.setNetworkCapabilities(network, capabilities)
 
         assertTrue(AndroidNetworkConnectivityChecker(context).isConnected())

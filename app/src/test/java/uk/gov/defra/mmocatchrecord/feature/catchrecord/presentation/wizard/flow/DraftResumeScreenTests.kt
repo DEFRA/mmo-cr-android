@@ -1,9 +1,20 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.dp
+import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.navigation
+import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -21,6 +32,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import uk.gov.defra.mmocatchrecord.common.design.GdsTopAppBarTestTags
+import uk.gov.defra.mmocatchrecord.common.navigation.CatchRecordGraphRoute
+import uk.gov.defra.mmocatchrecord.common.navigation.HomeRoute
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftRepository
 
@@ -61,11 +74,18 @@ class DraftResumeScreenTests {
         viewModel: CatchRecordFlowViewModel,
         draftId: String? = "draft-1",
         onNavigate: (WizardStep) -> Unit = {},
+        onDraftDeleted: () -> Unit = {},
         onBack: () -> Unit = {},
     ) {
         composeTestRule.setContent {
             WizardTestTheme {
-                DraftResumeScreen(viewModel = viewModel, onNavigate = onNavigate, onBack = onBack, draftId = draftId)
+                DraftResumeScreen(
+                    viewModel = viewModel,
+                    onNavigate = onNavigate,
+                    onDraftDeleted = onDraftDeleted,
+                    onBack = onBack,
+                    draftId = draftId,
+                )
             }
         }
         testScheduler.advanceUntilIdle()
@@ -134,14 +154,14 @@ class DraftResumeScreenTests {
         }
 
     @Test
-    fun `confirming delete dispatches DeleteDraft and navigates to vessel selection`() =
+    fun `confirming delete dispatches DeleteDraft and triggers onDraftDeleted`() =
         runTest {
             val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
             repository.startDraft("vessel-achilles")
             val viewModel = buildViewModel(StandardTestDispatcher(testScheduler), repository)
-            var navigatedStep: WizardStep? = null
+            var draftDeletedInvoked = false
 
-            launchScreen(viewModel, onNavigate = { navigatedStep = it })
+            launchScreen(viewModel, onDraftDeleted = { draftDeletedInvoked = true })
 
             composeTestRule.onNodeWithTag("${DraftResumeScreenTestTags.OPTION_PREFIX}_1").performClick()
             composeTestRule.onNodeWithTag(DraftResumeScreenTestTags.SAVE_ACTION).performClick()
@@ -151,8 +171,88 @@ class DraftResumeScreenTests {
             testScheduler.advanceUntilIdle()
             composeTestRule.waitForIdle()
 
-            assertEquals(WizardStep.VesselSelection, navigatedStep)
+            assertTrue(draftDeletedInvoked)
             assertTrue(repository.deletedDraftIds.contains("draft-1"))
+        }
+
+    @Test
+    fun `delete failure surfaces error and does not invoke onDraftDeleted`() =
+        runTest {
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            repository.startDraft("vessel-achilles")
+            val viewModel = buildViewModel(StandardTestDispatcher(testScheduler), repository)
+            var draftDeletedInvoked = false
+
+            launchScreen(viewModel, onDraftDeleted = { draftDeletedInvoked = true })
+
+            repository.failNextOperation = true
+            composeTestRule.onNodeWithTag("${DraftResumeScreenTestTags.OPTION_PREFIX}_1").performClick()
+            composeTestRule.onNodeWithTag(DraftResumeScreenTestTags.SAVE_ACTION).performClick()
+            composeTestRule.onNodeWithTag(DraftResumeScreenTestTags.CONFIRM_DELETE).performClick()
+            testScheduler.advanceUntilIdle()
+            composeTestRule.waitForIdle()
+
+            assertTrue(!draftDeletedInvoked)
+            composeTestRule.onNodeWithTag(DraftResumeScreenTestTags.ERROR_MESSAGE).assertIsDisplayed()
+        }
+
+    @Test
+    fun `confirming delete navigates to HomeRoute and pops catch record graph`() =
+        runTest {
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            repository.startDraft("vessel-achilles")
+            val viewModel = buildViewModel(StandardTestDispatcher(testScheduler), repository)
+            lateinit var navController: NavHostController
+
+            composeTestRule.setContent {
+                navController = rememberNavController()
+                WizardTestTheme {
+                    NavHost(navController = navController, startDestination = HomeRoute()) {
+                        composable<HomeRoute> {
+                            Box(modifier = Modifier.size(50.dp).testTag("home_screen_destination"))
+                        }
+                        navigation<CatchRecordGraphRoute>(startDestination = DraftResumeRoute("draft-1")) {
+                            composable<DraftResumeRoute> {
+                                DraftResumeScreen(
+                                    viewModel = viewModel,
+                                    onNavigate = { navController.navigate(routeFor(it)) },
+                                    onDraftDeleted = {
+                                        navController.navigate(HomeRoute()) {
+                                            popUpTo<CatchRecordGraphRoute> { inclusive = true }
+                                            launchSingleTop = true
+                                        }
+                                    },
+                                    onBack = { navController.popBackStack() },
+                                    draftId = "draft-1",
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            navController.navigate(DraftResumeRoute("draft-1"))
+            composeTestRule.waitUntil(timeoutMillis = 5_000) {
+                testScheduler.advanceUntilIdle()
+                viewModel.state.value.status is UiStatus.Content<*>
+            }
+            composeTestRule.waitForIdle()
+
+            composeTestRule.onNodeWithTag("${DraftResumeScreenTestTags.OPTION_PREFIX}_1").performClick()
+            composeTestRule.onNodeWithTag(DraftResumeScreenTestTags.SAVE_ACTION).performClick()
+            composeTestRule.onNodeWithTag(DraftResumeScreenTestTags.CONFIRM_DELETE).performClick()
+            composeTestRule.waitUntil(timeoutMillis = 5_000) {
+                testScheduler.advanceUntilIdle()
+                viewModel.state.value.isDraftDeleted
+            }
+            composeTestRule.waitForIdle()
+
+            composeTestRule.onNodeWithTag("home_screen_destination").assertIsDisplayed()
+            assertTrue(navController.currentBackStackEntry?.destination?.hasRoute<HomeRoute>() == true)
+            val hasDraftResumeOnStack = runCatching { navController.getBackStackEntry<DraftResumeRoute>() }.isSuccess
+            assertTrue(!hasDraftResumeOnStack)
+            val hasGraphOnStack = runCatching { navController.getBackStackEntry<CatchRecordGraphRoute>() }.isSuccess
+            assertTrue(!hasGraphOnStack)
         }
 
     @Test

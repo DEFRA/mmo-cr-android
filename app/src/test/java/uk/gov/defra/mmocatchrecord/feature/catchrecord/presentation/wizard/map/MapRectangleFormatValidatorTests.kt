@@ -53,4 +53,32 @@ class MapRectangleFormatValidatorTests {
         val result = MapRectangleFormatValidator.validate("38-84")
         assertEquals(MapRectangleInputError.Format, result.error)
     }
+
+    @Test
+    fun `a well-formatted code present in knownCodes is valid`() {
+        val result = MapRectangleFormatValidator.validate("38e84", knownCodes = setOf("38E84"))
+        assertEquals("38E84", result.code)
+        assertNull(result.error)
+    }
+
+    @Test
+    fun `a well-formatted code absent from knownCodes yields a not-found error`() {
+        val result = MapRectangleFormatValidator.validate("99Z99", knownCodes = setOf("38E84"))
+        assertEquals(MapRectangleInputError.NotFound, result.error)
+        assertNull(result.code)
+        assertEquals(false, result.isValid)
+    }
+
+    @Test
+    fun `a null knownCodes skips the existence check entirely`() {
+        val result = MapRectangleFormatValidator.validate("99Z99", knownCodes = null)
+        assertEquals("99Z99", result.code)
+        assertNull(result.error)
+    }
+
+    @Test
+    fun `format errors take precedence over the not-found existence check`() {
+        val result = MapRectangleFormatValidator.validate("not-a-code", knownCodes = setOf("38E84"))
+        assertEquals(MapRectangleInputError.Format, result.error)
+    }
 }

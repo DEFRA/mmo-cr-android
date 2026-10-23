@@ -2,7 +2,7 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
@@ -262,15 +262,74 @@ class GearSpeciesChecklistScreenTest {
     }
 
     @Test
+    fun wholeNumberSpeciesRejectsATypedDecimalWeightWithAPrecisionError() {
+        // AC8: the field must not block typing a ".", so an out-of-precision value can reach validation.
+        val gearUse = gearUseWithAddedSpecies(listOf(plaice.id))
+        composeTestRule.setContent {
+            MmoTheme {
+                GearSpeciesChecklistScreenContent(
+                    draft = draftWith(gearUse),
+                    gearUse = gearUse,
+                    speciesList = speciesList,
+                    onRemoveSpecies = {},
+                    onAddAnotherSpecies = {},
+                    onSubmit = {},
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
+        composeTestRule
+            .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${plaice.id}")
+            .performTextInput("10.55")
+        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performClick()
+
+        composeTestRule
+            .onAllNodesWithText("Weight for Plaice must be a whole number")
+            .onFirst()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun discardedWeightExceedingRetainedWeightShowsADiscardedExceedsRetainedError() {
+        // AC7: discarded weight must be strictly lower than the weight above minimum size retained.
+        val gearUse = gearUseWithAddedSpecies(listOf(cod.id))
+        composeTestRule.setContent {
+            MmoTheme {
+                GearSpeciesChecklistScreenContent(
+                    draft = draftWith(gearUse),
+                    gearUse = gearUse,
+                    speciesList = speciesList,
+                    onRemoveSpecies = {},
+                    onAddAnotherSpecies = {},
+                    onSubmit = {},
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
+        composeTestRule
+            .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${cod.id}")
+            .performTextInput("5")
+        composeTestRule
+            .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ADD_DISCARDED_ACTION_PREFIX}_${cod.id}")
+            .performClick()
+        composeTestRule
+            .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.DISCARDED_FIELD_PREFIX}_${cod.id}")
+            .performTextInput("10")
+        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performClick()
+
+        composeTestRule
+            .onAllNodesWithText("Weight above minimum size retained must be higher than weight legally discarded")
+            .onFirst()
+            .assertIsDisplayed()
+    }
+
+    @Test
     fun oneDecimalPlaceSpeciesRejectsATwoDecimalPlaceWeightWithAPrecisionError() {
-        // Note: a WholeNumber species' field renders as `GdsNumericFieldKind.Integer`, which strips any
-        // '.' the user types at input time (see `GdsNumericField.filterNumericInput`) — so a fractional
-        // value can never actually reach the validator for a whole-number species via real typing, and
-        // the Precision error for `SpeciesWeightPrecision.WholeNumber` is validator-level defensive-only
-        // (covered by `SpeciesWeightValidatorTests`, not reachable here). The one reachable-via-typing
-        // Precision path is `OneDecimalPlace`: the Decimal-kind field allows a single '.' but does not
-        // limit how many digits follow it, so a two-decimal-place value like "5.55" is exactly what a
-        // real user could type and still trip the precision rule.
+        // The Decimal-kind field allows a single '.' but does not limit how many digits follow it, so a
+        // two-decimal-place value like "5.55" is exactly what a real user could type and still trip the
+        // precision rule.
         val gearUse = gearUseWithAddedSpecies(listOf(cod.id))
         composeTestRule.setContent {
             MmoTheme {

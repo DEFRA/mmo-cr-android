@@ -3,9 +3,10 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.submission
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performFirstLinkClick
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -257,7 +258,7 @@ class WizardResultScreensErrorPathTests {
             .assertIsDisplayed()
         composeTestRule
             .onNodeWithTag(LateSubmissionWarningScreenTestTags.CHECK_TRIP_END_DATE_LINK)
-            .performClick()
+            .performFirstLinkClick()
 
         assertEquals(WizardStep.ReturnDate, navigatedTo)
     }

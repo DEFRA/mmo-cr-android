@@ -36,14 +36,12 @@ class ConnectivityViewModelTests {
         }
 
     @Test
-    fun `isOffline is true when the observer reports no connectivity`() =
+    fun `isOffline is true immediately when the app starts with no connectivity`() =
         runTest {
             val viewModel = ConnectivityViewModel(FakeConnectivityObserver(initiallyOnline = false))
 
+            assertTrue(viewModel.isOffline.value)
             viewModel.isOffline.test {
-                // stateIn's `initialValue` (false) is emitted synchronously before the underlying
-                // observer's actual "offline" value has had a chance to be collected on the test dispatcher.
-                skipItems(1)
                 assertTrue(awaitItem())
             }
         }

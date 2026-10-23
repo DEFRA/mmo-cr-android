@@ -1,6 +1,7 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.submission
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -85,6 +86,24 @@ class CheckYourAnswersSupportTests {
         assertEquals("Newlyn", departurePortRow.value)
         val returnPortRow = tripSection.rows.first { it.kind == CheckYourAnswersFieldKind.ReturnPort }
         assertEquals("Plymouth", returnPortRow.value)
+    }
+
+    @Test
+    fun `vessel row is not changeable, unlike every other trip row`() {
+        val gearUse =
+            GearUse(
+                id = "gear-use-1",
+                gearTypeId = seineNet.id,
+                statisticalSubRectangleCode = "38E9",
+                confirmedUsedOnTrip = true,
+            )
+        val sections = buildSections(draft(gearUses = listOf(gearUse)))
+        val tripSection = sections.first { it.kind == CheckYourAnswersSectionKind.Trip }
+
+        val vesselRow = tripSection.rows.first { it.kind == CheckYourAnswersFieldKind.Vessel }
+        assertFalse(vesselRow.isChangeable)
+        val otherRows = tripSection.rows.filter { it.kind != CheckYourAnswersFieldKind.Vessel }
+        assertTrue(otherRows.all { it.isChangeable })
     }
 
     @Test

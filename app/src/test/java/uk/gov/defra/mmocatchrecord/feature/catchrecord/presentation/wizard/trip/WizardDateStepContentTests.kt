@@ -4,11 +4,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTextClearance
-import androidx.compose.ui.test.performTextInput
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -17,21 +16,15 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DmyDate
+import java.time.LocalDate
 
-/** BR-XX (ADR 0014, Phase D) dirty-state coverage for [WizardDateStepContent]'s [onDirtyChanged] reporting. */
 @RunWith(RobolectricTestRunner::class)
 class WizardDateStepContentTests {
     @get:Rule
     val composeTestRule = createComposeRule()
 
-    private val tags =
-        WizardDateStepTestTags(
-            summary = DepartureDateScreenTestTags.ERROR_SUMMARY,
-            dayField = DepartureDateScreenTestTags.DAY_FIELD,
-            monthField = DepartureDateScreenTestTags.MONTH_FIELD,
-            yearField = DepartureDateScreenTestTags.YEAR_FIELD,
-            saveAction = DepartureDateScreenTestTags.SAVE_ACTION,
-        )
+    private val tags = DepartureDateScreenTestTags.stepTags
+    private val today = LocalDate.of(2026, 10, 16)
 
     private fun setContent(
         initialDate: DmyDate?,
@@ -44,6 +37,7 @@ class WizardDateStepContentTests {
                     testTags = tags,
                     onSubmit = {},
                     onDirtyChanged = onDirtyChanged,
+                    today = today,
                 )
             }
         }
@@ -58,27 +52,57 @@ class WizardDateStepContentTests {
     }
 
     @Test
-    fun editingAFieldReportsDirty() {
+    fun openingAnEmptyStepNeverReportsDirty() {
+        var lastDirty = true
+        setContent(initialDate = null, onDirtyChanged = { lastDirty = it })
+
+        assertFalse(lastDirty)
+    }
+
+    @Test
+    fun movingAWheelReportsDirty() {
         var lastDirty = false
         setContent(initialDate = DmyDate(3, 7, 2026), onDirtyChanged = { lastDirty = it })
 
-        composeTestRule.onNodeWithTag(DepartureDateScreenTestTags.DAY_FIELD).performTextClearance()
-        composeTestRule.onNodeWithTag(DepartureDateScreenTestTags.DAY_FIELD).performTextInput("04")
+        composeTestRule.setWheel(tags.dayWheel, 4)
         composeTestRule.waitForIdle()
 
         assertTrue(lastDirty)
     }
 
     @Test
-    fun reclearingBackToTheSavedValueReportsClean() {
+    fun cancelRestoresTheConfirmedDateAndReportsClean() {
         var lastDirty = false
         setContent(initialDate = DmyDate(3, 7, 2026), onDirtyChanged = { lastDirty = it })
 
-        composeTestRule.onNodeWithTag(DepartureDateScreenTestTags.DAY_FIELD).performTextClearance()
-        composeTestRule.onNodeWithTag(DepartureDateScreenTestTags.DAY_FIELD).performTextInput("03")
+        composeTestRule.setWheel(tags.dayWheel, 4)
+        composeTestRule.waitForIdle()
+        assertTrue(lastDirty)
+        composeTestRule.onNodeWithTag(tags.cancelAction).performClick()
         composeTestRule.waitForIdle()
 
         assertFalse(lastDirty)
+    }
+
+    @Test
+    fun confirmingADifferentDateStaysDirtyUntilSaved() {
+        var lastDirty = false
+        setContent(initialDate = DmyDate(3, 7, 2026), onDirtyChanged = { lastDirty = it })
+
+        composeTestRule.spinToAndConfirm(tags, DmyDate(4, 7, 2026))
+        composeTestRule.waitForIdle()
+
+        assertTrue(lastDirty)
+    }
+
+    @Test
+    fun previewRendersWithoutError() {
+        // WizardDateStepContentPreview otherwise stays uncounted new code (no coverage merged
+        // from connectedDebugAndroidTest) — see GdsAutocompleteFieldTests's equivalent doc comment.
+        composeTestRule.setContent { WizardDateStepContentPreview() }
+
+        // The preview hardcodes its own tags ("save" etc.), distinct from the outer `tags` fixture.
+        composeTestRule.onNodeWithTag("save").assertIsDisplayed()
     }
 
     @Test
@@ -93,26 +117,25 @@ class WizardDateStepContentTests {
                         testTags = tags,
                         onSubmit = { savedDate = it },
                         onDirtyChanged = { lastDirty = it },
+                        today = today,
                     )
                 } else {
-                    // A fresh instance for the re-entered step, mirroring the real screen's ViewModel-driven
-                    // recomposition from UiStatus.Loading to UiStatus.Content(saved) — see DepartureDateScreen.
+                    // A fresh instance mirrors the real screen recomposing from Loading to Content(saved).
                     WizardDateStepContent(
                         initialDate = savedDate,
                         testTags = tags,
                         onSubmit = {},
                         onDirtyChanged = { lastDirty = it },
+                        today = today,
                     )
                 }
             }
         }
 
-        composeTestRule.onNodeWithTag(DepartureDateScreenTestTags.DAY_FIELD).performTextInput("11")
-        composeTestRule.onNodeWithTag(DepartureDateScreenTestTags.MONTH_FIELD).performTextInput("09")
-        composeTestRule.onNodeWithTag(DepartureDateScreenTestTags.YEAR_FIELD).performTextInput("2026")
+        composeTestRule.spinToAndConfirm(tags, DmyDate(11, 9, 2026))
         composeTestRule.waitForIdle()
         assertTrue(lastDirty)
-        composeTestRule.onNodeWithTag(DepartureDateScreenTestTags.SAVE_ACTION).performClick()
+        composeTestRule.onNodeWithTag(tags.saveAction).performClick()
         composeTestRule.waitForIdle()
 
         assertFalse(lastDirty)

@@ -2,19 +2,27 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.subm
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withLink
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.gov.defra.mmocatchrecord.R
-import uk.gov.defra.mmocatchrecord.common.design.GdsLinkAction
+import uk.gov.defra.mmocatchrecord.common.design.MmoColors
+import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
@@ -35,6 +43,14 @@ object LateSubmissionWarningScreenTestTags {
     const val SAVE_ACTION = "late_submission_warning_save_action"
     const val ERROR_MESSAGE = "late_submission_warning_error_message"
 }
+
+/** Resolved callbacks for the private, ViewModel-free [LateSubmissionWarningScreen] overload below. */
+private data class LateSubmissionWarningActions(
+    val onRetry: () -> Unit,
+    val onCheckTripEndDate: () -> Unit,
+    val onSubmit: (CatchRecordDraft) -> Unit,
+    val onBack: () -> Unit,
+)
 
 /**
  * Phase 8, screen 1 (conditional): shown only when [nextWizardStepForDraft]/[resolveSubmissionStep]
@@ -61,33 +77,75 @@ fun LateSubmissionWarningScreen(
     val nowEpochMillis = System.currentTimeMillis()
     val draft = (state.status as? UiStatus.Content)?.value
     val daysSinceReturn = draft?.returnDate?.let { LateSubmissionSupport.daysSinceReturn(it, nowEpochMillis) } ?: 0
+    LateSubmissionWarningScreen(
+        status = state.status,
+        daysSinceReturn = daysSinceReturn,
+        referenceNumber = state.catchRecordReference,
+        actions =
+            LateSubmissionWarningActions(
+                onRetry = { viewModel.dispatch(CatchRecordFlowEvent.Retry) },
+                onCheckTripEndDate = { onNavigate(WizardStep.ReturnDate) },
+                onSubmit = { draftToSubmit ->
+                    val updatedDraft = draftToSubmit.copy(lateSubmissionWarningAcknowledged = true)
+                    val nextStep = resolveSubmissionStep(updatedDraft, nowEpochMillis)
+                    viewModel.dispatch(CatchRecordFlowEvent.SaveAndContinue(updatedDraft, nextStep))
+                    onNavigate(nextStep)
+                },
+                onBack = onBack,
+            ),
+        modifier = modifier,
+    )
+}
+
+/** ViewModel-free overload so [LateSubmissionWarningScreenPreview] can render the whole scaffold. */
+@Composable
+private fun LateSubmissionWarningScreen(
+    status: UiStatus<CatchRecordDraft>,
+    daysSinceReturn: Int,
+    referenceNumber: String?,
+    actions: LateSubmissionWarningActions,
+    modifier: Modifier = Modifier,
+) {
+    val title = pluralStringResource(R.plurals.late_submission_warning_title, daysSinceReturn, daysSinceReturn)
     CatchRecordWizardScaffold(
         screenTestTag = LateSubmissionWarningScreenTestTags.SCREEN,
-        title = pluralStringResource(R.plurals.late_submission_warning_title, daysSinceReturn, daysSinceReturn),
-        onBack = onBack,
+        title = highlightDayCount(title, daysSinceReturn),
+        onBack = actions.onBack,
         modifier = modifier,
-        referenceNumber = state.catchRecordReference,
+        referenceNumber = referenceNumber,
     ) {
-        when (val status = state.status) {
+        when (status) {
             UiStatus.Idle, UiStatus.Loading -> WizardLoadingState()
             is UiStatus.Error ->
                 WizardErrorState(
                     message = status.message,
                     testTag = LateSubmissionWarningScreenTestTags.ERROR_MESSAGE,
                     isRetryable = status.isRetryable,
-                    onRetry = { viewModel.dispatch(CatchRecordFlowEvent.Retry) },
+                    onRetry = actions.onRetry,
                 )
             is UiStatus.Content ->
                 LateSubmissionWarningScreenContent(
-                    onCheckTripEndDate = { onNavigate(WizardStep.ReturnDate) },
-                    onSubmit = {
-                        val updatedDraft = status.value.copy(lateSubmissionWarningAcknowledged = true)
-                        val nextStep = resolveSubmissionStep(updatedDraft, nowEpochMillis)
-                        viewModel.dispatch(CatchRecordFlowEvent.SaveAndContinue(updatedDraft, nextStep))
-                        onNavigate(nextStep)
-                    },
+                    onCheckTripEndDate = actions.onCheckTripEndDate,
+                    onSubmit = { actions.onSubmit(status.value) },
                 )
         }
+    }
+}
+
+/** Colours [daysSinceReturn]'s digits within [title] in [MmoColors.LinkVisited], per the confirmed screenshot. */
+private fun highlightDayCount(
+    title: String,
+    daysSinceReturn: Int,
+): AnnotatedString {
+    val dayCountText = daysSinceReturn.toString()
+    val highlightStart = title.indexOf(dayCountText)
+    if (highlightStart < 0) return AnnotatedString(title)
+    return buildAnnotatedString {
+        append(title.substring(0, highlightStart))
+        withStyle(SpanStyle(color = MmoColors.LinkVisited)) {
+            append(dayCountText)
+        }
+        append(title.substring(highlightStart + dayCountText.length))
     }
 }
 
@@ -98,23 +156,65 @@ fun LateSubmissionWarningScreenContent(
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-        Text(text = stringResource(R.string.late_submission_warning_body), style = MaterialTheme.typography.bodyLarge)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            GdsLinkAction(
-                text = stringResource(R.string.late_submission_warning_check_trip_end_date),
-                onClick = onCheckTripEndDate,
-                testTag = LateSubmissionWarningScreenTestTags.CHECK_TRIP_END_DATE_LINK,
-            )
-            Text(
-                text = " " + stringResource(R.string.late_submission_warning_check_trip_end_date_suffix),
-                style = MaterialTheme.typography.bodyLarge,
-            )
+    val bodyText = stringResource(R.string.late_submission_warning_body)
+    val linkText = stringResource(R.string.late_submission_warning_check_trip_end_date)
+    val suffixText = stringResource(R.string.late_submission_warning_check_trip_end_date_suffix)
+    val body =
+        buildAnnotatedString {
+            append(bodyText)
+            append(" ")
+            withLink(
+                LinkAnnotation.Clickable(
+                    tag = LateSubmissionWarningScreenTestTags.CHECK_TRIP_END_DATE_LINK,
+                    styles =
+                        TextLinkStyles(
+                            style = SpanStyle(color = MmoColors.Link, textDecoration = TextDecoration.Underline),
+                        ),
+                    linkInteractionListener = { onCheckTripEndDate() },
+                ),
+            ) {
+                append(linkText)
+            }
+            append(" ")
+            append(suffixText)
         }
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+        Text(
+            text = body,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.testTag(LateSubmissionWarningScreenTestTags.CHECK_TRIP_END_DATE_LINK),
+        )
         PrimaryActionButton(
             text = stringResource(R.string.save_and_continue),
             onClick = onSubmit,
             modifier = Modifier.testTag(LateSubmissionWarningScreenTestTags.SAVE_ACTION),
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Suppress("FunctionNaming")
+@Composable
+fun LateSubmissionWarningScreenPreview() {
+    MmoTheme {
+        LateSubmissionWarningScreen(
+            status =
+                UiStatus.Content(
+                    CatchRecordDraft(
+                        id = "draft-1",
+                        vesselId = "vessel-1",
+                        modifiedAtEpochMillis = 0L,
+                    ),
+                ),
+            daysSinceReturn = 3,
+            referenceNumber = "A1234520260727150815",
+            actions =
+                LateSubmissionWarningActions(
+                    onRetry = {},
+                    onCheckTripEndDate = {},
+                    onSubmit = {},
+                    onBack = {},
+                ),
         )
     }
 }

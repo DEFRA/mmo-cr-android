@@ -112,6 +112,20 @@ class FakeCatchRecordDraftRepository(
                 }
         }
 
+    override suspend fun getPreviouslyUsedPortIds(vesselId: String): Result<List<String>> {
+        if (failNextOperation) return failure()
+        return Result.success(
+            drafts.values
+                .filter {
+                    it.vesselId == vesselId &&
+                        (it.status == DraftStatus.Submitted || it.status == DraftStatus.PendingSync)
+                }.sortedWith(
+                    compareByDescending<CatchRecordDraft> { it.modifiedAtEpochMillis }.thenByDescending { it.id },
+                ).flatMap { listOfNotNull(it.departurePort?.portId, it.returnPort?.portId) }
+                .distinct(),
+        )
+    }
+
     private fun publishDrafts() {
         draftsFlow.value = drafts.values.toList()
     }

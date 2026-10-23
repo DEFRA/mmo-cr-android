@@ -108,9 +108,8 @@ class WizardSelectionScreensTest {
             }
         }
 
-        composeTestRule.onNodeWithTag("${VesselSelectionScreenTestTags.OPTION_PREFIX}_0").performClick()
         composeTestRule
-            .onNodeWithTag(VesselSelectionScreenTestTags.SAVE_ACTION)
+            .onNodeWithTag("${VesselSelectionScreenTestTags.OPTION_PREFIX}_0")
             .assertHasClickAction()
             .assertHeightIsAtLeast(48.dp)
             .performClick()

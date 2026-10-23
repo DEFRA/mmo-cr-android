@@ -1,7 +1,7 @@
 package uk.gov.defra.mmocatchrecord.core.root
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import org.junit.Rule
@@ -10,7 +10,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 
-/** JVM/Robolectric tests for [SplashScreen], the `testDevDebugUnitTest`-reachable [RootPhase.SPLASH] destination. */
+/** JVM/Robolectric tests for [SplashScreen], the `testDebugUnitTest`-reachable [RootPhase.SPLASH] destination. */
 @RunWith(RobolectricTestRunner::class)
 class SplashScreenTests {
     @get:Rule

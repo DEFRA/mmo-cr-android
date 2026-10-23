@@ -1,4 +1,4 @@
-@file:Suppress("detekt.MaxLineLength")
+@file:Suppress("detekt.MaxLineLength", "detekt.LargeClass")
 
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map
 
@@ -10,9 +10,10 @@ import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.click
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -259,8 +260,10 @@ class MapScreenTests {
             }
         }
 
-        composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_SAVE_ACTION).performClick()
-        composeTestRule.onNodeWithTag(MapScreenTestTags.ERROR_MESSAGE).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_SAVE_ACTION).performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+        // The error message appears below the Save action, which the bottom nav bar can push below the fold.
+        composeTestRule.onNodeWithTag(MapScreenTestTags.ERROR_MESSAGE).performScrollTo().assertIsDisplayed()
         assertNull(submittedDraft)
     }
 
@@ -282,7 +285,8 @@ class MapScreenTests {
         }
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.MAP_ERROR).assertIsDisplayed()
-        composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).assertIsDisplayed()
+        // The bottom nav bar can push the "Other" action below the fold.
+        composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -432,18 +436,23 @@ class MapScreenTests {
 
         composeTestRule
             .onNodeWithText(
-                "Select the statistical sub area where the majority of your catch was caught using seine nets (mesh size 100mm)?",
+                "Select the statistical sub area where the majority of your catch was caught using seine nets (mesh size 100mm).",
             ).assertIsDisplayed()
         composeTestRule
             .onNodeWithText(
                 "Select the area where most of your catch was caught. If it is not listed, select Other to enter it.",
             ).assertIsDisplayed()
+        // Later radio options can sit below the fold now the bottom nav bar takes up screen space.
         sampleRectangles.forEachIndexed { index, rectangle ->
-            composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_$index").assertIsDisplayed()
+            composeTestRule
+                .onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_$index")
+                .performScrollTo()
+                .assertIsDisplayed()
             composeTestRule.onNodeWithText(rectangle.code).assertIsDisplayed()
         }
         composeTestRule
             .onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_${sampleRectangles.size}")
+            .performScrollTo()
             .assertIsDisplayed()
         composeTestRule.onNodeWithText("Other").assertIsDisplayed()
     }
@@ -480,9 +489,9 @@ class MapScreenTests {
         setMapScreen(onSubmit = { submittedDraft = it })
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
-        // Radio option index 3 is the trailing "Other" entry (3 nearby codes at indices 0-2).
+        // Radio option index 3 is the trailing "Other" entry (3 nearby codes at indices 0-2). Selecting it
+        // reveals the autocomplete search immediately (Scenario 1/FR2) — no "Save and continue" click needed.
         composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_3").performScrollTo().performClick()
-        composeTestRule.onNodeWithTag(MapScreenTestTags.RADIO_SAVE_ACTION).performScrollTo().performClick()
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).assertIsDisplayed()
         assertNull(submittedDraft)
@@ -503,9 +512,10 @@ class MapScreenTests {
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
         composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_3").performScrollTo().performClick()
-        composeTestRule.onNodeWithTag(MapScreenTestTags.RADIO_SAVE_ACTION).performScrollTo().performClick()
 
-        // A code not present in the local nearby/stub list, entered via free text.
+        // A code not present in the local nearby/stub list, entered via free text. The default
+        // mapDataState (Loading) means existence validation isn't active here — see
+        // `rejectsAWellFormattedCodeNotPresentInTheLoadedDataset` for the FR8 existence-check case.
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).performScrollTo().performTextInput("99Z99")
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_SAVE_ACTION).performScrollTo().performClick()
 
@@ -527,7 +537,6 @@ class MapScreenTests {
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
         composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_3").performScrollTo().performClick()
-        composeTestRule.onNodeWithTag(MapScreenTestTags.RADIO_SAVE_ACTION).performScrollTo().performClick()
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).performScrollTo().performTextInput("38E9")
         composeTestRule
@@ -549,12 +558,11 @@ class MapScreenTests {
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
         composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_3").performScrollTo().performClick()
-        composeTestRule.onNodeWithTag(MapScreenTestTags.RADIO_SAVE_ACTION).performScrollTo().performClick()
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_SAVE_ACTION).performScrollTo().performClick()
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.ERROR_SUMMARY).assertIsDisplayed()
-        composeTestRule.onNodeWithText("Select a statistical subrectangle").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Select a statistical sub area").assertIsDisplayed()
     }
 
     @Test
@@ -567,7 +575,6 @@ class MapScreenTests {
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
         composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_3").performScrollTo().performClick()
-        composeTestRule.onNodeWithTag(MapScreenTestTags.RADIO_SAVE_ACTION).performScrollTo().performClick()
 
         composeTestRule
             .onNodeWithTag(
@@ -577,8 +584,152 @@ class MapScreenTests {
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_SAVE_ACTION).performScrollTo().performClick()
 
         composeTestRule
-            .onNodeWithText("Enter a statistical subrectangle in the correct format, for example 38E84")
+            .onNodeWithText("Enter a statistical sub area in the correct format, for example 38E84")
             .assertIsDisplayed()
+    }
+
+    @Test
+    fun autocompleteScreenRejectsAWellFormattedCodeAbsentFromTheLoadedDatasetWithFR8sNotFoundError() {
+        var submittedDraft: CatchRecordDraft? = null
+        composeTestRule.setContent {
+            WizardTestTheme {
+                MapScreen(
+                    state = stateWith(pendingGearUse()),
+                    onSubmit = { submittedDraft = it },
+                    onBack = {},
+                    mapDataState = MapDataUiState(UiStatus.Content(mapDatasetFixture()), onRetryMapData = {}),
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performScrollTo().performClick()
+        composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_0").performScrollTo().performClick()
+
+        // Once the comprehensive offline dataset has loaded, a correctly formatted but non-existent code
+        // (FR8) is rejected rather than silently saved — the dataset's one fixture code is "38E95".
+        composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).performScrollTo().performTextInput("99Z99")
+        composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_SAVE_ACTION).performScrollTo().performClick()
+
+        composeTestRule.onNodeWithText("Enter a valid statistical sub area code.").assertIsDisplayed()
+        assertNull(submittedDraft)
+    }
+
+    @Test
+    fun autocompleteScreenAcceptsATypedCodePresentInTheLoadedDataset() {
+        var submittedDraft: CatchRecordDraft? = null
+        composeTestRule.setContent {
+            WizardTestTheme {
+                MapScreen(
+                    state = stateWith(pendingGearUse()),
+                    onSubmit = { submittedDraft = it },
+                    onBack = {},
+                    mapDataState = MapDataUiState(UiStatus.Content(mapDatasetFixture()), onRetryMapData = {}),
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performScrollTo().performClick()
+        composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_0").performScrollTo().performClick()
+
+        composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).performScrollTo().performTextInput("38E95")
+        composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_SAVE_ACTION).performScrollTo().performClick()
+
+        assertEquals("38E95", submittedDraft?.gearUses?.single()?.statisticalSubRectangleCode)
+    }
+
+    // --- FR5/FR6: coordinates and ICES rectangle in search results -------------------------------------
+
+    @Test
+    fun autocompleteScreenShowsNoAreaSelectedTextBeforeAnyCodeIsMatched() {
+        composeTestRule.setContent {
+            WizardTestTheme {
+                MapScreen(
+                    state = stateWith(pendingGearUse()),
+                    onSubmit = {},
+                    onBack = {},
+                    mapDataState = MapDataUiState(UiStatus.Content(mapDatasetFixture()), onRetryMapData = {}),
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performScrollTo().performClick()
+        composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_0").performScrollTo().performClick()
+
+        composeTestRule
+            .onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_COORDINATES)
+            .performScrollTo()
+            .assertTextContains("No area selected")
+    }
+
+    @Test
+    fun autocompleteScreenShowsCoordinatesForAnExactlyMatchedCode() {
+        composeTestRule.setContent {
+            WizardTestTheme {
+                MapScreen(
+                    state = stateWith(pendingGearUse()),
+                    onSubmit = {},
+                    onBack = {},
+                    mapDataState = MapDataUiState(UiStatus.Content(mapDatasetFixture()), onRetryMapData = {}),
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performScrollTo().performClick()
+        composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_0").performScrollTo().performClick()
+        composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).performScrollTo().performTextInput("38E95")
+
+        composeTestRule
+            .onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_COORDINATES)
+            .performScrollTo()
+            .assertTextContains("Centre of area: 55.00°N, 0.00°E")
+    }
+
+    @Test
+    fun autocompleteScreenSuggestionShowsTheIcesRectangleAndCoordinatesAsASecondaryLine() {
+        composeTestRule.setContent {
+            WizardTestTheme {
+                MapScreen(
+                    state = stateWith(pendingGearUse()),
+                    onSubmit = {},
+                    onBack = {},
+                    mapDataState = MapDataUiState(UiStatus.Content(mapDatasetFixture()), onRetryMapData = {}),
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performScrollTo().performClick()
+        composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_0").performScrollTo().performClick()
+        composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).performScrollTo().performTextInput("38E9")
+
+        composeTestRule.onNodeWithText("38E95").assertIsDisplayed()
+        composeTestRule.onNodeWithText("ICES rectangle Test area, centre 55.00°N, 0.00°E").assertIsDisplayed()
+    }
+
+    @Test
+    fun autocompleteScreenAnnouncesCoordinatesAfterTheDebounceButNotBeforeIt() {
+        composeTestRule.setContent {
+            WizardTestTheme {
+                MapScreen(
+                    state = stateWith(pendingGearUse()),
+                    onSubmit = {},
+                    onBack = {},
+                    mapDataState = MapDataUiState(UiStatus.Content(mapDatasetFixture()), onRetryMapData = {}),
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performScrollTo().performClick()
+        composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_0").performScrollTo().performClick()
+        composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).performScrollTo().assertIsDisplayed()
+
+        composeTestRule.mainClock.autoAdvance = false
+        composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).performTextInput("38E95")
+        composeTestRule.onNodeWithTag(MapScreenTestTags.COORDINATES_LIVE_REGION).assertTextEquals("")
+        composeTestRule.mainClock.advanceTimeBy(500L)
+        composeTestRule
+            .onNodeWithTag(MapScreenTestTags.COORDINATES_LIVE_REGION)
+            .assertTextEquals("Centre of area, 55.00 degrees north, 0.00 degrees east")
+        composeTestRule.mainClock.autoAdvance = true
     }
 
     // --- Defensive fallback -----------------------------------------------------------------------------

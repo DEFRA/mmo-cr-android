@@ -8,7 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.click
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
@@ -31,7 +31,7 @@ import uk.gov.defra.mmocatchrecord.mapdata.SerializableSubRectangle
 
 /**
  * Exercises [MapCanvas] directly (rather than only through [MapScreen]) with a dataset rich enough to drive
- * its entire `DrawScope` rendering pipeline (land, unselected grid labels, the selected "pill" label, and
+ * its entire `DrawScope` rendering pipeline (grid, selected highlight, land masking, sea-only labels, and
  * ports) plus its pan gesture handling and its "tap misses everything" hit-test path — none of which
  * [MapScreenTests]'s single-sub-rectangle fixture reaches. `captureToImage()` is used purely to force
  * Robolectric to actually run the `Canvas` draw lambda (semantics-only assertions like `assertIsDisplayed`
@@ -88,10 +88,20 @@ class MapCanvasTests {
                 geometry = square(0.0, 30.0, 20.0, 75.0),
                 isSeaOverlapping = true,
             )
+        val rectOnLand =
+            SerializableSubRectangle(
+                code = "CCC03",
+                icesName = "Rectangle C",
+                areaKm2 = 1.0,
+                bbox = SerializableBBox(minLon = -19.0, minLat = 60.0, maxLon = -15.0, maxLat = 65.0),
+                centroid = SerializablePoint(-17.0, 62.5),
+                geometry = square(-19.0, 60.0, -15.0, 65.0),
+                isSeaOverlapping = true,
+            )
         return MapDataset(
             formatVersion = MapDataset.CURRENT_FORMAT_VERSION,
             land = listOf(square(-19.0, 60.0, -15.0, 65.0)),
-            subRectangles = listOf(rectA, rectB),
+            subRectangles = listOf(rectA, rectB, rectOnLand),
             ports =
                 listOf(
                     SerializablePort(portCode = "PORT1", name = "Test Port", point = SerializablePoint(-10.0, 55.0)),
@@ -103,7 +113,7 @@ class MapCanvasTests {
     private val wideCamera = MapCamera(centerLon = 0.0, centerLat = 55.0, visibleWidthMetres = 8_000_000.0)
 
     @Test
-    fun tappingASeaOverlappingRectangleSelectsItAndDrawsLandGridPortsAndThePill() {
+    fun tappingASeaOverlappingRectangleSelectsItAndDrawsGridLandLabelsAndPorts() {
         var selectedCode by mutableStateOf<String?>(null)
         var camera by mutableStateOf(wideCamera)
         composeTestRule.setContent {

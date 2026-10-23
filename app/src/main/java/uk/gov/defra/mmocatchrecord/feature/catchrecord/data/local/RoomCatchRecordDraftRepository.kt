@@ -87,4 +87,12 @@ class RoomCatchRecordDraftRepository
 
         override fun observeRecordSummaries(): Flow<List<CatchRecordSummary>> =
             dao.observeRecordSummaries().map { rows -> rows.mapNotNull(DraftSummaryMappers::toDomain) }
+
+        override suspend fun getPreviouslyUsedPortIds(vesselId: String): Result<List<String>> =
+            runCatching {
+                dao
+                    .findSubmittedTripPorts(vesselId)
+                    .flatMap { listOfNotNull(it.departurePortId, it.returnPortId) }
+                    .distinct()
+            }
     }

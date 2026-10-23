@@ -5,7 +5,10 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.subm
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -22,15 +25,24 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.gov.defra.mmocatchrecord.R
-import uk.gov.defra.mmocatchrecord.common.design.GdsInsetText
 import uk.gov.defra.mmocatchrecord.common.design.GdsLinkAction
 import uk.gov.defra.mmocatchrecord.common.design.GdsWarningText
+import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DmyDate
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementValue
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelection
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectionMode
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementField
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Species
@@ -162,8 +174,10 @@ fun CheckYourAnswersScreenContent(
                     section.heading?.let {
                         Text(text = it, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
                     }
-                    section.rows.forEach { row -> CheckYourAnswersRowView(row, onChangeRow) }
-                    HorizontalDivider()
+                    section.rows.forEach { row ->
+                        CheckYourAnswersRowView(row, onChangeRow)
+                        HorizontalDivider()
+                    }
                 }
             }
         }
@@ -187,6 +201,16 @@ fun CheckYourAnswersScreenContent(
     }
 }
 
+/**
+ * Column-width weights matching the GOV.UK Design System summary-list component
+ * (https://design-system.service.gov.uk/components/summary-list/): key 30%, value 50%, actions 20%.
+ */
+private object CheckYourAnswersColumnWeights {
+    const val KEY = 3f
+    const val VALUE = 5f
+    const val ACTIONS = 2f
+}
+
 @Composable
 private fun CheckYourAnswersRowView(
     row: CheckYourAnswersRow,
@@ -197,43 +221,62 @@ private fun CheckYourAnswersRowView(
     val displayValue =
         if (row.kind == CheckYourAnswersFieldKind.NotLandedStraightAway) stringResource(R.string.yes) else row.value
     Row(
-        modifier = modifier.fillMaxWidth().testTag("${CheckYourAnswersScreenTestTags.ROW_PREFIX}_${row.kind}"),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(vertical = Spacing.xs)
+                .testTag("${CheckYourAnswersScreenTestTags.ROW_PREFIX}_${row.kind}"),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = label, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
-            Text(text = displayValue, style = MaterialTheme.typography.bodyLarge)
-        }
-        GdsLinkAction(
-            text = stringResource(R.string.check_your_answers_change_action),
-            onClick = { onChangeRow(row) },
-            testTag = "${CheckYourAnswersScreenTestTags.CHANGE_ACTION_PREFIX}_${row.kind}",
-            accessibleLabel = stringResource(R.string.check_your_answers_change_action_with_label, label),
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+            modifier = Modifier.weight(CheckYourAnswersColumnWeights.KEY),
         )
+        Text(
+            text = displayValue,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(CheckYourAnswersColumnWeights.VALUE),
+        )
+        if (row.isChangeable) {
+            GdsLinkAction(
+                text = stringResource(R.string.check_your_answers_change_action),
+                onClick = { onChangeRow(row) },
+                testTag = "${CheckYourAnswersScreenTestTags.CHANGE_ACTION_PREFIX}_${row.kind}",
+                accessibleLabel = stringResource(R.string.check_your_answers_change_action_with_label, label),
+                modifier = Modifier.weight(CheckYourAnswersColumnWeights.ACTIONS).wrapContentWidth(Alignment.End),
+            )
+        } else {
+            Spacer(modifier = Modifier.weight(CheckYourAnswersColumnWeights.ACTIONS))
+        }
     }
 }
 
-/**
- * GDS "declaration" panel: an icon + bold intro + bullet list, conveying its meaning via icon **and** text
- * together (see [uk.gov.defra.mmocatchrecord.common.design.GdsInsetText] — not colour alone), per WCAG 2.2
- * AA.
- */
+/** Icon + bold intro ([GdsWarningText]) followed by a plain, unbordered "confirming" paragraph and bullets. */
 @Composable
 private fun DeclarationPanel(modifier: Modifier = Modifier) {
-    GdsInsetText(modifier = modifier.testTag(CheckYourAnswersScreenTestTags.DECLARATION_PANEL)) {
-        Text(
+    Column(
+        modifier = modifier.testTag(CheckYourAnswersScreenTestTags.DECLARATION_PANEL),
+        verticalArrangement = Arrangement.spacedBy(Spacing.m),
+    ) {
+        GdsWarningText(
             text = stringResource(R.string.check_your_answers_declaration_intro),
-            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+            testTag = "${CheckYourAnswersScreenTestTags.DECLARATION_PANEL}_intro",
         )
-        listOf(
-            R.string.check_your_answers_declaration_bullet_weight_accurate,
-            R.string.check_your_answers_declaration_bullet_tolerance,
-            R.string.check_your_answers_declaration_bullet_action,
-        ).forEach { bulletRes ->
-            Row {
-                Text(text = "• ", style = MaterialTheme.typography.bodyLarge)
-                Text(text = stringResource(bulletRes), style = MaterialTheme.typography.bodyLarge)
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            Text(
+                text = stringResource(R.string.check_your_answers_declaration_confirming),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            listOf(
+                R.string.check_your_answers_declaration_bullet_weight_accurate,
+                R.string.check_your_answers_declaration_bullet_tolerance,
+                R.string.check_your_answers_declaration_bullet_action,
+            ).forEach { bulletRes ->
+                Row {
+                    Text(text = "• ", style = MaterialTheme.typography.bodyLarge)
+                    Text(text = stringResource(bulletRes), style = MaterialTheme.typography.bodyLarge)
+                }
             }
         }
     }
@@ -266,3 +309,89 @@ private fun rowLabelRes(kind: CheckYourAnswersFieldKind): Int =
         CheckYourAnswersFieldKind.NotLandedStraightAway -> R.string.check_your_answers_row_not_landed_straight_away
         CheckYourAnswersFieldKind.WeightKeptOnboard -> R.string.check_your_answers_row_weight_kept_onboard
     }
+
+private val previewVessel = Vessel(id = "vessel-1", name = "The Providence")
+private val previewDeparturePort = Port(id = "port-1", name = "Newlyn", statisticalAreaId = "area-1")
+private val previewReturnPort = Port(id = "port-2", name = "Plymouth", statisticalAreaId = "area-1")
+private val previewGearType =
+    GearType(
+        id = "gear-seine",
+        name = "Seine nets",
+        measurementFields =
+            listOf(
+                GearMeasurementField(
+                    key = "mesh_size_mm",
+                    label = "Mesh size",
+                    type = GearMeasurementFieldType.Integer,
+                    unit = "mm",
+                ),
+            ),
+    )
+private val previewSpecies = Species(id = "species-cod", name = "Cod", faoCode = "COD")
+
+private val previewDraft =
+    CatchRecordDraft(
+        id = "draft-1",
+        vesselId = previewVessel.id,
+        isTripToday = false,
+        departureDate = DmyDate(1, 6, 2024),
+        returnDate = DmyDate(3, 6, 2024),
+        departurePort = PortSelection(previewDeparturePort.id, PortSelectionMode.FirstTime),
+        returnPort = PortSelection(previewReturnPort.id, PortSelectionMode.FirstTime),
+        gearUses =
+            listOf(
+                GearUse(
+                    id = "gear-use-1",
+                    gearTypeId = previewGearType.id,
+                    statisticalSubRectangleCode = "38E9",
+                    confirmedUsedOnTrip = true,
+                    numberOfShots = 4,
+                    measurements = mapOf("mesh_size_mm" to MeasurementValue.Numeric(50.0, "mm")),
+                    speciesWeights =
+                        listOf(
+                            SpeciesWeightEntry(
+                                id = "sw-1",
+                                speciesId = previewSpecies.id,
+                                weightAboveMinimumSizeKg = 12.5,
+                                confirmedCaught = true,
+                            ),
+                        ),
+                ),
+            ),
+        modifiedAtEpochMillis = 0L,
+    )
+
+@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Suppress("FunctionNaming")
+@Composable
+fun CheckYourAnswersScreenContentPreview() {
+    MmoTheme {
+        CheckYourAnswersScreenContent(
+            draft = previewDraft,
+            vessels = listOf(previewVessel),
+            ports = listOf(previewDeparturePort, previewReturnPort),
+            gearTypes = listOf(previewGearType),
+            species = listOf(previewSpecies),
+            onChangeRow = {},
+            onSubmit = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF, name = "Offline")
+@Suppress("FunctionNaming")
+@Composable
+fun CheckYourAnswersScreenContentOfflinePreview() {
+    MmoTheme {
+        CheckYourAnswersScreenContent(
+            draft = previewDraft,
+            vessels = listOf(previewVessel),
+            ports = listOf(previewDeparturePort, previewReturnPort),
+            gearTypes = listOf(previewGearType),
+            species = listOf(previewSpecies),
+            onChangeRow = {},
+            onSubmit = {},
+            isOffline = true,
+        )
+    }
+}

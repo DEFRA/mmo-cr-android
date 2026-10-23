@@ -22,11 +22,13 @@ val appVersion =
 android {
     namespace = "uk.gov.defra.mmocatchrecord"
     // Pinned to 37 due to library AAR metadata requirements (androidx.core, lifecycle, navigation).
+    // targetSdk is 36 per the Google Play target API level policy.
     compileSdk = 37
 
     defaultConfig {
         applicationId = "mmo.catchrecording.android"
         minSdk = 26
+        //noinspection OldTargetApi,EditedTargetSdkVersion
         targetSdk = 36
         versionCode = appVersion.getProperty("VERSION_CODE").toInt()
         versionName = appVersion.getProperty("VERSION_NAME")
@@ -59,7 +61,7 @@ android {
 
     sourceSets {
         // Bundles the exported Room schema JSON into the test APK so MigrationTestHelper can read it.
-        getByName("androidTest").assets.srcDirs("$projectDir/schemas")
+        getByName("androidTest").assets.directories.add("$projectDir/schemas")
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
@@ -142,7 +144,7 @@ dependencies {
 
     // Shared offline-map pure parsing/geometry/generator code (build-time preprocessing task + on-device
     // runtime fallback parser) — see docs/adr/0013-offline-fisheries-map-rendering.md.
-    implementation("uk.gov.defra.mmocatchrecord.mapdata:map-data-core")
+    implementation(libs.map.data.core)
 
     // Structured, redacted logging (see ADR 0011 / security instructions "no PII/secrets in logs").
     implementation(libs.timber)
@@ -175,11 +177,7 @@ dependencies {
     testImplementation(platform(libs.okhttp.bom))
     testImplementation(libs.okhttp.mockwebserver3.junit4)
 
-    // Compose UI testing on the JVM via Robolectric: coverage from `testDebugUnitTest` is what
-    // Kover reports and SonarCloud imports, whereas `connectedDebugAndroidTest` coverage is not
-    // merged in. Compose screens therefore need Robolectric unit tests under `src/test` to count
-    // towards the quality gate. The BoM keeps these aligned with the implementation Compose
-    // artifacts; `ui-test-manifest` is already supplied via `debugImplementation` below.
+    // Robolectric Compose tests count toward Kover/Sonar coverage; connected tests aren't merged.
     testImplementation(platform(libs.androidx.compose.bom))
     testImplementation(libs.androidx.compose.ui.test.junit4)
 

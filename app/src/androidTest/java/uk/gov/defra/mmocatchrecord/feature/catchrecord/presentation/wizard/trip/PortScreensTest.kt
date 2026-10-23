@@ -1,22 +1,18 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip
 
 import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelection
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectionMode
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.DeparturePortEntryMode
 
 class PortScreensTest {
     @get:Rule
@@ -29,35 +25,6 @@ class PortScreensTest {
         )
 
     @Test
-    fun samePortShortcutYesAcceptsAndSkips() {
-        var accepted = false
-        composeTestRule.setContent {
-            MmoTheme {
-                DeparturePortScreenContent(
-                    draft =
-                        CatchRecordDraft(
-                            "draft-1",
-                            "vessel-achilles",
-                            status = DraftStatus.Draft,
-                            modifiedAtEpochMillis = 1L,
-                        ),
-                    allPorts = allPorts,
-                    favouritePorts = allPorts,
-                    entryMode = DeparturePortEntryMode.SamePortShortcut,
-                    samePortCandidate = allPorts.first(),
-                    onSamePortAccepted = { accepted = true },
-                    onSamePortDeclined = {},
-                    onSubmit = {},
-                )
-            }
-        }
-
-        composeTestRule.onNodeWithTag("${DeparturePortScreenTestTags.SAME_PORT_OPTION_PREFIX}_0").performClick()
-        composeTestRule.onNodeWithTag(DeparturePortScreenTestTags.SAVE_ACTION).performClick()
-        assertTrue(accepted)
-    }
-
-    @Test
     fun departurePortAutocompleteHappyPathSubmitsFirstTimeSelection() {
         var selection: PortSelection? = null
         composeTestRule.setContent {
@@ -66,7 +33,7 @@ class PortScreensTest {
                     initialSelection = null,
                     allPorts = allPorts,
                     favouritePorts = emptyList(),
-                    autocompleteLabel = "Enter port",
+                    autocompletePlaceholder = "Enter port",
                     autocompleteFieldTag = DeparturePortScreenTestTags.AUTOCOMPLETE_FIELD,
                     liveRegionTag = DeparturePortScreenTestTags.LIVE_REGION,
                     suggestionPrefix = DeparturePortScreenTestTags.SUGGESTION_PREFIX,
@@ -97,7 +64,7 @@ class PortScreensTest {
                     initialSelection = null,
                     allPorts = allPorts,
                     favouritePorts = allPorts,
-                    autocompleteLabel = "Enter port",
+                    autocompletePlaceholder = "Enter port",
                     autocompleteFieldTag = ReturnPortScreenTestTags.AUTOCOMPLETE_FIELD,
                     liveRegionTag = ReturnPortScreenTestTags.LIVE_REGION,
                     suggestionPrefix = ReturnPortScreenTestTags.SUGGESTION_PREFIX,

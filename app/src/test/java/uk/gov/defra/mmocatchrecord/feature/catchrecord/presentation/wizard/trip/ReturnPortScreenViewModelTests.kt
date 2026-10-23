@@ -1,9 +1,10 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -71,8 +72,12 @@ class ReturnPortScreenViewModelTests {
         composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.state.value.status is UiStatus.Content<*> }
         composeTestRule.waitForIdle()
 
-        composeTestRule.onNodeWithTag("${ReturnPortScreenTestTags.FAVOURITE_OPTION_PREFIX}_0").performClick()
-        composeTestRule.onNodeWithTag(ReturnPortScreenTestTags.SAVE_ACTION).performClick()
+        // The bottom nav bar can push the favourite list and Save action below the fold.
+        composeTestRule
+            .onNodeWithTag("${ReturnPortScreenTestTags.FAVOURITE_OPTION_PREFIX}_0")
+            .performScrollTo()
+            .performClick()
+        composeTestRule.onNodeWithTag(ReturnPortScreenTestTags.SAVE_ACTION).performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         assertEquals(listOf(WizardStep.GearSearch), navigated)

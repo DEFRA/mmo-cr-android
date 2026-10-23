@@ -6,10 +6,12 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineScope
 import uk.gov.defra.mmocatchrecord.core.connectivity.AndroidConnectivityObserver
 import uk.gov.defra.mmocatchrecord.core.connectivity.AndroidNetworkConnectivityChecker
 import uk.gov.defra.mmocatchrecord.core.connectivity.ConnectivityObserver
 import uk.gov.defra.mmocatchrecord.core.connectivity.NetworkConnectivityChecker
+import uk.gov.defra.mmocatchrecord.core.di.ApplicationScope
 import uk.gov.defra.mmocatchrecord.core.language.AppLanguageRepository
 import uk.gov.defra.mmocatchrecord.core.language.DataStoreAppLanguageRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.CatchRecordDraftDao
@@ -87,7 +89,8 @@ object RepositoryModule {
     @Singleton
     fun provideConnectivityObserver(
         @ApplicationContext context: Context,
-    ): ConnectivityObserver = AndroidConnectivityObserver(context)
+        @ApplicationScope scope: CoroutineScope,
+    ): ConnectivityObserver = AndroidConnectivityObserver(context, scope)
 
     @Provides
     @Singleton

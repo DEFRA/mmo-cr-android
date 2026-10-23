@@ -1,14 +1,16 @@
 package uk.gov.defra.mmocatchrecord.common.design
 
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.text.font.FontWeight
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -117,6 +119,19 @@ class CommonComponentsTests {
     }
 
     @Test
+    fun `ExpandableDetails supports custom title font weight`() {
+        composeTestRule.setContent {
+            MmoTheme {
+                ExpandableDetails(title = "Custom weight", titleFontWeight = FontWeight.Bold) {
+                    Text("Hidden content")
+                }
+            }
+        }
+
+        composeTestRule.onNodeWithText("Custom weight").assertIsDisplayed()
+    }
+
+    @Test
     fun `MmoBottomNavigationBar routes the home tab click`() {
         var clickedIndex = -1
         composeTestRule.setContent {
@@ -159,5 +174,27 @@ class CommonComponentsTests {
         }
 
         composeTestRule.onNodeWithTag(MmoBottomNavigationBarTestTags.SETTINGS_TAB).assertIsDisplayed()
+    }
+
+    @Test
+    fun `RoyalCrestFooter renders under its given test tag`() {
+        composeTestRule.setContent {
+            MmoTheme {
+                RoyalCrestFooter(testTag = "royal_crest_footer")
+            }
+        }
+
+        composeTestRule.onNodeWithTag("royal_crest_footer").assertIsDisplayed()
+    }
+
+    @Test
+    fun `RoyalCrestFooter applies a caller-supplied modifier`() {
+        composeTestRule.setContent {
+            MmoTheme {
+                RoyalCrestFooter(testTag = "royal_crest_footer", modifier = Modifier.padding(Spacing.xs))
+            }
+        }
+
+        composeTestRule.onNodeWithTag("royal_crest_footer").assertIsDisplayed()
     }
 }

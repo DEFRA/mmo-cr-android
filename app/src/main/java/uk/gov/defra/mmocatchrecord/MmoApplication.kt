@@ -6,6 +6,7 @@ import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
 import uk.gov.defra.mmocatchrecord.core.config.AppConfiguration
+import uk.gov.defra.mmocatchrecord.core.connectivity.ConnectivityObserver
 import uk.gov.defra.mmocatchrecord.core.logging.ReleaseTree
 import uk.gov.defra.mmocatchrecord.core.logging.StartupMetadataLogger
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.sync.WorkManagerReferenceDataSyncScheduler
@@ -35,6 +36,10 @@ class MmoApplication :
 
     @Inject
     lateinit var appConfiguration: AppConfiguration
+
+    // Injected eagerly so connectivity is tracked from process start, before any screen subscribes.
+    @Inject
+    lateinit var connectivityObserver: ConnectivityObserver
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()

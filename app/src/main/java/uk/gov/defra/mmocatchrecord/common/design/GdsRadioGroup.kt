@@ -25,6 +25,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.isTraversalGroup
+import androidx.compose.ui.semantics.semantics
 
 data class GdsRadioOption(
     val id: String,
@@ -39,9 +42,22 @@ fun GdsRadioGroup(
     onOptionSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
     optionTestTagPrefix: String = "",
+    groupLabel: String? = null,
 ) {
     Column(
-        modifier = modifier.selectableGroup(),
+        modifier =
+            modifier
+                .selectableGroup()
+                .then(
+                    if (groupLabel == null) {
+                        Modifier
+                    } else {
+                        Modifier.semantics {
+                            contentDescription = groupLabel
+                            isTraversalGroup = true
+                        }
+                    },
+                ),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         options.forEachIndexed { index, option ->

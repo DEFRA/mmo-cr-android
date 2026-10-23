@@ -94,14 +94,15 @@ dataset is cached in memory for the remaining lifetime of the process.
 
 Bottom → top, single `Canvas` draw pass, viewport-clipped:
 
-1. Pale sea background.
-2. Land polygons (`MmoColors.MapLand`, dark teal fill + thin black outline).
-3. Sub-rectangle grid (`MmoColors.MapGridLine`, thin green stroke + very low alpha fill).
-4. Selected sub-rectangle highlight (`MmoColors.MapSelected`, amber ~35% fill + ~3× stroke).
-5. Sub-rectangle labels — zoom-gated and viewport-culled; never drawn for inland (non-selectable) cells; the
-   selected cell's label is a solid amber pill with white bold text (selection is never colour-only).
-6. Ports — zoom-gated, viewport-culled, cyan dot + haloed port name; display-only, single draw pass, never
-   intercept taps.
+1. White sea background.
+2. Sub-rectangle grid (`MmoColors.MapGridLine`, thin pale green stroke, no fill).
+3. Selected sub-rectangle highlight (`MmoColors.MapSelectedFill` pale blue fill + `MapSelectedStroke` GOV.UK
+   blue border; selection is also announced via TalkBack, so it is never colour-only).
+4. Land polygons (`MmoColors.MapLand`, dark teal fill + thin black outline) — drawn over the grid so no
+   rectangles or selection appear on land.
+5. Sub-rectangle labels — plain black text, no halo; viewport-culled; drawn only for sea-overlapping cells
+   whose centroid is not on land.
+6. Ports — viewport-culled cyan dots only (no place names); display-only, never intercept taps.
 7. A ~1.5dp black border around the whole viewport.
 
 ## Selection semantics
@@ -152,6 +153,12 @@ the current stub reference data:
   real map would be incorrect — flagged as a governance item against ADR-0008 for whoever next revisits the
   reference-data stub.
 
+**Update (CRAR Other-journey QA fixes):** the radio-list/autocomplete "Other" sub-screens (screens 2/3) no
+longer use the stub's `statisticalAreaId` grouping for their nearby list or search/existence validation once
+this dataset has loaded — see `MapSupport.nearbyRectanglesFromDataset`/`allRectanglesFromDataset`, which
+match the departure port by name against `dataset.ports` (as above) and rank by real centroid distance
+instead. The stub-grouped `nearbyRectanglesFor` remains only as the fallback while the dataset hasn't loaded.
+
 ## Regenerating this documentation's numbers
 
 Run `.\gradlew.bat :app:generateDebugMapData --rerun-tasks --info` and look for the single summary line the
@@ -160,3 +167,15 @@ task logs, e.g.:
 ```text
 MapData: land=7 (skipped 0), subrects=3465 (skipped 0, reprojected-coords=17325, inland=608), ports=938 (skipped 0)
 ```
+
+## Update (CRAR Track B: coordinates and ICES rectangle display)
+
+`StatisticalSubRectangle` now carries the generated dataset's `centroidLatitude`/`centroidLongitude`/
+`icesRectangleName` (via `MapSupport.toStatisticalSubRectangle`), so the "Other" autocomplete search
+(screen 3) shows each suggestion's ICES rectangle and centre coordinates (FR5), displays the matched code's
+coordinates live as the user types an exact code (FR6), and persists those coordinates alongside the code
+on `GearUse` (FR7, DB v8→v9 — see
+[ADR-0017](../adr/0017-statistical-sub-area-coordinates-and-ices-rectangle-display.md)). The displayed
+coordinates are always the sub-rectangle's **centroid**, not a point the fisher actually fished at — this
+convention is flagged in the ADR as a governance item for Delivery Architecture to confirm against the
+live Catch Recording service's own definition.

@@ -24,13 +24,7 @@ enum class GdsNumericFieldKind {
     Decimal,
 }
 
-/**
- * A single full-width numeric text input following the same GDS-style outlined-field visual language as
- * [GdsDateInput]'s per-part fields, generalised for reuse by any "enter a number" field — gear
- * measurements (mesh size, number of trawl nets) and shot counts — rather than being tied to date entry.
- * [GdsDateInput]'s own part field stays private/date-specific (fixed width, 2/4-digit max length), so this
- * is intentionally a separate, general-purpose component rather than an extraction of it.
- */
+/** A single full-width GDS-style outlined numeric text input (e.g. gear mesh size, number of trawl nets, shot counts). */
 @Suppress("FunctionNaming", "LongParameterList")
 @Composable
 fun GdsNumericField(
@@ -51,7 +45,13 @@ fun GdsNumericField(
             singleLine = true,
             isError = errorText != null,
             shape = RectangleShape,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = imeAction),
+            // Decimal must use KeyboardType.Decimal, not Number, or most on-screen keyboards omit the "." key.
+            keyboardOptions =
+                KeyboardOptions(
+                    keyboardType =
+                        if (kind == GdsNumericFieldKind.Decimal) KeyboardType.Decimal else KeyboardType.Number,
+                    imeAction = imeAction,
+                ),
             colors =
                 OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = if (errorText == null) MmoColors.Text else MmoColors.ErrorRed,

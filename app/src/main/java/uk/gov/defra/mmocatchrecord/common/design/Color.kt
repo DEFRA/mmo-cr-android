@@ -34,6 +34,9 @@ object MmoColors {
     val Grey3 = Color(0xFFD8DDE0)
     val Grey4 = Color(0xFFF3F2F1)
 
+    /** Alternate-row tint for autocomplete suggestion lists (GOV.UK accessible-autocomplete). */
+    val AutocompleteOddRow = Color(0xFFFAFAFA)
+
     // Selection (statistical sub-rectangle schematic grid — see MapScreen)
 
     /** Pale tint of [GovBlue] used as a selected grid cell's fill, per the confirmed screenshot. */
@@ -45,11 +48,14 @@ object MmoColors {
     /** Land fill. */
     val MapLand = Color(0xFF0B4143)
 
-    /** Sub-rectangle grid line stroke and (at low alpha) fill, and sub_code label text. */
-    val MapGridLine = Color(0xFF0B6B3A)
+    /** Sub-rectangle grid line stroke (thin pale green, sea only — land masks it). */
+    val MapGridLine = Color(0xFF9CC9A0)
 
-    /** Selected sub-rectangle fill/stroke and its label "pill" background. */
-    val MapSelectedFill = Color(0xFFE8A63A)
+    /** Selected sub-rectangle fill (pale GOV.UK blue tint). */
+    val MapSelectedFill = Color(0xFFBDD3EA)
+
+    /** Selected sub-rectangle border. */
+    val MapSelectedStroke = GovBlue
 
     /** Port marker dot fill. */
     val MapPortDot = Color(0xFF01FEE2)

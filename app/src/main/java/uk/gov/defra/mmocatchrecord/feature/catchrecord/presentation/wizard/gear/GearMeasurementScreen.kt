@@ -89,6 +89,7 @@ fun GearMeasurementScreen(
             boundGearUseId = state.pendingGearUseId
         }
     }
+    @Suppress("AssignedValueIsNeverRead")
     GearMeasurementScreen(
         state = state,
         editGearUseId = editGearUseId,

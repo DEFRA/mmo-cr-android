@@ -1,7 +1,7 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -97,24 +97,24 @@ class CatchRecordFlowScreenTests {
         }
 
     @Test
-    fun `entry screen renders its content state once enter flow resolves an existing draft`() =
+    fun `entry screen navigates to draft resume once enter flow resolves an existing draft`() =
         runTest {
             val repository = FakeCatchRecordDraftRepository()
             repository.startDraft("vessel-1")
             val viewModel = buildViewModel(StandardTestDispatcher(testScheduler), repository)
+            var navigatedStep: WizardStep? = null
 
             composeTestRule.setContent {
                 WizardTestTheme {
-                    CatchRecordFlowEntryScreen(viewModel = viewModel, onNavigate = {})
+                    CatchRecordFlowEntryScreen(viewModel = viewModel, onNavigate = { navigatedStep = it })
                 }
             }
             testScheduler.advanceUntilIdle()
             composeTestRule.waitForIdle()
 
-            // The one-shot navigate effect latches on the very first (default Idle) render, so by the
-            // time the draft resolves the screen itself just keeps rendering its Content status branch.
             composeTestRule.onNodeWithTag(CatchRecordFlowEntryScreenTestTags.SCREEN).assertIsDisplayed()
             assertEquals(UiStatus.Content::class, viewModel.state.value.status::class)
+            assertEquals(WizardStep.DraftResume, navigatedStep)
         }
 
     @Test

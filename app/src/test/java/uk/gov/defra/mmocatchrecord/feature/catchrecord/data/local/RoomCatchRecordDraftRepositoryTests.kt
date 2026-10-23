@@ -1,4 +1,4 @@
-@file:Suppress("detekt.MaxLineLength")
+@file:Suppress("detekt.MaxLineLength", "detekt.LargeClass")
 
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local
 
@@ -97,6 +97,41 @@ class RoomCatchRecordDraftRepositoryTests {
             repository.saveDraft(first.copy(status = DraftStatus.Submitted)).getOrThrow()
             val second = repository.startDraft("vessel-achilles").getOrThrow()
             assertTrue(second.id != first.id)
+        }
+
+    @Test
+    fun `previously used port ids come from submitted trips only, most recent first and distinct`() =
+        runTest {
+            val older = repository.startDraft("vessel-achilles").getOrThrow()
+            repository
+                .saveDraft(
+                    older.copy(
+                        status = DraftStatus.Submitted,
+                        departurePort = PortSelection("port-dover", PortSelectionMode.FirstTime),
+                        returnPort = PortSelection("port-hastings", PortSelectionMode.FirstTime),
+                    ),
+                ).getOrThrow()
+            clockMillis = 2_000L
+            val newer = repository.startDraft("vessel-achilles").getOrThrow()
+            repository
+                .saveDraft(
+                    newer.copy(
+                        status = DraftStatus.PendingSync,
+                        departurePort = PortSelection("port-hastings", PortSelectionMode.FirstTime),
+                        returnPort = PortSelection("port-hastings", PortSelectionMode.FirstTime),
+                    ),
+                ).getOrThrow()
+            clockMillis = 3_000L
+            val active = repository.startDraft("vessel-achilles").getOrThrow()
+            repository
+                .saveDraft(active.copy(departurePort = PortSelection("port-active", PortSelectionMode.FirstTime)))
+                .getOrThrow()
+
+            assertEquals(
+                listOf("port-hastings", "port-dover"),
+                repository.getPreviouslyUsedPortIds("vessel-achilles").getOrThrow(),
+            )
+            assertEquals(emptyList<String>(), repository.getPreviouslyUsedPortIds("vessel-hercules").getOrThrow())
         }
 
     @Test
@@ -253,6 +288,42 @@ class RoomCatchRecordDraftRepositoryTests {
             assertEquals("38E95", reloaded.gearUses.first { it.id == "gear-1" }.statisticalSubRectangleCode)
             assertEquals("99Z99", reloaded.gearUses.first { it.id == "gear-2" }.statisticalSubRectangleCode)
             assertNull(reloaded.gearUses.first { it.id == "gear-3" }.statisticalSubRectangleCode)
+        }
+
+    /** ADR 0017/FR7: the sub-rectangle's centre coordinates round-trip alongside its code, and stay `null`
+     *  when the code itself has none (DB v8->v9). */
+    @Test
+    fun `statistical sub-rectangle centre coordinates round-trip alongside the code`() =
+        runTest {
+            val started = repository.startDraft("vessel-hercules").getOrThrow()
+            val fullDraft =
+                started.copy(
+                    gearUses =
+                        listOf(
+                            GearUse(
+                                id = "gear-1",
+                                gearTypeId = "gear-seine-nets",
+                                statisticalSubRectangleCode = "38E95",
+                                statisticalSubRectangleLatitude = 50.9,
+                                statisticalSubRectangleLongitude = 0.6,
+                                confirmedUsedOnTrip = true,
+                            ),
+                            GearUse(
+                                id = "gear-2",
+                                gearTypeId = "gear-handlines",
+                                statisticalSubRectangleCode = "99Z99",
+                                confirmedUsedOnTrip = true,
+                            ),
+                        ),
+                )
+            repository.saveDraft(fullDraft).getOrThrow()
+            val reloaded = repository.getActiveDraft("vessel-hercules").getOrThrow()
+            val withCoordinates = reloaded!!.gearUses.first { it.id == "gear-1" }
+            val withoutCoordinates = reloaded.gearUses.first { it.id == "gear-2" }
+            assertEquals(50.9, withCoordinates.statisticalSubRectangleLatitude)
+            assertEquals(0.6, withCoordinates.statisticalSubRectangleLongitude)
+            assertNull(withoutCoordinates.statisticalSubRectangleLatitude)
+            assertNull(withoutCoordinates.statisticalSubRectangleLongitude)
         }
 
     @Test

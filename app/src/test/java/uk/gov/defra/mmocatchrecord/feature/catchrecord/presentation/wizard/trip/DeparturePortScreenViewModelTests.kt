@@ -1,9 +1,10 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -65,7 +66,7 @@ class DeparturePortScreenViewModelTests {
     }
 
     @Test
-    fun acceptingTheSamePortShortcutDispatchesAcceptedAndNavigatesToGearSearch() {
+    fun selectingAFavouritePortNavigatesToReturnPort() {
         val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
         seedActiveDraft(repository, "vessel-achilles")
         val viewModel = buildTripFlowViewModel(draftRepository = repository)
@@ -79,34 +80,12 @@ class DeparturePortScreenViewModelTests {
         composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.state.value.status is UiStatus.Content<*> }
         composeTestRule.waitForIdle()
 
-        composeTestRule.onNodeWithTag("${DeparturePortScreenTestTags.SAME_PORT_OPTION_PREFIX}_0").performClick()
-        composeTestRule.onNodeWithTag(DeparturePortScreenTestTags.SAVE_ACTION).performClick()
-        composeTestRule.waitForIdle()
-
-        assertEquals(listOf(WizardStep.GearSearch), navigated)
-    }
-
-    @Test
-    fun decliningTheSamePortShortcutThenSavingAFavouriteNavigatesToReturnPort() {
-        val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
-        seedActiveDraft(repository, "vessel-achilles")
-        val viewModel = buildTripFlowViewModel(draftRepository = repository)
-        val navigated = mutableListOf<WizardStep>()
-        composeTestRule.setContent {
-            WizardTestTheme {
-                DeparturePortScreen(viewModel = viewModel, onNavigate = { navigated += it }, onBack = {})
-            }
-        }
-        viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
-        composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.state.value.status is UiStatus.Content<*> }
-        composeTestRule.waitForIdle()
-
-        composeTestRule.onNodeWithTag("${DeparturePortScreenTestTags.SAME_PORT_OPTION_PREFIX}_1").performClick()
-        composeTestRule.onNodeWithTag(DeparturePortScreenTestTags.SAVE_ACTION).performClick()
-        composeTestRule.waitForIdle()
-
-        composeTestRule.onNodeWithTag("${DeparturePortScreenTestTags.FAVOURITE_OPTION_PREFIX}_1").performClick()
-        composeTestRule.onNodeWithTag(DeparturePortScreenTestTags.SAVE_ACTION).performClick()
+        // The bottom nav bar can push the favourite list and Save action below the fold.
+        composeTestRule
+            .onNodeWithTag("${DeparturePortScreenTestTags.FAVOURITE_OPTION_PREFIX}_1")
+            .performScrollTo()
+            .performClick()
+        composeTestRule.onNodeWithTag(DeparturePortScreenTestTags.SAVE_ACTION).performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         assertEquals(listOf(WizardStep.ReturnPort), navigated)

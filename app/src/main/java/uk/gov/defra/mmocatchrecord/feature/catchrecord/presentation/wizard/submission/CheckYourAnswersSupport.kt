@@ -55,6 +55,10 @@ enum class CheckYourAnswersFieldKind {
  * typed nav route argument so the destination screen edits that exact gear use in place rather than
  * ambiguously resolving "whichever gear is next pending" (which would resolve to nothing for an
  * already-complete gear) — see [uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.editRouteFor].
+ * [isChangeable] (default `true`) hides the "Change" link entirely for fields that must not be edited once
+ * the draft exists — currently only [CheckYourAnswersFieldKind.Vessel], since the vessel is fixed for the
+ * lifetime of a trip's draft once selected (changing it would invalidate vessel-length-dependent gear/catch
+ * rules already captured).
  */
 data class CheckYourAnswersRow(
     val kind: CheckYourAnswersFieldKind,
@@ -62,6 +66,7 @@ data class CheckYourAnswersRow(
     val changeStep: WizardStep,
     val dynamicLabel: String? = null,
     val changeGearUseId: String? = null,
+    val isChangeable: Boolean = true,
 )
 
 /**
@@ -119,7 +124,13 @@ object CheckYourAnswersSupport {
     ): CheckYourAnswersSection {
         val rows = mutableListOf<CheckYourAnswersRow>()
         val vesselName = vessels.firstOrNull { it.id == draft.vesselId }?.name ?: draft.vesselId
-        rows += CheckYourAnswersRow(CheckYourAnswersFieldKind.Vessel, vesselName, WizardStep.VesselSelection)
+        rows +=
+            CheckYourAnswersRow(
+                CheckYourAnswersFieldKind.Vessel,
+                vesselName,
+                WizardStep.VesselSelection,
+                isChangeable = false,
+            )
         draft.departureDate?.let {
             rows +=
                 CheckYourAnswersRow(CheckYourAnswersFieldKind.DepartureDate, formatDate(it), WizardStep.DepartureDate)
@@ -178,10 +189,11 @@ object CheckYourAnswersSupport {
                     changeGearUseId = gearUse.id,
                 )
         }
+        // No `heading` here: the gear name is already shown by the GearType row above, so a heading
+        // would only ever duplicate it verbatim — the row (with its own "Change" link) is authoritative.
         return CheckYourAnswersSection(
             kind = CheckYourAnswersSectionKind.GearUsed,
             rows = rows,
-            heading = displayGearNameFor(gearUse, gearTypes),
         )
     }
 

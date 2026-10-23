@@ -1,21 +1,26 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip
 
-import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import uk.gov.defra.mmocatchrecord.common.design.GdsTopAppBarTestTags
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
+import uk.gov.defra.mmocatchrecord.core.language.AppLanguage
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Vessel
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordFlowEvent
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardStep
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardTestTheme
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.catchRecordReference
 
 @RunWith(RobolectricTestRunner::class)
 class VesselSelectionScreenTests {
@@ -23,25 +28,16 @@ class VesselSelectionScreenTests {
     val composeTestRule = createComposeRule()
 
     @Test
-    fun noSaveActionIsShownUntilAVesselIsSelected() {
-        composeTestRule.setContent {
-            MmoTheme {
-                VesselSelectionScreenContent(
-                    vessels = listOf(Vessel("vessel-achilles", "ACHILLES")),
-                    onSubmit = {},
-                )
-            }
-        }
+    fun previewRendersWithoutError() {
+        // VesselSelectionScreenContentPreview otherwise stays uncounted new code — see
+        // GdsAutocompleteFieldTests's equivalent doc comment.
+        composeTestRule.setContent { VesselSelectionScreenContentPreview() }
 
-        composeTestRule.onAllNodesWithTag(VesselSelectionScreenTestTags.SAVE_ACTION).assertCountEquals(0)
-
-        composeTestRule.onNodeWithTag("${VesselSelectionScreenTestTags.OPTION_PREFIX}_0").performClick()
-
-        composeTestRule.onNodeWithTag(VesselSelectionScreenTestTags.SAVE_ACTION).assertIsDisplayed()
+        composeTestRule.onNodeWithTag("${VesselSelectionScreenTestTags.OPTION_PREFIX}_0").assertIsDisplayed()
     }
 
     @Test
-    fun selectingAVesselAndSavingSubmitsItsId() {
+    fun selectingAVesselImmediatelySubmitsItsId() {
         var submitted: String? = null
         composeTestRule.setContent {
             MmoTheme {
@@ -53,7 +49,6 @@ class VesselSelectionScreenTests {
         }
 
         composeTestRule.onNodeWithTag("${VesselSelectionScreenTestTags.OPTION_PREFIX}_1").performClick()
-        composeTestRule.onNodeWithTag(VesselSelectionScreenTestTags.SAVE_ACTION).performClick()
 
         assertEquals("vessel-hercules", submitted)
     }
@@ -87,9 +82,49 @@ class VesselSelectionScreenTests {
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithTag("${VesselSelectionScreenTestTags.OPTION_PREFIX}_0").performClick()
-        composeTestRule.onNodeWithTag(VesselSelectionScreenTestTags.SAVE_ACTION).performClick()
         composeTestRule.waitForIdle()
 
         assertEquals(listOf(WizardStep.TripToday), navigated)
+    }
+
+    @Test
+    fun theTripReferenceIsNotShownEvenOnceADraftExists() {
+        val viewModel = buildTripFlowViewModel()
+        composeTestRule.setContent {
+            WizardTestTheme {
+                VesselSelectionScreen(viewModel = viewModel, onNavigate = {}, onBack = {})
+            }
+        }
+        viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            viewModel.state.value.vessels
+                .isNotEmpty()
+        }
+        composeTestRule.onNodeWithTag("${VesselSelectionScreenTestTags.OPTION_PREFIX}_0").performClick()
+        composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.state.value.catchRecordReference != null }
+
+        composeTestRule.onNodeWithTag("${VesselSelectionScreenTestTags.SCREEN}_reference_number").assertDoesNotExist()
+        composeTestRule.onNodeWithText(checkNotNull(viewModel.state.value.catchRecordReference)).assertDoesNotExist()
+    }
+
+    @Test
+    fun tappingTheLanguageToggleTranslatesTheTitleToWelshAndBack() {
+        var language by mutableStateOf(AppLanguage.ENGLISH)
+        composeTestRule.setContent {
+            WizardTestTheme(
+                language = language,
+                onLanguageToggle = {
+                    language = if (language == AppLanguage.ENGLISH) AppLanguage.WELSH else AppLanguage.ENGLISH
+                },
+            ) {
+                VesselSelectionScreen(viewModel = buildTripFlowViewModel(), onNavigate = {}, onBack = {})
+            }
+        }
+
+        composeTestRule.onNodeWithText("Which vessel did you use?").assertIsDisplayed()
+        composeTestRule.onNodeWithTag(GdsTopAppBarTestTags.LANGUAGE_TOGGLE).performClick()
+        composeTestRule.onNodeWithText("Pa long a ddefnyddiwyd gennych?").assertIsDisplayed()
+        composeTestRule.onNodeWithTag(GdsTopAppBarTestTags.LANGUAGE_TOGGLE).performClick()
+        composeTestRule.onNodeWithText("Which vessel did you use?").assertIsDisplayed()
     }
 }

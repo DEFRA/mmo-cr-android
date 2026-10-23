@@ -75,6 +75,10 @@ data class GearUseEntity(
     val orderIndex: Int,
     val numberOfShots: Int?,
     val confirmedUsedOnTrip: Boolean,
+    // Appended (v8 -> v9, see CatchRecordMigrations.MIGRATION_8_9) to keep the exported schema's column
+    // order append-only — see ADR-0017.
+    val statisticalSubRectangleLatitude: Double? = null,
+    val statisticalSubRectangleLongitude: Double? = null,
 )
 
 /**

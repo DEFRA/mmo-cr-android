@@ -1,5 +1,6 @@
 package uk.gov.defra.mmocatchrecord.core.connectivity
 
+import android.app.Application
 import android.content.Context
 import android.content.ContextWrapper
 import android.net.ConnectivityManager
@@ -8,53 +9,67 @@ import android.net.NetworkCapabilities
 import android.net.NetworkInfo
 import app.cash.turbine.test
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowConnectivityManager
 import org.robolectric.shadows.ShadowNetwork
 import org.robolectric.shadows.ShadowNetworkCapabilities
 import org.robolectric.shadows.ShadowNetworkInfo
 
-/** Robolectric shadows simulate ConnectivityManager states without device-only connectivity dependencies.
- * Reset the shadow before each test because its static state can leak callbacks. */
+// Plain Application: MmoApplication's Hilt observer registers a callback on Dispatchers.IO, racing these asserts.
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
+@Config(application = Application::class)
 class AndroidConnectivityObserverTests {
     private val context = RuntimeEnvironment.getApplication()
     private val connectivityManager =
         context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
     private val shadowManager = shadowOf(connectivityManager)
 
+    // Shadow state is static, so reset it to stop a registered callback leaking across tests.
     @Before
     fun resetShadowConnectivityState() {
         ShadowConnectivityManager.reset()
     }
 
-    private fun networkInfo(connected: Boolean): NetworkInfo =
-        ShadowNetworkInfo.newInstance(
-            if (connected) NetworkInfo.DetailedState.CONNECTED else NetworkInfo.DetailedState.DISCONNECTED,
-            ConnectivityManager.TYPE_WIFI,
-            0,
-            connected,
-            connected,
-        )
+    private fun capabilities(
+        internet: Boolean,
+        validated: Boolean,
+    ): NetworkCapabilities {
+        val capabilities = ShadowNetworkCapabilities.newInstance()
+        if (internet) shadowOf(capabilities).addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        if (validated) shadowOf(capabilities).addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+        return capabilities
+    }
 
-    /** Registers an active Wi-Fi network, optionally with (or without) the internet capability. */
-    private fun setActiveNetwork(hasInternetCapability: Boolean): Network {
+    private fun setActiveNetwork(
+        internet: Boolean = true,
+        validated: Boolean = true,
+    ): Network {
         val network = ShadowNetwork.newInstance(ConnectivityManager.TYPE_WIFI)
-        val info = networkInfo(connected = true)
+        val info =
+            ShadowNetworkInfo.newInstance(
+                NetworkInfo.DetailedState.CONNECTED,
+                ConnectivityManager.TYPE_WIFI,
+                0,
+                true,
+                true,
+            )
         shadowManager.addNetwork(network, info)
         shadowManager.setActiveNetworkInfo(info)
         shadowManager.setDefaultNetworkActive(true)
-        val capabilities = ShadowNetworkCapabilities.newInstance()
-        if (hasInternetCapability) shadowOf(capabilities).addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-        shadowManager.setNetworkCapabilities(network, capabilities)
+        shadowManager.setNetworkCapabilities(network, capabilities(internet, validated))
         return network
     }
 
@@ -63,124 +78,124 @@ class AndroidConnectivityObserverTests {
         shadowManager.setDefaultNetworkActive(false)
     }
 
-    @Test
-    fun `isOnline emits true immediately when an active network already has internet capability`() =
-        runTest {
-            setActiveNetwork(hasInternetCapability = true)
-            val observer = AndroidConnectivityObserver(context)
+    private var callbacksBeforeStart: Set<ConnectivityManager.NetworkCallback> = emptySet()
 
-            observer.isOnline.test {
-                assertEquals(true, awaitItem())
-                cancelAndIgnoreRemainingEvents()
-            }
+    private fun TestScope.startObserver(ctx: Context = context): AndroidConnectivityObserver {
+        callbacksBeforeStart = shadowManager.networkCallbacks.toSet()
+        val observer = AndroidConnectivityObserver(ctx, backgroundScope)
+        runCurrent()
+        return observer
+    }
+
+    private fun registeredCallback(): ConnectivityManager.NetworkCallback =
+        (shadowManager.networkCallbacks - callbacksBeforeStart).single()
+
+    @Test
+    fun `isOnline is true at start when the active network has validated internet`() =
+        runTest {
+            setActiveNetwork()
+
+            assertTrue(startObserver().isOnline.value)
         }
 
     @Test
-    fun `isOnline emits false when there is no active network`() =
+    fun `isOnline is false at start when there is no active network`() =
         runTest {
             setNoActiveNetwork()
-            val observer = AndroidConnectivityObserver(context)
 
-            observer.isOnline.test {
-                assertEquals(false, awaitItem())
-                cancelAndIgnoreRemainingEvents()
-            }
+            assertFalse(startObserver().isOnline.value)
         }
 
     @Test
-    fun `isOnline emits false when the active network has no registered capabilities`() =
+    fun `isOnline is false at start when internet is present but not validated`() =
+        runTest {
+            setActiveNetwork(validated = false)
+
+            assertFalse(startObserver().isOnline.value)
+        }
+
+    @Test
+    fun `isOnline is false at start when the active network has no registered capabilities`() =
         runTest {
             val network = ShadowNetwork.newInstance(ConnectivityManager.TYPE_WIFI)
-            val info = networkInfo(connected = true)
+            val info =
+                ShadowNetworkInfo.newInstance(
+                    NetworkInfo.DetailedState.CONNECTED,
+                    ConnectivityManager.TYPE_WIFI,
+                    0,
+                    true,
+                    true,
+                )
             shadowManager.addNetwork(network, info)
             shadowManager.setActiveNetworkInfo(info)
             shadowManager.setDefaultNetworkActive(true)
-            val observer = AndroidConnectivityObserver(context)
 
-            observer.isOnline.test {
-                assertEquals(false, awaitItem())
-                cancelAndIgnoreRemainingEvents()
-            }
+            assertFalse(startObserver().isOnline.value)
         }
 
     @Test
-    fun `isOnline transitions to false when the network is lost`() =
+    fun `isOnline goes offline on onLost even while activeNetwork still reports the lost network`() =
         runTest {
-            val network = setActiveNetwork(hasInternetCapability = true)
-            val observer = AndroidConnectivityObserver(context)
+            val network = setActiveNetwork()
+            val observer = startObserver()
 
             observer.isOnline.test {
                 assertEquals(true, awaitItem())
-                val callback = shadowManager.networkCallbacks.single()
-                setNoActiveNetwork()
-                callback.onLost(network)
+                registeredCallback().onLost(network)
                 assertEquals(false, awaitItem())
-                cancelAndIgnoreRemainingEvents()
             }
         }
 
     @Test
-    fun `isOnline transitions to true when a network becomes available`() =
+    fun `isOnline goes online when the default network gains validated internet`() =
         runTest {
             setNoActiveNetwork()
-            val observer = AndroidConnectivityObserver(context)
+            val observer = startObserver()
 
             observer.isOnline.test {
                 assertEquals(false, awaitItem())
-                val callback = shadowManager.networkCallbacks.single()
-                val network = setActiveNetwork(hasInternetCapability = true)
-                callback.onAvailable(network)
+                val network = ShadowNetwork.newInstance(ConnectivityManager.TYPE_WIFI)
+                registeredCallback().onCapabilitiesChanged(network, capabilities(internet = true, validated = true))
                 assertEquals(true, awaitItem())
-                cancelAndIgnoreRemainingEvents()
             }
         }
 
     @Test
-    fun `isOnline reflects onCapabilitiesChanged losing internet capability`() =
+    fun `isOnline goes offline when the default network loses validation`() =
         runTest {
-            val network = setActiveNetwork(hasInternetCapability = true)
-            val observer = AndroidConnectivityObserver(context)
+            val network = setActiveNetwork()
+            val observer = startObserver()
 
             observer.isOnline.test {
                 assertEquals(true, awaitItem())
-                val callback = shadowManager.networkCallbacks.single()
-                val noInternetCapabilities = ShadowNetworkCapabilities.newInstance()
-                shadowManager.setNetworkCapabilities(network, noInternetCapabilities)
-                callback.onCapabilitiesChanged(network, noInternetCapabilities)
+                registeredCallback().onCapabilitiesChanged(network, capabilities(internet = true, validated = false))
                 assertEquals(false, awaitItem())
-                cancelAndIgnoreRemainingEvents()
             }
         }
 
     @Test
-    fun `isOnline emits false unconditionally when the callback reports onUnavailable`() =
+    fun `isOnline goes offline when the callback reports onUnavailable`() =
         runTest {
-            setActiveNetwork(hasInternetCapability = true)
-            val observer = AndroidConnectivityObserver(context)
+            setActiveNetwork()
+            val observer = startObserver()
 
             observer.isOnline.test {
                 assertEquals(true, awaitItem())
-                val callback = shadowManager.networkCallbacks.single()
-                // The real network is still online -- onUnavailable must still force a `false` emission.
-                callback.onUnavailable()
+                registeredCallback().onUnavailable()
                 assertEquals(false, awaitItem())
-                cancelAndIgnoreRemainingEvents()
             }
         }
 
     @Test
-    fun `isOnline emits false and never registers a callback when there is no ConnectivityManager`() =
+    fun `isOnline is false and registers no callback when there is no ConnectivityManager`() =
         runTest {
             val wrappedContext =
                 object : ContextWrapper(context) {
                     override fun getSystemService(name: String): Any? =
                         if (name == Context.CONNECTIVITY_SERVICE) null else super.getSystemService(name)
                 }
-            val observer = AndroidConnectivityObserver(wrappedContext)
 
-            observer.isOnline.test {
-                assertEquals(false, awaitItem())
-                cancelAndIgnoreRemainingEvents()
-            }
+            assertFalse(startObserver(wrappedContext).isOnline.value)
+            assertTrue((shadowManager.networkCallbacks - callbacksBeforeStart).isEmpty())
         }
 }
