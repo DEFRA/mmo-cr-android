@@ -13,6 +13,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performCustomAccessibilityActionWithLabel
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
@@ -464,15 +465,20 @@ class MapScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
-        composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_0").performClick()
-        composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).performTextInput("38E9")
+        composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performScrollTo().performClick()
+        composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_0").performScrollTo().performClick()
+        composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).performScrollTo().performTextInput("38E9")
 
-        composeTestRule.onNodeWithText("ICES rectangle Test area, centre 55.00°N, 0.00°E").assertIsDisplayed()
+        // Suggestions render inline below the field, so on-device they can sit under the IME/fold.
+        composeTestRule
+            .onNodeWithText("ICES rectangle Test area, centre 55.00°N, 0.00°E")
+            .performScrollTo()
+            .assertIsDisplayed()
 
-        composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).performTextInput("5")
+        composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).performTextReplacement("38E95")
         composeTestRule
             .onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_COORDINATES)
+            .performScrollTo()
             .assertTextContains("Centre of area: 55.00°N, 0.00°E")
     }
 
