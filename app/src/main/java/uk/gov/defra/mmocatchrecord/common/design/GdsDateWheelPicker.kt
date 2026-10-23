@@ -15,16 +15,11 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -70,19 +65,15 @@ data class GdsDateWheelPickerTestTags(
     val monthWheel: String,
     val dayWheel: String,
     val yearWheel: String,
-    val okAction: String,
-    val cancelAction: String,
 )
 
 private const val VISIBLE_ITEMS = 3
-private val PickerButtonGrey = MmoColors.Grey3
 private val WheelTextSize = 20.sp
 private val MonthWheelWidth = 84.dp
 private val DayWheelWidth = 56.dp
 private val YearWheelWidth = 84.dp
-private val PickerButtonWidth = 120.dp
 
-/** Month / Day / Year wheel date picker with Cancel and Ok, per the trip date Figma design.
+/** Month / Day / Year wheel date picker; the wheel value is the selection (no Ok/Cancel).
  * TalkBack adjusts each wheel like a slider; tapping the row above/below avoids dragging (WCAG 2.5.7). */
 @Suppress("FunctionNaming", "LongParameterList")
 @Composable
@@ -90,11 +81,9 @@ fun GdsDateWheelPicker(
     value: LocalDate,
     onValueChange: (LocalDate) -> Unit,
     yearRange: IntRange,
-    onConfirm: () -> Unit,
-    onCancel: () -> Unit,
     testTags: GdsDateWheelPickerTestTags,
     modifier: Modifier = Modifier,
-    okFocusRequester: FocusRequester? = null,
+    focusRequester: FocusRequester? = null,
 ) {
     val locale = appLocale()
     val fontScale = LocalDensity.current.fontScale.coerceAtLeast(1f)
@@ -123,7 +112,10 @@ fun GdsDateWheelPicker(
                 spokenText = { Month.of(it).getDisplayName(TextStyle.FULL_STANDALONE, locale) },
                 onSelectedChange = { update(month = it) },
                 testTag = testTags.monthWheel,
-                modifier = Modifier.width(MonthWheelWidth * fontScale),
+                modifier =
+                    Modifier
+                        .width(MonthWheelWidth * fontScale)
+                        .then(focusRequester?.let { Modifier.focusRequester(it) } ?: Modifier),
             )
             DateWheel(
                 label = stringResource(R.string.date_day_label),
@@ -146,44 +138,6 @@ fun GdsDateWheelPicker(
                 modifier = Modifier.width(YearWheelWidth * fontScale),
             )
         }
-        PickerActions(
-            onCancel = onCancel,
-            onConfirm = onConfirm,
-            testTags = testTags,
-            okFocusRequester = okFocusRequester,
-            buttonWidth = PickerButtonWidth * fontScale,
-        )
-    }
-}
-
-@Suppress("FunctionNaming")
-@Composable
-private fun PickerActions(
-    onCancel: () -> Unit,
-    onConfirm: () -> Unit,
-    testTags: GdsDateWheelPickerTestTags,
-    okFocusRequester: FocusRequester?,
-    buttonWidth: Dp,
-) {
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(Spacing.m),
-        verticalArrangement = Arrangement.spacedBy(Spacing.s),
-    ) {
-        PickerPillButton(
-            text = stringResource(R.string.cancel),
-            onClick = onCancel,
-            testTag = testTags.cancelAction,
-            modifier = Modifier.width(buttonWidth),
-        )
-        PickerPillButton(
-            text = stringResource(R.string.date_picker_ok),
-            onClick = onConfirm,
-            testTag = testTags.okAction,
-            modifier =
-                Modifier
-                    .width(buttonWidth)
-                    .then(okFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier),
-        )
     }
 }
 
@@ -313,29 +267,5 @@ private fun DateWheel(
                 }
             }
         }
-    }
-}
-
-@Suppress("FunctionNaming")
-@Composable
-private fun PickerPillButton(
-    text: String,
-    onClick: () -> Unit,
-    testTag: String,
-    modifier: Modifier = Modifier,
-) {
-    val shape = remember { RoundedCornerShape(percent = 50) }
-    Button(
-        onClick = onClick,
-        shape = shape,
-        colors =
-            ButtonDefaults.buttonColors(
-                containerColor = PickerButtonGrey,
-                contentColor = MmoColors.Text,
-            ),
-        contentPadding = PaddingValues(horizontal = Spacing.m, vertical = Spacing.s),
-        modifier = modifier.heightIn(min = Spacing.minTouchTarget).testTag(testTag),
-    ) {
-        Text(text = text, style = MaterialTheme.typography.bodyLarge.copy(fontSize = WheelTextSize))
     }
 }

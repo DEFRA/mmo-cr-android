@@ -8,22 +8,8 @@ import java.time.LocalDate
 
 class WizardDateInputValidatorTests {
     @Test
-    fun `nothing confirmed is rejected`() {
-        val result = WizardDateInputValidator.validate(confirmedDate = null, wheelDate = DmyDate(11, 9, 2026))
-        assertEquals(DateInputError.NotConfirmed, result.error)
-    }
-
-    @Test
-    fun `wheel moved after confirming is rejected`() {
-        val result =
-            WizardDateInputValidator.validate(confirmedDate = DmyDate(11, 9, 2026), wheelDate = DmyDate(12, 9, 2026))
-        assertEquals(DateInputError.NotConfirmed, result.error)
-    }
-
-    @Test
     fun `invalid calendar date is rejected`() {
-        val result =
-            WizardDateInputValidator.validate(confirmedDate = DmyDate(31, 2, 2026), wheelDate = DmyDate(31, 2, 2026))
+        val result = WizardDateInputValidator.validate(date = DmyDate(31, 2, 2026))
         assertEquals(DateInputError.InvalidDate, result.error)
     }
 
@@ -31,8 +17,7 @@ class WizardDateInputValidatorTests {
     fun `return date before departure is rejected`() {
         val result =
             WizardDateInputValidator.validate(
-                confirmedDate = DmyDate(10, 9, 2026),
-                wheelDate = DmyDate(10, 9, 2026),
+                date = DmyDate(10, 9, 2026),
                 departureDate = DmyDate(11, 9, 2026),
                 isReturnDate = true,
             )
@@ -40,9 +25,19 @@ class WizardDateInputValidatorTests {
     }
 
     @Test
-    fun `confirmed date matching the wheel passes`() {
+    fun `return date on departure day passes`() {
         val result =
-            WizardDateInputValidator.validate(confirmedDate = DmyDate(11, 9, 2026), wheelDate = DmyDate(11, 9, 2026))
+            WizardDateInputValidator.validate(
+                date = DmyDate(11, 9, 2026),
+                departureDate = DmyDate(11, 9, 2026),
+                isReturnDate = true,
+            )
+        assertTrue(result.isValid)
+    }
+
+    @Test
+    fun `valid date passes`() {
+        val result = WizardDateInputValidator.validate(date = DmyDate(11, 9, 2026))
         assertTrue(result.isValid)
         assertEquals(DmyDate(11, 9, 2026), result.date)
     }

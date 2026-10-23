@@ -99,9 +99,6 @@
     <string name="date_month_label">Month</string>
     <string name="date_year_label">Year</string>
     <string name="error_summary_title">There is a problem</string>
-    <string name="date_error_not_confirmed">Select a date and press OK</string>
-    <string name="date_picker_ok">OK</string>
-    <string name="date_picker_selected">Selected date: %1$s</string>
     <string name="date_error_invalid_date">Enter a real date</string>
     <string name="date_error_return_before_departure">Return date must be on or after the departure date</string>
     <string name="departure_port_title">Enter the port or closest port you set off from</string>

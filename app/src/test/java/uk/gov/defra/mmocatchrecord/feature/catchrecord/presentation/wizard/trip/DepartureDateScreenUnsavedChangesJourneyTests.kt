@@ -227,7 +227,7 @@ class DepartureDateScreenUnsavedChangesJourneyTests {
         val viewModel = buildViewModel(draftRepository)
         val navController = launchOnDepartureDateScreen(viewModel)
 
-        composeTestRule.spinToAndConfirm(DepartureDateScreenTestTags.stepTags, DmyDate(11, 9, year))
+        composeTestRule.spinTo(DepartureDateScreenTestTags.stepTags, DmyDate(11, 9, year))
         composeTestRule.waitForIdle()
         composeTestRule.saveAndContinue(DepartureDateScreenTestTags.stepTags)
         composeTestRule.waitForIdle()

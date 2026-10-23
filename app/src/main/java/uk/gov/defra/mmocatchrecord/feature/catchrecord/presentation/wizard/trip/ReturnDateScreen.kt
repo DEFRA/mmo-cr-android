@@ -27,9 +27,6 @@ object ReturnDateScreenTestTags {
     const val MONTH_WHEEL = "return_date_month_wheel"
     const val DAY_WHEEL = "return_date_day_wheel"
     const val YEAR_WHEEL = "return_date_year_wheel"
-    const val OK_ACTION = "return_date_ok_action"
-    const val CANCEL_ACTION = "return_date_cancel_action"
-    const val CONFIRMED_DATE = "return_date_confirmed_date"
     const val SAVE_ACTION = "return_date_save_action"
     const val ERROR_MESSAGE = "return_date_error_message"
 
@@ -39,10 +36,7 @@ object ReturnDateScreenTestTags {
             monthWheel = MONTH_WHEEL,
             dayWheel = DAY_WHEEL,
             yearWheel = YEAR_WHEEL,
-            okAction = OK_ACTION,
-            cancelAction = CANCEL_ACTION,
             saveAction = SAVE_ACTION,
-            confirmedDate = CONFIRMED_DATE,
         )
 }
 

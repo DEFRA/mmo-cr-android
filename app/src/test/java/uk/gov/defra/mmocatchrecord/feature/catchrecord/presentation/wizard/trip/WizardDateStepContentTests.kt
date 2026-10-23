@@ -71,25 +71,25 @@ class WizardDateStepContentTests {
     }
 
     @Test
-    fun cancelRestoresTheConfirmedDateAndReportsClean() {
+    fun movingAWheelBackToTheSavedDateReportsClean() {
         var lastDirty = false
         setContent(initialDate = DmyDate(3, 7, 2026), onDirtyChanged = { lastDirty = it })
 
         composeTestRule.setWheel(tags.dayWheel, 4)
         composeTestRule.waitForIdle()
         assertTrue(lastDirty)
-        composeTestRule.onNodeWithTag(tags.cancelAction).performClick()
+        composeTestRule.setWheel(tags.dayWheel, 3)
         composeTestRule.waitForIdle()
 
         assertFalse(lastDirty)
     }
 
     @Test
-    fun confirmingADifferentDateStaysDirtyUntilSaved() {
+    fun selectingADifferentDateStaysDirtyUntilSaved() {
         var lastDirty = false
         setContent(initialDate = DmyDate(3, 7, 2026), onDirtyChanged = { lastDirty = it })
 
-        composeTestRule.spinToAndConfirm(tags, DmyDate(4, 7, 2026))
+        composeTestRule.spinTo(tags, DmyDate(4, 7, 2026))
         composeTestRule.waitForIdle()
 
         assertTrue(lastDirty)
@@ -132,7 +132,7 @@ class WizardDateStepContentTests {
             }
         }
 
-        composeTestRule.spinToAndConfirm(tags, DmyDate(11, 9, 2026))
+        composeTestRule.spinTo(tags, DmyDate(11, 9, 2026))
         composeTestRule.waitForIdle()
         assertTrue(lastDirty)
         composeTestRule.onNodeWithTag(tags.saveAction).performClick()
