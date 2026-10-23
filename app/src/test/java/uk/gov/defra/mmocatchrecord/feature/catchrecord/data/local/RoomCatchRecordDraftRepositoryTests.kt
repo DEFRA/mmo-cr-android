@@ -55,7 +55,7 @@ class RoomCatchRecordDraftRepositoryTests {
      */
     private suspend fun RoomCatchRecordDraftRepository.startDraft(vesselId: String): Result<CatchRecordDraft> {
         val id = "id-${idCounter++}"
-        val reference = CatchRecordReferenceGenerator.generate(clockMillis)
+        val reference = CatchRecordReferenceGenerator.generate("B14974", clockMillis)
         return startDraft(CatchRecordDraftFactory.newDraft(vesselId = vesselId, id = id, reference = reference))
     }
 
@@ -526,7 +526,8 @@ class RoomCatchRecordDraftRepositoryTests {
             clockMillis = 1_700_000_000_000L
             val started = repository.startDraft("vessel-achilles").getOrThrow()
             assertNotNull(started.catchRecordReference)
-            assertEquals(CatchRecordReferenceGenerator.generate(clockMillis), started.catchRecordReference)
+            // 1_700_000_000_000L is 2023-11-14T22:13:20Z (GMT, so UK local time is identical).
+            assertEquals("B14974-14112023-221320", started.catchRecordReference)
 
             // Round-trips unchanged through a save/reload.
             val reloaded = repository.getActiveDraft("vessel-achilles").getOrThrow()

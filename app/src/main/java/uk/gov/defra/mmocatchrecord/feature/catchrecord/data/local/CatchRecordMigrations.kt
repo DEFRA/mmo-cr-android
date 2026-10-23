@@ -4,7 +4,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
- * Real Room [Migration]s for every [CatchRecordDatabase] schema version bump, v1 through v8 — see ADR 0010.
+ * Real Room [Migration]s for every [CatchRecordDatabase] schema version bump, v1 through v9 — see ADR 0010.
  * Each migration's SQL is derived directly from the committed `app/schemas` JSON history (the authoritative
  * record of each version's actual column/table shape), never destructively dropping/recreating the whole
  * database. Registered via `.addMigrations(...)` in `di/DatabaseModule.kt`.
@@ -212,6 +212,59 @@ object CatchRecordMigrations {
             }
         }
 
+    /**
+     * v8 -> v9: Trip IDs must be unique. Duplicates keep the earliest row's value; later rows get the
+     * lowest free `-2`, `-3`… suffix so the unique index can be created.
+     */
+    val MIGRATION_8_9 =
+        object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                dedupeReferences(db)
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_catch_record_draft_catchRecordReference` " +
+                        "ON `catch_record_draft` (`catchRecordReference`)",
+                )
+            }
+
+            private fun dedupeReferences(db: SupportSQLiteDatabase) {
+                val taken = mutableSetOf<String>()
+                db
+                    .query("SELECT catchRecordReference FROM catch_record_draft WHERE catchRecordReference IS NOT NULL")
+                    .use { cursor -> while (cursor.moveToNext()) taken += cursor.getString(0) }
+                val renames = mutableListOf<Pair<String, String>>()
+                db
+                    .query(
+                        "SELECT id, catchRecordReference FROM catch_record_draft WHERE catchRecordReference IN (" +
+                            "SELECT catchRecordReference FROM catch_record_draft " +
+                            "WHERE catchRecordReference IS NOT NULL " +
+                            "GROUP BY catchRecordReference HAVING COUNT(*) > 1) " +
+                            "ORDER BY catchRecordReference, " +
+                            "COALESCE(createdAtEpochMillis, modifiedAtEpochMillis), id",
+                    ).use { cursor ->
+                        var previous: String? = null
+                        while (cursor.moveToNext()) {
+                            val id = cursor.getString(0)
+                            val reference = cursor.getString(1)
+                            if (reference == previous) {
+                                val renamed =
+                                    generateSequence(2) { it + 1 }
+                                        .map { "$reference-$it" }
+                                        .first { it !in taken }
+                                taken += renamed
+                                renames += id to renamed
+                            }
+                            previous = reference
+                        }
+                    }
+                renames.forEach { (id, reference) ->
+                    db.execSQL(
+                        "UPDATE catch_record_draft SET catchRecordReference = ? WHERE id = ?",
+                        arrayOf(reference, id),
+                    )
+                }
+            }
+        }
+
     val ALL =
         arrayOf(
             MIGRATION_1_2,
@@ -221,5 +274,6 @@ object CatchRecordMigrations {
             MIGRATION_5_6,
             MIGRATION_6_7,
             MIGRATION_7_8,
+            MIGRATION_8_9,
         )
 }

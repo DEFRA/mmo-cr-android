@@ -200,11 +200,72 @@ class CatchRecordMigrationsJvmTests {
     }
 
     @Test
+    fun `MIGRATION_8_9 suffixes duplicate references then enforces uniqueness`() {
+        val db =
+            createDb(
+                8,
+                listOf(
+                    "CREATE TABLE catch_record_draft (id TEXT PRIMARY KEY NOT NULL, catchRecordReference TEXT, " +
+                        "createdAtEpochMillis INTEGER, modifiedAtEpochMillis INTEGER NOT NULL)",
+                    "INSERT INTO catch_record_draft VALUES ('a', 'REF1', 10, 10)",
+                    "INSERT INTO catch_record_draft VALUES ('b', 'REF1', 20, 20)",
+                    "INSERT INTO catch_record_draft VALUES ('c', 'REF1', NULL, 30)",
+                    "INSERT INTO catch_record_draft VALUES ('d', 'REF2', 5, 5)",
+                    "INSERT INTO catch_record_draft VALUES ('e', NULL, 1, 1)",
+                    "INSERT INTO catch_record_draft VALUES ('f', NULL, 2, 2)",
+                ),
+            )
+
+        CatchRecordMigrations.MIGRATION_8_9.migrate(db)
+
+        fun referenceOf(id: String): String? =
+            db.query("SELECT catchRecordReference FROM catch_record_draft WHERE id = ?", arrayOf(id)).use { cursor ->
+                cursor.moveToFirst()
+                if (cursor.isNull(0)) null else cursor.getString(0)
+            }
+
+        assertEquals("REF1", referenceOf("a"))
+        assertEquals("REF1-2", referenceOf("b"))
+        assertEquals("REF1-3", referenceOf("c"))
+        assertEquals("REF2", referenceOf("d"))
+        assertEquals(null, referenceOf("e"))
+        assertThrows(SQLiteConstraintException::class.java) {
+            db.execSQL("INSERT INTO catch_record_draft VALUES ('g', 'REF2', 1, 1)")
+        }
+        db.close()
+    }
+
+    @Test
+    fun `MIGRATION_8_9 skips suffixes already held by another record`() {
+        val db =
+            createDb(
+                8,
+                listOf(
+                    "CREATE TABLE catch_record_draft (id TEXT PRIMARY KEY NOT NULL, catchRecordReference TEXT, " +
+                        "createdAtEpochMillis INTEGER, modifiedAtEpochMillis INTEGER NOT NULL)",
+                    "INSERT INTO catch_record_draft VALUES ('a', 'REF1', 10, 10)",
+                    "INSERT INTO catch_record_draft VALUES ('b', 'REF1', 20, 20)",
+                    "INSERT INTO catch_record_draft VALUES ('c', 'REF1-2', 5, 5)",
+                    "INSERT INTO catch_record_draft VALUES ('d', 'REF1-2', 6, 6)",
+                ),
+            )
+
+        CatchRecordMigrations.MIGRATION_8_9.migrate(db)
+
+        val references =
+            db.query("SELECT id, catchRecordReference FROM catch_record_draft ORDER BY id").use { cursor ->
+                buildMap { while (cursor.moveToNext()) put(cursor.getString(0), cursor.getString(1)) }
+            }
+        assertEquals(mapOf("a" to "REF1", "b" to "REF1-3", "c" to "REF1-2", "d" to "REF1-2-2"), references)
+        db.close()
+    }
+
+    @Test
     fun `ALL contains every migration in ascending version order`() {
         val versions = CatchRecordMigrations.ALL.map { it.startVersion to it.endVersion }
 
         assertEquals(
-            listOf(1 to 2, 2 to 3, 3 to 4, 4 to 5, 5 to 6, 6 to 7, 7 to 8),
+            listOf(1 to 2, 2 to 3, 3 to 4, 4 to 5, 5 to 6, 6 to 7, 7 to 8, 8 to 9),
             versions,
         )
     }

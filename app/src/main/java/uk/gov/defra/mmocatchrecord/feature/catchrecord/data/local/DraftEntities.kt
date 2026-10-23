@@ -18,7 +18,11 @@ import androidx.room.PrimaryKey
  */
 @Entity(
     tableName = "catch_record_draft",
-    indices = [Index(value = ["vesselId", "status"])],
+    indices = [
+        Index(value = ["vesselId", "status"]),
+        // Trip ID uniqueness (v9); SQLite unique indexes allow many NULLs, so unset references are fine.
+        Index(value = ["catchRecordReference"], unique = true),
+    ],
 )
 data class DraftEntity(
     @PrimaryKey val id: String,
@@ -38,7 +42,7 @@ data class DraftEntity(
     val modifiedAtEpochMillis: Long,
     /** Phase 5B: `null` (column default) until the "not landing straight away" question is answered. */
     val notLandedStraightAway: Boolean? = null,
-    /** Phase 8: user-facing reference generated once at draft creation — see [CatchRecordReferenceGenerator]. */
+    /** Trip ID generated once at draft creation (unique, see [CatchRecordReferenceGenerator]). */
     val catchRecordReference: String? = null,
     /**
      * Phase 8: see [uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft]'s

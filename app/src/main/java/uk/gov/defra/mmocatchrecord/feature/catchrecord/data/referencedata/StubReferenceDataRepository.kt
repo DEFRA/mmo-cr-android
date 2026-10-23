@@ -36,8 +36,8 @@ class StubReferenceDataRepository : ReferenceDataRepository {
 
     private val vessels =
         listOf(
-            Vessel(id = "vessel-achilles", name = "ACHILLES"),
-            Vessel(id = "vessel-hercules", name = "HERCULES"),
+            Vessel(id = "vessel-achilles", name = "ACHILLES", pln = "PH101"),
+            Vessel(id = "vessel-hercules", name = "HERCULES", pln = "DH12"),
         )
 
     private val ports =

@@ -14,7 +14,12 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Vess
 
 /** Entity → domain mapping for the cached reference-data tables (ADR 0016); the cache-hit read path. */
 internal fun ReferenceDataVesselEntity.toDomain(): Vessel =
-    Vessel(id = id, name = displayName, lengthOverallMetres = lengthOverallMetres)
+    Vessel(
+        id = id,
+        name = displayName,
+        lengthOverallMetres = lengthOverallMetres,
+        pln = pln,
+    )
 
 internal fun ReferenceDataPortEntity.toDomain(): Port =
     Port(id = id, name = displayName, statisticalAreaId = statisticalAreaId)

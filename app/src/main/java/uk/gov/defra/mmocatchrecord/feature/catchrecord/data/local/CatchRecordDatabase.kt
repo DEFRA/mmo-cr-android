@@ -36,6 +36,8 @@ import androidx.room.RoomDatabase
  * v7 -> v8 (ADR 0016): six new, purely additive reference-data cache tables (vessels/ports/species/gears/
  * gear-measurements/metadata) — no pre-existing draft table is touched, so an in-progress draft survives.
  *
+ * v8 -> v9: a unique index on [DraftEntity]'s `catchRecordReference` enforces Trip ID uniqueness.
+ *
  * Every version bump above has a real [androidx.room.migration.Migration] registered in
  * [CatchRecordMigrations] (see `di/DatabaseModule.kt`) — a draft in progress must survive every schema
  * change, so `fallbackToDestructiveMigration` must never be reintroduced for this database (ADR 0010).
@@ -55,7 +57,7 @@ import androidx.room.RoomDatabase
         ReferenceDataGearMeasurementEntity::class,
         ReferenceDataMetadataEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = true,
 )
 abstract class CatchRecordDatabase : RoomDatabase() {

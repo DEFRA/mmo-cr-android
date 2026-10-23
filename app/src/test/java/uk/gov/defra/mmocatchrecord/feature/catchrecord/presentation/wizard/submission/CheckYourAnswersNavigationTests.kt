@@ -164,7 +164,7 @@ class CheckYourAnswersNavigationTests {
             notLandedStraightAway = false,
             status = DraftStatus.Draft,
             modifiedAtEpochMillis = 0L,
-            catchRecordReference = "A1234520260727150815",
+            catchRecordReference = "B14974-27072026-150815",
             lateSubmissionWarningAcknowledged = true,
         )
 
@@ -291,7 +291,7 @@ class CheckYourAnswersNavigationTests {
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithTag(SubmissionSuccessScreenTestTags.SCREEN).assertIsDisplayed()
-        composeTestRule.onNodeWithText("Your catch record reference A1234520260727150815").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Your catch record reference B14974-27072026-150815").assertIsDisplayed()
 
         assertEquals(1, submissionRepository.submitCallCount)
         assertEquals(DraftStatus.Submitted, draftRepository.statusOf(seedDraft.id))
@@ -327,7 +327,7 @@ class CheckYourAnswersNavigationTests {
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithTag(SubmissionPendingSyncScreenTestTags.SCREEN).assertIsDisplayed()
-        composeTestRule.onNodeWithText("Your catch record reference A1234520260727150815").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Your catch record reference B14974-27072026-150815").assertIsDisplayed()
 
         assertEquals(0, submissionRepository.submitCallCount)
         assertEquals(DraftStatus.PendingSync, draftRepository.statusOf(seedDraft.id))

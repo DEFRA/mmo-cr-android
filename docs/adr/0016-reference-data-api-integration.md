@@ -169,6 +169,15 @@ models and are deliberately kept DTO/entity-only rather than growing the models:
 these are currently needed by any screen; adding them was judged out of this phase's scope and is flagged
 for a product decision rather than silently added.
 
+**Update (Trip ID):** vessel `pln` is now carried into the domain `Vessel` as the interim prefix of the
+catch-record Trip ID `RSS_NUMBER-DDMMYYYY-HHMMSS` (UK local time), generated once when a record is started
+(`CatchRecordReferenceGenerator`). The true RSS number (`identifiers.registrationNumber`) exists only in the
+canonical vessel view, not the mobile view; swap the prefix source if the mobile projection gains it.
+Uniqueness: Room DB v9 adds a unique index on `catchRecordReference` (the migration de-duplicates existing rows
+with `-2`, `-3` suffixes). On a clash, the DAO's find-or-create transaction moves the time on by 1 second, so the
+Trip ID can be a few seconds after `createdAt`. Starting a record is blocked when the vessel has no PLN.
+Cross-device uniqueness still needs a backend unique constraint and 409 handling (follow-up).
+
 **Species language-cache strategy:** `ReferenceDataMetadataEntity.languageTag` stores the `Accept-Language`
 tag the cached `species` rows were resolved under. The *storage* exists now; the invalidate-on-change
 *enforcement* (compare the ADR-0012 current language against the stored tag before serving/trusting the

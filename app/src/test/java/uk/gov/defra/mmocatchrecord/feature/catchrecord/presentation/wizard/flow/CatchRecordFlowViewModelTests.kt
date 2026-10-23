@@ -476,7 +476,10 @@ class CatchRecordFlowViewModelTests {
             val recordingReferenceData =
                 RecordingReferenceDataRepository(
                     FakeReferenceDataRepository(
-                        vessels = listOf(Vessel("vessel-achilles", "ACHILLES", lengthOverallMetres = 8.74)),
+                        vessels =
+                            listOf(
+                                Vessel("vessel-achilles", "ACHILLES", lengthOverallMetres = 8.74, pln = "PH101"),
+                            ),
                     ),
                 )
             val viewModel =
@@ -496,6 +499,60 @@ class CatchRecordFlowViewModelTests {
                 awaitItem()
             }
             assertEquals(listOf(null, 8.74), recordingReferenceData.gearTypesCalls)
+        }
+
+    @Test
+    fun `selecting a vessel assigns a Trip ID from its PLN and the start time`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            val referenceData =
+                FakeReferenceDataRepository(
+                    vessels = listOf(Vessel("vessel-achilles", "ACHILLES", pln = "PH101")),
+                )
+            // 2026-09-20T10:22:33Z, i.e. 11:22:33 BST
+            val viewModel =
+                buildViewModel(
+                    repository = repository,
+                    referenceDataRepository = referenceData,
+                    clock = { 1_789_899_753_000L },
+                    dispatcher = dispatcher,
+                )
+
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            testScheduler.advanceUntilIdle()
+            viewModel.dispatch(CatchRecordFlowEvent.VesselSelected("vessel-achilles"))
+            testScheduler.advanceUntilIdle()
+
+            val persisted = repository.getActiveDraft("vessel-achilles").getOrThrow()
+            assertEquals("PH101-20092026-112233", persisted?.catchRecordReference)
+            assertEquals("PH101-20092026-112233", viewModel.state.value.catchRecordReference)
+        }
+
+    @Test
+    fun `selecting a vessel with no PLN blocks starting a record with a non-retryable error`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            val referenceData =
+                FakeReferenceDataRepository(vessels = listOf(Vessel("vessel-achilles", "ACHILLES", pln = " - ")))
+            val viewModel =
+                buildViewModel(
+                    repository = repository,
+                    referenceDataRepository = referenceData,
+                    dispatcher = dispatcher,
+                )
+
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            testScheduler.advanceUntilIdle()
+            viewModel.dispatch(CatchRecordFlowEvent.VesselSelected("vessel-achilles"))
+            testScheduler.advanceUntilIdle()
+
+            val status = viewModel.state.value.status as UiStatus.Error
+            assertTrue(status.message.contains("registration details are missing"))
+            assertFalse(status.isRetryable)
+            assertEquals(0, repository.startDraftCallCount)
+            assertNull(repository.getActiveDraft("vessel-achilles").getOrThrow())
         }
 
     @Test

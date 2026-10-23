@@ -33,7 +33,7 @@ class SubmissionScreensTests {
     @get:Rule
     val composeTestRule = createComposeRule()
 
-    private fun draft(reference: String = "A1234520260727150815") =
+    private fun draft(reference: String = "B14974-27072026-150815") =
         CatchRecordDraft(
             id = "draft-1",
             vesselId = "vessel-1",
@@ -57,7 +57,7 @@ class SubmissionScreensTests {
 
         composeTestRule.onNodeWithTag(SubmissionSuccessScreenTestTags.BANNER).assertIsDisplayed()
         composeTestRule.onNodeWithText("Your catch record has been submitted").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Your catch record reference A1234520260727150815").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Your catch record reference B14974-27072026-150815").assertIsDisplayed()
         composeTestRule
             .onNodeWithText(
                 "Your catch record has been received by the relevant fishing authority",
@@ -143,7 +143,7 @@ class SubmissionScreensTests {
 
         composeTestRule.onNodeWithTag(SubmissionPendingSyncScreenTestTags.BANNER).assertIsDisplayed()
         composeTestRule.onNodeWithText("Your catch record has been recorded").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Your catch record reference A1234520260727150815").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Your catch record reference B14974-27072026-150815").assertIsDisplayed()
         composeTestRule
             .onNodeWithText(
                 "Your catch record has been saved and will be sent automatically when you next have a " +

@@ -15,7 +15,10 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Vess
 
 class FakeReferenceDataRepository(
     private val vessels: List<Vessel> =
-        listOf(Vessel("vessel-achilles", "ACHILLES"), Vessel("vessel-hercules", "HERCULES")),
+        listOf(
+            Vessel("vessel-achilles", "ACHILLES", pln = "PH101"),
+            Vessel("vessel-hercules", "HERCULES", pln = "DH12"),
+        ),
     private val ports: List<Port> =
         listOf(Port("port-hastings", "Hastings", "AREA-HASTINGS"), Port("port-dover", "Dover", "AREA-DOVER")),
     private val previousPortsByVessel: Map<String, List<Port>> =

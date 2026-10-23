@@ -5,6 +5,7 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.CatchRecordReferenceGenerator
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftFactory
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftRepository
@@ -46,8 +47,13 @@ class FakeCatchRecordDraftRepository(
         val existing = drafts.values.firstOrNull { it.vesselId == candidate.vesselId && it.status.isActive }
         if (existing != null) return Result.success(existing)
         val creationTime = clock()
+        var reference = candidate.catchRecordReference
+        while (reference != null && drafts.values.any { it.catchRecordReference == reference }) {
+            reference = CatchRecordReferenceGenerator.nextAfter(reference)
+        }
         val stamped =
             candidate.copy(
+                catchRecordReference = reference,
                 createdAtEpochMillis = candidate.createdAtEpochMillis ?: creationTime,
                 modifiedAtEpochMillis = creationTime,
             )
