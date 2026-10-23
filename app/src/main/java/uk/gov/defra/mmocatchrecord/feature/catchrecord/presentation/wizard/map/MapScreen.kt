@@ -1,7 +1,8 @@
-@file:Suppress("detekt.FunctionNaming", "detekt.LongMethod", "detekt.MaxLineLength")
+@file:Suppress("detekt.FunctionNaming", "detekt.LongMethod", "detekt.MaxLineLength", "detekt.TooManyFunctions")
 
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -18,12 +20,17 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.delay
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.AppLanguageProvider
 import uk.gov.defra.mmocatchrecord.common.design.GdsAutocompleteField
@@ -87,6 +94,10 @@ data class MapDataUiState(
 data class StatRectangleOptions(
     val nearby: List<StatisticalSubRectangle>,
     val all: List<StatisticalSubRectangle>,
+    /** True once [all] is sourced from the comprehensive offline map dataset (`MapSupport.allRectanglesFromDataset`)
+     *  rather than the known-incomplete reference-data stub — gates FR8 existence validation on the "Other"
+     *  search screen so the stub's fallback list can never wrongly reject a real code. */
+    val validateExistence: Boolean = false,
 )
 
 object MapScreenTestTags {
@@ -105,7 +116,14 @@ object MapScreenTestTags {
     const val SUGGESTION_PREFIX = "gear_stat_rectangle_suggestion"
     const val NO_MATCHES = "gear_stat_rectangle_no_matches"
     const val AUTOCOMPLETE_SAVE_ACTION = "gear_stat_rectangle_autocomplete_save_action"
+    const val AUTOCOMPLETE_COORDINATES = "gear_stat_rectangle_autocomplete_coordinates"
+    const val COORDINATES_LIVE_REGION = "gear_stat_rectangle_coordinates_live_region"
 }
+
+/** Debounce before the coordinates live region speaks (FR6) — avoids queueing a stale announcement
+ *  behind every keystroke, and keeps it from colliding with [GdsAutocompleteField]'s own suggestion-count
+ *  live region (see ADR 0017, risk R6). */
+private const val COORDINATE_LIVE_REGION_DEBOUNCE_MS = 400L
 
 /** The special "Other" radio option id on the radio-list sub-screen (screen 2) — not a real rectangle code. */
 private const val OTHER_OPTION_ID = "other"
@@ -139,10 +157,17 @@ fun MapScreen(
         editGearUseId = editGearUseId,
         onSubmit = { updatedDraft ->
             if (editGearUseId != null) {
-                val newCode =
-                    updatedDraft.gearUses.firstOrNull { it.id == editGearUseId }?.statisticalSubRectangleCode
+                val updatedGearUse = updatedDraft.gearUses.firstOrNull { it.id == editGearUseId }
+                val newCode = updatedGearUse?.statisticalSubRectangleCode
                 if (newCode != null) {
-                    viewModel.dispatch(CatchRecordFlowEvent.EditGearStatRectangle(editGearUseId, newCode))
+                    viewModel.dispatch(
+                        CatchRecordFlowEvent.EditGearStatRectangle(
+                            gearUseId = editGearUseId,
+                            statisticalSubRectangleCode = newCode,
+                            statisticalSubRectangleLatitude = updatedGearUse.statisticalSubRectangleLatitude,
+                            statisticalSubRectangleLongitude = updatedGearUse.statisticalSubRectangleLongitude,
+                        ),
+                    )
                 }
                 onNavigate(WizardStep.CheckYourAnswers)
             } else {
@@ -239,6 +264,7 @@ fun MapScreenContent(
             MapAutocompleteContent(
                 gearUse = gearUse,
                 allRectangles = rectangleOptions.all,
+                validateExistence = rectangleOptions.validateExistence,
                 onSubmit = onSubmit,
                 modifier = modifier,
             )
@@ -369,7 +395,11 @@ private fun MapGridContent(
     }
 }
 
-/** Screen 2: the same nearby codes as a vertical radio list, plus a final "Other" option. */
+/**
+ * Screen 2: the same nearby codes as a vertical radio list, plus a final "Other" option. Selecting "Other"
+ * switches to the autocomplete sub-screen (screen 3) immediately (Scenario 1/FR2) — it does not wait for
+ * "Save and continue", which previously stranded the search field on a second click.
+ */
 @Suppress("FunctionNaming")
 @Composable
 private fun MapRadioListContent(
@@ -412,6 +442,9 @@ private fun MapRadioListContent(
             onOptionSelected = {
                 selectedOptionId = it
                 showError = false
+                if (it == OTHER_OPTION_ID) {
+                    onOtherSelected()
+                }
             },
             optionTestTagPrefix = MapScreenTestTags.RADIO_OPTION_PREFIX,
         )
@@ -429,18 +462,158 @@ private fun MapRadioListContent(
     }
 }
 
+/** A cardinal-direction string for a coordinate's sign, shared by the 4 label/text builders below. */
+@Composable
+private fun compassDirectionLabel(
+    isPrimary: Boolean,
+    @StringRes primaryRes: Int,
+    @StringRes secondaryRes: Int,
+): String = stringResource(if (isPrimary) primaryRes else secondaryRes)
+
+/** FR5: the search suggestion's second line — ICES rectangle name (where known) plus the sub-area's centre
+ *  coordinates; `null` when [rectangle] has no known coordinates (stub-fallback path — the row renders
+ *  exactly as it did before Track B). */
+@Composable
+private fun suggestionSecondaryLabel(rectangle: StatisticalSubRectangle): String? {
+    val latitude = rectangle.centroidLatitude ?: return null
+    val longitude = rectangle.centroidLongitude ?: return null
+    val latMagnitude = MapCoordinateFormat.magnitude(latitude)
+    val lonMagnitude = MapCoordinateFormat.magnitude(longitude)
+    val latDirection =
+        compassDirectionLabel(
+            MapCoordinateFormat.isNorth(latitude),
+            R.string.coordinate_north,
+            R.string.coordinate_south,
+        )
+    val lonDirection =
+        compassDirectionLabel(
+            MapCoordinateFormat.isEast(longitude),
+            R.string.coordinate_east,
+            R.string.coordinate_west,
+        )
+    return rectangle.icesRectangleName?.let { icesName ->
+        stringResource(
+            R.string.gear_stat_rectangle_suggestion_secondary,
+            icesName,
+            latMagnitude,
+            latDirection,
+            lonMagnitude,
+            lonDirection,
+        )
+    } ?: stringResource(
+        R.string.gear_stat_rectangle_suggestion_secondary_no_ices,
+        latMagnitude,
+        latDirection,
+        lonMagnitude,
+        lonDirection,
+    )
+}
+
+/** FR5's accessible name for the same suggestion row: code, then ICES rectangle, then coordinates spoken as
+ *  full words (e.g. "north") rather than the visual "N"/"E" letters, which TalkBack mispronounces. */
+@Composable
+private fun suggestionAccessibilityLabel(rectangle: StatisticalSubRectangle): String? {
+    val latitude = rectangle.centroidLatitude ?: return null
+    val longitude = rectangle.centroidLongitude ?: return null
+    val latMagnitude = MapCoordinateFormat.magnitude(latitude)
+    val lonMagnitude = MapCoordinateFormat.magnitude(longitude)
+    val latDirection =
+        compassDirectionLabel(
+            MapCoordinateFormat.isNorth(latitude),
+            R.string.coordinate_north_spoken,
+            R.string.coordinate_south_spoken,
+        )
+    val lonDirection =
+        compassDirectionLabel(
+            MapCoordinateFormat.isEast(longitude),
+            R.string.coordinate_east_spoken,
+            R.string.coordinate_west_spoken,
+        )
+    return rectangle.icesRectangleName?.let { icesName ->
+        stringResource(
+            R.string.gear_stat_rectangle_suggestion_accessibility,
+            rectangle.code,
+            icesName,
+            latMagnitude,
+            latDirection,
+            lonMagnitude,
+            lonDirection,
+        )
+    } ?: stringResource(
+        R.string.gear_stat_rectangle_suggestion_accessibility_no_ices,
+        rectangle.code,
+        latMagnitude,
+        latDirection,
+        lonMagnitude,
+        lonDirection,
+    )
+}
+
+/** FR6's visible "Centre of area" text for [rectangle]; `null` when unselected/unmatched or coordinates
+ *  aren't known — see [MapScreenTestTags.AUTOCOMPLETE_COORDINATES]. */
+@Composable
+private fun coordinatesVisibleText(rectangle: StatisticalSubRectangle?): String? {
+    val latitude = rectangle?.centroidLatitude ?: return null
+    val longitude = rectangle.centroidLongitude ?: return null
+    val latDirection =
+        compassDirectionLabel(
+            MapCoordinateFormat.isNorth(latitude),
+            R.string.coordinate_north,
+            R.string.coordinate_south,
+        )
+    val lonDirection =
+        compassDirectionLabel(
+            MapCoordinateFormat.isEast(longitude),
+            R.string.coordinate_east,
+            R.string.coordinate_west,
+        )
+    return stringResource(
+        R.string.gear_stat_rectangle_coordinates,
+        MapCoordinateFormat.magnitude(latitude),
+        latDirection,
+        MapCoordinateFormat.magnitude(longitude),
+        lonDirection,
+    )
+}
+
+/** FR6's debounced live-region announcement text — see [MapScreenTestTags.COORDINATES_LIVE_REGION]. */
+@Composable
+private fun coordinatesSpokenText(rectangle: StatisticalSubRectangle?): String? {
+    val latitude = rectangle?.centroidLatitude ?: return null
+    val longitude = rectangle.centroidLongitude ?: return null
+    val latDirection =
+        compassDirectionLabel(
+            MapCoordinateFormat.isNorth(latitude),
+            R.string.coordinate_north_spoken,
+            R.string.coordinate_south_spoken,
+        )
+    val lonDirection =
+        compassDirectionLabel(
+            MapCoordinateFormat.isEast(longitude),
+            R.string.coordinate_east_spoken,
+            R.string.coordinate_west_spoken,
+        )
+    return stringResource(
+        R.string.gear_stat_rectangle_coordinates_spoken,
+        MapCoordinateFormat.magnitude(latitude),
+        latDirection,
+        MapCoordinateFormat.magnitude(longitude),
+        lonDirection,
+    )
+}
+
 /**
  * Screen 3: free-text search over the full/global rectangle code list. Unlike the grid/radio-list, this
- * validates the raw typed text against [MapRectangleFormatValidator] (required + format) via
- * [WizardErrorSummary] — matching
- * [uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearMeasurementScreenContent]'s pattern for free-text/numeric input,
- * since a typed code need not appear in the (locally stubbed, non-exhaustive) suggestion list to be valid.
+ * validates the raw typed text against [MapRectangleFormatValidator] (required + format, plus existence
+ * when [validateExistence] is true — FR8) via [WizardErrorSummary] — matching
+ * [uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearMeasurementScreenContent]'s pattern for free-text/numeric input.
  */
 @Suppress("FunctionNaming")
 @Composable
 private fun MapAutocompleteContent(
     gearUse: GearUse,
     allRectangles: List<StatisticalSubRectangle>,
+    validateExistence: Boolean,
     onSubmit: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -453,6 +626,29 @@ private fun MapAutocompleteContent(
             searchQuery,
             allRectangles,
         ) { MapRectangleSearch.filterSuggestions(searchQuery, allRectangles) }
+    // `null` (rather than an empty set) when existence isn't checkable yet — keeps the known-incomplete
+    // stub fallback lenient (format-only) instead of wrongly rejecting a real code it simply lacks.
+    val knownCodes =
+        remember(allRectangles, validateExistence) {
+            if (validateExistence) allRectangles.map { it.code.uppercase() }.toSet() else null
+        }
+    // FR6: resolved purely by exact code match (not the type-ahead's prefix [suggestions]) so the
+    // coordinates only ever reflect a complete, valid entry — never a partial/ambiguous one.
+    val matchedRectangle =
+        remember(searchQuery, allRectangles) {
+            allRectangles.firstOrNull { it.code.equals(searchQuery.trim(), ignoreCase = true) }
+        }
+    val coordinatesText = coordinatesVisibleText(matchedRectangle)
+    val coordinatesSpoken = coordinatesSpokenText(matchedRectangle)
+    var announcedCoordinates by remember(gearUse.id) { mutableStateOf<String?>(null) }
+    LaunchedEffect(matchedRectangle) {
+        if (coordinatesSpoken == null) {
+            announcedCoordinates = null
+        } else {
+            delay(COORDINATE_LIVE_REGION_DEBOUNCE_MS)
+            announcedCoordinates = coordinatesSpoken
+        }
+    }
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
         error?.let { currentError ->
@@ -463,10 +659,10 @@ private fun MapAutocompleteContent(
                         WizardErrorSummaryItem(
                             message =
                                 stringResource(
-                                    if (currentError == MapRectangleInputError.Format) {
-                                        R.string.gear_stat_rectangle_error_format
-                                    } else {
-                                        R.string.gear_stat_rectangle_error_required
+                                    when (currentError) {
+                                        MapRectangleInputError.Format -> R.string.gear_stat_rectangle_error_format
+                                        MapRectangleInputError.NotFound -> R.string.gear_stat_rectangle_error_not_found
+                                        MapRectangleInputError.Required -> R.string.gear_stat_rectangle_error_required
                                     },
                                 ),
                             onClick = { fieldFocusRequester.requestFocus() },
@@ -479,7 +675,15 @@ private fun MapAutocompleteContent(
         GdsAutocompleteField(
             placeholder = stringResource(R.string.autocomplete_search_placeholder),
             value = searchQuery,
-            options = suggestions.map { GdsAutocompleteOption(it.id, it.code) },
+            options =
+                suggestions.map {
+                    GdsAutocompleteOption(
+                        id = it.id,
+                        label = it.code,
+                        secondaryLabel = suggestionSecondaryLabel(it),
+                        accessibilityLabel = suggestionAccessibilityLabel(it),
+                    )
+                },
             onValueChange = {
                 searchQuery = it
                 error = null
@@ -495,10 +699,24 @@ private fun MapAutocompleteContent(
             noMatchesText = stringResource(R.string.gear_stat_rectangle_no_matches_found),
             modifier = Modifier.focusRequester(fieldFocusRequester),
         )
+        Text(
+            text = coordinatesText ?: stringResource(R.string.gear_stat_rectangle_selected_area_none),
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.testTag(MapScreenTestTags.AUTOCOMPLETE_COORDINATES),
+        )
+        Text(
+            text = announcedCoordinates.orEmpty(),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier =
+                Modifier
+                    .alpha(0f)
+                    .testTag(MapScreenTestTags.COORDINATES_LIVE_REGION)
+                    .semantics { liveRegion = LiveRegionMode.Polite },
+        )
         PrimaryActionButton(
             text = stringResource(R.string.save_and_continue),
             onClick = {
-                val result = MapRectangleFormatValidator.validate(searchQuery)
+                val result = MapRectangleFormatValidator.validate(searchQuery, knownCodes)
                 val code = result.code
                 if (code != null) {
                     error = null
@@ -580,7 +798,14 @@ private fun mapPreviewFixture(): MapPreviewFixture {
         )
     val sampleRectangles =
         listOf(
-            StatisticalSubRectangle("rect-1", "38E95", PREVIEW_AREA_HASTINGS),
+            StatisticalSubRectangle(
+                id = "rect-1",
+                code = "38E95",
+                statisticalAreaId = PREVIEW_AREA_HASTINGS,
+                centroidLatitude = 50.86,
+                centroidLongitude = 0.37,
+                icesRectangleName = "38E9",
+            ),
             StatisticalSubRectangle("rect-2", "38E98", PREVIEW_AREA_HASTINGS),
             StatisticalSubRectangle("rect-3", "38F02", PREVIEW_AREA_HASTINGS),
         )

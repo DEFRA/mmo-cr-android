@@ -4,6 +4,9 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map
 enum class MapRectangleInputError {
     Required,
     Format,
+
+    /** Correctly formatted but absent from [MapRectangleFormatValidator.validate]'s `knownCodes` — FR8. */
+    NotFound,
 }
 
 data class MapRectangleValidationResult(
@@ -23,7 +26,16 @@ data class MapRectangleValidationResult(
 object MapRectangleFormatValidator {
     private val FORMAT_REGEX = Regex("^\\d{2}[A-Za-z]\\d{2}$")
 
-    fun validate(rawValue: String): MapRectangleValidationResult {
+    /**
+     * [knownCodes] (already uppercased), when supplied, additionally rejects a correctly formatted code
+     * that doesn't exist in it (FR8) — `null` skips this check, preserving the previous lenient
+     * format-only behaviour for callers whose rectangle list is known-incomplete (e.g. the stub fallback
+     * used while the comprehensive offline map dataset hasn't loaded) — see `MapScreenStatusContent`.
+     */
+    fun validate(
+        rawValue: String,
+        knownCodes: Set<String>? = null,
+    ): MapRectangleValidationResult {
         val trimmedValue = rawValue.trim()
         return when {
             trimmedValue.isEmpty() ->
@@ -31,6 +43,9 @@ object MapRectangleFormatValidator {
 
             !FORMAT_REGEX.matches(trimmedValue) ->
                 MapRectangleValidationResult(error = MapRectangleInputError.Format)
+
+            knownCodes != null && trimmedValue.uppercase() !in knownCodes ->
+                MapRectangleValidationResult(error = MapRectangleInputError.NotFound)
 
             else -> MapRectangleValidationResult(code = trimmedValue.uppercase())
         }

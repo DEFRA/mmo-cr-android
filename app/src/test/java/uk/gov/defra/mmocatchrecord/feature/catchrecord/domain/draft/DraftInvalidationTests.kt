@@ -57,12 +57,14 @@ class DraftInvalidationTests {
     }
 
     @Test
-    fun `unconfirming a gear use clears its stat rectangle and species weights`() {
+    fun `unconfirming a gear use clears its stat rectangle, coordinates and species weights`() {
         val previousGearUse =
             GearUse(
                 id = "gear-use-1",
                 gearTypeId = "gear-seine-nets",
                 statisticalSubRectangleCode = "38E95",
+                statisticalSubRectangleLatitude = 50.9,
+                statisticalSubRectangleLongitude = 0.6,
                 confirmedUsedOnTrip = true,
                 speciesWeights = listOf(SpeciesWeightEntry(id = "sw-1", speciesId = "species-cod")),
             )
@@ -74,6 +76,8 @@ class DraftInvalidationTests {
 
         val reconciled = result.gearUses.single()
         assertNull(reconciled.statisticalSubRectangleCode)
+        assertNull(reconciled.statisticalSubRectangleLatitude)
+        assertNull(reconciled.statisticalSubRectangleLongitude)
         assertTrue(reconciled.speciesWeights.isEmpty())
     }
 
@@ -216,6 +220,8 @@ class DraftInvalidationTests {
                 id = "gear-use-1",
                 gearTypeId = "gear-pots",
                 statisticalSubRectangleCode = "38E95",
+                statisticalSubRectangleLatitude = 50.9,
+                statisticalSubRectangleLongitude = 0.6,
                 confirmedUsedOnTrip = true,
                 speciesWeights = listOf(SpeciesWeightEntry(id = "sw-1", speciesId = "species-cod")),
             )
@@ -225,6 +231,8 @@ class DraftInvalidationTests {
 
         val reconciled = result.gearUses.single()
         assertNull(reconciled.statisticalSubRectangleCode)
+        assertNull(reconciled.statisticalSubRectangleLatitude)
+        assertNull(reconciled.statisticalSubRectangleLongitude)
         assertTrue(reconciled.speciesWeights.isEmpty())
         assertEquals(false, reconciled.confirmedUsedOnTrip)
     }

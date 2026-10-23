@@ -148,6 +148,7 @@ class CatchRecordFlowViewModel
                             previouslyUsedPorts = previouslyUsedPorts,
                             departurePortEntryMode = deriveDeparturePortEntryMode(previouslyUsedPorts),
                             isDraftPersisted = existingDraft != null,
+                            isFlowEntered = true,
                         )
                     }
                 }.onFailure { emitLoadError(CatchRecordFlowEvent.EnterFlow, it) }
@@ -455,7 +456,11 @@ class CatchRecordFlowViewModel
 
         private fun editGearStatRectangle(event: CatchRecordFlowEvent.EditGearStatRectangle) {
             persistGearEdit(event, event.gearUseId, WizardStep.CheckYourAnswers) {
-                it.copy(statisticalSubRectangleCode = event.statisticalSubRectangleCode)
+                it.copy(
+                    statisticalSubRectangleCode = event.statisticalSubRectangleCode,
+                    statisticalSubRectangleLatitude = event.statisticalSubRectangleLatitude,
+                    statisticalSubRectangleLongitude = event.statisticalSubRectangleLongitude,
+                )
             }
         }
 

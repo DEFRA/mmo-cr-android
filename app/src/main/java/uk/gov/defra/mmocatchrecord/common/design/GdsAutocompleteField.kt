@@ -31,6 +31,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -44,6 +45,10 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip.
 data class GdsAutocompleteOption(
     val id: String,
     val label: String,
+    /** An optional second line (e.g. coordinates/ICES rectangle) — `null` renders exactly as before. */
+    val secondaryLabel: String? = null,
+    /** Replaces the merged row's TalkBack name when the visual text alone reads poorly (e.g. coordinates). */
+    val accessibilityLabel: String? = null,
 )
 
 @Suppress("FunctionNaming", "LongParameterList", "LongMethod")
@@ -223,14 +228,25 @@ private fun AutocompleteSuggestions(
                         ).testTag("${suggestionTestTagPrefix}_$index")
                         .semantics {
                             role = Role.Button
+                            option.accessibilityLabel?.let { contentDescription = it }
                         },
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = option.label,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = if (isHighlighted) MmoColors.White else MmoColors.Text,
-                )
+                val textColor = if (isHighlighted) MmoColors.White else MmoColors.Text
+                Column {
+                    Text(
+                        text = option.label,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = textColor,
+                    )
+                    option.secondaryLabel?.let { secondaryLabel ->
+                        Text(
+                            text = secondaryLabel,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = textColor,
+                        )
+                    }
+                }
             }
         }
     }

@@ -13,6 +13,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performCustomAccessibilityActionWithLabel
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
@@ -333,7 +334,7 @@ class MapScreenTest {
 
         composeTestRule
             .onNodeWithText(
-                "Select the statistical sub area where the majority of your catch was caught using seine nets (mesh size 100mm)?",
+                "Select the statistical sub area where the majority of your catch was caught using seine nets (mesh size 100mm).",
             ).assertIsDisplayed()
         composeTestRule
             .onNodeWithText(
@@ -381,9 +382,9 @@ class MapScreenTest {
         setMapScreen(onSubmit = { submittedDraft = it })
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
-        // Radio option index 3 is the trailing "Other" entry (3 nearby codes at indices 0-2).
+        // Radio option index 3 is the trailing "Other" entry (3 nearby codes at indices 0-2). Selecting it
+        // reveals the autocomplete search immediately (Scenario 1/FR2) — no "Save and continue" click needed.
         composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_3").performClick()
-        composeTestRule.onNodeWithTag(MapScreenTestTags.RADIO_SAVE_ACTION).performClick()
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).assertIsDisplayed()
         assertNull(submittedDraft)
@@ -404,9 +405,9 @@ class MapScreenTest {
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
         composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_3").performClick()
-        composeTestRule.onNodeWithTag(MapScreenTestTags.RADIO_SAVE_ACTION).performClick()
 
-        // A code not present in the local nearby/stub list, entered via free text.
+        // A code not present in the local nearby/stub list, entered via free text. The default
+        // mapDataState (Loading) means existence validation isn't active here.
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).performTextInput("99Z99")
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_SAVE_ACTION).performClick()
 
@@ -423,12 +424,11 @@ class MapScreenTest {
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
         composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_3").performClick()
-        composeTestRule.onNodeWithTag(MapScreenTestTags.RADIO_SAVE_ACTION).performClick()
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_SAVE_ACTION).performClick()
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.ERROR_SUMMARY).assertIsDisplayed()
-        composeTestRule.onNodeWithText("Select a statistical subrectangle").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Select a statistical sub area").assertIsDisplayed()
     }
 
     @Test
@@ -441,14 +441,45 @@ class MapScreenTest {
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performClick()
         composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_3").performClick()
-        composeTestRule.onNodeWithTag(MapScreenTestTags.RADIO_SAVE_ACTION).performClick()
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).performTextInput("not-a-code")
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_SAVE_ACTION).performClick()
 
         composeTestRule
-            .onNodeWithText("Enter a statistical subrectangle in the correct format, for example 38E84")
+            .onNodeWithText("Enter a statistical sub area in the correct format, for example 38E84")
             .assertIsDisplayed()
+    }
+
+    // --- FR5/FR6: coordinates and ICES rectangle in search results -------------------------------------
+
+    @Test
+    fun autocompleteScreenShowsCoordinatesAndIcesRectangleForAMatchedCode() {
+        composeTestRule.setContent {
+            WizardTestTheme {
+                MapScreen(
+                    state = stateWith(pendingGearUse()),
+                    onSubmit = {},
+                    onBack = {},
+                    mapDataState = MapDataUiState(UiStatus.Content(mapDatasetFixture()), onRetryMapData = {}),
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag(MapScreenTestTags.GRID_OTHER_ACTION).performScrollTo().performClick()
+        composeTestRule.onNodeWithTag("${MapScreenTestTags.RADIO_OPTION_PREFIX}_0").performScrollTo().performClick()
+        composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).performScrollTo().performTextInput("38E9")
+
+        // Suggestions render inline below the field, so on-device they can sit under the IME/fold.
+        composeTestRule
+            .onNodeWithText("ICES rectangle Test area, centre 55.00°N, 0.00°E")
+            .performScrollTo()
+            .assertIsDisplayed()
+
+        composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).performTextReplacement("38E95")
+        composeTestRule
+            .onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_COORDINATES)
+            .performScrollTo()
+            .assertTextContains("Centre of area: 55.00°N, 0.00°E")
     }
 
     // --- Defensive fallback -----------------------------------------------------------------------------

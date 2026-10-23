@@ -212,6 +212,20 @@ object CatchRecordMigrations {
             }
         }
 
+    /**
+     * v8 -> v9 (ADR 0017): two new nullable columns on the existing gear-use table for a statistical
+     * sub-rectangle's centre coordinates (FR5-FR7) — no backfill, since inventing historical coordinates
+     * for an already-saved draft would misrepresent a regulatory record (same reasoning as ADR 0014's "no
+     * DEFAULT 0 timestamp").
+     */
+    val MIGRATION_8_9 =
+        object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE catch_record_gear_use ADD COLUMN statisticalSubRectangleLatitude REAL")
+                db.execSQL("ALTER TABLE catch_record_gear_use ADD COLUMN statisticalSubRectangleLongitude REAL")
+            }
+        }
+
     val ALL =
         arrayOf(
             MIGRATION_1_2,
@@ -221,5 +235,6 @@ object CatchRecordMigrations {
             MIGRATION_5_6,
             MIGRATION_6_7,
             MIGRATION_7_8,
+            MIGRATION_8_9,
         )
 }

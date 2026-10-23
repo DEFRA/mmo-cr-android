@@ -1,6 +1,7 @@
 package uk.gov.defra.mmocatchrecord.common.design
 
 import android.content.Context
+import android.view.KeyEvent
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertWidthIsAtLeast
@@ -10,7 +11,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
-import androidx.test.espresso.Espresso
+import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -57,7 +58,8 @@ class UnsavedChangesDialogTest {
             }
         }
 
-        Espresso.pressBack()
+        // The Dialog owns window focus, so Espresso.pressBack() can't find a focused activity root.
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
         composeTestRule.waitForIdle()
 
         assertFalse(leaveSelected)
