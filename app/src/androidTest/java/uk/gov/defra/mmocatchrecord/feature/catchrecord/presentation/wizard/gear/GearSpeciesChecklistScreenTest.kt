@@ -2,6 +2,7 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
@@ -281,7 +282,7 @@ class GearSpeciesChecklistScreenTest {
         composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
         composeTestRule
             .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${plaice.id}")
-            .performTextInput("10.55")
+            .performTextInput("10.5")
         composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performClick()
 
         composeTestRule
@@ -326,10 +327,7 @@ class GearSpeciesChecklistScreenTest {
     }
 
     @Test
-    fun oneDecimalPlaceSpeciesRejectsATwoDecimalPlaceWeightWithAPrecisionError() {
-        // The Decimal-kind field allows a single '.' but does not limit how many digits follow it, so a
-        // two-decimal-place value like "5.55" is exactly what a real user could type and still trip the
-        // precision rule.
+    fun weightFieldBlocksASecondDecimalDigitAndASecondDecimalPoint() {
         val gearUse = gearUseWithAddedSpecies(listOf(cod.id))
         composeTestRule.setContent {
             MmoTheme {
@@ -345,15 +343,12 @@ class GearSpeciesChecklistScreenTest {
         }
 
         composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
-        composeTestRule
-            .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${cod.id}")
-            .performTextInput("5.55")
-        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performClick()
-
-        composeTestRule
-            .onAllNodesWithText("Weight for Atlantic cod must be a number with up to 1 decimal place")
-            .onFirst()
-            .assertIsDisplayed()
+        val field =
+            composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${cod.id}")
+        field.performTextInput("5.5")
+        field.performTextInput("5")
+        field.performTextInput(".")
+        field.assertTextEquals("5.5")
     }
 
     @Test

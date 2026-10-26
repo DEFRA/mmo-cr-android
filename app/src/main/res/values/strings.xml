@@ -185,6 +185,8 @@
     <string name="not_landed_straight_away_species_title">Which species from this trip are you not landing straight away?</string>
     <string name="not_landed_straight_away_species_helper">For example, keeping white fish onboard for bait or storing shellfish in keep pots.</string>
     <string name="weight_above_minimum_size_kept_onboard_label">Weight above minimum size kept onboard or in keep pots (kg)</string>
+    <string name="weight_input_format_hint">Weight must be a number with up to 1 decimal place, like 12.5</string>
+    <string name="weight_input_whole_number_hint">Weight must be a whole number, like 12</string>
     <plurals name="port_search_suggestions_available">
         <item quantity="one">%1$d suggestion available</item>
         <item quantity="other">%1$d suggestions available</item>

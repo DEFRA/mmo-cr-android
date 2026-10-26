@@ -64,6 +64,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map.M
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.species.SpeciesSupport
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.species.SpeciesWeightFieldError
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.species.SpeciesWeightFieldKind
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.species.SpeciesWeightValidator
 
 object GearSpeciesChecklistScreenTestTags {
     const val SCREEN = "gear_species_checklist_screen"
@@ -392,9 +393,11 @@ private fun SpeciesWeightFields(
     onToggleDisclosed: (key: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Precision (whole vs one-decimal) is a save-time SpeciesWeightValidator rule, not an input-time
-    // filter — blocking "." at input time would stop an invalid value ever reaching that validation (AC8).
+    // "." stays typeable for whole-number species so AC8's precision error is still reachable at save time;
+    // input itself is capped at one '.' and one digit after it.
     val numericKind = GdsNumericFieldKind.Decimal
+    val maxDecimalPlaces = SpeciesWeightValidator.MAX_INPUT_DECIMAL_PLACES
+    val invalidInputMessage = stringResource(R.string.weight_input_format_hint)
     val aboveKey = rawValueKey(speciesId, SpeciesWeightFieldKind.AboveMinimumSize)
     val belowKey = rawValueKey(speciesId, SpeciesWeightFieldKind.BelowMinimumSize)
     val discardedKey = rawValueKey(speciesId, SpeciesWeightFieldKind.LegallyDiscarded)
@@ -406,6 +409,8 @@ private fun SpeciesWeightFields(
             onValueChange = { onValueChange(aboveKey, it) },
             testTag = "${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_$speciesId",
             kind = numericKind,
+            maxDecimalPlaces = maxDecimalPlaces,
+            invalidInputMessage = invalidInputMessage,
             errorText =
                 errors[aboveKey]?.let {
                     speciesWeightErrorMessage(
@@ -423,6 +428,8 @@ private fun SpeciesWeightFields(
                 onValueChange = { onValueChange(belowKey, it) },
                 testTag = "${GearSpeciesChecklistScreenTestTags.BELOW_MIN_FIELD_PREFIX}_$speciesId",
                 kind = numericKind,
+                maxDecimalPlaces = maxDecimalPlaces,
+                invalidInputMessage = invalidInputMessage,
                 errorText =
                     errors[belowKey]?.let {
                         speciesWeightErrorMessage(
@@ -452,6 +459,8 @@ private fun SpeciesWeightFields(
                 onValueChange = { onValueChange(discardedKey, it) },
                 testTag = "${GearSpeciesChecklistScreenTestTags.DISCARDED_FIELD_PREFIX}_$speciesId",
                 kind = numericKind,
+                maxDecimalPlaces = maxDecimalPlaces,
+                invalidInputMessage = invalidInputMessage,
                 errorText =
                     errors[discardedKey]?.let {
                         speciesWeightErrorMessage(species, it, SpeciesWeightFieldKind.LegallyDiscarded)

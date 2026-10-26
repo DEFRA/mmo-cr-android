@@ -1,6 +1,11 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.landing
 
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
@@ -12,6 +17,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
+import uk.gov.defra.mmocatchrecord.common.design.INVALID_INPUT_MESSAGE_TAG_SUFFIX
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
@@ -147,6 +153,31 @@ class NotLandedStraightAwayScreensTest {
         val entry = submitted?.notLandedSpeciesEntries?.single()
         assertEquals(cod.id, entry?.speciesId)
         assertEquals(3.5, entry?.weightAboveMinimumSizeKeptOnboardKg)
+    }
+
+    @Test
+    fun keptOnboardFieldBlocksASecondDecimalDigitOrPointAndAnnouncesWhy() {
+        composeTestRule.setContent {
+            MmoTheme {
+                NotLandedStraightAwaySpeciesScreenContent(
+                    draft = draftWithConfirmedSpecies(listOf(cod.id)),
+                    speciesList = listOf(cod),
+                    onSubmit = {},
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("${NotLandedStraightAwaySpeciesScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
+        val tag = "${NotLandedStraightAwaySpeciesScreenTestTags.WEIGHT_FIELD_PREFIX}_${cod.id}"
+        val field = composeTestRule.onNodeWithTag(tag)
+        field.performTextInput("5.5")
+        field.performTextInput("5")
+        field.performTextInput(".")
+        field.assertTextEquals("5.5")
+        composeTestRule
+            .onNodeWithTag("${tag}_$INVALID_INPUT_MESSAGE_TAG_SUFFIX")
+            .assertIsDisplayed()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
     }
 
     @Test
