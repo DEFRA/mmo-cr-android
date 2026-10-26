@@ -19,7 +19,7 @@ permissions:
 # Never cancel a main run: every non-Dependabot merge to main must publish its own release tag.
 concurrency:
   group: android-ci-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  # cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   validate:
