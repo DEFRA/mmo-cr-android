@@ -200,10 +200,10 @@ class CatchRecordMigrationsJvmTests {
     }
 
     @Test
-    fun `MIGRATION_8_9 suffixes duplicate references then enforces uniqueness`() {
+    fun `MIGRATION_9_10 suffixes duplicate references then enforces uniqueness`() {
         val db =
             createDb(
-                8,
+                9,
                 listOf(
                     "CREATE TABLE catch_record_draft (id TEXT PRIMARY KEY NOT NULL, catchRecordReference TEXT, " +
                         "createdAtEpochMillis INTEGER, modifiedAtEpochMillis INTEGER NOT NULL)",
@@ -216,7 +216,7 @@ class CatchRecordMigrationsJvmTests {
                 ),
             )
 
-        CatchRecordMigrations.MIGRATION_8_9.migrate(db)
+        CatchRecordMigrations.MIGRATION_9_10.migrate(db)
 
         fun referenceOf(id: String): String? =
             db.query("SELECT catchRecordReference FROM catch_record_draft WHERE id = ?", arrayOf(id)).use { cursor ->
@@ -236,10 +236,10 @@ class CatchRecordMigrationsJvmTests {
     }
 
     @Test
-    fun `MIGRATION_8_9 skips suffixes already held by another record`() {
+    fun `MIGRATION_9_10 skips suffixes already held by another record`() {
         val db =
             createDb(
-                8,
+                9,
                 listOf(
                     "CREATE TABLE catch_record_draft (id TEXT PRIMARY KEY NOT NULL, catchRecordReference TEXT, " +
                         "createdAtEpochMillis INTEGER, modifiedAtEpochMillis INTEGER NOT NULL)",
@@ -250,7 +250,7 @@ class CatchRecordMigrationsJvmTests {
                 ),
             )
 
-        CatchRecordMigrations.MIGRATION_8_9.migrate(db)
+        CatchRecordMigrations.MIGRATION_9_10.migrate(db)
 
         val references =
             db.query("SELECT id, catchRecordReference FROM catch_record_draft ORDER BY id").use { cursor ->
@@ -265,7 +265,7 @@ class CatchRecordMigrationsJvmTests {
         val versions = CatchRecordMigrations.ALL.map { it.startVersion to it.endVersion }
 
         assertEquals(
-            listOf(1 to 2, 2 to 3, 3 to 4, 4 to 5, 5 to 6, 6 to 7, 7 to 8, 8 to 9),
+            listOf(1 to 2, 2 to 3, 3 to 4, 4 to 5, 5 to 6, 6 to 7, 7 to 8, 8 to 9, 9 to 10),
             versions,
         )
     }

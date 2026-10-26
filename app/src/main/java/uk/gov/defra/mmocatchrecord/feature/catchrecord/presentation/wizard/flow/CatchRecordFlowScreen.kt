@@ -40,9 +40,8 @@ fun CatchRecordFlowEntryScreen(
         viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
     }
 
-    LaunchedEffect(state.currentStep, state.status, hasNavigated) {
-        val shouldNavigate = state.status !is UiStatus.Loading && state.status !is UiStatus.Error
-        if (shouldNavigate && !hasNavigated) {
+    LaunchedEffect(state.currentStep, state.isFlowEntered, hasNavigated) {
+        if (state.isFlowEntered && !hasNavigated) {
             hasNavigated = true
             onNavigate(state.currentStep)
         }

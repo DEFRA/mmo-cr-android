@@ -111,6 +111,11 @@ data class StatisticalSubRectangle(
     val id: String,
     val code: String,
     val statisticalAreaId: String,
+    /** Centre (not an observed fishing position) of the sub-area, WGS84; `null` on the stub-fallback path. */
+    val centroidLatitude: Double? = null,
+    val centroidLongitude: Double? = null,
+    /** The related four-character ICES rectangle name (e.g. `"38E9"`); `null`/blank where not applicable. */
+    val icesRectangleName: String? = null,
 )
 
 /**

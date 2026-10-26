@@ -61,7 +61,7 @@ class CatchRecordMigrationTest {
     }
 
     @Test
-    fun migrate1To8fullChainPreservesARowAcrossEveryIntermediateSchemaChange() {
+    fun migrate1To9fullChainPreservesARowAcrossEveryIntermediateSchemaChange() {
         val db = helper.createDatabase(databaseName, 1)
         db.seedV1DraftWithChildren("draft-v1", "vessel-legacy", 9_000L)
 
@@ -83,12 +83,15 @@ class CatchRecordMigrationTest {
             }
         db
             .query(
-                "SELECT statisticalSubRectangleCode, confirmedUsedOnTrip FROM catch_record_gear_use WHERE draftId = ?",
+                "SELECT statisticalSubRectangleCode, confirmedUsedOnTrip, statisticalSubRectangleLatitude, " +
+                    "statisticalSubRectangleLongitude FROM catch_record_gear_use WHERE draftId = ?",
                 arrayOf("draft-v1"),
             ).use { cursor ->
                 assertTrue(cursor.moveToFirst())
                 assertEquals("38E95", cursor.getString(0))
                 assertEquals(0, cursor.getInt(1))
+                assertTrue("new v9 coordinate column must be null, never backfilled (ADR 0017)", cursor.isNull(2))
+                assertTrue("new v9 coordinate column must be null, never backfilled (ADR 0017)", cursor.isNull(3))
             }
         db
             .query(
@@ -106,6 +109,34 @@ class CatchRecordMigrationTest {
             .query(
                 "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'reference_data_metadata'",
             ).use { cursor -> assertTrue(cursor.moveToFirst()) }
+        db.close()
+    }
+
+    @Test
+    fun migrate8To9addsCoordinateColumnsPreservingTheExistingCode() {
+        val db = helper.createDatabase(databaseName, 8)
+        db.execSQL(
+            "INSERT INTO catch_record_draft (id, vesselId, status, modifiedAtEpochMillis, " +
+                "lateSubmissionWarningAcknowledged) VALUES ('draft-v8', 'vessel-1', 'Draft', 1_000, 0)",
+        )
+        db.execSQL(
+            "INSERT INTO catch_record_gear_use (id, draftId, gearTypeId, statisticalSubRectangleCode, " +
+                "orderIndex, confirmedUsedOnTrip) VALUES ('draft-v8-gear', 'draft-v8', 'gear-seine-nets', " +
+                "'38E95', 0, 1)",
+        )
+
+        CatchRecordMigrations.MIGRATION_8_9.migrate(db)
+
+        db
+            .query(
+                "SELECT statisticalSubRectangleCode, statisticalSubRectangleLatitude, " +
+                    "statisticalSubRectangleLongitude FROM catch_record_gear_use WHERE id = 'draft-v8-gear'",
+            ).use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals("38E95", cursor.getString(0))
+                assertTrue(cursor.isNull(1))
+                assertTrue(cursor.isNull(2))
+            }
         db.close()
     }
 

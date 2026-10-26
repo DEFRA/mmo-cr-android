@@ -4,7 +4,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
- * Real Room [Migration]s for every [CatchRecordDatabase] schema version bump, v1 through v9 — see ADR 0010.
+ * Real Room [Migration]s for every [CatchRecordDatabase] schema version bump, v1 through v10 — see ADR 0010.
  * Each migration's SQL is derived directly from the committed `app/schemas` JSON history (the authoritative
  * record of each version's actual column/table shape), never destructively dropping/recreating the whole
  * database. Registered via `.addMigrations(...)` in `di/DatabaseModule.kt`.
@@ -213,11 +213,25 @@ object CatchRecordMigrations {
         }
 
     /**
-     * v8 -> v9: Trip IDs must be unique. Duplicates keep the earliest row's value; later rows get the
-     * lowest free `-2`, `-3`… suffix so the unique index can be created.
+     * v8 -> v9 (ADR 0017): two new nullable columns on the existing gear-use table for a statistical
+     * sub-rectangle's centre coordinates (FR5-FR7) — no backfill, since inventing historical coordinates
+     * for an already-saved draft would misrepresent a regulatory record (same reasoning as ADR 0014's "no
+     * DEFAULT 0 timestamp").
      */
     val MIGRATION_8_9 =
         object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE catch_record_gear_use ADD COLUMN statisticalSubRectangleLatitude REAL")
+                db.execSQL("ALTER TABLE catch_record_gear_use ADD COLUMN statisticalSubRectangleLongitude REAL")
+            }
+        }
+
+    /**
+     * v9 -> v10: Trip IDs must be unique. Duplicates keep the earliest row's value; later rows get the
+     * lowest free `-2`, `-3`… suffix so the unique index can be created.
+     */
+    val MIGRATION_9_10 =
+        object : Migration(9, 10) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 dedupeReferences(db)
                 db.execSQL(
@@ -275,5 +289,6 @@ object CatchRecordMigrations {
             MIGRATION_6_7,
             MIGRATION_7_8,
             MIGRATION_8_9,
+            MIGRATION_9_10,
         )
 }

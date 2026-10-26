@@ -244,6 +244,79 @@ class GdsAutocompleteFieldTests {
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText, AnnotatedString("Doverside")))
     }
 
+    @Test
+    fun `a suggestion with a secondary label renders it on a second line below the primary label`() {
+        composeTestRule.setContent {
+            MmoTheme {
+                var value by remember { mutableStateOf("") }
+                GdsAutocompleteField(
+                    placeholder = "Enter area",
+                    value = value,
+                    options =
+                        listOf(
+                            GdsAutocompleteOption("area-1", "38E95", secondaryLabel = "50.9N 0.6E"),
+                        ),
+                    onValueChange = { value = it },
+                    onOptionSelected = {},
+                    fieldTestTag = "area_field",
+                    liveRegionTestTag = "area_live_region",
+                    suggestionTestTagPrefix = "area_suggestion",
+                    noMatchesTestTag = "area_no_matches",
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("area_field").performTextInput("38")
+        composeTestRule.onAllNodesWithText("38E95").assertCountEquals(1)
+        composeTestRule.onAllNodesWithText("50.9N 0.6E").assertCountEquals(1)
+    }
+
+    @Test
+    fun `a suggestion without a secondary label renders only its primary label line, unchanged from before`() {
+        setPortAutocompleteContent()
+
+        composeTestRule.onNodeWithTag("port_field").performTextInput("Ha")
+        composeTestRule.onAllNodesWithText("Hastings").assertCountEquals(1)
+    }
+
+    @Test
+    fun `a suggestion's accessibility label overrides its merged-row TalkBack name`() {
+        composeTestRule.setContent {
+            MmoTheme {
+                var value by remember { mutableStateOf("") }
+                GdsAutocompleteField(
+                    placeholder = "Enter area",
+                    value = value,
+                    options =
+                        listOf(
+                            GdsAutocompleteOption(
+                                "area-1",
+                                "38E95",
+                                secondaryLabel = "50.9N 0.6E",
+                                accessibilityLabel = "38E95, 50.9 north, 0.6 east",
+                            ),
+                        ),
+                    onValueChange = { value = it },
+                    onOptionSelected = {},
+                    fieldTestTag = "area_field",
+                    liveRegionTestTag = "area_live_region",
+                    suggestionTestTagPrefix = "area_suggestion",
+                    noMatchesTestTag = "area_no_matches",
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("area_field").performTextInput("38")
+        composeTestRule
+            .onNodeWithTag("area_suggestion_0")
+            .assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.ContentDescription,
+                    listOf("38E95, 50.9 north, 0.6 east"),
+                ),
+            )
+    }
+
     private fun setPortAutocompleteContent(
         ports: List<Port> =
             listOf(

@@ -35,7 +35,6 @@ import org.junit.runner.RunWith
 import org.mockito.kotlin.mock
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import uk.gov.defra.mmocatchrecord.common.design.DebugSettingsSection
 import uk.gov.defra.mmocatchrecord.common.design.GdsTopAppBarTestTags
 import uk.gov.defra.mmocatchrecord.common.design.MmoBottomNavigationBarTestTags
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
@@ -119,7 +118,6 @@ class HomeScreenRobolectricTests {
     ): HomeViewModel =
         HomeViewModel(
             ObserveHomeSummaryUseCase(repository),
-            DebugSettingsSection {},
             context,
             dispatcher,
         )
@@ -257,10 +255,8 @@ class HomeScreenRobolectricTests {
         composeTestRule.onNodeWithTag(HomeScreenTestTags.NOTIFICATIONS_TAB_HEADING).assertIsDisplayed()
     }
 
-    /** Covers [SettingsTabContent]'s own default [uk.gov.defra.mmocatchrecord.common.design.DebugSettingsSection]
-     * seam — the Settings tab is reached via [HomeScreenContent] with its own default, a separate no-op object. */
     @Test
-    fun `settings tab shows the settings tab content with the default debug settings section`() {
+    fun `settings tab shows the settings tab content`() {
         composeTestRule.setContent {
             MmoTheme {
                 HomeScreenContent(
@@ -280,7 +276,7 @@ class HomeScreenRobolectricTests {
     }
 
     @Test
-    fun `settings tab content renders with its own default debug settings section when none is supplied`() {
+    fun `settings tab content renders standalone`() {
         composeTestRule.setContent {
             MmoTheme {
                 SettingsTabContent(onSignOut = {})

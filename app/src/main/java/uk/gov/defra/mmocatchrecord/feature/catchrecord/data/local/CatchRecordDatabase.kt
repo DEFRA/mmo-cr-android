@@ -5,7 +5,7 @@ import androidx.room.RoomDatabase
 
 /**
  * SQLCipher-encrypted (see ADR 0006) Room database for the catch-record draft aggregate. Opened via
- * `net.sqlcipher.database.SupportFactory` as its `openHelperFactory` — see `di/DatabaseModule.kt`.
+ * `net.zetetic...SupportOpenHelperFactory` as its `openHelperFactory` — see `di/DatabaseModule.kt`.
  *
  * v2 -> v3 (Phase 4): [GearUseEntity]'s `statRectangleId` column was renamed to
  * `statisticalSubRectangleCode` to reflect that it holds a recorded statistical sub-rectangle **code**
@@ -36,7 +36,11 @@ import androidx.room.RoomDatabase
  * v7 -> v8 (ADR 0016): six new, purely additive reference-data cache tables (vessels/ports/species/gears/
  * gear-measurements/metadata) — no pre-existing draft table is touched, so an in-progress draft survives.
  *
- * v8 -> v9: a unique index on [DraftEntity]'s `catchRecordReference` enforces Trip ID uniqueness.
+ * v8 -> v9 (ADR 0017): [GearUseEntity] gained two nullable coordinate columns —
+ * `statisticalSubRectangleLatitude`/`statisticalSubRectangleLongitude` — capturing the selected
+ * statistical sub-rectangle's centre (FR5-FR7); not backfilled for existing rows.
+ *
+ * v9 -> v10: a unique index on [DraftEntity]'s `catchRecordReference` enforces Trip ID uniqueness.
  *
  * Every version bump above has a real [androidx.room.migration.Migration] registered in
  * [CatchRecordMigrations] (see `di/DatabaseModule.kt`) — a draft in progress must survive every schema
@@ -57,7 +61,7 @@ import androidx.room.RoomDatabase
         ReferenceDataGearMeasurementEntity::class,
         ReferenceDataMetadataEntity::class,
     ],
-    version = 9,
+    version = 10,
     exportSchema = true,
 )
 abstract class CatchRecordDatabase : RoomDatabase() {

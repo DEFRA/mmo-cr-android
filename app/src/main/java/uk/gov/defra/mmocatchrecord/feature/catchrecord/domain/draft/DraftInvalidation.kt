@@ -44,7 +44,12 @@ object DraftInvalidation {
 
         val wasUnconfirmed = previousGearUse.confirmedUsedOnTrip && !gearUse.confirmedUsedOnTrip
         if (wasUnconfirmed) {
-            return gearUse.copy(statisticalSubRectangleCode = null, speciesWeights = emptyList())
+            return gearUse.copy(
+                statisticalSubRectangleCode = null,
+                statisticalSubRectangleLatitude = null,
+                statisticalSubRectangleLongitude = null,
+                speciesWeights = emptyList(),
+            )
         }
 
         val statRectangleChanged =
@@ -71,6 +76,8 @@ object DraftInvalidation {
                 } else {
                     gearUse.copy(
                         statisticalSubRectangleCode = null,
+                        statisticalSubRectangleLatitude = null,
+                        statisticalSubRectangleLongitude = null,
                         speciesWeights = emptyList(),
                         confirmedUsedOnTrip = false,
                     )

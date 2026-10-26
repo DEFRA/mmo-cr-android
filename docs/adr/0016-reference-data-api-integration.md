@@ -173,7 +173,7 @@ for a product decision rather than silently added.
 catch-record Trip ID `RSS_NUMBER-DDMMYYYY-HHMMSS` (UK local time), generated once when a record is started
 (`CatchRecordReferenceGenerator`). The true RSS number (`identifiers.registrationNumber`) exists only in the
 canonical vessel view, not the mobile view; swap the prefix source if the mobile projection gains it.
-Uniqueness: Room DB v9 adds a unique index on `catchRecordReference` (the migration de-duplicates existing rows
+Uniqueness: Room DB v10 adds a unique index on `catchRecordReference` (the migration de-duplicates existing rows
 with `-2`, `-3` suffixes). On a clash, the DAO's find-or-create transaction moves the time on by 1 second, so the
 Trip ID can be a few seconds after `createdAt`. Starting a record is blocked when the vessel has no PLN.
 Cross-device uniqueness still needs a backend unique constraint and 409 handling (follow-up).

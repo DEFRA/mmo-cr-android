@@ -107,10 +107,19 @@ data class GearUse(
      * completed for it — see `MapScreen`, driven only for gear uses where
      * [confirmedUsedOnTrip] is true (FR7/FR8). Deliberately a plain code string, not a foreign-key id into
      * [uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.StatisticalSubRectangle] — the
-     * "Other" free-text search path accepts any correctly formatted code, including ones not present in the
-     * local reference-data stub, since the full geographic grid is not locally enumerable.
+     * "Other" free-text search path validates against the comprehensive offline map dataset once loaded
+     * (`MapSupport.allRectanglesFromDataset`), falling back to the incomplete reference-data stub's lenient,
+     * format-only check only while that dataset hasn't loaded.
      */
     val statisticalSubRectangleCode: String?,
+    /**
+     * The sub-rectangle's centre coordinate (WGS84, *not* an observed fishing position — see ADR-0017),
+     * captured alongside [statisticalSubRectangleCode] at selection time (FR7). `null` whenever the code
+     * itself is `null`, or the code was resolved against the incomplete reference-data stub before the
+     * comprehensive offline map dataset had loaded.
+     */
+    val statisticalSubRectangleLatitude: Double? = null,
+    val statisticalSubRectangleLongitude: Double? = null,
     val measurements: Map<String, MeasurementValue> = emptyMap(),
     val speciesWeights: List<SpeciesWeightEntry> = emptyList(),
     /**
