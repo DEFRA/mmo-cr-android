@@ -157,6 +157,26 @@ jobs:
           path: app/build/reports/androidTests/connected
           retention-days: 14
 
+  # Runs last so the check is as close to the merge as possible. Must be a required status check.
+  main-idle:
+    name: Main idle check
+    needs: [validate, instrumented-tests]
+    if: ${{ github.event_name == 'merge_group' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Fail if Android CI is still running on main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_WORKFLOW_FILE: android-ci.yml
+        run: bash .github/workflows/scripts/check-main-idle.sh
+
   # Tags only — CI never starts a release; Android Release is run manually on the tag.
   # POC ONLY (ADR 0018): a manual run may tag any branch; restore the main-only check after the POC.
   release-tag:

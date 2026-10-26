@@ -136,7 +136,8 @@ split per feature package, per
 (PRs, except Dependabot), release tooling tests, static analysis, debug assemble, unit tests with coverage,
 SonarCloud and emulator-based instrumented/accessibility tests. Every Gradle invocation goes through a
 Fastlane lane, so CI and local runs are identical. After a green push to `main` (not a Dependabot merge),
-its `release-tag` job publishes the release tag. CI never starts a release.
+its `release-tag` job publishes the release tag. CI never starts a release. In the merge queue, the
+`main-idle` job fails while Android CI is still running on `main`; re-queue the PR once that run finishes.
 
 Every third-party Action is pinned to a **full commit SHA** (a DEFRA supply-chain requirement) with the
 version in a trailing comment, and `.github/dependabot.yml` keeps those pins current via the
