@@ -171,7 +171,7 @@ class SubmissionFlowNavigationTest {
             notLandedStraightAway = false,
             status = DraftStatus.Draft,
             modifiedAtEpochMillis = 0L,
-            catchRecordReference = "A1234520260727150815",
+            catchRecordReference = "B14974-27072026-150815",
             lateSubmissionWarningAcknowledged = true,
         )
 
@@ -283,7 +283,7 @@ class SubmissionFlowNavigationTest {
 
         // Real navigation to the real screen, not just a state change.
         composeTestRule.onNodeWithTag(SubmissionSuccessScreenTestTags.SCREEN).assertIsDisplayed()
-        composeTestRule.onNodeWithText("Your catch record reference A1234520260727150815").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Your catch record reference B14974-27072026-150815").assertIsDisplayed()
 
         // Real submission call chain reached (not skipped) and the draft's persisted status flipped.
         assertEquals(1, submissionRepository.submitCallCount)
@@ -321,7 +321,7 @@ class SubmissionFlowNavigationTest {
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithTag(SubmissionPendingSyncScreenTestTags.SCREEN).assertIsDisplayed()
-        composeTestRule.onNodeWithText("Your catch record reference A1234520260727150815").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Your catch record reference B14974-27072026-150815").assertIsDisplayed()
 
         // Offline path never attempts the network submission call.
         assertEquals(0, submissionRepository.submitCallCount)

@@ -24,14 +24,6 @@ fun SemanticsNodeInteractionsProvider.spinTo(
     setWheel(tags.dayWheel, date.day)
 }
 
-fun SemanticsNodeInteractionsProvider.spinToAndConfirm(
-    tags: WizardDateStepTestTags,
-    date: DmyDate,
-) {
-    spinTo(tags, date)
-    onNodeWithTag(tags.okAction).performSemanticsAction(SemanticsActions.OnClick)
-}
-
 fun SemanticsNodeInteractionsProvider.saveAndContinue(tags: WizardDateStepTestTags) {
     onNodeWithTag(tags.saveAction).performSemanticsAction(SemanticsActions.OnClick)
 }

@@ -21,6 +21,13 @@ class ReferenceDataMappersTests {
     }
 
     @Test
+    fun `vessel maps pln to the domain model`() {
+        val dto = VesselMobileDto(id = "v1", name = "A", displayName = "A", pln = "PH101")
+
+        assertEquals("PH101", dto.toDomain().pln)
+    }
+
+    @Test
     fun `port with an unmapped code falls back to the unassigned sentinel`() {
         val dto = PortMobileDto(id = "p1", code = "GBAOT", name = "Abbotsbury", displayName = "Abbotsbury")
 

@@ -1,7 +1,7 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -18,7 +18,7 @@ import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DmyDate
 import java.time.LocalDate
 
-/** Covers the confirm (Ok) / cancel / save rules of the date wheel step.
+/** Covers the save rules of the date wheel step: the wheel's date is the one saved.
  * Assertions target first matches because summary and inline errors render the same text. */
 @RunWith(RobolectricTestRunner::class)
 class WizardDateStepContentValidationTests {
@@ -28,6 +28,7 @@ class WizardDateStepContentValidationTests {
     private val departureTags = DepartureDateScreenTestTags.stepTags
     private val returnTags = ReturnDateScreenTestTags.stepTags
     private val today = LocalDate.of(2026, 10, 16)
+    private val returnBeforeDepartureMessage = "Return date must be on or after the departure date"
 
     private fun setDepartureContent(
         initialDate: DmyDate? = null,
@@ -45,24 +46,26 @@ class WizardDateStepContentValidationTests {
         }
     }
 
-    @Test
-    fun savingWithoutPressingOkShowsTheNotConfirmedErrorAndTheSummaryLinkWorks() {
-        var submitted: DmyDate? = null
-        setDepartureContent(onSubmit = { submitted = it })
-
-        composeTestRule.onNodeWithTag(departureTags.saveAction).performClick()
-
-        composeTestRule.onNodeWithTag(departureTags.summary).assertIsDisplayed()
-        composeTestRule.onAllNodesWithText("Select a date and press OK").onFirst().performClick()
-        assertNull(submitted)
+    private fun setReturnContent(onSubmit: (DmyDate) -> Unit = {}) {
+        composeTestRule.setContent {
+            MmoTheme {
+                WizardDateStepContent(
+                    initialDate = null,
+                    departureDate = DmyDate(11, 9, 2026),
+                    isReturnDate = true,
+                    testTags = returnTags,
+                    onSubmit = onSubmit,
+                    today = today,
+                )
+            }
+        }
     }
 
     @Test
-    fun theWheelStartsOnTodayWhenNoDateIsSaved() {
+    fun savingWithoutMovingTheWheelSubmitsToday() {
         var submitted: DmyDate? = null
         setDepartureContent(onSubmit = { submitted = it })
 
-        composeTestRule.onNodeWithTag(departureTags.okAction).performClick()
         composeTestRule.onNodeWithTag(departureTags.saveAction).performClick()
 
         assertEquals(DmyDate(16, 10, 2026), submitted)
@@ -74,66 +77,24 @@ class WizardDateStepContentValidationTests {
         // 31 February can never be a valid LocalDate, exercising toLocalDateOrNull's failure path.
         setDepartureContent(initialDate = DmyDate(31, 2, 2026), onSubmit = { submitted = it })
 
-        composeTestRule.onNodeWithTag(departureTags.okAction).performClick()
         composeTestRule.onNodeWithTag(departureTags.saveAction).performClick()
 
         assertEquals(DmyDate(16, 10, 2026), submitted)
     }
 
     @Test
-    fun cancellingAfterConfirmingViaOkRevertsToTheConfirmedDateNotTheStartDate() {
+    fun spinningThenSavingSubmitsTheWheelDate() {
         var submitted: DmyDate? = null
         setDepartureContent(onSubmit = { submitted = it })
 
-        composeTestRule.spinToAndConfirm(departureTags, DmyDate(20, 3, 2026))
-        composeTestRule.setWheel(departureTags.dayWheel, 25)
-        composeTestRule.onNodeWithTag(departureTags.cancelAction).performClick()
-        composeTestRule.onNodeWithTag(departureTags.saveAction).performClick()
-
-        assertEquals(DmyDate(20, 3, 2026), submitted)
-    }
-
-    @Test
-    fun okThenSaveSubmitsTheConfirmedDateAndShowsIt() {
-        var submitted: DmyDate? = null
-        setDepartureContent(onSubmit = { submitted = it })
-
-        composeTestRule.spinToAndConfirm(departureTags, DmyDate(31, 1, 2026))
-        composeTestRule
-            .onNodeWithTag(departureTags.confirmedDate)
-            .assertTextContains("31 January 2026", substring = true)
+        composeTestRule.spinTo(departureTags, DmyDate(31, 1, 2026))
         composeTestRule.onNodeWithTag(departureTags.saveAction).performClick()
 
         assertEquals(DmyDate(31, 1, 2026), submitted)
     }
 
     @Test
-    fun movingTheWheelAfterOkBlocksSavingUntilConfirmedAgain() {
-        var submitted: DmyDate? = null
-        setDepartureContent(onSubmit = { submitted = it })
-
-        composeTestRule.spinToAndConfirm(departureTags, DmyDate(31, 1, 2026))
-        composeTestRule.setWheel(departureTags.dayWheel, 30)
-        composeTestRule.onNodeWithTag(departureTags.saveAction).performClick()
-
-        composeTestRule.onNodeWithTag(departureTags.summary).assertIsDisplayed()
-        assertNull(submitted)
-    }
-
-    @Test
-    fun cancelRevertsTheWheelSoTheConfirmedDateCanBeSaved() {
-        var submitted: DmyDate? = null
-        setDepartureContent(initialDate = DmyDate(3, 7, 2026), onSubmit = { submitted = it })
-
-        composeTestRule.setWheel(departureTags.dayWheel, 20)
-        composeTestRule.onNodeWithTag(departureTags.cancelAction).performClick()
-        composeTestRule.onNodeWithTag(departureTags.saveAction).performClick()
-
-        assertEquals(DmyDate(3, 7, 2026), submitted)
-    }
-
-    @Test
-    fun aSavedDateIsTreatedAsConfirmed() {
+    fun aSavedDateIsSubmittedUnchanged() {
         var submitted: DmyDate? = null
         setDepartureContent(initialDate = DmyDate(3, 7, 2026), onSubmit = { submitted = it })
 
@@ -143,33 +104,21 @@ class WizardDateStepContentValidationTests {
     }
 
     @Test
-    fun aReturnDateBeforeDepartureShowsTheReturnBeforeDepartureError() {
+    fun aReturnDateBeforeDepartureShowsTheErrorAndTheSummaryLinkFocusesTheWheel() {
         var submitted: DmyDate? = null
-        composeTestRule.setContent {
-            MmoTheme {
-                WizardDateStepContent(
-                    initialDate = null,
-                    departureDate = DmyDate(11, 9, 2026),
-                    isReturnDate = true,
-                    testTags = returnTags,
-                    onSubmit = { submitted = it },
-                    today = today,
-                )
-            }
-        }
+        setReturnContent(onSubmit = { submitted = it })
 
-        composeTestRule.spinToAndConfirm(returnTags, DmyDate(1, 9, 2026))
+        composeTestRule.spinTo(returnTags, DmyDate(1, 9, 2026))
         composeTestRule.onNodeWithTag(returnTags.saveAction).performClick()
 
-        composeTestRule
-            .onAllNodesWithText("Return date must be on or after the departure date")
-            .onFirst()
-            .assertIsDisplayed()
+        composeTestRule.onNodeWithTag(returnTags.summary).assertIsDisplayed()
+        composeTestRule.onAllNodesWithText(returnBeforeDepartureMessage).onFirst().performClick()
+        composeTestRule.onNodeWithTag(returnTags.monthWheel).assertIsFocused()
         assertNull(submitted)
     }
 
     @Test
-    fun theConfirmedAndUnconfirmedWheelDatesSurviveRecreation() {
+    fun theWheelDateSurvivesRecreation() {
         var submitted: DmyDate? = null
         val restorationTester = StateRestorationTester(composeTestRule)
         restorationTester.setContent {
@@ -183,30 +132,24 @@ class WizardDateStepContentValidationTests {
             }
         }
 
-        composeTestRule.spinToAndConfirm(departureTags, DmyDate(31, 1, 2026))
-        composeTestRule.setWheel(departureTags.dayWheel, 30)
+        composeTestRule.spinTo(departureTags, DmyDate(31, 1, 2026))
         composeTestRule.waitForIdle()
         restorationTester.emulateSavedInstanceStateRestore()
+        composeTestRule.saveAndContinue(departureTags)
 
-        composeTestRule
-            .onNodeWithTag(departureTags.confirmedDate)
-            .assertTextContains("31 January 2026", substring = true)
-        composeTestRule.saveAndContinue(departureTags)
-        assertNull("the unconfirmed wheel move must survive recreation", submitted)
-        composeTestRule.onNodeWithTag(departureTags.cancelAction).performClick()
-        composeTestRule.saveAndContinue(departureTags)
         assertEquals(DmyDate(31, 1, 2026), submitted)
     }
 
     @Test
     fun movingTheWheelAfterAFailedSubmitClearsTheErrorSummary() {
-        setDepartureContent()
+        setReturnContent()
 
-        composeTestRule.onNodeWithTag(departureTags.saveAction).performClick()
-        composeTestRule.onNodeWithTag(departureTags.summary).assertIsDisplayed()
+        composeTestRule.spinTo(returnTags, DmyDate(1, 9, 2026))
+        composeTestRule.onNodeWithTag(returnTags.saveAction).performClick()
+        composeTestRule.onNodeWithTag(returnTags.summary).assertIsDisplayed()
 
-        composeTestRule.setWheel(departureTags.dayWheel, 1)
+        composeTestRule.setWheel(returnTags.dayWheel, 20)
 
-        composeTestRule.onNodeWithTag(departureTags.summary).assertDoesNotExist()
+        composeTestRule.onNodeWithTag(returnTags.summary).assertDoesNotExist()
     }
 }

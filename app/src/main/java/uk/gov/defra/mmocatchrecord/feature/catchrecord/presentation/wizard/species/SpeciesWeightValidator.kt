@@ -65,6 +65,9 @@ data class SpeciesWeightEntryValidationResult(
 object SpeciesWeightValidator {
     const val MIN_WEIGHT_KG = 0.0
     const val MAX_WEIGHT_KG = 10_000.0
+
+    /** Input-time cap on digits after the '.' in any weight field (the finest [SpeciesWeightPrecision]). */
+    const val MAX_INPUT_DECIMAL_PLACES = 1
     private const val PRECISION_TOLERANCE = 1e-6
     private const val DECIMAL_PLACES_ALLOWED = 10.0
 

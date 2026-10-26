@@ -326,6 +326,15 @@ fun NotLandedStraightAwaySpeciesScreenContent(
                         },
                         testTag = "${NotLandedStraightAwaySpeciesScreenTestTags.WEIGHT_FIELD_PREFIX}_$speciesId",
                         kind = numericKind,
+                        maxDecimalPlaces = SpeciesWeightValidator.MAX_INPUT_DECIMAL_PLACES,
+                        invalidInputMessage =
+                            stringResource(
+                                if (numericKind == GdsNumericFieldKind.Integer) {
+                                    R.string.weight_input_whole_number_hint
+                                } else {
+                                    R.string.weight_input_format_hint
+                                },
+                            ),
                         errorText =
                             errors[speciesId]?.let {
                                 speciesWeightErrorMessage(

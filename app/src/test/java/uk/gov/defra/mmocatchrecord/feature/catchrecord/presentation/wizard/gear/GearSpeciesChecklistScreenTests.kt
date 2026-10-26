@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
@@ -38,6 +39,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import uk.gov.defra.mmocatchrecord.common.design.INVALID_INPUT_MESSAGE_TAG_SUFFIX
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
@@ -363,7 +365,7 @@ class GearSpeciesChecklistScreenTests {
     }
 
     @Test
-    fun oneDecimalPlaceSpeciesRejectsATwoDecimalPlaceWeightWithAPrecisionError() {
+    fun weightFieldBlocksASecondDecimalDigitAndASecondDecimalPoint() {
         val gearUse = gearUseWithAddedSpecies(listOf(cod.id))
         composeTestRule.setContent {
             MmoTheme {
@@ -380,16 +382,22 @@ class GearSpeciesChecklistScreenTests {
         }
 
         composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
+        val field =
+            composeTestRule
+                .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${cod.id}")
+                .performScrollTo()
+        field.performTextInput("5.5")
+        field.performTextInput("5")
+        field.performTextInput(".")
+        field.assertTextEquals("5.5")
+        val hintTag = "${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${cod.id}"
         composeTestRule
-            .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${cod.id}")
-            .performScrollTo()
-            .performTextInput("5.55")
-        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performScrollTo().performClick()
+            .onNodeWithTag("${hintTag}_$INVALID_INPUT_MESSAGE_TAG_SUFFIX")
+            .assertTextEquals("Weight must be a number with up to 1 decimal place, like 12.5")
 
-        composeTestRule
-            .onAllNodesWithText("Weight for Atlantic cod must be a number with up to 1 decimal place")
-            .onFirst()
-            .assertIsDisplayed()
+        field.performTextClearance()
+        field.performTextInput("1.2.3")
+        field.assertTextEquals("")
     }
 
     @Test
@@ -818,7 +826,7 @@ class GearSpeciesChecklistScreenTests {
         composeTestRule
             .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${plaice.id}")
             .performScrollTo()
-            .performTextInput("10.55")
+            .performTextInput("10.5")
         composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performScrollTo().performClick()
 
         composeTestRule

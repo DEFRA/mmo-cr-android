@@ -5,7 +5,6 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DateValidati
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DmyDate
 
 enum class DateInputError {
-    NotConfirmed,
     InvalidDate,
     ReturnBeforeDeparture,
 }
@@ -18,26 +17,22 @@ data class WizardDateValidationResult(
         get() = date != null && error == null
 }
 
-/** Pure validator for the date wheel: only an Ok-confirmed date that still matches the wheel can be saved. */
+/** Pure validator for the date wheel: the wheel's current date is the one saved. */
 object WizardDateInputValidator {
     fun validate(
-        confirmedDate: DmyDate?,
-        wheelDate: DmyDate,
+        date: DmyDate,
         departureDate: DmyDate? = null,
         isReturnDate: Boolean = false,
     ): WizardDateValidationResult {
-        if (confirmedDate == null || confirmedDate != wheelDate) {
-            return WizardDateValidationResult(error = DateInputError.NotConfirmed)
-        }
-        if (DateValidation.validateDate(confirmedDate) is ValidationResult.Invalid) {
+        if (DateValidation.validateDate(date) is ValidationResult.Invalid) {
             return WizardDateValidationResult(error = DateInputError.InvalidDate)
         }
         if (isReturnDate &&
             departureDate != null &&
-            DateValidation.validateReturnNotBeforeDeparture(departureDate, confirmedDate) is ValidationResult.Invalid
+            DateValidation.validateReturnNotBeforeDeparture(departureDate, date) is ValidationResult.Invalid
         ) {
             return WizardDateValidationResult(error = DateInputError.ReturnBeforeDeparture)
         }
-        return WizardDateValidationResult(date = confirmedDate)
+        return WizardDateValidationResult(date = date)
     }
 }

@@ -40,6 +40,8 @@ import androidx.room.RoomDatabase
  * `statisticalSubRectangleLatitude`/`statisticalSubRectangleLongitude` — capturing the selected
  * statistical sub-rectangle's centre (FR5-FR7); not backfilled for existing rows.
  *
+ * v9 -> v10: a unique index on [DraftEntity]'s `catchRecordReference` enforces Trip ID uniqueness.
+ *
  * Every version bump above has a real [androidx.room.migration.Migration] registered in
  * [CatchRecordMigrations] (see `di/DatabaseModule.kt`) — a draft in progress must survive every schema
  * change, so `fallbackToDestructiveMigration` must never be reintroduced for this database (ADR 0010).
@@ -59,7 +61,7 @@ import androidx.room.RoomDatabase
         ReferenceDataGearMeasurementEntity::class,
         ReferenceDataMetadataEntity::class,
     ],
-    version = 9,
+    version = 10,
     exportSchema = true,
 )
 abstract class CatchRecordDatabase : RoomDatabase() {
