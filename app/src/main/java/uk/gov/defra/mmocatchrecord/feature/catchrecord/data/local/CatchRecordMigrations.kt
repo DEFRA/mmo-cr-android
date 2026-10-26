@@ -226,10 +226,8 @@ object CatchRecordMigrations {
             }
         }
 
-    /**
-     * v9 -> v10: Trip IDs must be unique. Duplicates keep the earliest row's value; later rows get the
-     * lowest free `-2`, `-3`… suffix so the unique index can be created.
-     */
+    // v9 -> v10: unique Trip IDs; the earliest duplicate keeps its value, later ones get the lowest free
+    // `-2`, `-3`… suffix so the unique index can be created.
     val MIGRATION_9_10 =
         object : Migration(9, 10) {
             override fun migrate(db: SupportSQLiteDatabase) {
