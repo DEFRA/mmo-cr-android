@@ -13,7 +13,12 @@ private const val UNIT_METRES = "m"
 private const val UNIT_MILLIMETRES = "mm"
 
 internal fun VesselMobileDto.toDomain(): Vessel =
-    Vessel(id = id, name = displayName, lengthOverallMetres = lengthOverallMetres)
+    Vessel(
+        id = id,
+        name = displayName,
+        lengthOverallMetres = lengthOverallMetres,
+        pln = pln,
+    )
 
 /**
  * Only the live port codes for the confirmed stub departure ports are known (ADR 0016, Q3) —

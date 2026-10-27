@@ -18,9 +18,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.GdsDateWheelPicker
@@ -29,22 +26,17 @@ import uk.gov.defra.mmocatchrecord.common.design.MmoColors
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
-import uk.gov.defra.mmocatchrecord.common.design.appLocale
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DmyDate
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardErrorSummary
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardErrorSummaryItem
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 data class WizardDateStepTestTags(
     val summary: String,
     val monthWheel: String,
     val dayWheel: String,
     val yearWheel: String,
-    val okAction: String,
-    val cancelAction: String,
     val saveAction: String,
-    val confirmedDate: String,
 )
 
 @Suppress("FunctionNaming", "LongMethod", "LongParameterList")
@@ -59,21 +51,19 @@ fun WizardDateStepContent(
     onDirtyChanged: (Boolean) -> Unit = {},
     today: LocalDate = remember { LocalDate.now() },
 ) {
-    // Seeded from the draft's saved value so re-entering the step shows it on the wheel and treats it as confirmed.
+    // Seeded from the draft's saved value so re-entering the step shows it on the wheel.
     val startDate = initialDate?.toLocalDateOrNull() ?: today
     var wheelEpochDay by rememberSaveable { mutableLongStateOf(startDate.toEpochDay()) }
-    var confirmedEpochDay by rememberSaveable { mutableStateOf(initialDate?.toLocalDateOrNull()?.toEpochDay()) }
     var error by remember { mutableStateOf<DateInputError?>(null) }
     var focusSummary by remember { mutableStateOf(false) }
     val summaryFocusRequester = remember { FocusRequester() }
-    val okFocusRequester = remember { FocusRequester() }
+    val wheelFocusRequester = remember { FocusRequester() }
 
     val wheelDate = LocalDate.ofEpochDay(wheelEpochDay)
-    val confirmedDate = confirmedEpochDay?.let(LocalDate::ofEpochDay)
     val yearRange = pickerYearRange(today, initialDate)
 
-    // BR-XX (ADR 0014, Phase D): dirty if the confirmed date differs from the saved one, or the wheel has unconfirmed moves.
-    val isDirty = confirmedDate?.toDmyDate() != initialDate || wheelDate != (confirmedDate ?: startDate)
+    // BR-XX (ADR 0014, Phase D): dirty once the wheel moves away from the date it opened on.
+    val isDirty = wheelDate != startDate
     LaunchedEffect(isDirty) { onDirtyChanged(isDirty) }
 
     LaunchedEffect(focusSummary) {
@@ -92,7 +82,7 @@ fun WizardDateStepContent(
                     listOf(
                         WizardErrorSummaryItem(
                             message = dateErrorMessage(currentError),
-                            onClick = { okFocusRequester.requestFocus() },
+                            onClick = { wheelFocusRequester.requestFocus() },
                         ),
                     ),
                 focusRequester = summaryFocusRequester,
@@ -112,42 +102,20 @@ fun WizardDateStepContent(
                 error = null
             },
             yearRange = yearRange,
-            onConfirm = {
-                confirmedEpochDay = wheelEpochDay
-                error = null
-            },
-            onCancel = {
-                wheelEpochDay = (confirmedDate ?: startDate).toEpochDay()
-                error = null
-            },
             testTags =
                 GdsDateWheelPickerTestTags(
                     monthWheel = testTags.monthWheel,
                     dayWheel = testTags.dayWheel,
                     yearWheel = testTags.yearWheel,
-                    okAction = testTags.okAction,
-                    cancelAction = testTags.cancelAction,
                 ),
-            okFocusRequester = okFocusRequester,
+            focusRequester = wheelFocusRequester,
         )
-        if (confirmedDate != null) {
-            val formatted = confirmedDate.format(DateTimeFormatter.ofPattern("d MMMM yyyy", appLocale()))
-            Text(
-                text = stringResource(R.string.date_picker_selected, formatted),
-                style = MaterialTheme.typography.bodyLarge,
-                modifier =
-                    Modifier
-                        .semantics { liveRegion = LiveRegionMode.Polite }
-                        .testTag(testTags.confirmedDate),
-            )
-        }
         PrimaryActionButton(
             text = stringResource(R.string.save_and_continue),
             onClick = {
                 val result =
                     WizardDateInputValidator.validate(
-                        confirmedDate = confirmedDate?.toDmyDate(),
-                        wheelDate = wheelDate.toDmyDate(),
+                        date = wheelDate.toDmyDate(),
                         departureDate = departureDate,
                         isReturnDate = isReturnDate,
                     )
@@ -182,7 +150,6 @@ private fun LocalDate.toDmyDate(): DmyDate = DmyDate(dayOfMonth, monthValue, yea
 @Composable
 private fun dateErrorMessage(error: DateInputError): String =
     when (error) {
-        DateInputError.NotConfirmed -> stringResource(R.string.date_error_not_confirmed)
         DateInputError.InvalidDate -> stringResource(R.string.date_error_invalid_date)
         DateInputError.ReturnBeforeDeparture -> stringResource(R.string.date_error_return_before_departure)
     }
@@ -200,10 +167,7 @@ fun WizardDateStepContentPreview() {
                     monthWheel = "month",
                     dayWheel = "day",
                     yearWheel = "year",
-                    okAction = "ok",
-                    cancelAction = "cancel",
                     saveAction = "save",
-                    confirmedDate = "confirmed",
                 ),
             onSubmit = {},
         )

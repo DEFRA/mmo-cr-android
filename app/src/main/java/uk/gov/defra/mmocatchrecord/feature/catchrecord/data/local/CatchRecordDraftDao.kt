@@ -9,6 +9,9 @@ import kotlinx.coroutines.flow.Flow
 
 private const val ACTIVE_STATUSES_CLAUSE = "status IN ('Draft', 'ReadyToSubmit')"
 
+// Bounds the one-second Trip ID bump; a real collision needs only one or two steps.
+private const val MAX_REFERENCE_ATTEMPTS = 3600
+
 /**
  * DAO for the catch-record draft aggregate. [replaceDraftAggregate] is the single write path used for
  * every "save and continue" autosave: it upserts the root row and wholesale-replaces the child rows,
@@ -112,6 +115,10 @@ interface CatchRecordDraftDao {
         landingStorage: List<LandingStorageEntity>,
         notLandedSpecies: List<NotLandedSpeciesEntity>,
     ) {
+        // REPLACE would delete (and cascade) a different draft holding the same Trip ID.
+        draft.catchRecordReference?.let { reference ->
+            check(!referenceUsedByOtherDraft(reference, draft.id)) { "Catch record reference already in use" }
+        }
         upsertDraft(draft)
         deleteGearUsesForDraft(draft.id)
         deleteLandingStorageForDraft(draft.id)
@@ -123,6 +130,17 @@ interface CatchRecordDraftDao {
         if (notLandedSpecies.isNotEmpty()) insertNotLandedSpecies(notLandedSpecies)
     }
 
+    @Query("SELECT EXISTS(SELECT 1 FROM catch_record_draft WHERE catchRecordReference = :reference)")
+    suspend fun referenceExists(reference: String): Boolean
+
+    @Query(
+        "SELECT EXISTS(SELECT 1 FROM catch_record_draft WHERE catchRecordReference = :reference AND id != :draftId)",
+    )
+    suspend fun referenceUsedByOtherDraft(
+        reference: String,
+        draftId: String,
+    ): Boolean
+
     /**
      * Race-safe "find the vessel's active draft, or create [candidate] as its new one" — see ADR 0010. The
      * whole find+insert-if-absent sequence runs inside one Room `@Transaction`, so SQLite's write-transaction
@@ -132,6 +150,8 @@ interface CatchRecordDraftDao {
      * winner's row and returns it — the partial unique index guarantees at most one winner even if this
      * transactional serialization guarantee were ever weakened, since [insertDraftIfAbsent] is ignore-on-conflict
      * rather than throwing or replacing.
+     *
+     * A Trip ID already in use is moved on one second at a time (inside the same transaction) until free.
      */
     @Transaction
     suspend fun findOrCreateActiveDraft(
@@ -139,9 +159,16 @@ interface CatchRecordDraftDao {
         candidate: DraftEntity,
     ): DraftEntity {
         findActiveDraftEntity(vesselId)?.let { return it }
-        val insertedRowId = insertDraftIfAbsent(candidate)
+        var reference = candidate.catchRecordReference
+        var attempts = 0
+        while (reference != null && referenceExists(reference)) {
+            check(++attempts <= MAX_REFERENCE_ATTEMPTS) { "No free catch record reference found" }
+            reference = CatchRecordReferenceGenerator.nextAfter(reference)
+        }
+        val unique = candidate.copy(catchRecordReference = reference)
+        val insertedRowId = insertDraftIfAbsent(unique)
         if (insertedRowId != -1L) {
-            return candidate
+            return unique
         }
         // Lost the race to a concurrent create — the unique index means an active draft now exists for
         // this vessel; return it rather than duplicating or failing (finding: "unique constraint returns

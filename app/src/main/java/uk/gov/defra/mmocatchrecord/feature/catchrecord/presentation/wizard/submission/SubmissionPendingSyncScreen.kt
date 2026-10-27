@@ -149,7 +149,7 @@ fun SubmissionPendingSyncScreenContentPreview() {
                     id = "draft-1",
                     vesselId = "vessel-1",
                     modifiedAtEpochMillis = 0L,
-                    catchRecordReference = "A1234520260727150815",
+                    catchRecordReference = "B14974-27072026-150815",
                 ),
             onViewRecords = {},
         )

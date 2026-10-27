@@ -26,6 +26,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftInvalid
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftSubmissionValidation
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MissingVesselRegistrationException
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
@@ -250,15 +251,21 @@ class CatchRecordFlowViewModel
          * selection was silently discarded. This supersedes ADR 0014's original BR-XX deferral, which only
          * persisted on the *next* step's "Save and continue"; see that ADR for the superseded rationale.
          */
-        private suspend fun startNewDraft(vesselId: String): CatchRecordDraft =
-            draftRepository
+        private suspend fun startNewDraft(vesselId: String): CatchRecordDraft {
+            val vessels = currentState.vessels.ifEmpty { referenceDataRepository.getVessels().getOrThrow() }
+            val rssNumber =
+                CatchRecordReferenceGenerator.normaliseRssNumber(
+                    vessels.firstOrNull { it.id == vesselId }?.pln,
+                ) ?: throw MissingVesselRegistrationException()
+            return draftRepository
                 .startDraft(
                     CatchRecordDraftFactory.newDraft(
                         vesselId = vesselId,
                         id = idFactory(),
-                        reference = CatchRecordReferenceGenerator.generate(clock()),
+                        reference = CatchRecordReferenceGenerator.generate(rssNumber, clock()),
                     ),
                 ).getOrThrow()
+        }
 
         private fun tripTodayAnswered(isTripToday: Boolean) {
             val draft = currentDraftOrNull() ?: return

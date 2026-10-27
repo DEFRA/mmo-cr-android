@@ -81,7 +81,7 @@ class ReturnDateScreenViewModelTests {
         composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.state.value.status is UiStatus.Content<*> }
         composeTestRule.waitForIdle()
 
-        composeTestRule.spinToAndConfirm(ReturnDateScreenTestTags.stepTags, DmyDate(11, 9, year))
+        composeTestRule.spinTo(ReturnDateScreenTestTags.stepTags, DmyDate(11, 9, year))
         composeTestRule.saveAndContinue(ReturnDateScreenTestTags.stepTags)
         composeTestRule.waitForIdle()
 
@@ -104,7 +104,7 @@ class ReturnDateScreenViewModelTests {
         composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.state.value.status is UiStatus.Content<*> }
         composeTestRule.waitForIdle()
 
-        composeTestRule.spinToAndConfirm(ReturnDateScreenTestTags.stepTags, DmyDate(1, 9, year))
+        composeTestRule.spinTo(ReturnDateScreenTestTags.stepTags, DmyDate(1, 9, year))
         composeTestRule.saveAndContinue(ReturnDateScreenTestTags.stepTags)
         composeTestRule.waitForIdle()
 

@@ -146,7 +146,7 @@ class WizardResultScreensErrorPathTests {
             notLandedStraightAway = false,
             status = DraftStatus.Draft,
             modifiedAtEpochMillis = 0L,
-            catchRecordReference = "A1234520200102150815",
+            catchRecordReference = "B14974-02012020-150815",
             lateSubmissionWarningAcknowledged = false,
         )
 

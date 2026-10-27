@@ -8,6 +8,8 @@ data class Vessel(
     val name: String,
     /** `null` until resolved from live reference data; selects the gears vessel-length band (ADR 0016). */
     val lengthOverallMetres: Double? = null,
+    /** Port letters and number; interim Trip ID prefix, since the mobile vessel view has no RSS number. */
+    val pln: String? = null,
 )
 
 /** A UK/EU landing port. */
