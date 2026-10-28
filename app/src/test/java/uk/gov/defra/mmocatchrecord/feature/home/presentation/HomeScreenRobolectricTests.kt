@@ -513,12 +513,6 @@ class HomeScreenRobolectricTests {
 
         composeTestRule.onNodeWithTag(CatchRecordsListSectionTestTags.row("draft-a")).assertIsDisplayed()
         composeTestRule.onNodeWithTag(CatchRecordsListSectionTestTags.row("draft-b")).assertIsDisplayed()
-        composeTestRule
-            .onNodeWithTag(CatchRecordsListSectionTestTags.reference("draft-a"))
-            .assertTextEquals("B14974-14112023-221320")
-        composeTestRule
-            .onNodeWithTag(CatchRecordsListSectionTestTags.reference("draft-b"))
-            .assertTextEquals("B14974-14112023-221321")
 
         composeTestRule.onNodeWithContentDescription(accessibleLabel("B14974-14112023-221321")).performClick()
         assertEquals(listOf("draft-b"), clicked)
@@ -566,9 +560,6 @@ class HomeScreenRobolectricTests {
         }
 
         val fallback = context().getString(R.string.records_reference_not_assigned)
-        composeTestRule
-            .onNodeWithTag(CatchRecordsListSectionTestTags.reference("draft-a"))
-            .assertTextEquals(fallback)
         composeTestRule
             .onNodeWithContentDescription(accessibleLabel(fallback, visibleText = "3 Jan 2026"))
             .assertIsDisplayed()

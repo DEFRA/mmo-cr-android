@@ -104,8 +104,6 @@ object CatchRecordsListSectionTestTags {
     fun row(id: String) = "catch_record_row_$id"
 
     fun createdBy(id: String) = "catch_record_created_by_$id"
-
-    fun reference(id: String) = "catch_record_reference_$id"
 }
 
 /** Records per page shown in the table — this is local, in-memory windowing, not a DB page query. */
@@ -245,8 +243,6 @@ private fun CatchRecordTableRow(
     ) {
         TripEndDateCell(
             text = tripEndDateText,
-            referenceText = referenceText,
-            referenceTestTag = CatchRecordsListSectionTestTags.reference(record.id),
             accessibleLabel = rowLabel,
             isResumable = isResumable,
             minTouchTarget = minTouchTarget,
@@ -272,14 +268,12 @@ private fun CatchRecordTableRow(
     }
 }
 
-/** The Trip ID sits under the date rather than in a fifth column: the 4-column table already scrolls
- *  horizontally below ~412dp, and a fifth column would force that on every phone. */
-@Suppress("FunctionNaming", "LongParameterList")
+/** The Trip ID is kept out of visible rendering here, but still feeds [accessibleLabel] so rows for the
+ *  same vessel/date/status (ADR 0018) remain distinctly announced to TalkBack. */
+@Suppress("FunctionNaming")
 @Composable
 private fun TripEndDateCell(
     text: String,
-    referenceText: String,
-    referenceTestTag: String,
     accessibleLabel: String,
     isResumable: Boolean,
     minTouchTarget: Dp,
@@ -303,14 +297,6 @@ private fun TripEndDateCell(
         } else {
             Text(text = text, style = MaterialTheme.typography.bodyLarge.copy(color = MmoColors.Text))
         }
-        Text(
-            text = referenceText,
-            style = MaterialTheme.typography.bodyMedium.copy(color = MmoColors.Grey1),
-            modifier =
-                Modifier
-                    .testTag(referenceTestTag)
-                    .then(if (isResumable) Modifier.semantics { invisibleToUser() } else Modifier),
-        )
     }
 }
 
