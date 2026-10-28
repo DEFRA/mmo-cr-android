@@ -126,29 +126,24 @@ class CatchRecordFlowViewModel
             return historyIds.mapNotNull { portsById[it] }
         }
 
+        /** "Create a new catch record" always starts fresh at vessel selection; an existing draft is
+         *  resumed only from the Home records list (FR2, [enterFlowForDraft]). */
         private fun enterFlow() {
             updateState { it.copy(status = UiStatus.Loading) }
             launchInViewModelScope {
                 runCatching {
                     val referenceData = loadReferenceData()
-                    val existingDraft =
-                        draftRepository.getAnyActiveDraft().getOrThrow()?.let {
-                            reconcileAgainstLiveGearTypes(it, referenceData.gearTypes)
-                        }
-                    val previouslyUsedPorts = previouslyUsedPortsFor(existingDraft, referenceData.ports)
+                    // Built from scratch rather than copied, so no field of a previously loaded draft can
+                    // survive into the new record.
                     updateState {
-                        it.copy(
-                            status = existingDraft?.let { draft -> UiStatus.Content(draft) } ?: UiStatus.Idle,
-                            currentStep =
-                                if (existingDraft == null) WizardStep.VesselSelection else WizardStep.DraftResume,
+                        CatchRecordFlowViewState(
+                            status = UiStatus.Idle,
+                            currentStep = WizardStep.VesselSelection,
                             vessels = referenceData.vessels,
                             ports = referenceData.ports,
                             gearTypes = referenceData.gearTypes,
                             statisticalSubRectangles = referenceData.statisticalSubRectangles,
                             species = referenceData.species,
-                            previouslyUsedPorts = previouslyUsedPorts,
-                            departurePortEntryMode = deriveDeparturePortEntryMode(previouslyUsedPorts),
-                            isDraftPersisted = existingDraft != null,
                             isFlowEntered = true,
                         )
                     }
@@ -228,11 +223,17 @@ class CatchRecordFlowViewModel
             updateState { it.copy(status = UiStatus.Loading) }
             launchInViewModelScope {
                 runCatching {
-                    val existingDraft = draftRepository.getActiveDraft(vesselId).getOrThrow()
-                    val draft = existingDraft ?: startNewDraft(vesselId)
-                    val previouslyUsedPorts = previouslyUsedPortsForVessel(vesselId, currentState.ports)
                     val vesselLength = currentState.vessels.firstOrNull { it.id == vesselId }?.lengthOverallMetres
                     val gearTypes = referenceDataRepository.getGearTypes(vesselLength).getOrThrow()
+                    // ADR 0016: this is a cold cross-session resume, so reconcile before showing the draft —
+                    // against the same banded gear types the gear screens will render for this vessel.
+                    val draft =
+                        draftRepository
+                            .getActiveDraft(vesselId)
+                            .getOrThrow()
+                            ?.let { reconcileAgainstLiveGearTypes(it, gearTypes) }
+                            ?: startNewDraft(vesselId)
+                    val previouslyUsedPorts = previouslyUsedPortsForVessel(vesselId, currentState.ports)
                     emitLoadedDraft(
                         draft,
                         WizardStep.TripToday,

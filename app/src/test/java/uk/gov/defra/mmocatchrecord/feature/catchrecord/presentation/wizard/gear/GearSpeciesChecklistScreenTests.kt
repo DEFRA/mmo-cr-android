@@ -1044,7 +1044,7 @@ class GearSpeciesChecklistScreenTests {
                     )
                 }
             }
-            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
             testScheduler.advanceUntilIdle()
             viewModel.dispatch(CatchRecordFlowEvent.ResumeDraft)
             testScheduler.advanceUntilIdle()
@@ -1075,7 +1075,7 @@ class GearSpeciesChecklistScreenTests {
                     )
                 }
             }
-            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
             testScheduler.advanceUntilIdle()
             viewModel.dispatch(CatchRecordFlowEvent.ResumeDraft)
             testScheduler.advanceUntilIdle()

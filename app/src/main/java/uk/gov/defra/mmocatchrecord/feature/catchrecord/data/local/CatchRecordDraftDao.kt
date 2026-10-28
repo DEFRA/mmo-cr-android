@@ -54,12 +54,6 @@ interface CatchRecordDraftDao {
     @Query("SELECT * FROM catch_record_draft WHERE vesselId = :vesselId AND $ACTIVE_STATUSES_CLAUSE LIMIT 1")
     suspend fun getActiveDraftWithChildren(vesselId: String): DraftWithChildren?
 
-    @Transaction
-    @Query(
-        "SELECT * FROM catch_record_draft WHERE $ACTIVE_STATUSES_CLAUSE ORDER BY modifiedAtEpochMillis DESC LIMIT 1",
-    )
-    suspend fun getMostRecentlyModifiedActiveDraftWithChildren(): DraftWithChildren?
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertDraft(entity: DraftEntity)
 

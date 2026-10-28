@@ -44,18 +44,16 @@ fun DraftResumeScreen(
     viewModel: CatchRecordFlowViewModel,
     onNavigate: (WizardStep) -> Unit,
     onBack: () -> Unit,
+    draftId: String,
     modifier: Modifier = Modifier,
-    draftId: String? = null,
     onDraftDeleted: () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    // FR2: a non-null draftId means we arrived directly from the Home records list (B5), bypassing
-    // CatchRecordEntryRoute's own EnterFlow — load that specific draft instead.
+    // FR2: resuming always arrives from the Home records list (B5) with the chosen draft's id —
+    // "Create a new catch record" never routes here (see CatchRecordFlowViewModel.enterFlow).
     LaunchedEffect(draftId) {
-        if (draftId != null) {
-            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft(draftId))
-        }
+        viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft(draftId))
     }
 
     LaunchedEffect(state.isDraftDeleted) {

@@ -124,7 +124,8 @@ sealed interface WizardStep {
 
 fun routeFor(step: WizardStep): Any =
     when (step) {
-        WizardStep.DraftResume -> DraftResumeRoute()
+        // Unreachable: resume carries a draft id, so it is navigated to as DraftResumeRoute(draftId) (FR2).
+        WizardStep.DraftResume -> error("DraftResume must be navigated to with an explicit draft id")
         WizardStep.VesselSelection -> VesselSelectionRoute
         WizardStep.TripToday -> TripTodayRoute
         WizardStep.DepartureDate -> DepartureDateRoute

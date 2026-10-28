@@ -172,21 +172,33 @@ class FakeReferenceDataRepository(
             )
     }
 
-    override suspend fun getVessels(): Result<List<Vessel>> = Result.success(vessels)
+    /** When `true`, the next read fails once (then resets) — drives wizard load-error/Retry tests. */
+    var failNextOperation: Boolean = false
 
-    override suspend fun getPorts(): Result<List<Port>> = Result.success(ports)
+    override suspend fun getVessels(): Result<List<Vessel>> = failOnceOrNull() ?: Result.success(vessels)
+
+    private fun <T> failOnceOrNull(): Result<T>? {
+        if (!failNextOperation) return null
+        failNextOperation = false
+        // IOException matches SafeErrorMapper's transient/retryable classification, as a real read would.
+        return Result.failure(java.io.IOException("Simulated failure"))
+    }
+
+    override suspend fun getPorts(): Result<List<Port>> = failOnceOrNull() ?: Result.success(ports)
 
     override suspend fun getPreviouslyUsedPorts(vesselId: String): Result<List<Port>> =
-        Result.success(previousPortsByVessel[vesselId].orEmpty())
+        failOnceOrNull() ?: Result.success(previousPortsByVessel[vesselId].orEmpty())
 
-    override suspend fun getGearTypes(vesselLengthMetres: Double?): Result<List<GearType>> = Result.success(gearTypes)
+    override suspend fun getGearTypes(vesselLengthMetres: Double?): Result<List<GearType>> =
+        failOnceOrNull() ?: Result.success(gearTypes)
 
-    override suspend fun getSpecies(): Result<List<Species>> = Result.success(species)
+    override suspend fun getSpecies(): Result<List<Species>> = failOnceOrNull() ?: Result.success(species)
 
     override suspend fun getStatisticalSubRectangles(): Result<List<StatisticalSubRectangle>> =
-        Result.success(statisticalSubRectangles)
+        failOnceOrNull() ?: Result.success(statisticalSubRectangles)
 
     override suspend fun getStatisticalSubRectanglesForPort(portId: String): Result<List<StatisticalSubRectangle>> {
+        failOnceOrNull<List<StatisticalSubRectangle>>()?.let { return it }
         val port = ports.firstOrNull { it.id == portId } ?: return Result.success(emptyList())
         return Result.success(statisticalSubRectangles.filter { it.statisticalAreaId == port.statisticalAreaId })
     }

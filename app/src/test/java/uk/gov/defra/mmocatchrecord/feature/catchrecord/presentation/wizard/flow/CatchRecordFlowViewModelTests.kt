@@ -136,7 +136,7 @@ class CatchRecordFlowViewModelTests {
             ).getOrThrow()
 
         val viewModel = buildViewModel(repository = repository, dispatcher = dispatcher)
-        viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+        viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
         testScheduler.advanceUntilIdle()
         viewModel.dispatch(CatchRecordFlowEvent.ResumeDraft)
         testScheduler.advanceUntilIdle()
@@ -251,7 +251,7 @@ class CatchRecordFlowViewModelTests {
         }
 
     @Test
-    fun `enter flow with active draft goes to draft resume`() =
+    fun `enter flow always starts a new record at vessel selection even when an active draft exists`() =
         runTest {
             val dispatcher = StandardTestDispatcher(testScheduler)
             val repository = FakeCatchRecordDraftRepository()
@@ -263,9 +263,10 @@ class CatchRecordFlowViewModelTests {
                 viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
                 assertEquals(UiStatus.Loading, awaitItem().status)
                 val loaded = awaitItem()
-                assertEquals(WizardStep.DraftResume, loaded.currentStep)
-                assertTrue(loaded.status is UiStatus.Content)
-                assertEquals(DeparturePortEntryMode.FavouriteList, loaded.departurePortEntryMode)
+                assertEquals(WizardStep.VesselSelection, loaded.currentStep)
+                assertEquals(UiStatus.Idle, loaded.status)
+                assertFalse(loaded.isDraftPersisted)
+                assertEquals(DeparturePortEntryMode.Search, loaded.departurePortEntryMode)
             }
         }
 
@@ -320,7 +321,7 @@ class CatchRecordFlowViewModelTests {
             val recreated = buildViewModel(repository = repository, dispatcher = dispatcher)
             recreated.state.test {
                 awaitItem()
-                recreated.dispatch(CatchRecordFlowEvent.EnterFlow)
+                recreated.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
                 awaitItem()
                 val loaded = awaitItem()
                 assertEquals(WizardStep.DraftResume, loaded.currentStep)
@@ -357,7 +358,7 @@ class CatchRecordFlowViewModelTests {
             val recreated = buildViewModel(repository = repository, dispatcher = dispatcher)
             recreated.state.test {
                 awaitItem()
-                recreated.dispatch(CatchRecordFlowEvent.EnterFlow)
+                recreated.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
                 awaitItem()
                 val loaded = awaitItem()
                 val draft = (loaded.status as UiStatus.Content<CatchRecordDraft>).value
@@ -395,7 +396,7 @@ class CatchRecordFlowViewModelTests {
 
             viewModel.state.test {
                 awaitItem()
-                viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+                viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
                 awaitItem()
                 val loaded = awaitItem()
                 val reconciled = (loaded.status as UiStatus.Content<CatchRecordDraft>).value.gearUses.single()
@@ -405,7 +406,57 @@ class CatchRecordFlowViewModelTests {
             }
             val persisted =
                 repository
-                    .getAnyActiveDraft()
+                    .getDraftById("draft-1")
+                    .getOrThrow()
+                    ?.gearUses
+                    ?.single()
+            assertEquals(false, persisted?.confirmedUsedOnTrip)
+        }
+
+    /** ADR 0016: "Create a new catch record" then picking a vessel is now the normal way a cold
+     *  cross-session draft loads, so that path must reconcile too — not just the Home resume path. */
+    @Test
+    fun `vessel selected reconciles a stub-era draft whose gear type id is absent from live reference data`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            val started = repository.startDraft("vessel-achilles").getOrThrow()
+            val stubEraGearUse =
+                GearUse(
+                    id = "gear-use-1",
+                    gearTypeId = "gear-pots",
+                    statisticalSubRectangleCode = "38E95",
+                    confirmedUsedOnTrip = true,
+                    speciesWeights =
+                        listOf(SpeciesWeightEntry(id = "sw-1", speciesId = "species-cod", confirmedCaught = true)),
+                )
+            repository.saveDraft(started.copy(gearUses = listOf(stubEraGearUse))).getOrThrow()
+            val liveOnlyReferenceData =
+                FakeReferenceDataRepository(gearTypes = listOf(GearType("live-gear-1", "Live gear")))
+            val viewModel =
+                buildViewModel(
+                    repository = repository,
+                    referenceDataRepository = liveOnlyReferenceData,
+                    dispatcher = dispatcher,
+                )
+
+            viewModel.state.test {
+                awaitItem()
+                viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+                awaitItem()
+                assertEquals(WizardStep.VesselSelection, awaitItem().currentStep)
+                viewModel.dispatch(CatchRecordFlowEvent.VesselSelected("vessel-achilles"))
+                awaitItem()
+                val loaded = awaitItem()
+                assertEquals(WizardStep.TripToday, loaded.currentStep)
+                val reconciled = (loaded.status as UiStatus.Content<CatchRecordDraft>).value.gearUses.single()
+                assertNull(reconciled.statisticalSubRectangleCode)
+                assertTrue(reconciled.speciesWeights.isEmpty())
+                assertEquals(false, reconciled.confirmedUsedOnTrip)
+            }
+            val persisted =
+                repository
+                    .getDraftById("draft-1")
                     .getOrThrow()
                     ?.gearUses
                     ?.single()
@@ -605,7 +656,7 @@ class CatchRecordFlowViewModelTests {
             val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
             val viewModel = buildViewModel(repository = repository, dispatcher = dispatcher)
             repository.startDraft("vessel-achilles")
-            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
             testScheduler.advanceUntilIdle()
 
             viewModel.state.test {
@@ -624,8 +675,13 @@ class CatchRecordFlowViewModelTests {
     fun `repository failure surfaces retryable error state`() =
         runTest {
             val dispatcher = StandardTestDispatcher(testScheduler)
-            val repository = FakeCatchRecordDraftRepository().apply { failNextOperation = true }
-            val viewModel = buildViewModel(repository = repository, dispatcher = dispatcher)
+            val referenceData = FakeReferenceDataRepository().apply { failNextOperation = true }
+            val viewModel =
+                buildViewModel(
+                    repository = FakeCatchRecordDraftRepository(),
+                    referenceDataRepository = referenceData,
+                    dispatcher = dispatcher,
+                )
 
             viewModel.state.test {
                 awaitItem()
@@ -912,7 +968,7 @@ class CatchRecordFlowViewModelTests {
                     ),
                 ).getOrThrow()
             val viewModel = buildViewModel(repository = repository, dispatcher = dispatcher)
-            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
             testScheduler.advanceUntilIdle()
             viewModel.dispatch(CatchRecordFlowEvent.ResumeDraft)
             testScheduler.advanceUntilIdle()
@@ -956,7 +1012,7 @@ class CatchRecordFlowViewModelTests {
                 ).getOrThrow()
 
             val viewModel = buildViewModel(repository = repository, dispatcher = dispatcher)
-            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
             testScheduler.advanceUntilIdle()
             viewModel.dispatch(CatchRecordFlowEvent.ResumeDraft)
             testScheduler.advanceUntilIdle()
@@ -1168,7 +1224,7 @@ class CatchRecordFlowViewModelTests {
                     syncScheduler = syncScheduler,
                     dispatcher = dispatcher,
                 )
-            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
             testScheduler.advanceUntilIdle()
             viewModel.dispatch(CatchRecordFlowEvent.ResumeDraft)
             testScheduler.advanceUntilIdle()
@@ -1204,7 +1260,7 @@ class CatchRecordFlowViewModelTests {
                     syncScheduler = syncScheduler,
                     dispatcher = dispatcher,
                 )
-            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
             testScheduler.advanceUntilIdle()
             viewModel.dispatch(CatchRecordFlowEvent.ResumeDraft)
             testScheduler.advanceUntilIdle()
@@ -1239,7 +1295,7 @@ class CatchRecordFlowViewModelTests {
                     syncScheduler = syncScheduler,
                     dispatcher = dispatcher,
                 )
-            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
             testScheduler.advanceUntilIdle()
             viewModel.dispatch(CatchRecordFlowEvent.ResumeDraft)
             testScheduler.advanceUntilIdle()
