@@ -250,15 +250,13 @@ Phase 4.
 **Stub-ID draft resume.** A draft saved before this change references stub ids (e.g. `port-hastings`) that
 will not exist in live reference data. `DraftInvalidation.reconcileAgainstLiveGearTypes` already clears a
 gear use's dependent answers when its `gearTypeId` is not among the live gear types. This reconciliation
-runs on **both** paths that surface a persisted draft, in each case against exactly the gear-type list the
-gear screens will then render, so what is reconciled and what is displayed can never disagree:
+runs on the single path that surfaces a persisted draft, against exactly the gear-type list the gear
+screens will then render, so what is reconciled and what is displayed can never disagree:
 
 - `CatchRecordFlowViewModel.enterFlowForDraft` (Home records list resume) — against the unbanded
-  `getGearTypes()` it loads with the rest of the reference-data bundle.
-- `CatchRecordFlowViewModel.vesselSelected` (picking a vessel that already has an active draft, per ADR
-  0010) — against the vessel-length-banded `getGearTypes(vesselLength)` it emits into state. Since "Create
-  a new catch record" no longer diverts to the draft-resume step, this is the normal way a cold
-  cross-session draft is loaded, so it must reconcile too.
+  `getGearTypes()` it loads with the rest of the reference-data bundle. Since
+  [ADR 0018](0018-independent-catch-record-drafts.md) made vessel selection always create a new draft,
+  this is the only path that surfaces a persisted draft and so the only one that needs reconciling.
 
 **What the user sees:** the affected gear's "Used on trip?" question reverts to
 unanswered and its statistical rectangle/species entries are cleared — nothing crashes, and every other

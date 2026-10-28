@@ -77,7 +77,7 @@ sealed interface CatchRecordFlowEvent {
     /** Permanently delete the loaded active draft. */
     data object DeleteDraft : CatchRecordFlowEvent
 
-    /** Start or resume the selected vessel's active draft, then continue to the trip-timing step. */
+    /** Always start a new, independent draft for the selected vessel, then continue to trip timing. */
     data class VesselSelected(
         val vesselId: String,
     ) : CatchRecordFlowEvent

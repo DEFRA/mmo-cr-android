@@ -16,6 +16,9 @@
     <string name="records_reference_pending">Reference not yet assigned</string>
     <string name="records_trip_end_date_not_set">Not entered yet</string>
     <string name="records_created_by_you">You</string>
+    <!-- Visible date leads the name per WCAG 2.5.3; distinguishes a vessel's multiple drafts (ADR 0018). -->
+    <string name="records_row_accessible_label">%1$s, %2$s, %3$s, Trip ID %4$s</string>
+    <string name="records_reference_not_assigned">Not assigned yet</string>
     <string name="pagination_showing">Showing %1$d to %2$d of %3$d</string>
     <string name="pagination_previous">Previous</string>
     <string name="pagination_next">Next</string>

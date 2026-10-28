@@ -19,6 +19,8 @@
     <string name="records_reference_pending">Cyfeirnod heb ei neilltuo eto</string>
     <string name="records_trip_end_date_not_set">Heb ei nodi eto</string>
     <string name="records_created_by_you">Chi</string>
+    <string name="records_row_accessible_label">%1$s, %2$s, %3$s, ID Taith %4$s</string>
+    <string name="records_reference_not_assigned">Heb ei neilltuo eto</string>
     <string name="pagination_showing">Yn dangos %1$d i %2$d o %3$d</string>
     <string name="pagination_previous">Blaenorol</string>
     <string name="pagination_next">Nesaf</string>

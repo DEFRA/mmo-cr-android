@@ -8,24 +8,17 @@ import uk.gov.defra.mmocatchrecord.feature.home.domain.CatchRecordSummary
  * locally first (no network dependency for this feature — see ADR 0006), and every function returns a
  * [Result] so callers must handle failure explicitly rather than assume success.
  *
- * **Draft singularity:** at most one **active** (non-terminal-status, see [DraftStatus.isActive]) draft
- * may exist per vessel at a time. [startDraft] enforces this by returning the existing active draft
- * instead of creating a duplicate.
+ * **Draft independence:** a vessel may hold any number of simultaneous active drafts, and no API here
+ * resolves a draft by vessel — a draft is only ever addressed by its own id (ADR 0018).
  */
 interface CatchRecordDraftRepository {
-    /** Returns the vessel's current active draft, or `null` (wrapped in success) if none exists. */
-    suspend fun getActiveDraft(vesselId: String): Result<CatchRecordDraft?>
-
-    /**
-     * Returns the draft identified by [draftId] regardless of its status (unlike [getActiveDraft], which
-     * only ever returns an *active* draft) — used by the Home records list's resume action (FR2) and by
-     * `CatchRecordSyncWorker` (Phase 8/ADR 0009) to re-fetch a specific `PendingSync` draft by id.
-     */
+    /** Returns the draft identified by [draftId] regardless of status — used by the Home records list's
+     *  resume action (FR2) and `CatchRecordSyncWorker` to re-fetch a `PendingSync` draft by id. */
     suspend fun getDraftById(draftId: String): Result<CatchRecordDraft?>
 
     /**
-     * Persists [candidate] unless the vessel already has an active draft (then returns that unchanged) —
-     * see ADR 0010 for race-safety and ADR 0014 for why callers build [candidate] (BR-XX).
+     * Persists [candidate] as a new, independent draft and never returns an existing one (ADR 0018) —
+     * see ADR 0014 for why callers build [candidate] (BR-XX).
      */
     suspend fun startDraft(candidate: CatchRecordDraft): Result<CatchRecordDraft>
 

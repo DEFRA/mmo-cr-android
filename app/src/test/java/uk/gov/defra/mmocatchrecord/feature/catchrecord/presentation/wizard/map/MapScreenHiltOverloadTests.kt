@@ -78,9 +78,6 @@ class MapScreenHiltOverloadTests {
         /** When `true`, the next [getDraftById] call fails once (then resets) — drives the Retry test. */
         var failNextGetDraftById: Boolean = false
 
-        override suspend fun getActiveDraft(vesselId: String): Result<CatchRecordDraft?> =
-            Result.success(drafts.values.firstOrNull { it.vesselId == vesselId && it.status.isActive })
-
         override suspend fun getDraftById(draftId: String): Result<CatchRecordDraft?> {
             if (failNextGetDraftById) {
                 failNextGetDraftById = false
