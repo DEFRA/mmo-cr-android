@@ -75,21 +75,19 @@ class MapScreenHiltOverloadTests {
     ) : CatchRecordDraftRepository {
         private val drafts = mutableMapOf(seed.id to seed)
 
-        /** When `true`, the next [getAnyActiveDraft] call fails once (then resets) — drives the Retry test. */
-        var failNextGetAnyActiveDraft: Boolean = false
+        /** When `true`, the next [getDraftById] call fails once (then resets) — drives the Retry test. */
+        var failNextGetDraftById: Boolean = false
 
         override suspend fun getActiveDraft(vesselId: String): Result<CatchRecordDraft?> =
             Result.success(drafts.values.firstOrNull { it.vesselId == vesselId && it.status.isActive })
 
-        override suspend fun getAnyActiveDraft(): Result<CatchRecordDraft?> {
-            if (failNextGetAnyActiveDraft) {
-                failNextGetAnyActiveDraft = false
+        override suspend fun getDraftById(draftId: String): Result<CatchRecordDraft?> {
+            if (failNextGetDraftById) {
+                failNextGetDraftById = false
                 return Result.failure(java.io.IOException("Simulated failure"))
             }
-            return Result.success(drafts.values.firstOrNull { it.status.isActive })
+            return Result.success(drafts[draftId])
         }
-
-        override suspend fun getDraftById(draftId: String): Result<CatchRecordDraft?> = Result.success(drafts[draftId])
 
         override suspend fun startDraft(candidate: CatchRecordDraft): Result<CatchRecordDraft> =
             Result.failure(UnsupportedOperationException("Not exercised by this test"))
@@ -195,7 +193,7 @@ class MapScreenHiltOverloadTests {
                 }
             }
         }
-        viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+        viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
         composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.state.value.status is UiStatus.Content<*> }
         composeTestRule.waitForIdle()
     }
@@ -282,9 +280,9 @@ class MapScreenHiltOverloadTests {
     }
 
     @Test
-    fun retryActionOnAnOuterLoadErrorRedispatchesEnterFlowAndRecoversToContent() {
+    fun retryActionOnAnOuterLoadErrorRedispatchesEnterFlowForDraftAndRecoversToContent() {
         val draftRepository = FakeDraftRepository(draftWith(pendingGearUse()))
-        draftRepository.failNextGetAnyActiveDraft = true
+        draftRepository.failNextGetDraftById = true
         val viewModel = buildViewModel(draftRepository)
 
         composeTestRule.setContent {
@@ -301,7 +299,7 @@ class MapScreenHiltOverloadTests {
         // Force the outer wizard state into a retryable error (a simulated repository I/O failure), then
         // recover via the real ViewModel's Retry event — exercising the Hilt-backed overload's `onRetry`
         // wiring (`{ viewModel.dispatch(CatchRecordFlowEvent.Retry) }`) end-to-end.
-        viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+        viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
         composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.state.value.status is UiStatus.Error }
         composeTestRule.waitForIdle()
 

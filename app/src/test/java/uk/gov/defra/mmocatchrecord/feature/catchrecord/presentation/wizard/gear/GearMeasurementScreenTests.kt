@@ -57,9 +57,10 @@ class GearMeasurementScreenTests {
     private fun buildViewModel(
         dispatcher: CoroutineDispatcher,
         repository: FakeCatchRecordDraftRepository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" }),
+        referenceDataRepository: FakeReferenceDataRepository = FakeReferenceDataRepository(),
     ) = CatchRecordFlowViewModel(
         repository,
-        FakeReferenceDataRepository(),
+        referenceDataRepository,
         FakeCatchRecordSubmissionRepository(),
         FakeNetworkConnectivityChecker(),
         FakeCatchRecordSyncScheduler(),
@@ -174,9 +175,12 @@ class GearMeasurementScreenTests {
     @Test
     fun `an outer load error is shown as a retryable wizard error and recovers via Retry`() =
         runTest {
-            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
-            repository.failNextOperation = true
-            val viewModel = buildViewModel(dispatcher = StandardTestDispatcher(testScheduler), repository = repository)
+            val referenceData = FakeReferenceDataRepository().apply { failNextOperation = true }
+            val viewModel =
+                buildViewModel(
+                    dispatcher = StandardTestDispatcher(testScheduler),
+                    referenceDataRepository = referenceData,
+                )
 
             composeTestRule.setContent {
                 WizardTestTheme {

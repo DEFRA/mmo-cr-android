@@ -72,7 +72,7 @@ class DraftResumeScreenTests {
      * `waitUntil` poll, until the draft load settles into [UiStatus.Content]. */
     private fun TestScope.launchScreen(
         viewModel: CatchRecordFlowViewModel,
-        draftId: String? = "draft-1",
+        draftId: String = "draft-1",
         onNavigate: (WizardStep) -> Unit = {},
         onDraftDeleted: () -> Unit = {},
         onBack: () -> Unit = {},
@@ -106,20 +106,15 @@ class DraftResumeScreenTests {
         }
 
     @Test
-    fun `no draftId leaves the view model idle and renders the loading state`() =
+    fun `an unknown draftId surfaces an error rather than leaving an endless loading spinner`() =
         runTest {
             val viewModel = buildViewModel(StandardTestDispatcher(testScheduler))
 
-            composeTestRule.setContent {
-                WizardTestTheme {
-                    DraftResumeScreen(viewModel = viewModel, onNavigate = {}, onBack = {}, draftId = null)
-                }
-            }
-            testScheduler.advanceUntilIdle()
-            composeTestRule.waitForIdle()
+            launchScreen(viewModel, draftId = "draft-that-does-not-exist")
 
             composeTestRule.onNodeWithTag(DraftResumeScreenTestTags.SCREEN).assertIsDisplayed()
-            assertEquals(UiStatus.Idle, viewModel.state.value.status)
+            composeTestRule.onNodeWithTag(DraftResumeScreenTestTags.ERROR_MESSAGE).assertIsDisplayed()
+            assertTrue(viewModel.state.value.status is UiStatus.Error)
         }
 
     @Test
