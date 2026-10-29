@@ -76,9 +76,6 @@ class OfflineSubmissionAndSyncTest {
         val drafts = mutableMapOf(seed.id to seed)
         var failNextSaves = 0
 
-        override suspend fun getActiveDraft(vesselId: String): Result<CatchRecordDraft?> =
-            Result.success(drafts.values.firstOrNull { it.vesselId == vesselId && it.status.isActive })
-
         override suspend fun getDraftById(draftId: String): Result<CatchRecordDraft?> = Result.success(drafts[draftId])
 
         override suspend fun startDraft(candidate: CatchRecordDraft): Result<CatchRecordDraft> =

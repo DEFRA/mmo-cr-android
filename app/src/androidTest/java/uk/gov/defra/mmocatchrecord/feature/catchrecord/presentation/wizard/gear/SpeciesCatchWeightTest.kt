@@ -19,7 +19,6 @@ import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import uk.gov.defra.mmocatchrecord.R
@@ -57,7 +56,7 @@ class SpeciesCatchWeightTest {
 
     private val speciesList = listOf(cod, plaice)
     private var submitted: CatchRecordDraft? = null
-    private var removed: CatchRecordDraft? = null
+    private var removeSpeciesClicks = 0
     private var addSpeciesClicks = 0
 
     @Test
@@ -155,14 +154,8 @@ class SpeciesCatchWeightTest {
         composeTestRule.onNodeWithTag(Tags.REMOVE_SPECIES_ACTION).assertIsDisplayed().performClick()
 
         // Ticket: removal happens on the separate "remove species from vessel" page, not on this screen.
-        assertTrue("Remove species trigger was not invoked", removed != null)
-        val remainingSpeciesIds =
-            removed
-                ?.gearUses
-                ?.single()
-                ?.speciesWeights
-                ?.map { it.speciesId }
-        assertEquals(listOf(cod.id, plaice.id), remainingSpeciesIds)
+        assertEquals(1, removeSpeciesClicks)
+        assertNull(submitted)
     }
 
     @Test
@@ -534,7 +527,7 @@ class SpeciesCatchWeightTest {
                     draft = draft,
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = { removed = it },
+                    onRemoveSpeciesRequested = { removeSpeciesClicks++ },
                     onAddAnotherSpecies = { addSpeciesClicks++ },
                     onSubmit = { submitted = it },
                 )

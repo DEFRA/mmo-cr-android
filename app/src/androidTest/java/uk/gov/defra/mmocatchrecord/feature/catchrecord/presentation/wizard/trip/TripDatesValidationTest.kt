@@ -87,23 +87,58 @@ class TripDatesValidationTest {
     }
 
     @Test
-    fun ac3_departureDateInFutureIsRejected() {
+    fun ac3_departureWheelCannotSelectFutureDay() {
         showDepartureStep()
 
         spinTo(departureTags, DmyDate(17, 10, 2026))
+        assertWheelShows(departureTags, day = "16", month = "October", year = "2026")
         saveAndContinue(departureTags)
 
-        assertBlockedWithError(departureTags, DEPARTURE_IN_FUTURE)
+        assertSavedWithoutError(departureTags, DmyDate(16, 10, 2026))
     }
 
     @Test
-    fun ac4_returnDateInFutureIsRejected() {
+    fun ac3_departureWheelCannotSelectFutureMonth() {
+        showDepartureStep()
+
+        spinTo(departureTags, DmyDate(1, 12, 2026))
+        assertWheelShows(departureTags, day = "1", month = "October", year = "2026")
+        saveAndContinue(departureTags)
+
+        assertSavedWithoutError(departureTags, DmyDate(1, 10, 2026))
+    }
+
+    @Test
+    fun ac3_departureWheelCannotSelectFutureYear() {
+        showDepartureStep()
+
+        spinTo(departureTags, DmyDate(16, 10, 2027))
+        assertWheelShows(departureTags, day = "16", month = "October", year = "2026")
+        saveAndContinue(departureTags)
+
+        assertSavedWithoutError(departureTags, DmyDate(16, 10, 2026))
+    }
+
+    @Test
+    fun ac4_returnWheelCannotSelectFutureDay() {
         showReturnStep(departureDate = DmyDate(10, 10, 2026))
 
         spinTo(returnTags, DmyDate(17, 10, 2026))
+        assertWheelShows(returnTags, day = "16", month = "October", year = "2026")
         saveAndContinue(returnTags)
 
-        assertBlockedWithError(returnTags, RETURN_IN_FUTURE)
+        assertSavedWithoutError(returnTags, DmyDate(16, 10, 2026))
+    }
+
+    @Test
+    fun ac4_returnWheelCannotSelectFutureMonth() {
+        showReturnStep(departureDate = DmyDate(10, 10, 2026))
+
+        spinTo(returnTags, DmyDate(10, 11, 2026))
+        assertWheelShows(returnTags, day = "10", month = "October", year = "2026")
+        saveAndContinue(returnTags)
+
+        assertSavedWithoutError(returnTags, DmyDate(10, 10, 2026))
     }
 
     @Test
@@ -202,6 +237,25 @@ class TripDatesValidationTest {
             .assertIsDisplayed()
     }
 
+    private fun assertSavedWithoutError(
+        tags: WizardDateStepTestTags,
+        expected: DmyDate,
+    ) {
+        assertEquals(expected, submittedDate)
+        composeTestRule.onNodeWithTag(tags.summary).assertDoesNotExist()
+    }
+
+    private fun assertWheelShows(
+        tags: WizardDateStepTestTags,
+        day: String,
+        month: String,
+        year: String,
+    ) {
+        assertWheelState(tags.dayWheel, day)
+        assertWheelState(tags.monthWheel, month)
+        assertWheelState(tags.yearWheel, year)
+    }
+
     private fun spinTo(
         tags: WizardDateStepTestTags,
         date: DmyDate,
@@ -229,8 +283,6 @@ class TripDatesValidationTest {
 
     private companion object {
         const val DEPARTURE_BEFORE_ALLOWED = "Date you left for your trip must be on or after 24 July 2025"
-        const val DEPARTURE_IN_FUTURE = "Date you left for your trip must be today or in the past"
-        const val RETURN_IN_FUTURE = "Date you returned from your trip must be today or in the past"
         const val RETURN_BEFORE_DEPARTURE =
             "Date you returned from your trip must be the same as or after the date you left"
     }
