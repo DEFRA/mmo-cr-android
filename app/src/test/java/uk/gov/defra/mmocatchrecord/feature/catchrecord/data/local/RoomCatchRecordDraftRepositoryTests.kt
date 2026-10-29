@@ -70,11 +70,29 @@ class RoomCatchRecordDraftRepositoryTests {
         }
 
     @Test
-    fun `starting a draft twice for the same vessel returns the existing active draft, not a duplicate`() =
+    fun `starting a draft twice for the same vessel creates two independent drafts`() =
         runTest {
             val first = repository.startDraft("vessel-achilles").getOrThrow()
             val second = repository.startDraft("vessel-achilles").getOrThrow()
-            assertEquals(first.id, second.id)
+            assertTrue(first.id != second.id)
+            assertTrue(first.catchRecordReference != second.catchRecordReference)
+            assertEquals(DraftStatus.Draft, repository.getDraftById(first.id).getOrThrow()?.status)
+            assertEquals(DraftStatus.Draft, repository.getDraftById(second.id).getOrThrow()?.status)
+        }
+
+    @Test
+    fun `creating a draft whose id already exists fails rather than adopting the existing row`() =
+        runTest {
+            val existing = repository.startDraft("vessel-achilles").getOrThrow()
+            val duplicate =
+                CatchRecordDraftFactory.newDraft(
+                    vesselId = "vessel-hercules",
+                    id = existing.id,
+                    reference = CatchRecordReferenceGenerator.generate("B14974", 2_000L),
+                )
+            val result = repository.startDraft(duplicate)
+            assertTrue(result.isFailure)
+            assertEquals("vessel-achilles", repository.getDraftById(existing.id).getOrThrow()?.vesselId)
         }
 
     @Test
@@ -122,9 +140,9 @@ class RoomCatchRecordDraftRepositoryTests {
         }
 
     @Test
-    fun `getActiveDraft returns null when the vessel has no active draft`() =
+    fun `getDraftById returns null when no draft with that id exists`() =
         runTest {
-            val result = repository.getActiveDraft("vessel-with-no-draft")
+            val result = repository.getDraftById("draft-that-does-not-exist")
             assertTrue(result.isSuccess)
             assertNull(result.getOrThrow())
         }
@@ -170,7 +188,7 @@ class RoomCatchRecordDraftRepositoryTests {
                         ),
                 )
             val saved = repository.saveDraft(fullDraft).getOrThrow()
-            val reloaded = repository.getActiveDraft("vessel-hercules").getOrThrow()
+            val reloaded = repository.getDraftById(started.id).getOrThrow()
             assertNotNull(reloaded)
             assertEquals(saved.id, reloaded!!.id)
             assertEquals(true, reloaded.isTripToday)
@@ -209,7 +227,7 @@ class RoomCatchRecordDraftRepositoryTests {
                         ),
                 )
             repository.saveDraft(fullDraft).getOrThrow()
-            val reloaded = repository.getActiveDraft("vessel-hercules").getOrThrow()
+            val reloaded = repository.getDraftById(started.id).getOrThrow()
             val gearUse = reloaded!!.gearUses.single()
             assertEquals(4, gearUse.numberOfShots)
             assertTrue(gearUse.confirmedUsedOnTrip)
@@ -227,7 +245,7 @@ class RoomCatchRecordDraftRepositoryTests {
                         ),
                 )
             repository.saveDraft(fullDraft).getOrThrow()
-            val reloaded = repository.getActiveDraft("vessel-hercules").getOrThrow()
+            val reloaded = repository.getDraftById(started.id).getOrThrow()
             val gearUse = reloaded!!.gearUses.single()
             assertNull(gearUse.numberOfShots)
             assertTrue(!gearUse.confirmedUsedOnTrip)
@@ -270,7 +288,7 @@ class RoomCatchRecordDraftRepositoryTests {
                         ),
                 )
             repository.saveDraft(fullDraft).getOrThrow()
-            val reloaded = repository.getActiveDraft("vessel-hercules").getOrThrow()
+            val reloaded = repository.getDraftById(started.id).getOrThrow()
             assertEquals(3, reloaded!!.gearUses.size)
             assertEquals("38E95", reloaded.gearUses.first { it.id == "gear-1" }.statisticalSubRectangleCode)
             assertEquals("99Z99", reloaded.gearUses.first { it.id == "gear-2" }.statisticalSubRectangleCode)
@@ -304,7 +322,7 @@ class RoomCatchRecordDraftRepositoryTests {
                         ),
                 )
             repository.saveDraft(fullDraft).getOrThrow()
-            val reloaded = repository.getActiveDraft("vessel-hercules").getOrThrow()
+            val reloaded = repository.getDraftById(started.id).getOrThrow()
             val withCoordinates = reloaded!!.gearUses.first { it.id == "gear-1" }
             val withoutCoordinates = reloaded.gearUses.first { it.id == "gear-2" }
             assertEquals(50.9, withCoordinates.statisticalSubRectangleLatitude)
@@ -343,7 +361,7 @@ class RoomCatchRecordDraftRepositoryTests {
                         ),
                 )
             repository.saveDraft(fullDraft).getOrThrow()
-            val reloaded = repository.getActiveDraft("vessel-hercules").getOrThrow()
+            val reloaded = repository.getDraftById(started.id).getOrThrow()
             assertEquals(2, reloaded!!.gearUses.size)
             val gearUseIds = reloaded.gearUses.map { it.id }
             assertTrue(gearUseIds.containsAll(listOf("gear-1", "gear-2")))
@@ -394,7 +412,7 @@ class RoomCatchRecordDraftRepositoryTests {
                         ),
                 )
             repository.saveDraft(fullDraft).getOrThrow()
-            val reloaded = repository.getActiveDraft("vessel-hercules").getOrThrow()
+            val reloaded = repository.getDraftById(started.id).getOrThrow()
             assertEquals(2, reloaded!!.gearUses.size)
             val pots = reloaded.gearUses.first { it.id == "gear-1" }
             assertEquals("gear-pots", pots.gearTypeId)
@@ -460,7 +478,7 @@ class RoomCatchRecordDraftRepositoryTests {
                         ),
                 )
             repository.saveDraft(fullDraft).getOrThrow()
-            val reloaded = repository.getActiveDraft("vessel-hercules").getOrThrow()
+            val reloaded = repository.getDraftById(started.id).getOrThrow()
             assertNotNull(reloaded)
             assertEquals(true, reloaded!!.notLandedStraightAway)
             assertEquals(1, reloaded.notLandedSpeciesEntries.size)
@@ -486,7 +504,7 @@ class RoomCatchRecordDraftRepositoryTests {
         runTest {
             val started = repository.startDraft("vessel-hercules").getOrThrow()
             repository.saveDraft(started).getOrThrow()
-            val reloaded = repository.getActiveDraft("vessel-hercules").getOrThrow()
+            val reloaded = repository.getDraftById(started.id).getOrThrow()
             assertNull(reloaded!!.notLandedStraightAway)
             assertTrue(reloaded.notLandedSpeciesEntries.isEmpty())
         }
@@ -505,7 +523,7 @@ class RoomCatchRecordDraftRepositoryTests {
             repository.saveDraft(withOneGear).getOrThrow()
             val withNoGear = withOneGear.copy(gearUses = emptyList())
             repository.saveDraft(withNoGear).getOrThrow()
-            val reloaded = repository.getActiveDraft("vessel-hercules").getOrThrow()
+            val reloaded = repository.getDraftById(started.id).getOrThrow()
             assertTrue(reloaded!!.gearUses.isEmpty())
         }
 
@@ -524,7 +542,7 @@ class RoomCatchRecordDraftRepositoryTests {
             val deleteResult = repository.deleteDraft(withGear.id)
             assertTrue(deleteResult.isSuccess)
             assertNull(dao.findDraftEntity(withGear.id))
-            assertNull(repository.getActiveDraft("vessel-achilles").getOrThrow())
+            assertNull(repository.getDraftById(withGear.id).getOrThrow())
         }
 
     @Test
@@ -553,8 +571,29 @@ class RoomCatchRecordDraftRepositoryTests {
             assertEquals("B14974-14112023-221320", started.catchRecordReference)
 
             // Round-trips unchanged through a save/reload.
-            val reloaded = repository.getActiveDraft("vessel-achilles").getOrThrow()
+            val reloaded = repository.getDraftById(started.id).getOrThrow()
             assertEquals(started.catchRecordReference, reloaded?.catchRecordReference)
+        }
+
+    @Test
+    fun `a reference collision across different vessels is resolved by advancing one second`() =
+        runTest {
+            clockMillis = 1_700_000_000_000L
+            val first = repository.startDraft("vessel-achilles").getOrThrow()
+            assertEquals("B14974-14112023-221320", first.catchRecordReference)
+
+            // Same clock tick as "first" (different vessel, different id) collides on reference.
+            val second =
+                repository
+                    .startDraft(
+                        CatchRecordDraftFactory.newDraft(
+                            vesselId = "vessel-hercules",
+                            id = "id-collision",
+                            reference = CatchRecordReferenceGenerator.generate("B14974", clockMillis),
+                        ),
+                    ).getOrThrow()
+
+            assertEquals("B14974-14112023-221321", second.catchRecordReference)
         }
 
     @Test
@@ -568,8 +607,7 @@ class RoomCatchRecordDraftRepositoryTests {
                 )
             repository.saveDraft(updated).getOrThrow()
 
-            // PendingSync is a terminal, non-"active" status, so it must be reloaded by id rather than via
-            // getActiveDraft (which only ever returns Draft/ReadyToSubmit — see [DraftStatus.isActive]).
+            // A draft is only ever addressed by its own id (ADR 0018).
             val reloaded = repository.getDraftById(updated.id).getOrThrow()
             assertEquals(DraftStatus.PendingSync, reloaded?.status)
             assertTrue(reloaded?.lateSubmissionWarningAcknowledged == true)
@@ -594,6 +632,22 @@ class RoomCatchRecordDraftRepositoryTests {
             clockMillis = 9_000L
             val saved = repository.saveDraft(started.copy(isTripToday = true)).getOrThrow()
             assertEquals(5_000L, saved.createdAtEpochMillis)
+        }
+
+    @Test
+    fun `startDraft preserves a candidate's own createdAt instead of stamping the clock time`() =
+        runTest {
+            clockMillis = 5_000L
+            val candidate =
+                CatchRecordDraftFactory
+                    .newDraft(vesselId = "vessel-achilles", id = "id-preset", reference = "B14974-1")
+                    .copy(createdAtEpochMillis = 1_000L)
+
+            clockMillis = 9_000L
+            val started = repository.startDraft(candidate).getOrThrow()
+
+            assertEquals(1_000L, started.createdAtEpochMillis)
+            assertEquals(9_000L, started.modifiedAtEpochMillis)
         }
 
     @Test

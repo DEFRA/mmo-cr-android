@@ -16,6 +16,9 @@
     <string name="records_reference_pending">Reference not yet assigned</string>
     <string name="records_trip_end_date_not_set">Not entered yet</string>
     <string name="records_created_by_you">You</string>
+    <!-- Visible date leads the name per WCAG 2.5.3; distinguishes a vessel's multiple drafts (ADR 0018). -->
+    <string name="records_row_accessible_label">%1$s, %2$s, %3$s, Trip ID %4$s</string>
+    <string name="records_reference_not_assigned">Not assigned yet</string>
     <string name="pagination_showing">Showing %1$d to %2$d of %3$d</string>
     <string name="pagination_previous">Previous</string>
     <string name="pagination_next">Next</string>
@@ -99,8 +102,13 @@
     <string name="date_year_label">Year</string>
     <string name="error_summary_title">There is a problem</string>
     <string name="date_error_invalid_date">Enter a real date</string>
-    <string name="date_error_return_before_departure">Return date must be on or after the departure date</string>
-    <string name="departure_port_title">Select the port you set off from</string>
+    <string name="date_error_departure_before_earliest">Date you left for your trip must be on or after 24 July 2025</string>
+    <string name="date_error_departure_in_future">Date you left for your trip must be today or in the past</string>
+    <string name="date_error_return_in_future">Date you returned from your trip must be today or in the past</string>
+    <string name="date_error_return_before_departure">Date you returned from your trip must be the same as or after the date you left</string>
+    <string name="departure_port_title">Enter the port or closest port you set off from</string>
+    <string name="second_entry_departure_port_title">Select the port you set off from</string>
+    <string name="first_entry_return_port_title">Enter the port or closest port you returned to</string>
     <string name="return_port_title">Select the port you returned to</string>
     <string name="port_selection_confirm_title">Was %1$s the port or the closest port you set off from and returned to?</string>
     <string name="autocomplete_search_placeholder">Type to search (minimum 2 characters)</string>
@@ -185,6 +193,11 @@
     <string name="add_a_species_action">Add a species</string>
     <string name="remove_a_species_action">Remove a species</string>
     <string name="species_checklist_error_required">Select at least one species</string>
+    <string name="remove_species_title">Remove a species caught with %1$s</string>
+    <string name="remove_species_title_fallback">Remove a species</string>
+    <string name="remove_species_instruction">Select the species you want to remove, then delete them.</string>
+    <string name="remove_species_error_required">Select the species you want to remove</string>
+    <string name="delete_action">Delete</string>
     <string name="species_weight_error_required_above_min">Enter the weight above minimum size retained</string>
     <string name="species_weight_error_required_kept_onboard">Enter the weight above minimum size kept onboard or in keep pots in kilograms</string>
     <string name="species_weight_error_below_minimum">Weight for %1$s must be more than 0kg</string>

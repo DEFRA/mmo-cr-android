@@ -16,6 +16,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
+import androidx.compose.ui.unit.Density
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -343,6 +344,57 @@ class MapCanvasTests {
                 predicate = ::isGlyph,
             )
         assertTrue("A port must render its name beneath its dot", named)
+    }
+
+    /** Two ports at the same screen position with different names — the overlap case [portLabelBounds] and
+     *  [drawPorts] must resolve without crashing or garbling text. */
+    private fun overlappingPortsDataset(): MapDataset {
+        val sharedPoint = SerializablePoint(0.0, 55.0)
+        return MapDataset(
+            formatVersion = MapDataset.CURRENT_FORMAT_VERSION,
+            land = emptyList(),
+            subRectangles = emptyList(),
+            ports =
+                listOf(
+                    SerializablePort(portCode = "PORT1", name = "Alpha Harbour", point = sharedPoint),
+                    SerializablePort(portCode = "PORT2", name = "Beta Harbour", point = sharedPoint),
+                ),
+        )
+    }
+
+    @Test
+    fun twoPortsAtTheSameLocationRenderWithoutCrashing() {
+        composeTestRule.setContent {
+            WizardTestTheme {
+                MapCanvas(
+                    dataset = overlappingPortsDataset(),
+                    cameraState = MapCameraState(wideCamera) {},
+                    selection = MapSelectionState(null) {},
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag(MapScreenTestTags.MAP).captureToImage()
+    }
+
+    @Test
+    fun twoPortLabelsAtTheSamePositionAreDetectedAsOverlapping() {
+        val labelPaints = MapLabelPaints(Density(density = 1f, fontScale = 1f))
+
+        val first = portLabelBounds("Alpha Harbour", centerX = 100f, baselineY = 100f, labelPaints)
+        val second = portLabelBounds("Beta Harbour", centerX = 100f, baselineY = 100f, labelPaints)
+
+        assertTrue(first.overlapsRect(second))
+    }
+
+    @Test
+    fun twoPortLabelsFarApartAreNotOverlapping() {
+        val labelPaints = MapLabelPaints(Density(density = 1f, fontScale = 1f))
+
+        val first = portLabelBounds("Alpha Harbour", centerX = 0f, baselineY = 100f, labelPaints)
+        val second = portLabelBounds("Beta Harbour", centerX = 10_000f, baselineY = 100f, labelPaints)
+
+        assertFalse(first.overlapsRect(second))
     }
 
     private fun clamp(

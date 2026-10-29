@@ -12,7 +12,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -136,7 +136,7 @@ class GearSpeciesChecklistScreenTests {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = { submitted = it },
                     modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -170,7 +170,7 @@ class GearSpeciesChecklistScreenTests {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
                 )
@@ -207,7 +207,7 @@ class GearSpeciesChecklistScreenTests {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = { submitted = it },
                     modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -265,7 +265,7 @@ class GearSpeciesChecklistScreenTests {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
                     modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -295,7 +295,7 @@ class GearSpeciesChecklistScreenTests {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = { submitted = it },
                 )
@@ -317,7 +317,7 @@ class GearSpeciesChecklistScreenTests {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
                     modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -342,7 +342,7 @@ class GearSpeciesChecklistScreenTests {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = { submitted = it },
                     modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -373,7 +373,7 @@ class GearSpeciesChecklistScreenTests {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
                     modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -409,7 +409,7 @@ class GearSpeciesChecklistScreenTests {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
                     modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -439,7 +439,7 @@ class GearSpeciesChecklistScreenTests {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
                     modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -469,7 +469,7 @@ class GearSpeciesChecklistScreenTests {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
                     modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -491,7 +491,7 @@ class GearSpeciesChecklistScreenTests {
     }
 
     @Test
-    fun removeASpeciesLinkIsDisabledWhenNothingIsCheckedButRemainsVisible() {
+    fun removeASpeciesLinkIsAlwaysEnabledWhenSpeciesAreAdded() {
         val gearUse = gearUseWithAddedSpecies(listOf(cod.id))
         composeTestRule.setContent {
             MmoTheme {
@@ -499,7 +499,7 @@ class GearSpeciesChecklistScreenTests {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
                 )
@@ -509,12 +509,12 @@ class GearSpeciesChecklistScreenTests {
         composeTestRule
             .onNodeWithTag(GearSpeciesChecklistScreenTestTags.REMOVE_SPECIES_ACTION)
             .assertIsDisplayed()
-            .assertIsNotEnabled()
+            .assertIsEnabled()
     }
 
     @Test
-    fun removeASpeciesLinkRemovesOnlyCheckedSpeciesFromTheGearUse() {
-        var updated: CatchRecordDraft? = null
+    fun removeASpeciesLinkNavigatesToTheRemoveSpeciesPage() {
+        var navigated = false
         val gearUse = gearUseWithAddedSpecies(listOf(cod.id, plaice.id))
         composeTestRule.setContent {
             MmoTheme {
@@ -522,7 +522,7 @@ class GearSpeciesChecklistScreenTests {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = { updated = it },
+                    onRemoveSpeciesRequested = { navigated = true },
                     onAddAnotherSpecies = {},
                     onSubmit = {},
                     modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -530,19 +530,12 @@ class GearSpeciesChecklistScreenTests {
             }
         }
 
-        composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
         composeTestRule
             .onNodeWithTag(GearSpeciesChecklistScreenTestTags.REMOVE_SPECIES_ACTION)
             .performScrollTo()
             .performClick()
 
-        val remainingSpeciesIds =
-            updated
-                ?.gearUses
-                ?.single()
-                ?.speciesWeights
-                ?.map { it.speciesId }
-        assertEquals(listOf(plaice.id), remainingSpeciesIds)
+        assertTrue(navigated)
     }
 
     private fun gearUseWithConfirmedWeight(weightKg: Double) =
@@ -573,7 +566,7 @@ class GearSpeciesChecklistScreenTests {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
                     onDirtyChanged = { lastDirty = it },
@@ -594,7 +587,7 @@ class GearSpeciesChecklistScreenTests {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
                     onDirtyChanged = { lastDirty = it },
@@ -620,7 +613,7 @@ class GearSpeciesChecklistScreenTests {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
                     onDirtyChanged = { lastDirty = it },
@@ -649,7 +642,7 @@ class GearSpeciesChecklistScreenTests {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
                     onDirtyChanged = { lastDirty = it },
@@ -675,7 +668,7 @@ class GearSpeciesChecklistScreenTests {
                         draft = draftWith(gearUse),
                         gearUse = gearUse,
                         speciesList = speciesList,
-                        onRemoveSpecies = {},
+                        onRemoveSpeciesRequested = {},
                         onAddAnotherSpecies = {},
                         onSubmit = { submitted = it },
                         onDirtyChanged = { lastDirty = it },
@@ -688,7 +681,7 @@ class GearSpeciesChecklistScreenTests {
                         draft = requireNotNull(submitted),
                         gearUse = updatedGearUse,
                         speciesList = speciesList,
-                        onRemoveSpecies = {},
+                        onRemoveSpeciesRequested = {},
                         onAddAnotherSpecies = {},
                         onSubmit = {},
                         onDirtyChanged = { lastDirty = it },
@@ -737,7 +730,7 @@ class GearSpeciesChecklistScreenTests {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
                     modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -775,7 +768,7 @@ class GearSpeciesChecklistScreenTests {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
                     modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -814,7 +807,7 @@ class GearSpeciesChecklistScreenTests {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
                     modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -845,7 +838,7 @@ class GearSpeciesChecklistScreenTests {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
                     modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -898,7 +891,7 @@ class GearSpeciesChecklistScreenTests {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
                     modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -933,7 +926,7 @@ class GearSpeciesChecklistScreenTests {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList + annualQuotaOnlySpecies,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
                     modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -967,7 +960,7 @@ class GearSpeciesChecklistScreenTests {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = { submitted = it },
                     modifier = Modifier.verticalScroll(rememberScrollState()),

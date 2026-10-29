@@ -35,17 +35,38 @@ internal fun rememberPortConfirmationVisible(
     mutableStateOf(isSinglePortConfirmationInitiallyShown(favouritePorts, initialSelection))
 }
 
-/** The scaffold title: the shared confirm-question wording naming the sole favourite port, or [defaultTitleRes]. */
+/** Whether [PortSelectionStepContent] initially renders its free-text search field rather than the
+ *  favourites radio list, mirroring the `showSearch` seed inside that composable. */
+internal fun isPortSearchInitiallyShown(
+    favouritePorts: List<Port>,
+    initialSelection: PortSelection?,
+): Boolean = favouritePorts.isEmpty() || initialSelection?.selectionMode == PortSelectionMode.FirstTime
+
+/** Lifted search-field-visibility, seeded once and kept in sync by `onShowSearchChanged` so each
+ *  screen can pick between its first-entry ("Enter...") and second-entry ("Select...") titles. */
+@Composable
+internal fun rememberPortSearchVisible(
+    favouritePorts: List<Port>,
+    initialSelection: PortSelection?,
+) = rememberSaveable(favouritePorts.size) {
+    mutableStateOf(isPortSearchInitiallyShown(favouritePorts, initialSelection))
+}
+
+/** The scaffold title: the shared confirm-question wording naming the sole favourite port; otherwise
+ *  [firstEntryTitleRes] while the free-text search field is shown, or [secondEntryTitleRes] once
+ *  favourite ports are offered as radio options. */
 @Composable
 internal fun portSelectionScaffoldTitle(
     showingPortConfirmation: Boolean,
     favouritePorts: List<Port>,
-    defaultTitleRes: Int,
+    showSearch: Boolean,
+    firstEntryTitleRes: Int,
+    secondEntryTitleRes: Int,
 ): String =
-    if (showingPortConfirmation) {
-        stringResource(R.string.port_selection_confirm_title, favouritePorts.single().name)
-    } else {
-        stringResource(defaultTitleRes)
+    when {
+        showingPortConfirmation -> stringResource(R.string.port_selection_confirm_title, favouritePorts.single().name)
+        showSearch -> stringResource(firstEntryTitleRes)
+        else -> stringResource(secondEntryTitleRes)
     }
 
 /** The Yes/No radio pair for the single-port confirmation; [question] labels the group for TalkBack. */

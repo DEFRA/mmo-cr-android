@@ -109,6 +109,7 @@ fun WizardDateStepContent(
                     yearWheel = testTags.yearWheel,
                 ),
             focusRequester = wheelFocusRequester,
+            maxDate = today,
         )
         PrimaryActionButton(
             text = stringResource(R.string.save_and_continue),
@@ -116,6 +117,7 @@ fun WizardDateStepContent(
                 val result =
                     WizardDateInputValidator.validate(
                         date = wheelDate.toDmyDate(),
+                        today = today,
                         departureDate = departureDate,
                         isReturnDate = isReturnDate,
                     )
@@ -132,13 +134,14 @@ fun WizardDateStepContent(
     }
 }
 
-/** Last year to next year, widened to include a saved date outside that window. */
+/** Last year to this year, widened to include a saved date outside that window.
+ * Never extends past today's year: the wheel must not offer future dates. */
 internal fun pickerYearRange(
     today: LocalDate,
     initialDate: DmyDate?,
 ): IntRange {
     val first = minOf(today.year - 1, initialDate?.year ?: Int.MAX_VALUE)
-    val last = maxOf(today.year + 1, initialDate?.year ?: Int.MIN_VALUE)
+    val last = maxOf(today.year, initialDate?.year ?: Int.MIN_VALUE)
     return first..last
 }
 
@@ -151,6 +154,9 @@ private fun LocalDate.toDmyDate(): DmyDate = DmyDate(dayOfMonth, monthValue, yea
 private fun dateErrorMessage(error: DateInputError): String =
     when (error) {
         DateInputError.InvalidDate -> stringResource(R.string.date_error_invalid_date)
+        DateInputError.DepartureBeforeEarliest -> stringResource(R.string.date_error_departure_before_earliest)
+        DateInputError.DepartureInFuture -> stringResource(R.string.date_error_departure_in_future)
+        DateInputError.ReturnInFuture -> stringResource(R.string.date_error_return_in_future)
         DateInputError.ReturnBeforeDeparture -> stringResource(R.string.date_error_return_before_departure)
     }
 

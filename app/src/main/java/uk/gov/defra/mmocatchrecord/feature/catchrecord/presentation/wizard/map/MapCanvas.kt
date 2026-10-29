@@ -294,7 +294,7 @@ private fun DrawScope.drawMap(
 }
 
 /** Label paints built once per density/font scale rather than per frame — pan and zoom redraw continuously. */
-private class MapLabelPaints(
+internal class MapLabelPaints(
     density: Density,
 ) {
     val textSizePx = with(density) { LABEL_TEXT_SIZE_SP.sp.toPx() }
@@ -318,6 +318,7 @@ private class MapLabelPaints(
             strokeJoin = Paint.Join.ROUND
         }
     val portFill = textPaint(portTextSizePx, android.graphics.Color.BLACK)
+    val portMetrics: Paint.FontMetrics = portFill.fontMetrics
     val portBaselineOffsetPx =
         with(density) { PORT_DOT_RADIUS_DP.dp.toPx() + PORT_LABEL_GAP_DP.dp.toPx() } - portFill.fontMetrics.ascent
 }
@@ -547,6 +548,9 @@ private fun DrawScope.drawPorts(
     density: Density,
     labelPaints: MapLabelPaints,
 ) {
+    // Dots are always drawn; a name is skipped once it would overlap an already-placed one, so names never
+    // collide even when several ports sit close together on screen.
+    val placedLabelBounds = mutableListOf<Rect>()
     geometry.ports
         .asSequence()
         .filter { it.point.lon in viewport.minLon..viewport.maxLon && it.point.lat in viewport.minLat..viewport.maxLat }
@@ -560,11 +564,37 @@ private fun DrawScope.drawPorts(
                 center = Offset(screen[0], screen[1]),
             )
             val baselineY = screen[1] + labelPaints.portBaselineOffsetPx
-            val canvas = drawContext.canvas.nativeCanvas
-            canvas.drawText(port.name, screen[0], baselineY, labelPaints.portHalo)
-            canvas.drawText(port.name, screen[0], baselineY, labelPaints.portFill)
+            val labelBounds = portLabelBounds(port.name, screen[0], baselineY, labelPaints)
+            if (placedLabelBounds.none { it.overlapsRect(labelBounds) }) {
+                placedLabelBounds += labelBounds
+                val canvas = drawContext.canvas.nativeCanvas
+                canvas.drawText(port.name, screen[0], baselineY, labelPaints.portHalo)
+                canvas.drawText(port.name, screen[0], baselineY, labelPaints.portFill)
+            }
         }
 }
+
+/** The on-screen box a port name's halo occupies, padded by the halo's stroke width so names are kept apart
+ *  by their visible extent, not just their glyph outlines. */
+internal fun portLabelBounds(
+    name: String,
+    centerX: Float,
+    baselineY: Float,
+    labelPaints: MapLabelPaints,
+): Rect {
+    val haloPx = labelPaints.portHalo.strokeWidth
+    val halfWidth = labelPaints.portFill.measureText(name) / 2f + haloPx
+    val metrics = labelPaints.portMetrics
+    return Rect(
+        left = centerX - halfWidth,
+        top = baselineY + metrics.ascent - haloPx,
+        right = centerX + halfWidth,
+        bottom = baselineY + metrics.descent + haloPx,
+    )
+}
+
+internal fun Rect.overlapsRect(other: Rect): Boolean =
+    left < other.right && other.left < right && top < other.bottom && other.top < bottom
 
 private fun SerializablePoint.toGeoPointLocal() = GeoPoint(lon, lat)
 

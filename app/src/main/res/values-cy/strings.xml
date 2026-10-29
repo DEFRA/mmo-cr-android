@@ -19,6 +19,8 @@
     <string name="records_reference_pending">Cyfeirnod heb ei neilltuo eto</string>
     <string name="records_trip_end_date_not_set">Heb ei nodi eto</string>
     <string name="records_created_by_you">Chi</string>
+    <string name="records_row_accessible_label">%1$s, %2$s, %3$s, ID Taith %4$s</string>
+    <string name="records_reference_not_assigned">Heb ei neilltuo eto</string>
     <string name="pagination_showing">Yn dangos %1$d i %2$d o %3$d</string>
     <string name="pagination_previous">Blaenorol</string>
     <string name="pagination_next">Nesaf</string>
@@ -103,8 +105,13 @@
     <string name="date_year_label">Blwyddyn</string>
     <string name="error_summary_title">Mae problem</string>
     <string name="date_error_invalid_date">Rhowch ddyddiad go iawn</string>
-    <string name="date_error_return_before_departure">Rhaid i’r dyddiad dychwelyd fod ar neu ar ôl y dyddiad gadael</string>
-    <string name="departure_port_title">Dewiswch y porthladd y gwnaethoch adael ohono</string>
+    <string name="date_error_departure_before_earliest">Rhaid i’r dyddiad y gwnaethoch adael ar gyfer eich taith fod ar neu ar ôl 24 Gorffennaf 2025</string>
+    <string name="date_error_departure_in_future">Rhaid i’r dyddiad y gwnaethoch adael ar gyfer eich taith fod heddiw neu yn y gorffennol</string>
+    <string name="date_error_return_in_future">Rhaid i’r dyddiad y gwnaethoch ddychwelyd o’ch taith fod heddiw neu yn y gorffennol</string>
+    <string name="date_error_return_before_departure">Rhaid i’r dyddiad y gwnaethoch ddychwelyd o’ch taith fod yr un peth neu ar ôl y dyddiad y gwnaethoch adael</string>
+    <string name="departure_port_title">Rhowch y porthladd neu’r porthladd agosaf y gwnaethoch adael ohono</string>
+    <string name="second_entry_departure_port_title">Dewiswch y porthladd y gwnaethoch adael ohono</string>
+    <string name="first_entry_return_port_title">Rhowch y porthladd neu’r porthladd agosaf y gwnaethoch ddychwelyd iddo</string>
     <string name="return_port_title">Dewiswch y porthladd y gwnaethoch ddychwelyd iddo</string>
     <string name="port_selection_confirm_title">Ai %1$s oedd y porthladd neu’r porthladd agosaf y gwnaethoch adael ohono a dychwelyd iddo?</string>
     <string name="autocomplete_search_placeholder">Teipiwch i chwilio (isafswm 2 nod)</string>
@@ -195,6 +202,11 @@
     <string name="add_a_species_action">Ychwanegu rhywogaeth</string>
     <string name="remove_a_species_action">Dileu rhywogaeth</string>
     <string name="species_checklist_error_required">Dewiswch o leiaf un rhywogaeth</string>
+    <string name="remove_species_title">Dileu rhywogaeth a ddaliwyd gyda %1$s</string>
+    <string name="remove_species_title_fallback">Dileu rhywogaeth</string>
+    <string name="remove_species_instruction">Dewiswch y rhywogaethau rydych am eu dileu, yna dilëwch nhw.</string>
+    <string name="remove_species_error_required">Dewiswch y rhywogaethau rydych am eu dileu</string>
+    <string name="delete_action">Dileu</string>
     <string name="species_weight_error_required_above_min">Nodwch y pwysau uwchlaw\'r maint lleiaf a gedwir</string>
     <string name="species_weight_error_required_kept_onboard">Nodwch y pwysau uwchlaw\'r maint lleiaf a gedwir ar y cwch neu mewn cewyll cadw mewn cilogramau</string>
     <string name="species_weight_error_below_minimum">Rhaid i\'r pwysau ar gyfer %1$s fod yn fwy na 0kg</string>

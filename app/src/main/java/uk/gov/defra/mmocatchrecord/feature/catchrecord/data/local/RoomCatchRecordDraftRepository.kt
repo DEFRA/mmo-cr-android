@@ -10,9 +10,7 @@ import javax.inject.Inject
 
 /**
  * Room-backed, offline-first [CatchRecordDraftRepository] implementation. See ADR 0006 for the
- * SQLCipher-encrypted database this reads/writes, and the class doc comment on
- * [CatchRecordDraftRepository] for the "one active draft per vessel" (draft singularity) rule this
- * enforces.
+ * SQLCipher-encrypted database this reads/writes, and ADR 0018 for why every draft is independent.
  */
 class RoomCatchRecordDraftRepository
     @Inject
@@ -20,9 +18,6 @@ class RoomCatchRecordDraftRepository
         private val dao: CatchRecordDraftDao,
         private val clock: () -> Long,
     ) : CatchRecordDraftRepository {
-        override suspend fun getActiveDraft(vesselId: String): Result<CatchRecordDraft?> =
-            runCatching { dao.getActiveDraftWithChildren(vesselId)?.let(DraftMappers::toDomain) }
-
         override suspend fun getDraftById(draftId: String): Result<CatchRecordDraft?> =
             runCatching { dao.getDraftWithChildren(draftId)?.let(DraftMappers::toDomain) }
 
@@ -34,13 +29,9 @@ class RoomCatchRecordDraftRepository
                         createdAtEpochMillis = candidate.createdAtEpochMillis ?: creationTime,
                         modifiedAtEpochMillis = creationTime,
                     )
-                // Race-safe find-or-create (see ADR 0010): returns the vessel's existing active draft
-                // unchanged if one already exists (including one created concurrently by another caller),
-                // never a duplicate.
-                val winningEntity =
-                    dao.findOrCreateActiveDraft(stamped.vesselId, DraftMappers.toEntities(stamped).draft)
-                dao.getDraftWithChildren(winningEntity.id)?.let(DraftMappers::toDomain)
-                    ?: error("Draft '${winningEntity.id}' vanished immediately after find-or-create")
+                val created = dao.createDraft(DraftMappers.toEntities(stamped).draft)
+                dao.getDraftWithChildren(created.id)?.let(DraftMappers::toDomain)
+                    ?: error("Draft '${created.id}' vanished immediately after creation")
             }
 
         override suspend fun saveDraft(draft: CatchRecordDraft): Result<CatchRecordDraft> =

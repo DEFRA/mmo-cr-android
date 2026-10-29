@@ -84,10 +84,20 @@ fun GdsDateWheelPicker(
     testTags: GdsDateWheelPickerTestTags,
     modifier: Modifier = Modifier,
     focusRequester: FocusRequester? = null,
+    maxDate: LocalDate? = null,
 ) {
     val locale = appLocale()
     val fontScale = LocalDensity.current.fontScale.coerceAtLeast(1f)
     val daysInMonth = YearMonth.of(value.year, value.monthValue).lengthOfMonth()
+    val monthValues =
+        if (maxDate != null && value.year == maxDate.year) (1..maxDate.monthValue).toList() else (1..12).toList()
+    val dayValues =
+        if (maxDate != null && value.year == maxDate.year && value.monthValue == maxDate.monthValue) {
+            (1..maxDate.dayOfMonth).toList()
+        } else {
+            (1..daysInMonth).toList()
+        }
+    val yearValues = if (maxDate != null) yearRange.filter { it <= maxDate.year } else yearRange.toList()
 
     fun update(
         year: Int = value.year,
@@ -95,7 +105,8 @@ fun GdsDateWheelPicker(
         day: Int = value.dayOfMonth,
     ) {
         val maxDay = YearMonth.of(year, month).lengthOfMonth()
-        onValueChange(LocalDate.of(year, month, day.coerceAtMost(maxDay)))
+        val newDate = LocalDate.of(year, month, day.coerceAtMost(maxDay))
+        onValueChange(if (maxDate != null && newDate > maxDate) maxDate else newDate)
     }
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
@@ -106,7 +117,7 @@ fun GdsDateWheelPicker(
         ) {
             DateWheel(
                 label = stringResource(R.string.date_month_label),
-                values = (1..12).toList(),
+                values = monthValues,
                 selected = value.monthValue,
                 displayText = { Month.of(it).getDisplayName(TextStyle.SHORT, locale) },
                 spokenText = { Month.of(it).getDisplayName(TextStyle.FULL_STANDALONE, locale) },
@@ -119,7 +130,7 @@ fun GdsDateWheelPicker(
             )
             DateWheel(
                 label = stringResource(R.string.date_day_label),
-                values = (1..daysInMonth).toList(),
+                values = dayValues,
                 selected = value.dayOfMonth,
                 displayText = { it.toString().padStart(2, '0') },
                 spokenText = { it.toString() },
@@ -129,7 +140,7 @@ fun GdsDateWheelPicker(
             )
             DateWheel(
                 label = stringResource(R.string.date_year_label),
-                values = yearRange.toList(),
+                values = yearValues,
                 selected = value.year,
                 displayText = { it.toString() },
                 spokenText = { it.toString() },

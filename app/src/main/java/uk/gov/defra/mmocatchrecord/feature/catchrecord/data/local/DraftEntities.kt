@@ -11,10 +11,8 @@ import androidx.room.PrimaryKey
  * aggregate. See ADR 0006 for the SQLCipher at-rest encryption wrapping this database, and ADR 0007 for how
  * this is driven by the wizard flow.
  *
- * The "one active draft per vessel" rule (draft singularity) is enforced by
- * [CatchRecordDraftDao]/the repository at the application layer within a transaction (a partial/conditional
- * unique index is not expressed by Room's annotation API), not by a SQL constraint on this table. The
- * `(vesselId, status)` index below exists purely to make that lookup query efficient.
+ * Drafts are independent — a vessel may hold many active ones (ADR 0018), so no uniqueness is enforced
+ * on `vesselId`. The `(vesselId, status)` index below serves the submitted-trip port-history lookup.
  */
 @Entity(
     tableName = "catch_record_draft",

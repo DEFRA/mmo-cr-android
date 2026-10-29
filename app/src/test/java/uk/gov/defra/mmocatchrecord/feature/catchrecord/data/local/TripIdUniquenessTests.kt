@@ -80,6 +80,19 @@ class TripIdUniquenessTests {
             assertEquals("B14974-25102026-013001", gmt.catchRecordReference)
         }
 
+    /** ADR 0018: two same-vessel drafts created in the same second both persist, one second apart. */
+    @Test
+    fun `two active drafts for the same vessel in the same second both persist with distinct Trip IDs`() =
+        runTest {
+            val first = start("vessel-achilles")
+            val second = start("vessel-achilles")
+
+            assertEquals("B14974-14112023-221320", first.catchRecordReference)
+            assertEquals("B14974-14112023-221321", second.catchRecordReference)
+            assertEquals(DraftStatus.Draft, repository.getDraftById(first.id).getOrThrow()?.status)
+            assertEquals(DraftStatus.Draft, repository.getDraftById(second.id).getOrThrow()?.status)
+        }
+
     @Test
     fun `the database itself rejects a duplicate Trip ID`() =
         runTest {
