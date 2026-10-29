@@ -106,7 +106,9 @@
     <string name="date_error_departure_in_future">Date you left for your trip must be today or in the past</string>
     <string name="date_error_return_in_future">Date you returned from your trip must be today or in the past</string>
     <string name="date_error_return_before_departure">Date you returned from your trip must be the same as or after the date you left</string>
-    <string name="departure_port_title">Select the port you set off from</string>
+    <string name="departure_port_title">Enter the port or closest port you set off from</string>
+    <string name="second_entry_departure_port_title">Select the port you set off from</string>
+    <string name="first_entry_return_port_title">Enter the port or closest port you returned to</string>
     <string name="return_port_title">Select the port you returned to</string>
     <string name="port_selection_confirm_title">Was %1$s the port or the closest port you set off from and returned to?</string>
     <string name="autocomplete_search_placeholder">Type to search (minimum 2 characters)</string>

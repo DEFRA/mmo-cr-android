@@ -109,7 +109,9 @@
     <string name="date_error_departure_in_future">Rhaid i’r dyddiad y gwnaethoch adael ar gyfer eich taith fod heddiw neu yn y gorffennol</string>
     <string name="date_error_return_in_future">Rhaid i’r dyddiad y gwnaethoch ddychwelyd o’ch taith fod heddiw neu yn y gorffennol</string>
     <string name="date_error_return_before_departure">Rhaid i’r dyddiad y gwnaethoch ddychwelyd o’ch taith fod yr un peth neu ar ôl y dyddiad y gwnaethoch adael</string>
-    <string name="departure_port_title">Dewiswch y porthladd y gwnaethoch adael ohono</string>
+    <string name="departure_port_title">Rhowch y porthladd neu’r porthladd agosaf y gwnaethoch adael ohono</string>
+    <string name="second_entry_departure_port_title">Dewiswch y porthladd y gwnaethoch adael ohono</string>
+    <string name="first_entry_return_port_title">Rhowch y porthladd neu’r porthladd agosaf y gwnaethoch ddychwelyd iddo</string>
     <string name="return_port_title">Dewiswch y porthladd y gwnaethoch ddychwelyd iddo</string>
     <string name="port_selection_confirm_title">Ai %1$s oedd y porthladd neu’r porthladd agosaf y gwnaethoch adael ohono a dychwelyd iddo?</string>
     <string name="autocomplete_search_placeholder">Teipiwch i chwilio (isafswm 2 nod)</string>

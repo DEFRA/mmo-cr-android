@@ -34,7 +34,7 @@ object ReturnPortScreenTestTags {
     const val ERROR_MESSAGE = "return_port_error_message"
 }
 
-@Suppress("FunctionNaming")
+@Suppress("FunctionNaming", "LongMethod")
 @Composable
 fun ReturnPortScreen(
     viewModel: CatchRecordFlowViewModel,
@@ -47,9 +47,17 @@ fun ReturnPortScreen(
     val favouritePorts = state.previouslyUsedPorts
     val initialReturnPort = (state.status as? UiStatus.Content)?.value?.returnPort
     var showingPortConfirmation by rememberPortConfirmationVisible(favouritePorts, initialReturnPort)
+    var showingSearch by rememberPortSearchVisible(favouritePorts, initialReturnPort)
     CatchRecordWizardScaffold(
         screenTestTag = ReturnPortScreenTestTags.SCREEN,
-        title = portSelectionScaffoldTitle(showingPortConfirmation, favouritePorts, R.string.return_port_title),
+        title =
+            portSelectionScaffoldTitle(
+                showingPortConfirmation = showingPortConfirmation,
+                favouritePorts = favouritePorts,
+                showSearch = showingSearch,
+                firstEntryTitleRes = R.string.first_entry_return_port_title,
+                secondEntryTitleRes = R.string.return_port_title,
+            ),
         onBack = onBack,
         modifier = modifier,
         referenceNumber = state.catchRecordReference,
@@ -91,6 +99,7 @@ fun ReturnPortScreen(
                     },
                     onDirtyChanged = { hasUnsavedChanges = it },
                     onShowingPortConfirmationChanged = { showingPortConfirmation = it },
+                    onShowSearchChanged = { showingSearch = it },
                 )
         }
     }
