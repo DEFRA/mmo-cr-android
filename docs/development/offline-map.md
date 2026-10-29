@@ -108,8 +108,9 @@ Bottom → top, single `Canvas` draw pass, viewport-clipped:
    whose centroid is not on land, and never for the selected cell (step 8 draws that one).
 7. Ports — viewport-culled cyan dots, de-duplicated by name and coordinate, each with its name centred beneath
    it in smaller black text over a white halo (ports sit on the coastline, so no single colour passes AA on
-   both sea and land). Display-only, never intercept taps. There is no collision avoidance, so names of
-   distinct ports close together can overlap.
+   both sea and land). Display-only, never intercept taps. A port's dot is always drawn; its name is skipped
+   once its halo's bounding box would overlap an already-placed name (earlier dataset order wins), so names
+   of distinct ports close together never collide.
 8. The selected sub-rectangle's code — always drawn, bypassing both the sea-only rule in step 6 and the
    visible-label cap. It is drawn last so a port dot or name cannot obscure it, and is clamped into the
    selected cell's own on-screen box, falling back to the viewport when the chip cannot fit there. The code
