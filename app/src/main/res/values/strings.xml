@@ -102,7 +102,10 @@
     <string name="date_year_label">Year</string>
     <string name="error_summary_title">There is a problem</string>
     <string name="date_error_invalid_date">Enter a real date</string>
-    <string name="date_error_return_before_departure">Return date must be on or after the departure date</string>
+    <string name="date_error_departure_before_earliest">Date you left for your trip must be on or after 24 July 2025</string>
+    <string name="date_error_departure_in_future">Date you left for your trip must be today or in the past</string>
+    <string name="date_error_return_in_future">Date you returned from your trip must be today or in the past</string>
+    <string name="date_error_return_before_departure">Date you returned from your trip must be the same as or after the date you left</string>
     <string name="departure_port_title">Select the port you set off from</string>
     <string name="return_port_title">Select the port you returned to</string>
     <string name="port_selection_confirm_title">Was %1$s the port or the closest port you set off from and returned to?</string>

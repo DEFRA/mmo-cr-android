@@ -116,6 +116,7 @@ fun WizardDateStepContent(
                 val result =
                     WizardDateInputValidator.validate(
                         date = wheelDate.toDmyDate(),
+                        today = today,
                         departureDate = departureDate,
                         isReturnDate = isReturnDate,
                     )
@@ -151,6 +152,9 @@ private fun LocalDate.toDmyDate(): DmyDate = DmyDate(dayOfMonth, monthValue, yea
 private fun dateErrorMessage(error: DateInputError): String =
     when (error) {
         DateInputError.InvalidDate -> stringResource(R.string.date_error_invalid_date)
+        DateInputError.DepartureBeforeEarliest -> stringResource(R.string.date_error_departure_before_earliest)
+        DateInputError.DepartureInFuture -> stringResource(R.string.date_error_departure_in_future)
+        DateInputError.ReturnInFuture -> stringResource(R.string.date_error_return_in_future)
         DateInputError.ReturnBeforeDeparture -> stringResource(R.string.date_error_return_before_departure)
     }
 
