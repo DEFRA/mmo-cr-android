@@ -85,11 +85,11 @@ class RemoveSpeciesScreenViewModelTests {
             confirmedUsedOnTrip = true,
         )
 
-    /** Covers the title's gear-name lookup, the checkbox/delete happy path and the onBack + dispatch
+    /** Covers the title's vessel-name lookup, the checkbox/delete happy path and the onBack + dispatch
      * wiring from the public, Hilt-backed entry point (lines not reachable from [RemoveSpeciesScreenContent]
      * tests alone). */
     @Test
-    fun viewModelBackedScreenShowsTheGearNameInTitleAndDeletesSelectedSpeciesThenNavigatesBack() =
+    fun viewModelBackedScreenShowsTheVesselNameInTitleAndDeletesSelectedSpeciesThenNavigatesBack() =
         runTest {
             val dispatcher = StandardTestDispatcher(testScheduler)
             val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
@@ -115,11 +115,11 @@ class RemoveSpeciesScreenViewModelTests {
             testScheduler.advanceUntilIdle()
             composeTestRule.waitForIdle()
 
-            val expectedTitle = context.getString(R.string.remove_species_title, "seine nets")
+            val expectedTitle = context.getString(R.string.remove_species_title, "ACHILLES")
             composeTestRule.onNodeWithText(expectedTitle).assertIsDisplayed()
 
             composeTestRule.onNodeWithTag("${RemoveSpeciesScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
-            composeTestRule.onNodeWithTag(RemoveSpeciesScreenTestTags.DELETE_ACTION).performClick()
+            composeTestRule.onNodeWithTag(RemoveSpeciesScreenTestTags.CONTINUE_ACTION).performClick()
             testScheduler.advanceUntilIdle()
             composeTestRule.waitForIdle()
 
@@ -206,7 +206,7 @@ class RemoveSpeciesScreenViewModelTests {
 
             assertEquals(UiStatus.Idle, viewModel.state.value.status)
             composeTestRule.onNodeWithTag(RemoveSpeciesScreenTestTags.ERROR_MESSAGE).assertDoesNotExist()
-            composeTestRule.onNodeWithTag(RemoveSpeciesScreenTestTags.DELETE_ACTION).assertDoesNotExist()
+            composeTestRule.onNodeWithTag(RemoveSpeciesScreenTestTags.CONTINUE_ACTION).assertDoesNotExist()
         }
 
     /** Renders the screen's `@Preview` composable to cover it under the `testDevDebugUnitTest` gate,

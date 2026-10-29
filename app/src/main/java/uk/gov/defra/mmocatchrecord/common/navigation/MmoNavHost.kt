@@ -34,6 +34,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.NotLandedStraightAwaySpeciesRoute
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.PhaseThreeCompleteRoute
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.PhaseThreeCompleteScreen
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.RemoveGearRoute
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.RemoveSpeciesRoute
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.ReturnDateRoute
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.ReturnPortRoute
@@ -50,6 +51,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearSpeciesChecklistScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearSpeciesSearchScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearSummaryScreen
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.RemoveGearScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.RemoveSpeciesScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.landing.NotLandedStraightAwayDecisionScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.landing.NotLandedStraightAwaySpeciesScreen
@@ -192,6 +194,13 @@ fun MmoNavHost(
                 GearSummaryScreen(
                     viewModel = catchRecordFlowViewModel(navController, backStackEntry),
                     onNavigate = { navController.navigate(routeFor(it)) },
+                    onBack = { navController.popBackStack() },
+                    onNavigateToRemoveGear = { navController.navigate(RemoveGearRoute) },
+                )
+            }
+            composable<RemoveGearRoute> { backStackEntry ->
+                RemoveGearScreen(
+                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
                     onBack = { navController.popBackStack() },
                 )
             }

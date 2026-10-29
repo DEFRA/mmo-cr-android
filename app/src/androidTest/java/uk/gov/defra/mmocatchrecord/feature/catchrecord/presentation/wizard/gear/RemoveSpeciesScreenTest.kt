@@ -6,7 +6,6 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
@@ -79,7 +78,6 @@ class RemoveSpeciesScreenTest {
                     gearUse = gearUse,
                     speciesList = speciesList,
                     onDelete = {},
-                    onCancel = {},
                 )
             }
         }
@@ -89,7 +87,7 @@ class RemoveSpeciesScreenTest {
     }
 
     @Test
-    fun deletingWithNothingCheckedShowsAnErrorAndDoesNotDelete() {
+    fun continuingWithNothingCheckedShowsAnErrorAndDoesNotDelete() {
         var deleted: CatchRecordDraft? = null
         val gearUse = gearUseWithAddedSpecies(listOf(cod.id))
         composeTestRule.setContent {
@@ -99,19 +97,18 @@ class RemoveSpeciesScreenTest {
                     gearUse = gearUse,
                     speciesList = speciesList,
                     onDelete = { deleted = it },
-                    onCancel = {},
                 )
             }
         }
 
-        composeTestRule.onNodeWithTag(RemoveSpeciesScreenTestTags.DELETE_ACTION).performClick()
+        composeTestRule.onNodeWithTag(RemoveSpeciesScreenTestTags.CONTINUE_ACTION).performClick()
 
         composeTestRule.onNodeWithTag(RemoveSpeciesScreenTestTags.ERROR_MESSAGE).assertIsDisplayed()
         assertNull(deleted)
     }
 
     @Test
-    fun deletingOnlyCheckedSpeciesRemovesThemFromTheGearUse() {
+    fun continuingRemovesOnlyCheckedSpeciesRemovesThemFromTheGearUse() {
         var deleted: CatchRecordDraft? = null
         val gearUse = gearUseWithAddedSpecies(listOf(cod.id, plaice.id))
         composeTestRule.setContent {
@@ -121,13 +118,12 @@ class RemoveSpeciesScreenTest {
                     gearUse = gearUse,
                     speciesList = speciesList,
                     onDelete = { deleted = it },
-                    onCancel = {},
                 )
             }
         }
 
         composeTestRule.onNodeWithTag("${RemoveSpeciesScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
-        composeTestRule.onNodeWithTag(RemoveSpeciesScreenTestTags.DELETE_ACTION).performClick()
+        composeTestRule.onNodeWithTag(RemoveSpeciesScreenTestTags.CONTINUE_ACTION).performClick()
 
         val remainingSpeciesIds =
             deleted
@@ -136,28 +132,5 @@ class RemoveSpeciesScreenTest {
                 ?.speciesWeights
                 ?.map { it.speciesId }
         assertEquals(listOf(plaice.id), remainingSpeciesIds)
-    }
-
-    @Test
-    fun cancelInvokesOnCancelWithoutDeleting() {
-        var cancelled = false
-        var deleted: CatchRecordDraft? = null
-        val gearUse = gearUseWithAddedSpecies(listOf(cod.id))
-        composeTestRule.setContent {
-            MmoTheme {
-                RemoveSpeciesScreenContent(
-                    draft = draftWith(gearUse),
-                    gearUse = gearUse,
-                    speciesList = speciesList,
-                    onDelete = { deleted = it },
-                    onCancel = { cancelled = true },
-                )
-            }
-        }
-
-        composeTestRule.onNodeWithTag(RemoveSpeciesScreenTestTags.CANCEL_ACTION).performClick()
-
-        assertTrue(cancelled)
-        assertNull(deleted)
     }
 }

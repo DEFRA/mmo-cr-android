@@ -111,6 +111,7 @@ fun MapCanvas(
     selection: MapSelectionState,
     modifier: Modifier = Modifier,
     testTag: String = MapScreenTestTags.MAP,
+    heightOverWidth: Float = MAP_ASPECT_RATIO_HEIGHT_OVER_WIDTH,
     onChooseFromListRequested: () -> Unit = {},
 ) {
     val density = LocalDensity.current
@@ -149,7 +150,7 @@ fun MapCanvas(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1f / MAP_ASPECT_RATIO_HEIGHT_OVER_WIDTH)
+                    .aspectRatio(1f / heightOverWidth)
                     // Canvas does not clip by default â€” without this, land/grid/labels spill across the screen.
                     .clipToBounds()
                     .border(MAP_BORDER_DP.dp, Color.Black)

@@ -9,21 +9,22 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.AppLanguageProvider
 import uk.gov.defra.mmocatchrecord.common.design.GdsCheckboxGroup
-import uk.gov.defra.mmocatchrecord.common.design.GdsLinkAction
 import uk.gov.defra.mmocatchrecord.common.design.MmoColors
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
-import uk.gov.defra.mmocatchrecord.common.design.SecondaryActionButton
+import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
@@ -34,6 +35,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeigh
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldKeys
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Species
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Vessel
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordFlowEvent
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordFlowViewModel
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordFlowViewState
@@ -42,17 +44,15 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardLoadingState
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.catchRecordReference
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearSpeciesChecklistSupport.replaceGearUse
-import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map.MapSupport
 
 object RemoveSpeciesScreenTestTags {
     const val SCREEN = "remove_species_screen"
     const val ERROR_MESSAGE = "remove_species_error_message"
     const val CHECKBOX_PREFIX = "remove_species_checkbox"
-    const val DELETE_ACTION = "remove_species_delete_action"
-    const val CANCEL_ACTION = "remove_species_cancel_action"
+    const val CONTINUE_ACTION = "remove_species_continue_action"
 }
 
-/** Dedicated "Remove a species caught with {gear}" page, reached from [GearSpeciesChecklistScreen]'s link. */
+/** Dedicated "Remove species from vessel {vessel}" page, reached from [GearSpeciesChecklistScreen]'s link. */
 @Suppress("FunctionNaming")
 @Composable
 fun RemoveSpeciesScreen(
@@ -69,7 +69,6 @@ fun RemoveSpeciesScreen(
             viewModel.dispatch(CatchRecordFlowEvent.SpeciesRemoved(updatedDraft))
             onBack()
         },
-        onCancel = onBack,
         onRetry = { viewModel.dispatch(CatchRecordFlowEvent.Retry) },
         onBack = onBack,
         modifier = modifier,
@@ -82,20 +81,18 @@ private fun RemoveSpeciesScreen(
     state: CatchRecordFlowViewState,
     gearUseId: String,
     onDelete: (CatchRecordDraft) -> Unit,
-    onCancel: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     onRetry: () -> Unit = {},
 ) {
     val draft = (state.status as? UiStatus.Content<CatchRecordDraft>)?.value
     val gearUse = draft?.gearUses?.firstOrNull { it.id == gearUseId }
-    val gearType = gearUse?.let { use -> state.gearTypes.firstOrNull { it.id == use.gearTypeId } }
-    val gearNameWithMeasurement = gearUse?.let { MapSupport.gearNameWithIdentifyingMeasurementFor(gearType, it) }
+    val vesselName = draft?.let { d -> state.vessels.firstOrNull { it.id == d.vesselId }?.name }
 
     CatchRecordWizardScaffold(
         screenTestTag = RemoveSpeciesScreenTestTags.SCREEN,
         title =
-            gearNameWithMeasurement?.let { stringResource(R.string.remove_species_title, it) }
+            vesselName?.let { stringResource(R.string.remove_species_title, it) }
                 ?: stringResource(R.string.remove_species_title_fallback),
         onBack = onBack,
         modifier = modifier,
@@ -123,7 +120,6 @@ private fun RemoveSpeciesScreen(
                         gearUse = gearUse,
                         speciesList = state.species,
                         onDelete = onDelete,
-                        onCancel = onCancel,
                     )
                 }
         }
@@ -137,25 +133,23 @@ fun RemoveSpeciesScreenContent(
     gearUse: GearUse,
     speciesList: List<Species>,
     onDelete: (CatchRecordDraft) -> Unit,
-    onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var checkedIds by rememberSaveable(gearUse.id) { mutableStateOf(emptySet<String>()) }
-    var showError by remember(gearUse.id) { mutableStateOf(false) }
+    var showError by rememberSaveable(gearUse.id) { mutableStateOf(false) }
 
     val options = GearSpeciesChecklistSupport.checkboxOptionsFor(gearUse, speciesList)
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-        Text(
-            text = stringResource(R.string.remove_species_instruction),
-            style = MaterialTheme.typography.bodyLarge,
-        )
         if (showError) {
             Text(
                 text = stringResource(R.string.remove_species_error_required),
                 color = MmoColors.ErrorRed,
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.testTag(RemoveSpeciesScreenTestTags.ERROR_MESSAGE),
+                modifier =
+                    Modifier
+                        .testTag(RemoveSpeciesScreenTestTags.ERROR_MESSAGE)
+                        .semantics { liveRegion = LiveRegionMode.Polite },
             )
         }
         GdsCheckboxGroup(
@@ -167,8 +161,8 @@ fun RemoveSpeciesScreenContent(
             },
             optionTestTagPrefix = RemoveSpeciesScreenTestTags.CHECKBOX_PREFIX,
         )
-        SecondaryActionButton(
-            text = stringResource(R.string.delete_action),
+        PrimaryActionButton(
+            text = stringResource(R.string.continue_action),
             onClick = {
                 if (checkedIds.isEmpty()) {
                     showError = true
@@ -178,12 +172,7 @@ fun RemoveSpeciesScreenContent(
                     onDelete(replaceGearUse(draft, updatedGearUse))
                 }
             },
-            modifier = Modifier.testTag(RemoveSpeciesScreenTestTags.DELETE_ACTION),
-        )
-        GdsLinkAction(
-            text = stringResource(R.string.cancel),
-            onClick = onCancel,
-            testTag = RemoveSpeciesScreenTestTags.CANCEL_ACTION,
+            modifier = Modifier.testTag(RemoveSpeciesScreenTestTags.CONTINUE_ACTION),
         )
     }
 }
@@ -193,7 +182,8 @@ fun RemoveSpeciesScreenContent(
 @Composable
 fun RemoveSpeciesScreen_Preview() {
     val gearType = GearType(id = "gear-seine-nets", name = "Boat or vessel seine")
-    val sampleSpecies = Species(id = "species-crg", name = "Green crab (CRG)", faoCode = "CRG")
+    val vessel = Vessel(id = "vessel-1", name = "515 CB PRO")
+    val sampleSpecies = Species(id = "species-atp", name = "Sand smelt (ATP)", faoCode = "ATP")
     val gearUse =
         GearUse(
             id = "gear-use-1",
@@ -222,6 +212,7 @@ fun RemoveSpeciesScreen_Preview() {
     val state =
         CatchRecordFlowViewState(
             status = UiStatus.Content(sampleDraft),
+            vessels = listOf(vessel),
             gearTypes = listOf(gearType),
             species = listOf(sampleSpecies),
         )
@@ -231,7 +222,6 @@ fun RemoveSpeciesScreen_Preview() {
                 state = state,
                 gearUseId = gearUse.id,
                 onDelete = {},
-                onCancel = {},
                 onBack = {},
             )
         }

@@ -151,6 +151,8 @@
     <string name="gear_summary_instruction">Dewiswch yr holl offer a ddefnyddiwyd ar eich llong.</string>
     <string name="gear_shots_label">Nifer y troeon y defnyddiwyd yr offer ar y daith</string>
     <string name="remove_gear">Tynnu offer</string>
+    <string name="remove_gear_title">Tynnu offer o\'r llong %1$s</string>
+    <string name="remove_gear_error_required">Dewiswch yr offer rydych am ei dynnu</string>
     <string name="add_another_gear">Ychwanegu offer arall</string>
     <string name="gear_stat_rectangle_grid_title">Ble cafodd y rhan fwyaf o\'ch dalfa ei dal gan ddefnyddio %1$s?</string>
     <string name="gear_stat_rectangle_other_title">Dewiswch yr is-ardal ystadegol lle cafodd y rhan fwyaf o\'ch dalfa ei dal gan ddefnyddio %1$s.</string>
@@ -202,11 +204,10 @@
     <string name="add_a_species_action">Ychwanegu rhywogaeth</string>
     <string name="remove_a_species_action">Dileu rhywogaeth</string>
     <string name="species_checklist_error_required">Dewiswch o leiaf un rhywogaeth</string>
-    <string name="remove_species_title">Dileu rhywogaeth a ddaliwyd gyda %1$s</string>
-    <string name="remove_species_title_fallback">Dileu rhywogaeth</string>
-    <string name="remove_species_instruction">Dewiswch y rhywogaethau rydych am eu dileu, yna dilëwch nhw.</string>
+    <string name="remove_species_title">Dileu rhywogaethau o\'r llong %1$s</string>
+    <string name="remove_species_title_fallback">Dileu rhywogaethau</string>
     <string name="remove_species_error_required">Dewiswch y rhywogaethau rydych am eu dileu</string>
-    <string name="delete_action">Dileu</string>
+    <string name="continue_action">Parhau</string>
     <string name="species_weight_error_required_above_min">Nodwch y pwysau uwchlaw\'r maint lleiaf a gedwir</string>
     <string name="species_weight_error_required_kept_onboard">Nodwch y pwysau uwchlaw\'r maint lleiaf a gedwir ar y cwch neu mewn cewyll cadw mewn cilogramau</string>
     <string name="species_weight_error_below_minimum">Rhaid i\'r pwysau ar gyfer %1$s fod yn fwy na 0kg</string>

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -58,7 +59,7 @@ object GearSummaryScreenTestTags {
 /**
  * "What gear did you use?" checklist of every gear added so far. Checking a gear confirms it was used on
  * *this* trip (see [GearUse.confirmedUsedOnTrip]) and reveals its "number of times gear was shot on trip"
- * field; "Remove gear" bulk-removes whichever gear(s) are currently checked; "Add another gear" loops back
+ * field; "Remove gear" opens [RemoveGearScreen]; "Add another gear" loops back
  * to the gear-search step.
  *
  * Deviation from the screenshots (flagged, non-blocking): the confirmed screenshots show two slightly
@@ -74,11 +75,12 @@ fun GearSummaryScreen(
     onNavigate: (WizardStep) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onNavigateToRemoveGear: () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     GearSummaryScreen(
         state = state,
-        onRemoveGear = { updatedDraft -> viewModel.dispatch(CatchRecordFlowEvent.GearRemoved(updatedDraft)) },
+        onRemoveGear = onNavigateToRemoveGear,
         onAddAnotherGear = { onNavigate(WizardStep.GearSearch) },
         onSubmit = { updatedDraft ->
             // At least one confirmed gear routes into the general next-step resolver (Phase 4/5's
@@ -107,7 +109,7 @@ fun GearSummaryScreen(
 @Composable
 private fun GearSummaryScreen(
     state: CatchRecordFlowViewState,
-    onRemoveGear: (CatchRecordDraft) -> Unit,
+    onRemoveGear: () -> Unit,
     onAddAnotherGear: () -> Unit,
     onSubmit: (CatchRecordDraft) -> Unit,
     onBack: () -> Unit,
@@ -147,14 +149,12 @@ private fun GearSummaryScreen(
 fun GearSummaryScreenContent(
     draft: CatchRecordDraft,
     gearTypes: List<GearType>,
-    onRemoveGear: (CatchRecordDraft) -> Unit,
+    onRemoveGear: () -> Unit,
     onAddAnotherGear: () -> Unit,
     onSubmit: (CatchRecordDraft) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Keyed only on draft.id (not on the gear-use list) so a "Remove gear" action — which mutates the
-    // gear-use list within the same continuous composition — does not reset the other rows' not-yet-saved
-    // check/shots edits. A genuinely new draft (different id) still re-seeds from the persisted values.
+    // Keyed on draft.id only so removing gear elsewhere keeps the other rows' unsaved check/shots edits.
     var checkedIds by
         rememberSaveable(draft.id) {
             mutableStateOf(
@@ -168,6 +168,11 @@ fun GearSummaryScreenContent(
         rememberSaveable(draft.id) {
             mutableStateOf(draft.gearUses.associate { it.id to (it.numberOfShots?.toString() ?: "") })
         }
+    val gearUseIds = draft.gearUses.map { it.id }.toSet()
+    LaunchedEffect(gearUseIds) {
+        checkedIds = checkedIds intersect gearUseIds
+        shotsById = shotsById.filterKeys { it in gearUseIds }
+    }
 
     val options =
         draft.gearUses.map { gearUse ->
@@ -198,13 +203,10 @@ fun GearSummaryScreenContent(
                 )
             },
         )
-        RemoveGearLink(
-            enabled = checkedIds.isNotEmpty(),
-            onClick = {
-                val updatedDraft = draft.copy(gearUses = draft.gearUses.filterNot { it.id in checkedIds })
-                checkedIds = emptySet()
-                onRemoveGear(updatedDraft)
-            },
+        GdsLinkAction(
+            text = stringResource(R.string.remove_gear),
+            onClick = onRemoveGear,
+            testTag = GearSummaryScreenTestTags.REMOVE_ACTION,
         )
         PrimaryActionButton(
             text = stringResource(R.string.save_and_continue),
@@ -229,26 +231,6 @@ fun GearSummaryScreenContent(
             modifier = Modifier.testTag(GearSummaryScreenTestTags.ADD_ANOTHER_ACTION),
         )
     }
-}
-
-/**
- * "Remove gear" is rendered as a link-styled action that is always visible but disabled (dimmed, and
- * unclickable) when nothing is checked, rather than hidden outright — see [GdsLinkAction].
- */
-@Suppress("FunctionNaming")
-@Composable
-private fun RemoveGearLink(
-    enabled: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    GdsLinkAction(
-        text = stringResource(R.string.remove_gear),
-        onClick = onClick,
-        testTag = GearSummaryScreenTestTags.REMOVE_ACTION,
-        enabled = enabled,
-        modifier = modifier,
-    )
 }
 
 @Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)

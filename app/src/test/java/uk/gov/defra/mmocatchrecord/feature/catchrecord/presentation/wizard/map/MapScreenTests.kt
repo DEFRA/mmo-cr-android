@@ -2,10 +2,12 @@
 
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map
 
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
@@ -13,6 +15,7 @@ import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -21,6 +24,7 @@ import androidx.compose.ui.test.performCustomAccessibilityActionWithLabel
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.pinch
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -28,6 +32,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
@@ -47,6 +52,7 @@ import uk.gov.defra.mmocatchrecord.mapdata.SerializableBBox
 import uk.gov.defra.mmocatchrecord.mapdata.SerializableMultiPolygon
 import uk.gov.defra.mmocatchrecord.mapdata.SerializablePoint
 import uk.gov.defra.mmocatchrecord.mapdata.SerializablePolygon
+import uk.gov.defra.mmocatchrecord.mapdata.SerializablePort
 import uk.gov.defra.mmocatchrecord.mapdata.SerializableRing
 import uk.gov.defra.mmocatchrecord.mapdata.SerializableSubRectangle
 
@@ -134,6 +140,115 @@ class MapScreenTests {
             subRectangles = listOf(subRectangle),
             ports = emptyList(),
         )
+    }
+
+    /** A 5x5 block of real-sized sub-rectangles (1/3° x 1/6°) around Hastings, coded "R{col}{row}"; the
+     *  map snaps to the centre cell R22 (lon 1/3..2/3, lat 50.833..51.0) and opens 3x3 on R11..R33. */
+    private fun subRectangleGridFixture(): MapDataset {
+        val cells =
+            (0 until GRID_SIZE).flatMap { col ->
+                (0 until GRID_SIZE).map { row ->
+                    val minLon = (col - 1) / 3.0
+                    val minLat = GRID_MIN_LAT + row / 6.0
+                    val maxLon = minLon + 1 / 3.0
+                    val maxLat = minLat + 1 / 6.0
+                    val ring =
+                        SerializableRing(
+                            listOf(
+                                SerializablePoint(minLon, minLat),
+                                SerializablePoint(maxLon, minLat),
+                                SerializablePoint(maxLon, maxLat),
+                                SerializablePoint(minLon, maxLat),
+                                SerializablePoint(minLon, minLat),
+                            ),
+                        )
+                    SerializableSubRectangle(
+                        code = "R$col$row",
+                        icesName = "Cell $col$row",
+                        areaKm2 = 1.0,
+                        bbox = SerializableBBox(minLon, minLat, maxLon, maxLat),
+                        centroid = SerializablePoint((minLon + maxLon) / 2, (minLat + maxLat) / 2),
+                        geometry = SerializableMultiPolygon(listOf(SerializablePolygon(ring, emptyList()))),
+                        isSeaOverlapping = true,
+                    )
+                }
+            }
+        return MapDataset(
+            formatVersion = MapDataset.CURRENT_FORMAT_VERSION,
+            land = emptyList(),
+            subRectangles = cells,
+            ports = listOf(SerializablePort("PORT1", samplePort.name, SerializablePoint(0.4, 50.9))),
+        )
+    }
+
+    @Composable
+    @Suppress("FunctionNaming")
+    private fun GridMapContent() {
+        WizardTestTheme {
+            MapScreen(
+                state = stateWith(pendingGearUse()),
+                onSubmit = {},
+                onBack = {},
+                mapDataState = MapDataUiState(UiStatus.Content(subRectangleGridFixture()), onRetryMapData = {}),
+            )
+        }
+    }
+
+    private fun tapMapAndAssertSelected(
+        xFraction: Float,
+        yFraction: Float,
+        expectedCode: String,
+    ) {
+        composeTestRule
+            .onNodeWithTag(MapScreenTestTags.MAP)
+            .performTouchInput { click(Offset(width * xFraction, height * yFraction)) }
+        composeTestRule
+            .onNodeWithTag(MapScreenTestTags.MAP_SELECTED_TEXT)
+            .assertTextContains(expectedCode, substring = true)
+    }
+
+    @Test
+    @Config(qualifiers = PHONE_SCREEN)
+    fun gridMapOpensShowingA3x3BlockOfSubRectangles() {
+        composeTestRule.setContent { GridMapContent() }
+
+        val size = composeTestRule.onNodeWithTag(MapScreenTestTags.MAP).fetchSemanticsNode().size
+        val expectedAspect = MapCamera.gridAspectRatioAt(MapCamera.snapToSubRectangleCentre(0.4, 50.9).lat)
+        assertEquals(expectedAspect, size.height.toFloat() / size.width, ASPECT_TOLERANCE)
+
+        val cells = listOf(1 to 3, 2 to 3, 3 to 3, 1 to 2, 2 to 2, 3 to 2, 3 to 1)
+        cells.forEach { (col, row) ->
+            tapMapAndAssertSelected(
+                xFraction = (col - 0.5f) / 3f,
+                yFraction = (3.5f - row) / 3f,
+                expectedCode = "R$col$row",
+            )
+        }
+        // The designed "Other" overlay covers R11 and the left of R21, so R21 is tapped on its right.
+        tapMapAndAssertSelected(xFraction = 0.62f, yFraction = 2.5f / 3f, expectedCode = "R21")
+    }
+
+    @Test
+    @Config(qualifiers = PHONE_SCREEN)
+    fun gridMapZoomOutIsCappedAt4x4AndSurvivesStateRestoration() {
+        val restorationTester = StateRestorationTester(composeTestRule)
+        restorationTester.setContent { GridMapContent() }
+        val sizeBefore = composeTestRule.onNodeWithTag(MapScreenTestTags.MAP).fetchSemanticsNode().size
+
+        composeTestRule.onNodeWithTag(MapScreenTestTags.MAP).performTouchInput {
+            pinch(
+                start0 = Offset(centerX - width * 0.4f, centerY),
+                end0 = Offset(centerX - 10f, centerY),
+                start1 = Offset(centerX + width * 0.4f, centerY),
+                end1 = Offset(centerX + 10f, centerY),
+            )
+        }
+        restorationTester.emulateSavedInstanceStateRestore()
+
+        assertEquals(sizeBefore, composeTestRule.onNodeWithTag(MapScreenTestTags.MAP).fetchSemanticsNode().size)
+        // 4 across centred on R22 spans lon -1/6..7/6, so the outer column R0x/R4x is now half visible.
+        tapMapAndAssertSelected(xFraction = 0.05f, yFraction = 0.2f, expectedCode = "R03")
+        tapMapAndAssertSelected(xFraction = 0.95f, yFraction = 0.2f, expectedCode = "R43")
     }
 
     // --- Screen 1: the offline Canvas map --------------------------------------------------------------
@@ -807,3 +922,8 @@ class MapScreenTests {
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_FIELD).assertIsDisplayed()
     }
 }
+
+private const val GRID_SIZE = 5
+private const val GRID_MIN_LAT = 50.5
+private const val ASPECT_TOLERANCE = 0.01f
+private const val PHONE_SCREEN = "w411dp-h1600dp"

@@ -120,6 +120,7 @@ class CatchRecordRoutesTests {
 
         val removeSpecies = RemoveSpeciesRoute(gearUseId = "a")
         assertEquals(removeSpecies, Json.decodeFromString<RemoveSpeciesRoute>(Json.encodeToString(removeSpecies)))
+        assertEquals(RemoveGearRoute, Json.decodeFromString<RemoveGearRoute>(Json.encodeToString(RemoveGearRoute)))
     }
 
     /** Missing editGearUseId JSON covers the generated constructor's default-field branch. */

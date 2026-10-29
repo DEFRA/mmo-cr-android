@@ -5,7 +5,6 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -528,43 +527,23 @@ class GearScreensTest {
     }
 
     @Test
-    fun removeGearLinkIsDisabledWhenNothingIsCheckedAndEnabledWhenSomethingIsChecked() {
+    fun removeGearLinkIsAlwaysEnabledAndInvokesCallback() {
+        var removeRequested = false
         composeTestRule.setContent {
             MmoTheme {
                 GearSummaryScreenContent(
                     draft = sampleDraft(listOf(gearUseSeineNets, gearUseBottomOtterTrawls)),
                     gearTypes = gearTypes,
-                    onRemoveGear = {},
+                    onRemoveGear = { removeRequested = true },
                     onAddAnotherGear = {},
                     onSubmit = {},
                 )
             }
         }
 
-        composeTestRule.onNodeWithTag(GearSummaryScreenTestTags.REMOVE_ACTION).assertIsNotEnabled()
-        composeTestRule.onNodeWithTag("${GearSummaryScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
-        composeTestRule.onNodeWithTag(GearSummaryScreenTestTags.REMOVE_ACTION).assertIsEnabled()
-    }
+        composeTestRule.onNodeWithTag(GearSummaryScreenTestTags.REMOVE_ACTION).assertIsEnabled().performClick()
 
-    @Test
-    fun removeGearBulkRemovesOnlyCheckedGearUses() {
-        var updatedDraft: CatchRecordDraft? = null
-        composeTestRule.setContent {
-            MmoTheme {
-                GearSummaryScreenContent(
-                    draft = sampleDraft(listOf(gearUseSeineNets, gearUseBottomOtterTrawls)),
-                    gearTypes = gearTypes,
-                    onRemoveGear = { updatedDraft = it },
-                    onAddAnotherGear = {},
-                    onSubmit = {},
-                )
-            }
-        }
-
-        composeTestRule.onNodeWithTag("${GearSummaryScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
-        composeTestRule.onNodeWithTag(GearSummaryScreenTestTags.REMOVE_ACTION).performClick()
-
-        assertEquals(listOf("gear-use-2"), updatedDraft?.gearUses?.map { it.id })
+        assertTrue(removeRequested)
     }
 
     @Test

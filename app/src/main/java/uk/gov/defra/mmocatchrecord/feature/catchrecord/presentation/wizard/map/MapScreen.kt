@@ -334,6 +334,8 @@ private fun MapGridContent(
                     }
                 var camera by
                     rememberSaveable(gearUse.id, stateSaver = MapCamera.Saver) { mutableStateOf(initialCamera) }
+                // Fixed per screen so panning never resizes the map.
+                val heightOverWidth = remember(initialCamera) { MapCamera.gridAspectRatioAt(initialCamera.centerLat) }
 
                 Box(modifier = Modifier.fillMaxWidth()) {
                     MapCanvas(
@@ -345,6 +347,7 @@ private fun MapGridContent(
                                 showError = false
                             },
                         modifier = Modifier.fillMaxWidth(),
+                        heightOverWidth = heightOverWidth,
                         onChooseFromListRequested = onOtherSelected,
                     )
                     SecondaryActionButton(

@@ -1,13 +1,15 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear
 
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -167,11 +169,32 @@ class GearSummaryScreenTests {
     }
 
     @Test
-    fun removeGearLinkIsDisabledWhenNothingIsCheckedAndEnabledWhenSomethingIsChecked() {
+    fun removeGearLinkIsAlwaysEnabledAndInvokesCallback() {
+        var removeRequested = false
         composeTestRule.setContent {
             MmoTheme {
                 GearSummaryScreenContent(
                     draft = sampleDraft(listOf(gearUseSeineNets, gearUseBottomOtterTrawls)),
+                    gearTypes = gearTypes,
+                    onRemoveGear = { removeRequested = true },
+                    onAddAnotherGear = {},
+                    onSubmit = {},
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag(GearSummaryScreenTestTags.REMOVE_ACTION).assertIsEnabled().performClick()
+
+        assertTrue(removeRequested)
+    }
+
+    @Test
+    fun removedGearIsPrunedFromUnsavedCheckedState() {
+        var draft by mutableStateOf(sampleDraft(listOf(gearUseSeineNets, gearUseBottomOtterTrawls)))
+        composeTestRule.setContent {
+            MmoTheme {
+                GearSummaryScreenContent(
+                    draft = draft,
                     gearTypes = gearTypes,
                     onRemoveGear = {},
                     onAddAnotherGear = {},
@@ -180,30 +203,13 @@ class GearSummaryScreenTests {
             }
         }
 
-        composeTestRule.onNodeWithTag(GearSummaryScreenTestTags.REMOVE_ACTION).assertIsNotEnabled()
         composeTestRule.onNodeWithTag("${GearSummaryScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
-        composeTestRule.onNodeWithTag(GearSummaryScreenTestTags.REMOVE_ACTION).assertIsEnabled()
-    }
+        draft = sampleDraft(listOf(gearUseBottomOtterTrawls))
+        composeTestRule.waitForIdle()
+        draft = sampleDraft(listOf(gearUseSeineNets, gearUseBottomOtterTrawls))
+        composeTestRule.waitForIdle()
 
-    @Test
-    fun removeGearBulkRemovesOnlyCheckedGearUses() {
-        var updatedDraft: CatchRecordDraft? = null
-        composeTestRule.setContent {
-            MmoTheme {
-                GearSummaryScreenContent(
-                    draft = sampleDraft(listOf(gearUseSeineNets, gearUseBottomOtterTrawls)),
-                    gearTypes = gearTypes,
-                    onRemoveGear = { updatedDraft = it },
-                    onAddAnotherGear = {},
-                    onSubmit = {},
-                )
-            }
-        }
-
-        composeTestRule.onNodeWithTag("${GearSummaryScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
-        composeTestRule.onNodeWithTag(GearSummaryScreenTestTags.REMOVE_ACTION).performClick()
-
-        assertEquals(listOf("gear-use-2"), updatedDraft?.gearUses?.map { it.id })
+        composeTestRule.onNodeWithTag("${GearSummaryScreenTestTags.CHECKBOX_PREFIX}_0").assertIsOff()
     }
 
     @Test
@@ -400,17 +406,23 @@ class GearSummaryScreenTests {
         }
 
     @Test
-    fun viewModelBackedScreenRemoveGearDispatchesGearRemovedAndUpdatesTheDraft() =
+    fun viewModelBackedScreenRemoveGearNavigatesToTheRemoveGearScreen() =
         runTest {
             val dispatcher = StandardTestDispatcher(testScheduler)
             val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
             repository.startDraft("vessel-achilles")
             repository.saveDraft(fullyCompleteDraft())
             val viewModel = buildViewModel(dispatcher, repository)
+            var removeRequested = false
 
             composeTestRule.setContent {
                 WizardTestTheme {
-                    GearSummaryScreen(viewModel = viewModel, onNavigate = {}, onBack = {})
+                    GearSummaryScreen(
+                        viewModel = viewModel,
+                        onNavigate = {},
+                        onBack = {},
+                        onNavigateToRemoveGear = { removeRequested = true },
+                    )
                 }
             }
             viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
@@ -418,18 +430,11 @@ class GearSummaryScreenTests {
             composeTestRule.waitForIdle()
 
             composeTestRule
-                .onNodeWithTag("${GearSummaryScreenTestTags.CHECKBOX_PREFIX}_0")
-                .performScrollTo()
-                .performClick()
-            composeTestRule
                 .onNodeWithTag(GearSummaryScreenTestTags.REMOVE_ACTION)
                 .performScrollTo()
                 .performClick()
-            testScheduler.advanceUntilIdle()
-            composeTestRule.waitForIdle()
 
-            val draft = (viewModel.state.value.status as UiStatus.Content<CatchRecordDraft>).value
-            assertTrue(draft.gearUses.isEmpty())
+            assertTrue(removeRequested)
         }
 
     @Test

@@ -147,6 +147,12 @@ from the same saved value. `MapCameraSupport.initialCameraFor` derives the initi
    (`MapSupport.nearbyRectanglesFor(...)`) are actually present in the generated dataset.
 3. Otherwise, fall back to a documented default centre in UK waters.
 
+The chosen centre is snapped to the centre of its containing sub-rectangle and the map opens at the
+default zoom: **3 × 3 sub-rectangles**. The canvas height/width (`MapCamera.gridAspectRatioAt`) is fixed
+per screen from that latitude so as many rows as columns fit. Pinch-zoom is clamped between **4 × 4**
+(furthest zoom-out) and **400%** of the default (0.75 sub-rectangles across). Because zoom keeps the
+centre fixed, the 4 × 4 view shows a 4 × 4 area, which can include part-cells at the edges.
+
 ## Known data-integration gap: port ↔ reference-data linkage
 
 The domain `Port` model (`ReferenceDataRepository`, ADR-0008's stub) has **no coordinate field**, so camera

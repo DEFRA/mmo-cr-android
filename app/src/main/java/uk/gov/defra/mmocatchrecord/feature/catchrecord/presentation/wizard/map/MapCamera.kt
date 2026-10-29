@@ -10,6 +10,7 @@ import uk.gov.defra.mmocatchrecord.mapdata.Projection
 import uk.gov.defra.mmocatchrecord.mapdata.SerializableSubRectangle
 import uk.gov.defra.mmocatchrecord.mapdata.toBBox
 import kotlin.math.PI
+import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 
@@ -42,23 +43,46 @@ data class MapCamera(
         private const val SUB_RECTANGLE_WIDTH_METRES =
             SUB_RECTANGLE_LON_DEGREES * DEGREES_TO_RADIANS * Projection.EARTH_RADIUS_METRES
 
-        // Camera zoom is expressed as the number of statistical sub-rectangles visible across the viewport
-        // width: 2 is the closest permitted zoom-in, 3 is the default view (~3-4 rows, given the canvas
-        // aspect ratio and sub-rectangles' near-square real-world shape), 4 is the furthest permitted
-        // zoom-out — the user cannot zoom out past that.
-        private const val MIN_RECTANGLES_ACROSS = 2
-        private const val DEFAULT_RECTANGLES_ACROSS = 3
-        private const val MAX_RECTANGLES_ACROSS = 4
+        // Zoom = sub-rectangles visible across: opens at 3x3, zooms out to at most 4x4 and
+        // zooms in to 400% of the default (0.75 across).
+        private const val DEFAULT_RECTANGLES_ACROSS = 3.0
+        private const val MAX_RECTANGLES_ACROSS = 4.0
+        private const val MAX_ZOOM_IN_FACTOR = 4.0
 
-        /** Closest permitted zoom-in — 2 statistical sub-rectangles visible across the viewport width. */
-        const val MIN_VISIBLE_WIDTH_METRES = MIN_RECTANGLES_ACROSS * SUB_RECTANGLE_WIDTH_METRES
+        /** Closest permitted zoom-in — 400% of the default view. */
+        const val MIN_VISIBLE_WIDTH_METRES =
+            DEFAULT_RECTANGLES_ACROSS / MAX_ZOOM_IN_FACTOR * SUB_RECTANGLE_WIDTH_METRES
 
-        /** Default camera view — about 3 statistical sub-rectangles visible across the viewport width. */
+        /** Default camera view — 3 statistical sub-rectangles across (3x3 with [gridAspectRatioAt]). */
         const val DEFAULT_VISIBLE_WIDTH_METRES = DEFAULT_RECTANGLES_ACROSS * SUB_RECTANGLE_WIDTH_METRES
 
-        /** Furthest permitted zoom-out — 4 statistical sub-rectangles visible across the viewport width; the
-         * maximum. */
+        /** Furthest permitted zoom-out — 4 statistical sub-rectangles across (4x4). */
         const val MAX_VISIBLE_WIDTH_METRES = MAX_RECTANGLES_ACROSS * SUB_RECTANGLE_WIDTH_METRES
+
+        private const val SUB_RECTANGLE_LAT_DEGREES = 1.0 / 6.0
+        private const val HALF = 0.5
+        private const val MIN_ASPECT_RATIO = 0.5f
+        private const val MAX_ASPECT_RATIO = 1.6f
+
+        /** Canvas height/width so the same number of sub-rectangle rows as columns fit at [lat]. */
+        fun gridAspectRatioAt(lat: Double): Float {
+            val half = SUB_RECTANGLE_LAT_DEGREES / 2.0
+            val top = Projection.wgs84ToMetres(0.0, lat + half)[1]
+            val bottom = Projection.wgs84ToMetres(0.0, lat - half)[1]
+            return ((top - bottom) / SUB_RECTANGLE_WIDTH_METRES).toFloat().coerceIn(MIN_ASPECT_RATIO, MAX_ASPECT_RATIO)
+        }
+
+        /** Centre of the sub-rectangle containing ([lon], [lat]), so the default view shows whole cells. */
+        fun snapToSubRectangleCentre(
+            lon: Double,
+            lat: Double,
+        ): GeoPoint {
+            val snappedLon = (floor(lon / SUB_RECTANGLE_LON_DEGREES) + HALF) * SUB_RECTANGLE_LON_DEGREES
+            val south = floor(lat / SUB_RECTANGLE_LAT_DEGREES) * SUB_RECTANGLE_LAT_DEGREES
+            val southY = Projection.wgs84ToMetres(0.0, south)[1]
+            val northY = Projection.wgs84ToMetres(0.0, south + SUB_RECTANGLE_LAT_DEGREES)[1]
+            return GeoPoint(lon = snappedLon, lat = Projection.metresToWgs84(0.0, (southY + northY) / 2.0).lat)
+        }
 
         /** Saver for `rememberSaveable` — a flat `DoubleArray` survives config changes/process death. */
         val Saver: Saver<MapCamera, DoubleArray> =
@@ -134,12 +158,6 @@ object MapCameraSupport {
     private const val DEFAULT_UK_WATERS_LON = -4.0
     private const val DEFAULT_UK_WATERS_LAT = 56.0
 
-    // A specific port/nearby-rectangle match is the closest known context, so it opens at the closest
-    // permitted zoom (see MapCamera.MIN_VISIBLE_WIDTH_METRES) rather than an arbitrary tighter width that
-    // would now fall outside the enforced "4 rectangles" zoom-in limit.
-    private const val NEARBY_VISIBLE_WIDTH_METRES = MapCamera.MIN_VISIBLE_WIDTH_METRES
-    private const val PORT_MATCH_VISIBLE_WIDTH_METRES = MapCamera.MIN_VISIBLE_WIDTH_METRES
-
     fun initialCameraFor(
         departurePort: Port?,
         dataset: MapDataset,
@@ -150,7 +168,7 @@ object MapCameraSupport {
                 dataset.ports.firstOrNull { normalise(it.name) == normalise(port.name) }
             }
         if (matchedPort != null) {
-            return MapCamera(matchedPort.point.lon, matchedPort.point.lat, PORT_MATCH_VISIBLE_WIDTH_METRES)
+            return defaultCameraAt(matchedPort.point.lon, matchedPort.point.lat)
         }
 
         val nearbyCodes = nearbyRectangles.map { it.code }.toSet()
@@ -161,10 +179,18 @@ object MapCameraSupport {
         val unioned = BBox.union(nearbyBounds)
         if (unioned != null) {
             val centroid = unioned.centroid
-            return MapCamera(centroid.lon, centroid.lat, NEARBY_VISIBLE_WIDTH_METRES)
+            return defaultCameraAt(centroid.lon, centroid.lat)
         }
 
-        return MapCamera(DEFAULT_UK_WATERS_LON, DEFAULT_UK_WATERS_LAT, MapCamera.DEFAULT_VISIBLE_WIDTH_METRES)
+        return defaultCameraAt(DEFAULT_UK_WATERS_LON, DEFAULT_UK_WATERS_LAT)
+    }
+
+    private fun defaultCameraAt(
+        lon: Double,
+        lat: Double,
+    ): MapCamera {
+        val centre = MapCamera.snapToSubRectangleCentre(lon, lat)
+        return MapCamera(centre.lon, centre.lat, MapCamera.DEFAULT_VISIBLE_WIDTH_METRES)
     }
 
     private fun normalise(value: String) = value.trim().lowercase()

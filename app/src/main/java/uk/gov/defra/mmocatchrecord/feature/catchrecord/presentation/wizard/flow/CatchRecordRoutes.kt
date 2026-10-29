@@ -50,6 +50,10 @@ data class GearMeasurementRoute(
 @Serializable
 data object GearSummaryRoute
 
+/** Reached from [GearSummaryRoute]'s "Remove gear" link. */
+@Serializable
+data object RemoveGearRoute
+
 @Serializable
 data class GearStatRectangleRoute(
     val editGearUseId: String? = null,

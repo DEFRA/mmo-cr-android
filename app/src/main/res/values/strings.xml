@@ -144,6 +144,8 @@
     <string name="gear_summary_instruction">Select all the gears used on your vessel.</string>
     <string name="gear_shots_label">Number of times gear was shot on trip</string>
     <string name="remove_gear">Remove gear</string>
+    <string name="remove_gear_title">Remove gear from vessel %1$s</string>
+    <string name="remove_gear_error_required">Select the gear you want to remove</string>
     <string name="add_another_gear">Add another gear</string>
     <string name="gear_stat_rectangle_grid_title">Where was the majority of your catch caught using %1$s?</string>
     <string name="gear_stat_rectangle_other_title">Select the statistical sub area where the majority of your catch was caught using %1$s.</string>
@@ -193,11 +195,10 @@
     <string name="add_a_species_action">Add a species</string>
     <string name="remove_a_species_action">Remove a species</string>
     <string name="species_checklist_error_required">Select at least one species</string>
-    <string name="remove_species_title">Remove a species caught with %1$s</string>
-    <string name="remove_species_title_fallback">Remove a species</string>
-    <string name="remove_species_instruction">Select the species you want to remove, then delete them.</string>
+    <string name="remove_species_title">Remove species from vessel %1$s</string>
+    <string name="remove_species_title_fallback">Remove species</string>
     <string name="remove_species_error_required">Select the species you want to remove</string>
-    <string name="delete_action">Delete</string>
+    <string name="continue_action">Continue</string>
     <string name="species_weight_error_required_above_min">Enter the weight above minimum size retained</string>
     <string name="species_weight_error_required_kept_onboard">Enter the weight above minimum size kept onboard or in keep pots in kilograms</string>
     <string name="species_weight_error_below_minimum">Weight for %1$s must be more than 0kg</string>

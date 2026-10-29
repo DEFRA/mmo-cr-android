@@ -18,6 +18,7 @@ import uk.gov.defra.mmocatchrecord.mapdata.SerializableSubRectangle
 import kotlin.math.abs
 
 private const val GEO_TOLERANCE_DEGREES = 1e-6
+private const val SNAP_TOLERANCE_DEGREES = 1e-3
 private const val PIXEL_TOLERANCE = 0.5f
 
 class MapCameraTests {
@@ -119,6 +120,28 @@ class MapCameraTests {
         assertEquals(MapCamera.MAX_VISIBLE_WIDTH_METRES, zoomedOut.visibleWidthMetres, 0.0)
     }
 
+    @Test
+    fun `default view is 3 sub-rectangles across, max zoom-out 4 and max zoom-in 400 percent`() {
+        val subRectangleWidth = MapCamera.DEFAULT_VISIBLE_WIDTH_METRES / 3.0
+
+        assertEquals(4.0, MapCamera.MAX_VISIBLE_WIDTH_METRES / subRectangleWidth, 1e-9)
+        assertEquals(4.0, MapCamera.DEFAULT_VISIBLE_WIDTH_METRES / MapCamera.MIN_VISIBLE_WIDTH_METRES, 1e-9)
+    }
+
+    @Test
+    fun `grid aspect ratio fits as many sub-rectangle rows as columns`() {
+        val camera = MapCamera.snapToSubRectangleCentre(0.6, 50.85).let { MapCamera(it.lon, it.lat, 0.0) }
+        val widthPx = 900f
+        val heightPx = widthPx * MapCamera.gridAspectRatioAt(camera.centerLat)
+        val viewport =
+            viewportBBox(camera.copy(visibleWidthMetres = MapCamera.DEFAULT_VISIBLE_WIDTH_METRES), widthPx, heightPx)
+
+        assertEquals(1.0, viewport.maxLon - viewport.minLon, 1e-6)
+        assertEquals(0.5, viewport.maxLat - viewport.minLat, 1e-3)
+        assertEquals(51.1667, viewport.maxLat, 1e-3)
+        assertEquals(50.6667, viewport.minLat, 1e-3)
+    }
+
     // --- MapCamera.Saver ---------------------------------------------------------------------------------
 
     @Test
@@ -149,8 +172,9 @@ class MapCameraTests {
 
         val camera = MapCameraSupport.initialCameraFor(departurePort, dataset, emptyList())
 
-        assertEquals(0.6, camera.centerLon, GEO_TOLERANCE_DEGREES)
-        assertEquals(50.85, camera.centerLat, GEO_TOLERANCE_DEGREES)
+        assertEquals(0.5, camera.centerLon, GEO_TOLERANCE_DEGREES)
+        assertEquals(50.9167, camera.centerLat, SNAP_TOLERANCE_DEGREES)
+        assertEquals(MapCamera.DEFAULT_VISIBLE_WIDTH_METRES, camera.visibleWidthMetres, 0.0)
     }
 
     @Test
@@ -175,8 +199,9 @@ class MapCameraTests {
 
         val camera = MapCameraSupport.initialCameraFor(departurePort, dataset, nearbyRectangles)
 
-        assertEquals(1.0, camera.centerLon, GEO_TOLERANCE_DEGREES)
-        assertEquals(50.5, camera.centerLat, GEO_TOLERANCE_DEGREES)
+        assertEquals(1.1667, camera.centerLon, SNAP_TOLERANCE_DEGREES)
+        assertEquals(50.5833, camera.centerLat, SNAP_TOLERANCE_DEGREES)
+        assertEquals(MapCamera.DEFAULT_VISIBLE_WIDTH_METRES, camera.visibleWidthMetres, 0.0)
     }
 
     @Test
@@ -191,8 +216,9 @@ class MapCameraTests {
 
         val camera = MapCameraSupport.initialCameraFor(null, dataset, emptyList())
 
-        assertEquals(-4.0, camera.centerLon, GEO_TOLERANCE_DEGREES)
-        assertEquals(56.0, camera.centerLat, GEO_TOLERANCE_DEGREES)
+        assertEquals(-3.8333, camera.centerLon, SNAP_TOLERANCE_DEGREES)
+        assertEquals(56.0833, camera.centerLat, SNAP_TOLERANCE_DEGREES)
+        assertEquals(MapCamera.DEFAULT_VISIBLE_WIDTH_METRES, camera.visibleWidthMetres, 0.0)
     }
 
     // --- Viewport culling ----------------------------------------------------------------------------------
