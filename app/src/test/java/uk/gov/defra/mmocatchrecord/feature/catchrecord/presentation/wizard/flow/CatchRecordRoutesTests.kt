@@ -34,13 +34,15 @@ class CatchRecordRoutesTests {
         )
 
     @Test
-    fun `draft resume route defaults draftId to null when omitted`() {
-        assertNull(DraftResumeRoute().draftId)
+    fun `draft resume has no argument-free route because it always carries a draft id`() {
+        val failure = runCatching { routeFor(WizardStep.DraftResume) }.exceptionOrNull()
+        assertNotNull(failure)
+        assertEquals(DraftResumeRoute("draft-1"), DraftResumeRoute("draft-1").copy())
     }
 
     @Test
     fun `routeFor constructs a route for every wizard step`() {
-        allSteps.forEach { step -> assertNotNull(routeFor(step)) }
+        allSteps.filterNot { it == WizardStep.DraftResume }.forEach { step -> assertNotNull(routeFor(step)) }
     }
 
     @Test
@@ -66,6 +68,7 @@ class CatchRecordRoutesTests {
             .filterNot {
                 it in
                     setOf(
+                        WizardStep.DraftResume,
                         WizardStep.GearMeasurement,
                         WizardStep.GearStatRectangle,
                         WizardStep.GearSpeciesSearch,

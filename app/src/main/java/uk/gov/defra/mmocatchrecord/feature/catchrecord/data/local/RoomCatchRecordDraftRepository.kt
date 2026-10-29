@@ -23,9 +23,6 @@ class RoomCatchRecordDraftRepository
         override suspend fun getActiveDraft(vesselId: String): Result<CatchRecordDraft?> =
             runCatching { dao.getActiveDraftWithChildren(vesselId)?.let(DraftMappers::toDomain) }
 
-        override suspend fun getAnyActiveDraft(): Result<CatchRecordDraft?> =
-            runCatching { dao.getMostRecentlyModifiedActiveDraftWithChildren()?.let(DraftMappers::toDomain) }
-
         override suspend fun getDraftById(draftId: String): Result<CatchRecordDraft?> =
             runCatching { dao.getDraftWithChildren(draftId)?.let(DraftMappers::toDomain) }
 

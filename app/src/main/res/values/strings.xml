@@ -147,7 +147,7 @@
     <string name="gear_stat_rectangle_body_select_other">Select the area where most of your catch was caught. If it is not listed, select Other to enter it.</string>
     <string name="gear_stat_rectangle_other_option">Other</string>
     <string name="gear_stat_rectangle_no_matches_found">No matching statistical sub areas found</string>
-    <string name="gear_stat_rectangle_error_required">Select a statistical sub area</string>
+    <string name="gear_stat_rectangle_error_required">Select the statistical sub area where the majority of your catch was caught.</string>
     <string name="gear_stat_rectangle_error_format">Enter a statistical sub area in the correct format, for example 38E84</string>
     <string name="gear_stat_rectangle_error_not_found">Enter a valid statistical sub area code.</string>
     <string name="gear_stat_rectangle_selected_area">Selected area: %1$s</string>

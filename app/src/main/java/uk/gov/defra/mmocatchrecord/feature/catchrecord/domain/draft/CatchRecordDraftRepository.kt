@@ -16,13 +16,10 @@ interface CatchRecordDraftRepository {
     /** Returns the vessel's current active draft, or `null` (wrapped in success) if none exists. */
     suspend fun getActiveDraft(vesselId: String): Result<CatchRecordDraft?>
 
-    /** Returns the most recently modified active draft across all vessels, or `null` if none exists. */
-    suspend fun getAnyActiveDraft(): Result<CatchRecordDraft?>
-
     /**
-     * Returns the draft identified by [draftId] regardless of its status (unlike [getActiveDraft]/
-     * [getAnyActiveDraft], which only ever return an *active* draft) — used by `CatchRecordSyncWorker`
-     * (Phase 8/ADR 0009) to re-fetch a specific `PendingSync` draft by id in the background.
+     * Returns the draft identified by [draftId] regardless of its status (unlike [getActiveDraft], which
+     * only ever returns an *active* draft) — used by the Home records list's resume action (FR2) and by
+     * `CatchRecordSyncWorker` (Phase 8/ADR 0009) to re-fetch a specific `PendingSync` draft by id.
      */
     suspend fun getDraftById(draftId: String): Result<CatchRecordDraft?>
 

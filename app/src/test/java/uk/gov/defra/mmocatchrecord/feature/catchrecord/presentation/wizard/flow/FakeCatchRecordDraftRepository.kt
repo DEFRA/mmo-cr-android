@@ -31,11 +31,6 @@ class FakeCatchRecordDraftRepository(
         return Result.success(drafts.values.firstOrNull { it.vesselId == vesselId && it.status.isActive })
     }
 
-    override suspend fun getAnyActiveDraft(): Result<CatchRecordDraft?> {
-        if (failNextOperation) return failure()
-        return Result.success(drafts.values.filter { it.status.isActive }.maxByOrNull { it.modifiedAtEpochMillis })
-    }
-
     override suspend fun getDraftById(draftId: String): Result<CatchRecordDraft?> {
         if (failNextOperation) return failure()
         return Result.success(drafts[draftId])

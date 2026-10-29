@@ -99,11 +99,23 @@ Bottom → top, single `Canvas` draw pass, viewport-clipped:
 3. Selected sub-rectangle highlight (`MmoColors.MapSelectedFill` pale blue fill + `MapSelectedStroke` GOV.UK
    blue border; selection is also announced via TalkBack, so it is never colour-only).
 4. Land polygons (`MmoColors.MapLand`, dark teal fill + thin black outline) — drawn over the grid so no
-   rectangles or selection appear on land.
-5. Sub-rectangle labels — plain black text, no halo; viewport-culled; drawn only for sea-overlapping cells
-   whose centroid is not on land.
-6. Ports — viewport-culled cyan dots only (no place names); display-only, never intercept taps.
-7. A ~1.5dp black border around the whole viewport.
+   unselected rectangles appear on land.
+5. The selected sub-rectangle again, above land, so the **whole** selected cell stays highlighted even where
+   it covers land: the same `MapSelectedFill` at 60% alpha (the coastline still reads through it) plus the
+   opaque `MapSelectedStroke` border. Over sea this composites to the identical colour as step 3, so only the
+   land portion changes.
+6. Sub-rectangle labels — plain black text, no halo; viewport-culled; drawn only for sea-overlapping cells
+   whose centroid is not on land, and never for the selected cell (step 8 draws that one).
+7. Ports — viewport-culled cyan dots, de-duplicated by name and coordinate, each with its name centred beneath
+   it in smaller black text over a white halo (ports sit on the coastline, so no single colour passes AA on
+   both sea and land). Display-only, never intercept taps. There is no collision avoidance, so names of
+   distinct ports close together can overlap.
+8. The selected sub-rectangle's code — always drawn, bypassing both the sea-only rule in step 6 and the
+   visible-label cap. It is drawn last so a port dot or name cannot obscure it, and is clamped into the
+   selected cell's own on-screen box, falling back to the viewport when the chip cannot fit there. The code
+   is white on a `MapSelectedStroke` (GOV.UK blue) chip — ~5.2:1, independent of whatever it covers — so it
+   needs no halo, where black on bare `MapLand` would be ~1.85:1 and fail WCAG 1.4.3.
+9. A ~1.5dp black border around the whole viewport.
 
 ## Selection semantics
 

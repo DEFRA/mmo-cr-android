@@ -87,9 +87,10 @@ class NotLandedStraightAwayScreensTests {
     private fun buildViewModel(
         dispatcher: CoroutineDispatcher,
         repository: FakeCatchRecordDraftRepository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" }),
+        referenceDataRepository: FakeReferenceDataRepository = FakeReferenceDataRepository(),
     ) = CatchRecordFlowViewModel(
         repository,
-        FakeReferenceDataRepository(),
+        referenceDataRepository,
         FakeCatchRecordSubmissionRepository(),
         FakeNetworkConnectivityChecker(),
         FakeCatchRecordSyncScheduler(),
@@ -448,7 +449,7 @@ class NotLandedStraightAwayScreensTests {
                     )
                 }
             }
-            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
             testScheduler.advanceUntilIdle()
             composeTestRule.waitForIdle()
 
@@ -467,9 +468,12 @@ class NotLandedStraightAwayScreensTests {
     @Test
     fun anOuterLoadErrorOnTheDecisionScreenIsShownAsARetryableWizardErrorAndRecoversViaRetry() =
         runTest {
-            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
-            repository.failNextOperation = true
-            val viewModel = buildViewModel(dispatcher = StandardTestDispatcher(testScheduler), repository = repository)
+            val referenceData = FakeReferenceDataRepository().apply { failNextOperation = true }
+            val viewModel =
+                buildViewModel(
+                    dispatcher = StandardTestDispatcher(testScheduler),
+                    referenceDataRepository = referenceData,
+                )
 
             composeTestRule.setContent {
                 WizardTestTheme {
@@ -509,7 +513,7 @@ class NotLandedStraightAwayScreensTests {
                     )
                 }
             }
-            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
             testScheduler.advanceUntilIdle()
             composeTestRule.waitForIdle()
 
@@ -531,9 +535,12 @@ class NotLandedStraightAwayScreensTests {
     @Test
     fun anOuterLoadErrorOnTheSpeciesScreenIsShownAsARetryableWizardErrorAndRecoversViaRetry() =
         runTest {
-            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
-            repository.failNextOperation = true
-            val viewModel = buildViewModel(dispatcher = StandardTestDispatcher(testScheduler), repository = repository)
+            val referenceData = FakeReferenceDataRepository().apply { failNextOperation = true }
+            val viewModel =
+                buildViewModel(
+                    dispatcher = StandardTestDispatcher(testScheduler),
+                    referenceDataRepository = referenceData,
+                )
 
             composeTestRule.setContent {
                 WizardTestTheme {

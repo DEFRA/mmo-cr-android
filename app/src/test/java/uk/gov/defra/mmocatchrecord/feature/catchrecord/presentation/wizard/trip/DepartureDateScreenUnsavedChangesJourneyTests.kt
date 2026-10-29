@@ -68,9 +68,6 @@ class DepartureDateScreenUnsavedChangesJourneyTests {
         override suspend fun getActiveDraft(vesselId: String): Result<CatchRecordDraft?> =
             Result.success(drafts.values.firstOrNull { it.vesselId == vesselId && it.status.isActive })
 
-        override suspend fun getAnyActiveDraft(): Result<CatchRecordDraft?> =
-            Result.success(drafts.values.firstOrNull { it.status.isActive })
-
         override suspend fun getDraftById(draftId: String): Result<CatchRecordDraft?> = Result.success(drafts[draftId])
 
         override suspend fun startDraft(candidate: CatchRecordDraft): Result<CatchRecordDraft> =
@@ -161,7 +158,7 @@ class DepartureDateScreenUnsavedChangesJourneyTests {
             JourneyHarness(viewModel = viewModel, navController = navController)
         }
 
-        viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+        viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
         composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.state.value.status is UiStatus.Content<*> }
         composeTestRule.waitForIdle()
         navController.navigate(DepartureDateRoute)

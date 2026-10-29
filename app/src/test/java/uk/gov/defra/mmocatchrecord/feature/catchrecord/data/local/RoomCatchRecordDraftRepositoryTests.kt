@@ -78,19 +78,6 @@ class RoomCatchRecordDraftRepositoryTests {
         }
 
     @Test
-    fun `most recently modified active draft is returned across vessels`() =
-        runTest {
-            val first = repository.startDraft("vessel-achilles").getOrThrow()
-            clockMillis = 2_000L
-            val second = repository.startDraft("vessel-hercules").getOrThrow()
-            clockMillis = 3_000L
-            repository.saveDraft(first.copy(isTripToday = true)).getOrThrow()
-            val latest = repository.getAnyActiveDraft().getOrThrow()
-            assertEquals(first.id, latest?.id)
-            assertTrue(second.id != latest?.id)
-        }
-
-    @Test
     fun `a submitted draft does not block starting a new active draft for the same vessel`() =
         runTest {
             val first = repository.startDraft("vessel-achilles").getOrThrow()

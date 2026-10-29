@@ -77,9 +77,6 @@ class SubmissionFlowNavigationTest {
         override suspend fun getActiveDraft(vesselId: String): Result<CatchRecordDraft?> =
             Result.success(drafts.values.firstOrNull { it.vesselId == vesselId && it.status.isActive })
 
-        override suspend fun getAnyActiveDraft(): Result<CatchRecordDraft?> =
-            Result.success(drafts.values.firstOrNull { it.status.isActive })
-
         override suspend fun getDraftById(draftId: String): Result<CatchRecordDraft?> = Result.success(drafts[draftId])
 
         override suspend fun startDraft(candidate: CatchRecordDraft): Result<CatchRecordDraft> =
@@ -245,9 +242,9 @@ class SubmissionFlowNavigationTest {
             SubmissionFlowHarness(viewModel = viewModel, navController = navController)
         }
 
-        // `EnterFlow` is genuinely asynchronous (loads reference data + the existing draft) — wait for the
-        // real ViewModel to resolve it, exactly as `CatchRecordFlowEntryScreen` does in production.
-        viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+        // Resuming a specific draft is genuinely asynchronous (reference data + the draft itself) — wait
+        // for the real ViewModel to resolve it, exactly as `DraftResumeScreen` does in production.
+        viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
         composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.state.value.status is UiStatus.Content<*> }
         composeTestRule.waitForIdle()
         return navController
