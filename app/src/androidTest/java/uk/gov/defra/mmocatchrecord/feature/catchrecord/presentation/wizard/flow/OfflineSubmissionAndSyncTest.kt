@@ -79,9 +79,6 @@ class OfflineSubmissionAndSyncTest {
         override suspend fun getActiveDraft(vesselId: String): Result<CatchRecordDraft?> =
             Result.success(drafts.values.firstOrNull { it.vesselId == vesselId && it.status.isActive })
 
-        override suspend fun getAnyActiveDraft(): Result<CatchRecordDraft?> =
-            Result.success(drafts.values.firstOrNull { it.status.isActive })
-
         override suspend fun getDraftById(draftId: String): Result<CatchRecordDraft?> = Result.success(drafts[draftId])
 
         override suspend fun startDraft(candidate: CatchRecordDraft): Result<CatchRecordDraft> =

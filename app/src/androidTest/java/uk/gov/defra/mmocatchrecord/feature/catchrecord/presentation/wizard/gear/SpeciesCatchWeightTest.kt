@@ -1,21 +1,28 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear
 
+import android.content.Context
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
+import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
@@ -291,16 +298,226 @@ class SpeciesCatchWeightTest {
         assertBlockedWithError("The weight for Atlantic cod must be a number")
     }
 
+    @Test
+    fun selectedSpeciesFromPreviousPageAreListedWithoutWeightFields() {
+        showChecklist(cod, plaice)
+
+        composeTestRule.onNodeWithText(cod.name).assertIsDisplayed()
+        composeTestRule.onNodeWithText(plaice.name).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(aboveMin(cod)).assertDoesNotExist()
+        composeTestRule.onNodeWithTag(aboveMin(plaice)).assertDoesNotExist()
+    }
+
+    @Test
+    fun noSpeciesTickedBlocksSaveAndContinue() {
+        showChecklist(cod)
+
+        saveAndContinue()
+
+        assertNull("User must not be able to continue", submitted)
+        composeTestRule
+            .onNodeWithTag(Tags.CHECKLIST_ERROR)
+            .assertIsDisplayed()
+            .assertTextEquals(string(R.string.species_checklist_error_required))
+    }
+
+    @Test
+    fun untickingASpeciesHidesItsFieldsAndExcludesItFromValidationAndSave() {
+        showChecklist(cod, plaice)
+        tick(0)
+        tick(1)
+        enter(aboveMin(cod), "0")
+        enter(aboveMin(plaice), "7")
+
+        tick(0)
+        composeTestRule.onNodeWithTag(aboveMin(cod)).assertDoesNotExist()
+        saveAndContinue()
+
+        assertNotNull("Unticked species must not block Save and Continue", submitted)
+        assertEquals(false, savedEntry(cod)?.confirmedCaught)
+        assertNull(savedEntry(cod)?.weightAboveMinimumSizeKg)
+        assertEquals(7.0, savedEntry(plaice)?.weightAboveMinimumSizeKg)
+    }
+
+    @Test
+    fun weightsForEachSelectedSpeciesAreSavedAgainstTheirOwnRecord() {
+        showChecklist(cod, plaice)
+        tick(0)
+        tick(1)
+        enter(aboveMin(cod), "12.5")
+        enter(aboveMin(plaice), "30")
+
+        saveAndContinue()
+
+        assertEquals(12.5, savedEntry(cod)?.weightAboveMinimumSizeKg)
+        assertEquals(30.0, savedEntry(plaice)?.weightAboveMinimumSizeKg)
+        assertEquals(true, savedEntry(cod)?.confirmedCaught)
+        assertEquals(true, savedEntry(plaice)?.confirmedCaught)
+    }
+
+    @Test
+    fun eachSpeciesIsValidatedSeparatelyAndTheErrorNamesTheFailingSpecies() {
+        showChecklist(cod, plaice)
+        tick(0)
+        tick(1)
+        enter(aboveMin(cod), "20")
+        enter(aboveMin(plaice), "10.5")
+
+        saveAndContinue()
+
+        assertNull("User must not be able to continue", submitted)
+        composeTestRule
+            .onAllNodesWithText(string(R.string.species_weight_error_whole_number, "Plaice"))
+            .onFirst()
+            .assertExists()
+        composeTestRule.onAllNodesWithText("Weight for Atlantic cod", substring = true).assertCountEquals(0)
+    }
+
+    @Test
+    fun ac3_correctingAnInvalidWeightAllowsSaveAndContinue() {
+        showChecklist(cod)
+        tick(0)
+        enter(aboveMin(cod), "0")
+        saveAndContinue()
+        assertNull("User must not be able to continue", submitted)
+
+        replace(aboveMin(cod), "15")
+        saveAndContinue()
+
+        assertEquals(15.0, savedEntry(cod)?.weightAboveMinimumSizeKg)
+    }
+
+    @Test
+    fun ac3_previouslySavedWeightsAreShownAndCanBeAmended() {
+        showChecklistWith(
+            SpeciesWeightEntry(
+                id = "sw-0",
+                speciesId = cod.id,
+                confirmedCaught = true,
+                weightAboveMinimumSizeKg = 20.0,
+                weightBelowMinimumSizeKg = 4.0,
+                weightLegallyDiscardedKg = 2.0,
+            ),
+        )
+
+        field(aboveMin(cod)).assertTextEquals("20")
+        replace(aboveMin(cod), "25")
+        replace(belowMin(cod), "6")
+        replace(discarded(cod), "3")
+        saveAndContinue()
+
+        assertEquals(25.0, savedEntry(cod)?.weightAboveMinimumSizeKg)
+        assertEquals(6.0, savedEntry(cod)?.weightBelowMinimumSizeKg)
+        assertEquals(3.0, savedEntry(cod)?.weightLegallyDiscardedKg)
+    }
+
+    @Test
+    fun ac7_discardedLowerThanRetainedIsAccepted() {
+        showChecklist(cod)
+        tick(0)
+        revealOptionalFields(cod)
+        enter(aboveMin(cod), "10")
+        enter(discarded(cod), "9.9")
+
+        saveAndContinue()
+
+        assertEquals(10.0, savedEntry(cod)?.weightAboveMinimumSizeKg)
+        assertEquals(9.9, savedEntry(cod)?.weightLegallyDiscardedKg)
+    }
+
+    @Test
+    fun scenario9_zeroInAllThreeFieldsShowsAnErrorForEveryField() {
+        showChecklist(cod)
+        tick(0)
+        revealOptionalFields(cod)
+        enter(aboveMin(cod), "0")
+        enter(belowMin(cod), "0")
+        enter(discarded(cod), "0")
+
+        saveAndContinue()
+
+        assertNull("User must not be able to continue", submitted)
+        // Three fields, each listed in the error summary and shown inline.
+        composeTestRule
+            .onAllNodesWithText(string(R.string.species_weight_error_below_minimum, "Atlantic cod"))
+            .assertCountEquals(6)
+    }
+
+    @Test
+    fun scenario9_smallestPositiveWeightIsAccepted() {
+        showChecklist(cod)
+        tick(0)
+        enter(aboveMin(cod), "0.1")
+
+        saveAndContinue()
+
+        assertEquals(0.1, savedEntry(cod)?.weightAboveMinimumSizeKg)
+    }
+
+    @Test
+    fun scenario10_weightJustBelowTheMaximumIsAccepted() {
+        showChecklist(cod)
+        tick(0)
+        enter(aboveMin(cod), "9999.9")
+
+        saveAndContinue()
+
+        assertEquals(9_999.9, savedEntry(cod)?.weightAboveMinimumSizeKg)
+    }
+
+    @Test
+    fun scenario10_weightJustAboveTheMaximumBlocksSaveAndContinue() {
+        showChecklist(cod)
+        tick(0)
+        enter(aboveMin(cod), "10000.1")
+
+        saveAndContinue()
+
+        assertNull("User must not be able to continue", submitted)
+        composeTestRule
+            .onAllNodesWithText(string(R.string.species_weight_error_above_maximum, "Atlantic cod"))
+            .onFirst()
+            .assertExists()
+    }
+
+    @Test
+    fun optionalBelowMinimumWeightMustBeValidWhenEntered() {
+        showChecklist(cod)
+        tick(0)
+        revealOptionalFields(cod)
+        enter(aboveMin(cod), "10")
+        enter(belowMin(cod), "10001")
+
+        saveAndContinue()
+
+        assertNull("User must not be able to continue", submitted)
+        composeTestRule
+            .onAllNodesWithText(string(R.string.species_weight_error_above_maximum, "Atlantic cod"))
+            .onFirst()
+            .assertExists()
+    }
+
+    private fun string(
+        resId: Int,
+        vararg args: Any,
+    ): String = ApplicationProvider.getApplicationContext<Context>().getString(resId, *args)
+
     private fun showChecklist(vararg species: Species) {
+        showChecklistWith(
+            *species
+                .mapIndexed { index, s ->
+                    SpeciesWeightEntry(id = "sw-$index", speciesId = s.id, confirmedCaught = false)
+                }.toTypedArray(),
+        )
+    }
+
+    private fun showChecklistWith(vararg entries: SpeciesWeightEntry) {
         val gearUse =
             GearUse(
                 id = "gear-use-1",
                 gearTypeId = "gear-seine-nets",
                 statisticalSubRectangleCode = "38E95",
-                speciesWeights =
-                    species.mapIndexed { index, s ->
-                        SpeciesWeightEntry(id = "sw-$index", speciesId = s.id, confirmedCaught = false)
-                    },
+                speciesWeights = entries.toList(),
                 confirmedUsedOnTrip = true,
             )
         val draft =
