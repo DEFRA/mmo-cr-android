@@ -95,13 +95,13 @@ class WizardDateInputValidatorTests {
     }
 
     @Test
-    fun `year range spans last year to next year`() {
-        assertEquals(2025..2027, pickerYearRange(LocalDate.of(2026, 10, 16), null))
+    fun `year range spans last year to this year and never extends into the future`() {
+        assertEquals(2025..2026, pickerYearRange(LocalDate.of(2026, 10, 16), null))
     }
 
     @Test
     fun `year range widens to include a saved date outside the window`() {
-        assertEquals(2022..2027, pickerYearRange(LocalDate.of(2026, 10, 16), DmyDate(1, 1, 2022)))
+        assertEquals(2022..2026, pickerYearRange(LocalDate.of(2026, 10, 16), DmyDate(1, 1, 2022)))
         assertEquals(2025..2029, pickerYearRange(LocalDate.of(2026, 10, 16), DmyDate(1, 1, 2029)))
     }
 }
