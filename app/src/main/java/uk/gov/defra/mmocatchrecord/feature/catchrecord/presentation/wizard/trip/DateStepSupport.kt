@@ -109,6 +109,7 @@ fun WizardDateStepContent(
                     yearWheel = testTags.yearWheel,
                 ),
             focusRequester = wheelFocusRequester,
+            maxDate = today,
         )
         PrimaryActionButton(
             text = stringResource(R.string.save_and_continue),
@@ -133,13 +134,14 @@ fun WizardDateStepContent(
     }
 }
 
-/** Last year to next year, widened to include a saved date outside that window. */
+/** Last year to this year, widened to include a saved date outside that window.
+ * Never extends past today's year: the wheel must not offer future dates. */
 internal fun pickerYearRange(
     today: LocalDate,
     initialDate: DmyDate?,
 ): IntRange {
     val first = minOf(today.year - 1, initialDate?.year ?: Int.MAX_VALUE)
-    val last = maxOf(today.year + 1, initialDate?.year ?: Int.MIN_VALUE)
+    val last = maxOf(today.year, initialDate?.year ?: Int.MIN_VALUE)
     return first..last
 }
 
