@@ -24,11 +24,7 @@ import androidx.room.RoomDatabase
  * (breaks what would otherwise be an infinite wizard-step loop on the late-submission warning screen — see
  * `presentation.wizard.WizardStep`), plus [DraftStatus.PendingSync] as a new stored status value.
  *
- * v5 -> v6 (see ADR 0010): a genuine partial unique index — `index_catch_record_draft_active_vessel` on
- * `(vesselId) WHERE status IN ('Draft', 'ReadyToSubmit')` — now enforces "one active draft per vessel" at
- * the SQLite level (Room's `@Index` annotation cannot express a `WHERE` clause, so it is created via raw SQL
- * in [CatchRecordMigrations.MIGRATION_5_6]); [CatchRecordDraftDao.findOrCreateActiveDraft] is the
- * corresponding race-safe find-or-create DAO path.
+ * v5 -> v6: a no-op since ADR 0018 — see [CatchRecordMigrations.MIGRATION_5_6].
  *
  * v6 -> v7 (CRAR-152 Phase A, FR10): [DraftEntity] gained three nullable audit columns —
  * `createdAtEpochMillis`/`submittedAtEpochMillis`/`syncedAtEpochMillis` — see ADR 0014.
@@ -41,6 +37,8 @@ import androidx.room.RoomDatabase
  * statistical sub-rectangle's centre (FR5-FR7); not backfilled for existing rows.
  *
  * v9 -> v10: a unique index on [DraftEntity]'s `catchRecordReference` enforces Trip ID uniqueness.
+ *
+ * v10 -> v11 (ADR 0018): drops the v6 partial unique index so a vessel may hold many independent drafts.
  *
  * Every version bump above has a real [androidx.room.migration.Migration] registered in
  * [CatchRecordMigrations] (see `di/DatabaseModule.kt`) — a draft in progress must survive every schema
@@ -61,7 +59,7 @@ import androidx.room.RoomDatabase
         ReferenceDataGearMeasurementEntity::class,
         ReferenceDataMetadataEntity::class,
     ],
-    version = 10,
+    version = 11,
     exportSchema = true,
 )
 abstract class CatchRecordDatabase : RoomDatabase() {

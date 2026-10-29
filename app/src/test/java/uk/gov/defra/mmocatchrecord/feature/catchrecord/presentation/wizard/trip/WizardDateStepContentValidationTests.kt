@@ -28,7 +28,8 @@ class WizardDateStepContentValidationTests {
     private val departureTags = DepartureDateScreenTestTags.stepTags
     private val returnTags = ReturnDateScreenTestTags.stepTags
     private val today = LocalDate.of(2026, 10, 16)
-    private val returnBeforeDepartureMessage = "Return date must be on or after the departure date"
+    private val returnBeforeDepartureMessage =
+        "Date you returned from your trip must be the same as or after the date you left"
 
     private fun setDepartureContent(
         initialDate: DmyDate? = null,

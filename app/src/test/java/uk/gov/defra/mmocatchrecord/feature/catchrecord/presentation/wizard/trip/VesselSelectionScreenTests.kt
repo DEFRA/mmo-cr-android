@@ -15,9 +15,11 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import uk.gov.defra.mmocatchrecord.common.design.GdsTopAppBarTestTags
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
+import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.core.language.AppLanguage
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Vessel
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordFlowEvent
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.FakeReferenceDataRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardStep
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.WizardTestTheme
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.catchRecordReference
@@ -105,6 +107,56 @@ class VesselSelectionScreenTests {
 
         composeTestRule.onNodeWithTag("${VesselSelectionScreenTestTags.SCREEN}_reference_number").assertDoesNotExist()
         composeTestRule.onNodeWithText(checkNotNull(viewModel.state.value.catchRecordReference)).assertDoesNotExist()
+    }
+
+    /** ADR 0018 made selection a write, so a failed create must surface here, not on the next screen. */
+    @Test
+    fun aFailedDraftCreationShowsTheErrorOnThisScreenAndDoesNotNavigate() {
+        val viewModel =
+            buildTripFlowViewModel(
+                referenceDataRepository =
+                    FakeReferenceDataRepository(vessels = listOf(Vessel("vessel-achilles", "ACHILLES", pln = " - "))),
+            )
+        val navigated = mutableListOf<WizardStep>()
+        composeTestRule.setContent {
+            WizardTestTheme {
+                VesselSelectionScreen(viewModel = viewModel, onNavigate = { navigated += it }, onBack = {})
+            }
+        }
+        viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            viewModel.state.value.vessels
+                .isNotEmpty()
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("${VesselSelectionScreenTestTags.OPTION_PREFIX}_0").performClick()
+        composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.state.value.status is UiStatus.Error }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag(VesselSelectionScreenTestTags.ERROR_MESSAGE).assertIsDisplayed()
+        assertEquals(emptyList<WizardStep>(), navigated)
+    }
+
+    /** Back-navigation must not bounce the user straight forward again on the still-advanced state. */
+    @Test
+    fun reEnteringTheScreenAfterADraftWasCreatedDoesNotAutoNavigate() {
+        val viewModel = buildTripFlowViewModel()
+        viewModel.dispatch(CatchRecordFlowEvent.VesselSelected("vessel-achilles"))
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            viewModel.state.value.currentStep == WizardStep.TripToday &&
+                viewModel.state.value.status is UiStatus.Content
+        }
+        val navigated = mutableListOf<WizardStep>()
+        composeTestRule.setContent {
+            WizardTestTheme {
+                VesselSelectionScreen(viewModel = viewModel, onNavigate = { navigated += it }, onBack = {})
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag(VesselSelectionScreenTestTags.SCREEN).assertIsDisplayed()
+        assertEquals(emptyList<WizardStep>(), navigated)
     }
 
     @Test

@@ -7,6 +7,7 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.testing.WorkManagerTestInitHelper
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -71,5 +72,19 @@ class WorkManagerCatchRecordSyncSchedulerTests {
                 .state.isFinished
                 .not(),
         )
+    }
+
+    /** ADR 0018: a vessel can hold several drafts, so unique work must key on draft id, not vessel. */
+    @Test
+    fun `two drafts for the same vessel enqueue independent unique work`() {
+        scheduler.scheduleSync("draft-4a")
+        scheduler.scheduleSync("draft-4b")
+
+        val first = workManager.getWorkInfosForUniqueWork(uniqueWorkName("draft-4a")).get().single()
+        val second = workManager.getWorkInfosForUniqueWork(uniqueWorkName("draft-4b")).get().single()
+        assertNotEquals(uniqueWorkName("draft-4a"), uniqueWorkName("draft-4b"))
+        assertNotEquals(first.id, second.id)
+        assertEquals(WorkInfo.State.ENQUEUED, first.state)
+        assertEquals(WorkInfo.State.ENQUEUED, second.state)
     }
 }

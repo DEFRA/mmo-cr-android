@@ -7,8 +7,6 @@ import androidx.room.Query
 import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 
-private const val ACTIVE_STATUSES_CLAUSE = "status IN ('Draft', 'ReadyToSubmit')"
-
 // Bounds the one-second Trip ID bump; a real collision needs only one or two steps.
 private const val MAX_REFERENCE_ATTEMPTS = 3600
 
@@ -32,9 +30,6 @@ interface CatchRecordDraftDao {
     )
     fun observeRecordSummaries(): Flow<List<DraftSummaryRow>>
 
-    @Query("SELECT * FROM catch_record_draft WHERE vesselId = :vesselId AND $ACTIVE_STATUSES_CLAUSE LIMIT 1")
-    suspend fun findActiveDraftEntity(vesselId: String): DraftEntity?
-
     @Query(
         "SELECT departurePortId, returnPortId FROM catch_record_draft " +
             "WHERE vesselId = :vesselId AND status IN ('PendingSync', 'Submitted') " +
@@ -50,22 +45,11 @@ interface CatchRecordDraftDao {
     @Query("SELECT * FROM catch_record_draft WHERE id = :draftId")
     suspend fun getDraftWithChildren(draftId: String): DraftWithChildren?
 
-    @Transaction
-    @Query("SELECT * FROM catch_record_draft WHERE vesselId = :vesselId AND $ACTIVE_STATUSES_CLAUSE LIMIT 1")
-    suspend fun getActiveDraftWithChildren(vesselId: String): DraftWithChildren?
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertDraft(entity: DraftEntity)
 
-    /**
-     * Inserts [entity] only if it does not conflict with an existing row — in particular, the v6 partial
-     * unique index (`index_catch_record_draft_active_vessel`, see ADR 0010) that allows at most one
-     * `Draft`/`ReadyToSubmit` row per `vesselId`. Deliberately [OnConflictStrategy.IGNORE], never `REPLACE`:
-     * replacing would silently delete a concurrently-created active draft for the same vessel (and, via
-     * cascade, its child rows) rather than preserving it — see [findOrCreateActiveDraft].
-     *
-     * @return the inserted row's rowId, or -1 if the insert was ignored due to a conflict.
-     */
+    /** Inserts [entity] only if it doesn't conflict with the v10 unique Trip ID index; IGNORE not
+     *  REPLACE, since REPLACE would cascade-delete another draft's rows — see [createDraft]. */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertDraftIfAbsent(entity: DraftEntity): Long
 
@@ -135,24 +119,11 @@ interface CatchRecordDraftDao {
         draftId: String,
     ): Boolean
 
-    /**
-     * Race-safe "find the vessel's active draft, or create [candidate] as its new one" — see ADR 0010. The
-     * whole find+insert-if-absent sequence runs inside one Room `@Transaction`, so SQLite's write-transaction
-     * serialization makes the overall operation atomic across concurrent callers: whichever caller's
-     * transaction commits first "wins" (its insert succeeds), and every other concurrent caller's own
-     * transaction only begins evaluating [findActiveDraftEntity] after that commit, so it always observes the
-     * winner's row and returns it — the partial unique index guarantees at most one winner even if this
-     * transactional serialization guarantee were ever weakened, since [insertDraftIfAbsent] is ignore-on-conflict
-     * rather than throwing or replacing.
-     *
-     * A Trip ID already in use is moved on one second at a time (inside the same transaction) until free.
-     */
+    /** Creates [candidate] as a new, independent draft (ADR 0018); a Trip ID in use is advanced one second
+     *  at a time until free, and a duplicate id or unexpected conflict fails fast. */
     @Transaction
-    suspend fun findOrCreateActiveDraft(
-        vesselId: String,
-        candidate: DraftEntity,
-    ): DraftEntity {
-        findActiveDraftEntity(vesselId)?.let { return it }
+    suspend fun createDraft(candidate: DraftEntity): DraftEntity {
+        check(findDraftEntity(candidate.id) == null) { "Draft '${candidate.id}' already exists" }
         var reference = candidate.catchRecordReference
         var attempts = 0
         while (reference != null && referenceExists(reference)) {
@@ -160,14 +131,7 @@ interface CatchRecordDraftDao {
             reference = CatchRecordReferenceGenerator.nextAfter(reference)
         }
         val unique = candidate.copy(catchRecordReference = reference)
-        val insertedRowId = insertDraftIfAbsent(unique)
-        if (insertedRowId != -1L) {
-            return unique
-        }
-        // Lost the race to a concurrent create — the unique index means an active draft now exists for
-        // this vessel; return it rather than duplicating or failing (finding: "unique constraint returns
-        // existing").
-        return findActiveDraftEntity(vesselId)
-            ?: error("Draft insert for vessel '$vesselId' conflicted but no active draft was found")
+        check(insertDraftIfAbsent(unique) != -1L) { "Draft '${candidate.id}' conflicted unexpectedly on insert" }
+        return unique
     }
 }

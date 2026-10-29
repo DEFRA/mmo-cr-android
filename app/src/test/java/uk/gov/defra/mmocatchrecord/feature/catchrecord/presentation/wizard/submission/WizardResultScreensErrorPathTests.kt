@@ -46,8 +46,6 @@ class WizardResultScreensErrorPathTests {
     val composeTestRule = createComposeRule()
 
     private class FailingDraftRepository : CatchRecordDraftRepository {
-        override suspend fun getActiveDraft(vesselId: String): Result<CatchRecordDraft?> = failure()
-
         override suspend fun getDraftById(draftId: String): Result<CatchRecordDraft?> = failure()
 
         override suspend fun startDraft(candidate: CatchRecordDraft): Result<CatchRecordDraft> = failure()
@@ -67,9 +65,6 @@ class WizardResultScreensErrorPathTests {
         seed: CatchRecordDraft,
     ) : CatchRecordDraftRepository {
         private val drafts = mutableMapOf(seed.id to seed)
-
-        override suspend fun getActiveDraft(vesselId: String): Result<CatchRecordDraft?> =
-            Result.success(drafts.values.firstOrNull { it.vesselId == vesselId && it.status.isActive })
 
         override suspend fun getDraftById(draftId: String): Result<CatchRecordDraft?> = Result.success(drafts[draftId])
 

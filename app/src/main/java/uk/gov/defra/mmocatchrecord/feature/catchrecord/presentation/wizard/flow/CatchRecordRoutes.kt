@@ -68,6 +68,12 @@ data class GearSpeciesChecklistRoute(
     val gearUseId: String? = null,
 )
 
+/** Reached from [GearSpeciesChecklistRoute]'s "Remove a species" link; [gearUseId] is always resolved. */
+@Serializable
+data class RemoveSpeciesRoute(
+    val gearUseId: String,
+)
+
 @Serializable
 data object NotLandedStraightAwayDecisionRoute
 

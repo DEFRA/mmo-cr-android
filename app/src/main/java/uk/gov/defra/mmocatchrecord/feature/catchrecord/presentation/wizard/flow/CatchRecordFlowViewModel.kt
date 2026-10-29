@@ -219,20 +219,16 @@ class CatchRecordFlowViewModel
             }
         }
 
+        /** ADR 0018: always creates a new, independent draft — a vessel's existing drafts are resumed only
+         *  from the Home records list. The [UiStatus.Loading] guard stops a double tap creating two. */
         private fun vesselSelected(vesselId: String) {
+            if (currentState.status == UiStatus.Loading) return
             updateState { it.copy(status = UiStatus.Loading) }
             launchInViewModelScope {
                 runCatching {
                     val vesselLength = currentState.vessels.firstOrNull { it.id == vesselId }?.lengthOverallMetres
                     val gearTypes = referenceDataRepository.getGearTypes(vesselLength).getOrThrow()
-                    // ADR 0016: this is a cold cross-session resume, so reconcile before showing the draft —
-                    // against the same banded gear types the gear screens will render for this vessel.
-                    val draft =
-                        draftRepository
-                            .getActiveDraft(vesselId)
-                            .getOrThrow()
-                            ?.let { reconcileAgainstLiveGearTypes(it, gearTypes) }
-                            ?: startNewDraft(vesselId)
+                    val draft = startNewDraft(vesselId)
                     val previouslyUsedPorts = previouslyUsedPortsForVessel(vesselId, currentState.ports)
                     emitLoadedDraft(
                         draft,
@@ -245,13 +241,8 @@ class CatchRecordFlowViewModel
             }
         }
 
-        /**
-         * Persists a brand-new draft candidate the moment a vessel is chosen (race-safe via
-         * [CatchRecordDraftRepository.startDraft]), so the selection survives a back-navigation or app exit
-         * before the user answers a later wizard question — fixes a data-loss bug where an abandoned
-         * selection was silently discarded. This supersedes ADR 0014's original BR-XX deferral, which only
-         * persisted on the *next* step's "Save and continue"; see that ADR for the superseded rationale.
-         */
+        /** Persists a brand-new draft the moment a vessel is chosen, so it survives back-navigation
+         *  or app exit before the next step's save — supersedes ADR 0014's original deferral. */
         private suspend fun startNewDraft(vesselId: String): CatchRecordDraft {
             val vessels = currentState.vessels.ifEmpty { referenceDataRepository.getVessels().getOrThrow() }
             val rssNumber =
