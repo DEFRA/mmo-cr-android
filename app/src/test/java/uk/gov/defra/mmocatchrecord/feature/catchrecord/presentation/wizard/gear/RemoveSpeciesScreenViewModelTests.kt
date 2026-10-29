@@ -188,6 +188,27 @@ class RemoveSpeciesScreenViewModelTests {
             assertEquals(UiStatus.Idle, viewModel.state.value.status)
         }
 
+    /** Covers the combined [UiStatus.Idle]/[UiStatus.Loading] `when` branch, rendered before any
+     * [CatchRecordFlowEvent] is dispatched — the only state from which neither the error nor the
+     * content branch is reachable. */
+    @Test
+    fun theInitialIdleStateRendersTheLoadingBranchWithNeitherContentNorError() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val viewModel = buildViewModel(dispatcher)
+
+            composeTestRule.setContent {
+                WizardTestTheme {
+                    RemoveSpeciesScreen(viewModel = viewModel, gearUseId = "gear-use-1", onBack = {})
+                }
+            }
+            composeTestRule.waitForIdle()
+
+            assertEquals(UiStatus.Idle, viewModel.state.value.status)
+            composeTestRule.onNodeWithTag(RemoveSpeciesScreenTestTags.ERROR_MESSAGE).assertDoesNotExist()
+            composeTestRule.onNodeWithTag(RemoveSpeciesScreenTestTags.DELETE_ACTION).assertDoesNotExist()
+        }
+
     /** Renders the screen's `@Preview` composable to cover it under the `testDevDebugUnitTest` gate,
      * mirroring the "preview renders without crashing" convention used across this codebase. */
     @Test

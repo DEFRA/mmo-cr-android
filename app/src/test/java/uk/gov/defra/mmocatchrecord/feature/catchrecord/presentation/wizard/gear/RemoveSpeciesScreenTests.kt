@@ -142,6 +142,30 @@ class RemoveSpeciesScreenTests {
     }
 
     @Test
+    fun uncheckingAPreviouslyCheckedSpeciesExcludesItFromTheSelection() {
+        var deleted: CatchRecordDraft? = null
+        val gearUse = gearUseWithAddedSpecies(listOf(cod.id, plaice.id))
+        composeTestRule.setContent {
+            MmoTheme {
+                RemoveSpeciesScreenContent(
+                    draft = draftWith(gearUse),
+                    gearUse = gearUse,
+                    speciesList = speciesList,
+                    onDelete = { deleted = it },
+                    onCancel = {},
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("${RemoveSpeciesScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
+        composeTestRule.onNodeWithTag("${RemoveSpeciesScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
+        composeTestRule.onNodeWithTag(RemoveSpeciesScreenTestTags.DELETE_ACTION).performClick()
+
+        composeTestRule.onNodeWithTag(RemoveSpeciesScreenTestTags.ERROR_MESSAGE).assertIsDisplayed()
+        assertNull(deleted)
+    }
+
+    @Test
     fun cancelInvokesOnCancelWithoutDeleting() {
         var cancelled = false
         var deleted: CatchRecordDraft? = null

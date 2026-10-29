@@ -576,6 +576,27 @@ class RoomCatchRecordDraftRepositoryTests {
         }
 
     @Test
+    fun `a reference collision across different vessels is resolved by advancing one second`() =
+        runTest {
+            clockMillis = 1_700_000_000_000L
+            val first = repository.startDraft("vessel-achilles").getOrThrow()
+            assertEquals("B14974-14112023-221320", first.catchRecordReference)
+
+            // Same clock tick as "first" (different vessel, different id) collides on reference.
+            val second =
+                repository
+                    .startDraft(
+                        CatchRecordDraftFactory.newDraft(
+                            vesselId = "vessel-hercules",
+                            id = "id-collision",
+                            reference = CatchRecordReferenceGenerator.generate("B14974", clockMillis),
+                        ),
+                    ).getOrThrow()
+
+            assertEquals("B14974-14112023-221321", second.catchRecordReference)
+        }
+
+    @Test
     fun `late-submission acknowledgement and pending-sync status round-trip correctly`() =
         runTest {
             val started = repository.startDraft("vessel-achilles").getOrThrow()
@@ -611,6 +632,22 @@ class RoomCatchRecordDraftRepositoryTests {
             clockMillis = 9_000L
             val saved = repository.saveDraft(started.copy(isTripToday = true)).getOrThrow()
             assertEquals(5_000L, saved.createdAtEpochMillis)
+        }
+
+    @Test
+    fun `startDraft preserves a candidate's own createdAt instead of stamping the clock time`() =
+        runTest {
+            clockMillis = 5_000L
+            val candidate =
+                CatchRecordDraftFactory
+                    .newDraft(vesselId = "vessel-achilles", id = "id-preset", reference = "B14974-1")
+                    .copy(createdAtEpochMillis = 1_000L)
+
+            clockMillis = 9_000L
+            val started = repository.startDraft(candidate).getOrThrow()
+
+            assertEquals(1_000L, started.createdAtEpochMillis)
+            assertEquals(9_000L, started.modifiedAtEpochMillis)
         }
 
     @Test
