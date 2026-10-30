@@ -1,3 +1,4 @@
+import java.util.Base64
 import java.util.Properties
 
 plugins {
@@ -24,6 +25,29 @@ val localProperties =
     }
 val referenceDataServiceUrlOverride: String? = localProperties.getProperty("referenceData.serviceUrl")
 
+// Upload-key signing for the release build type (Play App Signing — ci-cd.instructions.md). CI supplies
+// UPLOAD_KEYSTORE_BASE64 + passwords as env vars; locally, set the local.properties `upload.*` keys instead.
+val uploadKeystoreBase64: String? = System.getenv("UPLOAD_KEYSTORE_BASE64")
+val uploadKeystorePassword: String? =
+    System.getenv("UPLOAD_KEYSTORE_PASSWORD") ?: localProperties.getProperty("upload.keystore.password")
+val uploadKeyAlias: String? = System.getenv("UPLOAD_KEY_ALIAS") ?: localProperties.getProperty("upload.key.alias")
+val uploadKeyPassword: String? =
+    System.getenv("UPLOAD_KEY_PASSWORD") ?: localProperties.getProperty("upload.key.password")
+val uploadKeystoreFile: File? =
+    when {
+        uploadKeystoreBase64 != null ->
+            layout.buildDirectory.file("upload-keystore.jks").get().asFile.apply {
+                parentFile.mkdirs()
+                writeBytes(Base64.getDecoder().decode(uploadKeystoreBase64))
+            }
+        localProperties.getProperty("upload.keystore.path") != null ->
+            file(localProperties.getProperty("upload.keystore.path")!!)
+        else -> null
+    }
+// PKCS12 (.p12/.pfx) keystores need an explicit storeType; JKS auto-detects.
+val uploadKeystoreType: String? =
+    uploadKeystoreFile?.extension?.lowercase()?.takeIf { it == "p12" || it == "pfx" }?.let { "PKCS12" }
+
 android {
     namespace = "uk.gov.defra.mmocatchrecord"
     // Pinned to 37 due to library AAR metadata requirements (androidx.core, lifecycle, navigation).
@@ -35,14 +59,29 @@ android {
         minSdk = 26
         //noinspection OldTargetApi,EditedTargetSdkVersion
         targetSdk = 36
-        versionCode = 2
+        versionCode = 15
         versionName = "2.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // Unsigned if no keystore is configured (e.g. a dev machine without upload-key access); CI and
+    // release-signing developers always provide the keys resolved above.
+    signingConfigs {
+        if (uploadKeystoreFile != null) {
+            create("upload") {
+                storeFile = uploadKeystoreFile
+                storeType = uploadKeystoreType
+                storePassword = uploadKeystorePassword
+                keyAlias = uploadKeyAlias
+                keyPassword = uploadKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
+            signingConfigs.findByName("upload")?.let { signingConfig = it }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

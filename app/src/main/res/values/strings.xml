@@ -83,7 +83,7 @@
     <string name="gov_uk" translatable="false">GOV.UK</string>
     <string name="gov_uk_royal_crest">GOV.UK Royal Crest</string>
     <string name="save_and_continue">Save and continue</string>
-    <string name="cancel">Cancel</string>
+    <string name="cancel">Continue</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
     <string name="draft_resume_title">What do you want to do with your draft record?</string>
@@ -195,7 +195,7 @@
     <string name="species_checklist_error_required">Select at least one species</string>
     <string name="remove_species_title">Remove a species caught with %1$s</string>
     <string name="remove_species_title_fallback">Remove a species</string>
-    <string name="remove_species_instruction">Select the species you want to remove, then delete them.</string>
+    <string name="remove_species_instruction">Select all that apply.</string>
     <string name="remove_species_error_required">Select the species you want to remove</string>
     <string name="delete_action">Delete</string>
     <string name="species_weight_error_required_above_min">Enter the weight above minimum size retained</string>
