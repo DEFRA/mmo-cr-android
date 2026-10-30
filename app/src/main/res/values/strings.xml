@@ -197,7 +197,7 @@
     <string name="remove_species_title_fallback">Remove a species</string>
     <string name="remove_species_instruction">Select all that apply.</string>
     <string name="remove_species_error_required">Select the species you want to remove</string>
-    <string name="delete_action">Delete</string>
+    <string name="delete_action">Continue</string>
     <string name="species_weight_error_required_above_min">Enter the weight above minimum size retained</string>
     <string name="species_weight_error_required_kept_onboard">Enter the weight above minimum size kept onboard or in keep pots in kilograms</string>
     <string name="species_weight_error_below_minimum">Weight for %1$s must be more than 0kg</string>
