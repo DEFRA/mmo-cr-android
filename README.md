@@ -122,6 +122,7 @@ split per feature package, per
 | [0014](docs/adr/0014-catch-record-status-audit-and-offline-sync-confirmation.md) | Catch-record status, audit timestamps and offline-sync confirmation |
 | [0015](docs/adr/0015-http-client-retrofit-okhttp.md) | HTTP client: Retrofit + OkHttp |
 | [0016](docs/adr/0016-reference-data-api-integration.md) | Reference-data API integration |
+| [0019](docs/adr/0019-entra-external-id-authentication.md) | Authentication via Microsoft Entra External ID (native auth) |
 | [0000](docs/adr/0000-ios-adr-references-TBC.md) | iOS ADR references — TBC |
 
 ## CI

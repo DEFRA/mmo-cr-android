@@ -308,7 +308,7 @@ from local draft history*.
 | # | Topic | Status |
 | - | ----- | ------ |
 | Q1 | DEV reachability/seeding | **Resolved** — seeded 2026-10-09; confirmed end-to-end including an on-device smoke test against DEV |
-| Q2 | Real token issuer | **Open** — `StubTokenProvider`/`MissingTokenProvider` remain interim |
+| Q2 | Real token issuer | **Resolved in principle (2026-11-02)** — [ADR 0019](0019-entra-external-id-authentication.md) selects Microsoft Entra External ID with MSAL native authentication. Resolved **in fact** only once ADR 0019's Phase 1 token spike proves a token with the correct `aud`/`scp`. `StubTokenProvider`/`MissingTokenProvider` remain in place until then — see the note below |
 | Q3 | Port → statistical-area mapping | **Open** — only `GBHTG`/`GBDVR` populated in `PortStatisticalAreaLookup`; everything else sentinel-falls-back |
 | Q4 | Sub-rectangles from the API | **Open** — no API source; stub remains the sole source, now correctly resolved against live port ids (Phase 6 fix) |
 | Q5 | Previously-used ports from the API | **Open** — no API source; follow-up recorded above (derive from local draft history) |
@@ -319,6 +319,23 @@ from local draft history*.
 | Q10 | `applicationIdSuffix` per flavor | **Open** — DevOps-owned; recommended only, not implemented |
 | Q11 | CI flavor matrix | **Open** — DevOps-owned; Phase 1's Fastfile/CI changes are an interim single-flavor pipeline |
 | — | Previously-used-ports follow-up | **Open** — derive from local draft/submission history |
+
+### Note (2026-11-02): ADR 0019's Q3 retrospectively changes this integration
+
+The reference-data integration is **already live against DEV**, authenticated only by `StubTokenProvider`'s
+fixed non-secret literal `"local-stub"` (DEV runs an always-allow auth stub). ADR 0019's **Q3** — whether
+the token is audienced to the MMO **gateway / central Authentication Service**, and what its registration,
+Application ID URI, scope name(s) and claim contract are — is therefore **not** a greenfield question for a
+future feature. Whatever it resolves to changes this shipped integration retrospectively:
+
+- *Reference Data Service Design* §2.3 names permissions `reference-data.read` / `reference-data.write`,
+  a gateway permission vocabulary rather than Entra's `api://<app-id>/Scope` form, so the scope string
+  MSAL must request cannot be inferred from it.
+- ADR 0019 **Q3b** (one shared audience, or separate tokens for reference-data and catch-record) decides
+  whether `TokenProvider` stays a single `currentToken()` lookup or becomes a per-service lookup.
+
+Until Q3 resolves, the `local`/`dev` stub binding stays as recorded above; it is changed by ADR 0019's own
+phasing, not by this ADR.
 
 ## Out of scope (this ADR)
 
