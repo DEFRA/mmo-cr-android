@@ -1,21 +1,21 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# Readable stack traces for user-shared diagnostics (ADR 0011) — see security.instructions.md.
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# kotlinx.serialization: official keep rules so annotated route/DTO classes keep their generated
+# $$serializer and Companion.serializer() — required by Navigation Compose routes and reference-data DTOs.
+-keepattributes *Annotation*,InnerClasses
+-dontnote kotlinx.serialization.AnnotationsKt
+-keep,includedescriptorclasses class uk.gov.defra.mmocatchrecord.**$$serializer { *; }
+-keepclassmembers class uk.gov.defra.mmocatchrecord.** {
+    *** Companion;
+}
+-keepclasseswithmembers class uk.gov.defra.mmocatchrecord.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
-
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# SQLCipher at-rest encryption (ADR 0006) — JNI bridge needs its exact class names/members kept.
+-keep class net.sqlcipher.** { *; }
+-keep class net.zetetic.** { *; }
+-dontwarn net.sqlcipher.**
+-dontwarn net.zetetic.**
