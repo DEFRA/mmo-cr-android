@@ -1,16 +1,21 @@
 package uk.gov.defra.mmocatchrecord.di
 
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import uk.gov.defra.mmocatchrecord.core.security.DataStoreSessionStore
 import uk.gov.defra.mmocatchrecord.core.security.FakeBiometricRepository
 import uk.gov.defra.mmocatchrecord.core.security.InMemoryBiometricPreferenceStore
-import uk.gov.defra.mmocatchrecord.core.security.InMemorySessionStore
 
 /** App providers are plain Hilt module methods, so direct calls verify the object wiring. */
+@RunWith(RobolectricTestRunner::class)
 class AppModuleTests {
     @Test
     fun `provideDispatcher wires up the default dispatcher`() {
@@ -45,8 +50,10 @@ class AppModuleTests {
     }
 
     @Test
-    fun `provideSessionStore wires up the in-memory implementation`() {
-        assertTrue(AppModule.provideSessionStore() is InMemorySessionStore)
+    fun `provideSessionStore wires up the persistent implementation`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+
+        assertTrue(AppModule.provideSessionStore(context) is DataStoreSessionStore)
     }
 
     @Test

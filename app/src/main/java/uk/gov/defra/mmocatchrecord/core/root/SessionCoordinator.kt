@@ -65,7 +65,11 @@ class SessionCoordinator
             when (event) {
                 RootEvent.SignedIn ->
                     launchInViewModelScope {
-                        sessionStore.recordAuthenticatedNow(clock())
+                        val now = clock()
+                        sessionStore.recordAuthenticatedNow(now)
+                        // Sign-in is the only event that reaches the identity provider, so it alone may
+                        // refresh the online-verification timestamp the offline grace period is judged on.
+                        sessionStore.recordVerifiedOnlineNow(now)
                         refreshPhaseNow()
                     }
 
@@ -75,6 +79,8 @@ class SessionCoordinator
                         // A cancelled/failed attempt must leave the state (and therefore RootPhase.APP_LOCK)
                         // unchanged — never optimistically unlock on user intent alone.
                         if (biometricRepository.authenticate().isSuccess) {
+                            // Deliberately does NOT touch lastVerifiedOnlineAtMillis: a local gesture must
+                            // never renew a remote authorisation decision (ADR 0019).
                             sessionStore.recordAuthenticatedNow(clock())
                         }
                         refreshPhaseNow()

@@ -203,7 +203,6 @@ dependencies {
     implementation(libs.androidx.sqlite)
 
     implementation(libs.androidx.biometric)
-    implementation(libs.androidx.security.crypto)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)
@@ -225,8 +224,10 @@ dependencies {
     // Structured, redacted logging (see ADR 0011 / security instructions "no PII/secrets in logs").
     implementation(libs.timber)
 
-    // App-wide language preference persistence (DataStore Preferences — see ADR 0012).
+    // App-wide language preference persistence (DataStore Preferences — see ADR 0012) and the typed
+    // DataStore used by the encrypted core/security SessionStore (ADR 0019).
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.datastore)
 
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)

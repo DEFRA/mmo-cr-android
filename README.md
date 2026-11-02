@@ -77,10 +77,12 @@ split per feature package, per
 - **Material 3, light-only GOV.UK theme** — no dark mode, no dynamic colour, system-font fallback (GDS
   Transport is not licensed for non-gov.uk products, so it is not bundled; the font is swapped in one
   place, `common/design/Typography.kt`, if a licensed alternative becomes available).
-- **Security** — `androidx.biometric` + `androidx.security:security-crypto` are wired as dependencies;
-  Stage 1 ships interfaces and in-memory fakes only. Real implementations must use Android Keystore
-  (+ Tink) for data-at-rest, never plain `EncryptedSharedPreferences`, and must never log biometric/session
-  state or PII — see the KDoc on each interface in `core/security/`.
+- **Security** — `androidx.biometric` is wired as a dependency; biometric prompt/preference remain Stage-1
+  interfaces and in-memory fakes. Data at rest is protected with **non-auth-bound Android Keystore AES-GCM**
+  keys (`core/security/KeystoreAesGcmCipher`) — the SQLCipher passphrase (ADR 0006) and the encrypted
+  session timestamps behind `core/security/SessionStore` (ADR 0019). **Neither Tink nor
+  `androidx.security-crypto` is used**: the latter is deprecated upstream and was removed. Never log
+  biometric/session state or PII — see the KDoc on each interface in `core/security/`.
 - **Offline fisheries statistical sub-rectangle map** — a fully offline, custom Compose `Canvas`-rendered
   map (no map SDK/tiles/API key/network) with a build-time GeoJSON preprocessing task in the `build-logic/`
   composite Gradle build — see ADR 0013 and [`docs/development/offline-map.md`](docs/development/offline-map.md).

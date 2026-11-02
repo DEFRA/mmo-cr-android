@@ -65,3 +65,6 @@ feature — ADR 0003's choice of Room as the persistence layer stands, but its s
   plaintext-readable (e.g. a known field value does not appear as a substring of the raw file bytes).
 - `androidx.security-crypto` remains listed in the Gradle version catalog only if another Stage-1 area
   still references it; this feature does not depend on it and no new code may introduce a dependency on it.
+  **Update (2026-11-02):** nothing ever referenced it, so the dependency and both version-catalog entries
+  were removed under ADR 0019. The AES-GCM pattern described above now lives in the shared
+  `core/security/KeystoreAesGcmCipher` and is reused by `DataStoreSessionStore`.

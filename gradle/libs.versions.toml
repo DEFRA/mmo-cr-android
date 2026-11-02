@@ -16,7 +16,6 @@ room = "2.8.5"
 hilt = "2.60.1"
 hiltNavigationCompose = "1.4.0"
 biometric = "1.1.0"
-securityCrypto = "1.1.0"
 coroutines = "1.11.0"
 mockito = "5.24.0"
 mockitoKotlin = "6.4.0"
@@ -62,7 +61,6 @@ androidx-room-runtime = { group = "androidx.room", name = "room-runtime", versio
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 androidx-biometric = { group = "androidx.biometric", name = "biometric", version.ref = "biometric" }
-androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-android-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
 androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
@@ -83,6 +81,7 @@ androidx-room-testing = { group = "androidx.room", name = "room-testing", versio
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
 androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastorePreferences" }
+androidx-datastore = { group = "androidx.datastore", name = "datastore", version.ref = "datastorePreferences" }
 okhttp-bom = { group = "com.squareup.okhttp3", name = "okhttp-bom", version.ref = "okhttp" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp" }
 okhttp-logging-interceptor = { group = "com.squareup.okhttp3", name = "logging-interceptor" }
