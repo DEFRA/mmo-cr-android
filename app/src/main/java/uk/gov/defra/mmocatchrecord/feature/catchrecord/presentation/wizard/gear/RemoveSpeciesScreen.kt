@@ -180,7 +180,11 @@ fun RemoveSpeciesScreenContent(
             },
             modifier = Modifier.testTag(RemoveSpeciesScreenTestTags.DELETE_ACTION),
         )
-
+        GdsLinkAction(
+            text = stringResource(R.string.cancel),
+            onClick = onCancel,
+            testTag = RemoveSpeciesScreenTestTags.CANCEL_ACTION,
+        )
     }
 }
 

@@ -46,7 +46,11 @@ val uploadKeystoreFile: File? =
     }
 // PKCS12 (.p12/.pfx) keystores need an explicit storeType; JKS auto-detects.
 val uploadKeystoreType: String? =
-    uploadKeystoreFile?.extension?.lowercase()?.takeIf { it == "p12" || it == "pfx" }?.let { "PKCS12" }
+    uploadKeystoreFile
+        ?.extension
+        ?.lowercase()
+        ?.takeIf { it == "p12" || it == "pfx" }
+        ?.let { "PKCS12" }
 
 android {
     namespace = "uk.gov.defra.mmocatchrecord"
