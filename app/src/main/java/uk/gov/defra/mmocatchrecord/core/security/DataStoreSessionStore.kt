@@ -77,7 +77,7 @@ class DataStoreSessionStore(
 }
 
 /** DataStore file name, under `filesDir/datastore/` — already excluded from backup by the allowlist. */
-internal const val SESSION_METADATA_FILE_NAME = "session_metadata.pb"
+private const val SESSION_METADATA_FILE_NAME = "session_metadata.pb"
 
 private const val SESSION_METADATA_KEY_ALIAS = "session_metadata_key"
 
