@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
+import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -111,7 +112,7 @@ class SignInScreenTests {
                 SignInContent(
                     state =
                         SignInViewState(
-                            status = UiStatus.Error("Sign in failed. Please try again.", isRetryable = true),
+                            status = UiStatus.Error("Something went wrong. Try signing in again.", isRetryable = true),
                         ),
                     currentLanguage = "cy",
                     onLanguageToggle = { toggled = true },
@@ -132,8 +133,13 @@ class SignInScreenTests {
         runTest {
             val dispatcher = StandardTestDispatcher(testScheduler)
             val repository =
-                FakeSignInRepository(result = { Result.failure(IllegalStateException("Invalid credentials")) })
-            val viewModel = SignInViewModel(SignInUseCase(repository), defaultDispatcher = dispatcher)
+                FakeSignInRepository(accounts = mapOf("alice@example.com" to "valid-fixture-input"))
+            val viewModel =
+                SignInViewModel(
+                    SignInUseCase(repository),
+                    ApplicationProvider.getApplicationContext(),
+                    defaultDispatcher = dispatcher,
+                )
 
             composeTestRule.setContent {
                 MmoTheme {
@@ -170,7 +176,12 @@ class SignInScreenTests {
         runTest {
             val dispatcher = StandardTestDispatcher(testScheduler)
             val repository = FakeSignInRepository()
-            val viewModel = SignInViewModel(SignInUseCase(repository), defaultDispatcher = dispatcher)
+            val viewModel =
+                SignInViewModel(
+                    SignInUseCase(repository),
+                    ApplicationProvider.getApplicationContext(),
+                    defaultDispatcher = dispatcher,
+                )
             val languageViewModel = AppLanguageViewModel(FakeAppLanguageRepository())
             var signedIn = false
 
