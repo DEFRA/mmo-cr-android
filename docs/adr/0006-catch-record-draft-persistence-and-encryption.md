@@ -61,6 +61,13 @@ feature — ADR 0003's choice of Room as the persistence layer stands, but its s
   state under Android's app-storage model. The repository layer must treat an `SQLiteException` on open as
   a **terminal, non-retryable** error distinct from a transient offline failure (see error-handling
   standards) and must not attempt to silently delete/recreate user data as its first recovery step.
+- **Open decision (2026-11-03):** the same permanent-loss outcome occurs if the *Keystore key* is lost or
+  invalidated while the passphrase file survives. `KeystoreAesGcmCipher.decrypt` now throws a typed
+  `KeyUnavailableException` instead of minting a fresh key and failing as an opaque `AEADBadTagException`,
+  so the condition is explicit and diagnosable. **No automatic reset of the draft store is implemented**:
+  discarding an unsynced catch record is a product/business decision, not an engineering default. The
+  recovery behaviour (prompt the user, discard, or escalate) must be decided before the draft store ships
+  to production users.
 - Unit/instrumented tests must include an encryption smoke test asserting the raw database file is **not**
   plaintext-readable (e.g. a known field value does not appear as a substring of the raw file bytes).
 - `androidx.security-crypto` remains listed in the Gradle version catalog only if another Stage-1 area

@@ -17,6 +17,14 @@ interface AeadCipher {
 }
 
 /**
+ * The Keystore key is gone (cleared, or invalidated by a device change), so existing ciphertext is
+ * permanently unreadable. Distinct from tampering, which surfaces as an AEAD tag mismatch.
+ */
+class KeyUnavailableException(
+    keyAlias: String,
+) : GeneralSecurityException("No AndroidKeyStore key for alias '$keyAlias'")
+
+/**
  * Non-auth-bound `AndroidKeyStore` AES-GCM cipher (ADR 0006): not biometric-bound, so background work can
  * read protected data without a prompt. Output layout is `IV || ciphertext+tag`.
  */
@@ -36,14 +44,21 @@ class KeystoreAesGcmCipher(
         val iv = ciphertext.copyOfRange(0, GCM_IV_LENGTH_BYTES)
         val body = ciphertext.copyOfRange(GCM_IV_LENGTH_BYTES, ciphertext.size)
         val cipher = Cipher.getInstance(TRANSFORMATION)
-        cipher.init(Cipher.DECRYPT_MODE, getOrCreateKey(), GCMParameterSpec(GCM_TAG_LENGTH_BITS, iv))
+        cipher.init(Cipher.DECRYPT_MODE, requireKey(), GCMParameterSpec(GCM_TAG_LENGTH_BITS, iv))
         return cipher.doFinal(body)
     }
 
-    private fun getOrCreateKey(): SecretKey {
-        val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE_PROVIDER).apply { load(null) }
-        (keyStore.getKey(keyAlias, null) as? SecretKey)?.let { return it }
+    /** Decrypt must never mint a key: a fresh one would fail as an opaque tag mismatch, masking key loss. */
+    private fun requireKey(): SecretKey = loadKey() ?: throw KeyUnavailableException(keyAlias)
 
+    private fun getOrCreateKey(): SecretKey = loadKey() ?: generateKey()
+
+    private fun loadKey(): SecretKey? {
+        val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE_PROVIDER).apply { load(null) }
+        return keyStore.getKey(keyAlias, null) as? SecretKey
+    }
+
+    private fun generateKey(): SecretKey {
         val keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE_PROVIDER)
         keyGenerator.init(
             KeyGenParameterSpec

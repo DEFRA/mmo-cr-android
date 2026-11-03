@@ -1,5 +1,6 @@
 package uk.gov.defra.mmocatchrecord.core.security
 
+import android.security.keystore.KeyInfo
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.dataStoreFile
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -14,9 +15,13 @@ import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.security.KeyStore
+import javax.crypto.SecretKey
+import javax.crypto.SecretKeyFactory
 
 /**
  * Instrumented cover for the real `AndroidKeyStore` path (ADR 0006/0019): Robolectric has no
@@ -29,16 +34,60 @@ class SessionStoreEncryptionSmokeTest {
 
     @Before
     @After
-    fun deleteTestFile() {
+    fun resetFileAndKey() {
         file.delete()
+        keyStore().deleteEntry(KEY_ALIAS)
     }
 
     @Test
-    fun keystoreCipherRoundTripsThroughANonAuthBoundKey() {
+    fun keystoreCipherRoundTripsAPayload() {
         val cipher = KeystoreAesGcmCipher(KEY_ALIAS)
         val plaintext = "session-metadata-canary".toByteArray()
 
         assertArrayEquals(plaintext, cipher.decrypt(cipher.encrypt(plaintext)))
+    }
+
+    @Test
+    fun everyEncryptionUsesAFreshIv() {
+        val cipher = KeystoreAesGcmCipher(KEY_ALIAS)
+        val plaintext = "session-metadata-canary".toByteArray()
+
+        val first = cipher.encrypt(plaintext)
+        val second = cipher.encrypt(plaintext)
+
+        assertFalse(
+            "Identical plaintext must not encrypt to identical ciphertext",
+            first.contentEquals(second),
+        )
+        // IV reuse under a fixed GCM key is catastrophic, so the IV prefix itself is compared.
+        assertFalse(
+            "The 12-byte GCM IV must differ on every encryption",
+            first.copyOfRange(0, GCM_IV_LENGTH_BYTES).contentEquals(second.copyOfRange(0, GCM_IV_LENGTH_BYTES)),
+        )
+    }
+
+    @Test
+    fun theSessionKeyIsNotBoundToUserAuthentication() {
+        KeystoreAesGcmCipher(KEY_ALIAS).encrypt("warm-up".toByteArray())
+        val key = keyStore().getKey(KEY_ALIAS, null) as SecretKey
+        val keyInfo =
+            SecretKeyFactory
+                .getInstance(key.algorithm, ANDROID_KEYSTORE)
+                .getKeySpec(key, KeyInfo::class.java) as KeyInfo
+
+        // Auth-binding would make a background token refresh demand a biometric prompt (ADR 0006).
+        assertFalse(keyInfo.isUserAuthenticationRequired)
+    }
+
+    @Test
+    fun decryptingAfterKeyLossFailsAsKeyUnavailableRatherThanTampering() {
+        val ciphertext = KeystoreAesGcmCipher(KEY_ALIAS).encrypt("session-metadata-canary".toByteArray())
+        keyStore().deleteEntry(KEY_ALIAS)
+
+        // A silently minted key would surface as an opaque AEADBadTagException, masking permanent key loss.
+        assertThrows(KeyUnavailableException::class.java) {
+            KeystoreAesGcmCipher(KEY_ALIAS).decrypt(ciphertext)
+        }
     }
 
     @Test
@@ -57,6 +106,8 @@ class SessionStoreEncryptionSmokeTest {
             )
             withStore { assertEquals(DISTINCTIVE_TIMESTAMP, it.getLastVerifiedOnlineAtMillis()) }
         }
+
+    private fun keyStore(): KeyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
 
     /** DataStore forbids two live instances over one file, so each block owns a scope it then tears down. */
     private suspend fun withStore(block: suspend (DataStoreSessionStore) -> Unit) {
@@ -78,8 +129,10 @@ class SessionStoreEncryptionSmokeTest {
     }
 
     private companion object {
+        const val ANDROID_KEYSTORE = "AndroidKeyStore"
         const val TEST_FILE_NAME = "session_metadata_smoke_test.pb"
         const val KEY_ALIAS = "session_metadata_smoke_test_key"
         const val DISTINCTIVE_TIMESTAMP = 1_234_567_890_123L
+        const val GCM_IV_LENGTH_BYTES = 12
     }
 }
