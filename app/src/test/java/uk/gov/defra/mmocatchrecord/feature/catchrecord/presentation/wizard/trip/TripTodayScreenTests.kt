@@ -88,7 +88,7 @@ class TripTodayScreenTests {
                 TripTodayScreen(viewModel = viewModel, onNavigate = { navigated += it }, onBack = {})
             }
         }
-        viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+        viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
         composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.state.value.status is UiStatus.Content<*> }
         composeTestRule.waitForIdle()
 
@@ -109,7 +109,7 @@ class TripTodayScreenTests {
                 TripTodayScreen(viewModel = viewModel, onNavigate = { navigated += it }, onBack = {})
             }
         }
-        viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+        viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-2"))
         composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.state.value.status is UiStatus.Content<*> }
         composeTestRule.waitForIdle()
 

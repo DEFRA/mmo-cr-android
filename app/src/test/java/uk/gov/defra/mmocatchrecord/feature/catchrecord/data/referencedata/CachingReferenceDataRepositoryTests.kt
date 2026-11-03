@@ -98,6 +98,17 @@ class CachingReferenceDataRepositoryTests {
         }
 
     @Test
+    fun `a cached vessel's pln is carried into the domain model`() =
+        runTest {
+            dao.replaceVessels(listOf(vesselEntity("v1", "ACHILLES").copy(pln = "PH101")))
+            dao.upsertMetadata(metadata(DATASET_VESSELS, fetchedAtEpochMillis = FIXED_NOW_MILLIS))
+
+            val vessel = repository().getVessels().getOrThrow().single()
+
+            assertEquals("PH101", vessel.pln)
+        }
+
+    @Test
     fun `a stale cache is returned immediately and triggers a background refresh`() =
         runTest {
             dao.replaceVessels(listOf(vesselEntity("v1", "ACHILLES")))

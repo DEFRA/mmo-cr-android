@@ -77,11 +77,11 @@ class ReturnDateScreenViewModelTests {
                 ReturnDateScreen(viewModel = viewModel, onNavigate = { navigated += it }, onBack = {})
             }
         }
-        viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+        viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
         composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.state.value.status is UiStatus.Content<*> }
         composeTestRule.waitForIdle()
 
-        composeTestRule.spinToAndConfirm(ReturnDateScreenTestTags.stepTags, DmyDate(11, 9, year))
+        composeTestRule.spinTo(ReturnDateScreenTestTags.stepTags, DmyDate(11, 9, year))
         composeTestRule.saveAndContinue(ReturnDateScreenTestTags.stepTags)
         composeTestRule.waitForIdle()
 
@@ -100,11 +100,11 @@ class ReturnDateScreenViewModelTests {
                 ReturnDateScreen(viewModel = viewModel, onNavigate = { navigated += it }, onBack = {})
             }
         }
-        viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+        viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
         composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.state.value.status is UiStatus.Content<*> }
         composeTestRule.waitForIdle()
 
-        composeTestRule.spinToAndConfirm(ReturnDateScreenTestTags.stepTags, DmyDate(1, 9, year))
+        composeTestRule.spinTo(ReturnDateScreenTestTags.stepTags, DmyDate(1, 9, year))
         composeTestRule.saveAndContinue(ReturnDateScreenTestTags.stepTags)
         composeTestRule.waitForIdle()
 

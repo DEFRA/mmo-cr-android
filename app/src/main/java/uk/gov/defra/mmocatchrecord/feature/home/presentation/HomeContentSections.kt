@@ -31,6 +31,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.invisibleToUser
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -221,6 +222,16 @@ private fun CatchRecordTableRow(
     val tripEndDateText =
         record.tripEndDate?.let(::formatDmyDate) ?: stringResource(R.string.records_trip_end_date_not_set)
     val createdByLabel = stringResource(R.string.records_created_by_you)
+    val referenceText = record.catchRecordReference ?: stringResource(R.string.records_reference_not_assigned)
+    // A vessel can hold many drafts (ADR 0018), so repeated date links need distinct names (WCAG 2.4.4/4.1.2).
+    val rowLabel =
+        stringResource(
+            R.string.records_row_accessible_label,
+            tripEndDateText,
+            record.vesselName,
+            stringResource(record.status.labelRes),
+            referenceText,
+        )
 
     Row(
         modifier =
@@ -230,13 +241,22 @@ private fun CatchRecordTableRow(
                 .testTag(CatchRecordsListSectionTestTags.row(record.id))
                 .padding(vertical = Spacing.s),
     ) {
-        TripEndDateCell(tripEndDateText, isResumable, minTouchTarget) { onClick(record.id) }
+        TripEndDateCell(
+            text = tripEndDateText,
+            accessibleLabel = rowLabel,
+            isResumable = isResumable,
+            minTouchTarget = minTouchTarget,
+        ) { onClick(record.id) }
         Text(
             text = record.vesselName,
             style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.width(VesselColumnWidth).padding(end = TableColumnGap),
+            modifier =
+                Modifier
+                    .width(VesselColumnWidth)
+                    .padding(end = TableColumnGap)
+                    .then(if (isResumable) Modifier.semantics { invisibleToUser() } else Modifier),
         )
-        StatusCell(record)
+        StatusCell(record, hideFromAccessibility = isResumable)
         Text(
             text = createdByLabel,
             style = MaterialTheme.typography.bodyLarge,
@@ -248,15 +268,18 @@ private fun CatchRecordTableRow(
     }
 }
 
+/** The Trip ID is kept out of visible rendering here, but still feeds [accessibleLabel] so rows for the
+ *  same vessel/date/status (ADR 0018) remain distinctly announced to TalkBack. */
 @Suppress("FunctionNaming")
 @Composable
 private fun TripEndDateCell(
     text: String,
+    accessibleLabel: String,
     isResumable: Boolean,
     minTouchTarget: Dp,
     onClick: () -> Unit,
 ) {
-    Box(modifier = Modifier.width(TripEndDateColumnWidth).padding(end = TableColumnGap)) {
+    Column(modifier = Modifier.width(TripEndDateColumnWidth).padding(end = TableColumnGap)) {
         if (isResumable) {
             Text(
                 text = text,
@@ -268,7 +291,8 @@ private fun TripEndDateCell(
                 modifier =
                     Modifier
                         .sizeIn(minWidth = minTouchTarget, minHeight = minTouchTarget)
-                        .clickable(role = Role.Button, onClick = onClick),
+                        .clickable(role = Role.Button, onClick = onClick)
+                        .semantics { contentDescription = accessibleLabel },
             )
         } else {
             Text(text = text, style = MaterialTheme.typography.bodyLarge.copy(color = MmoColors.Text))
@@ -278,8 +302,17 @@ private fun TripEndDateCell(
 
 @Suppress("FunctionNaming")
 @Composable
-private fun StatusCell(record: CatchRecordSummary) {
-    Column(modifier = Modifier.width(StatusColumnWidth).padding(end = TableColumnGap)) {
+private fun StatusCell(
+    record: CatchRecordSummary,
+    hideFromAccessibility: Boolean = false,
+) {
+    Column(
+        modifier =
+            Modifier
+                .width(StatusColumnWidth)
+                .padding(end = TableColumnGap)
+                .then(if (hideFromAccessibility) Modifier.semantics { invisibleToUser() } else Modifier),
+    ) {
         StatusTag(status = record.status)
     }
 }

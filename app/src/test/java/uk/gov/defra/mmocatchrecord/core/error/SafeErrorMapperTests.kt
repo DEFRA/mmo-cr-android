@@ -6,6 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.DraftMappingException
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.remote.ReferenceDataHttpException
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MissingVesselRegistrationException
 import java.io.IOException
 
 /** [SafeErrorMapper] never surfaces a raw message and classifies every known failure kind (ADR 0011/0015). */
@@ -51,5 +52,17 @@ class SafeErrorMapperTests {
         val mapped = SafeErrorMapper.map(error)
 
         assertFalse(mapped.message.contains("secret"))
+    }
+
+    @Test
+    fun `a vessel with no registration maps to the specific non-retryable message`() {
+        val mapped = SafeErrorMapper.map(MissingVesselRegistrationException())
+
+        assertEquals(
+            "You cannot start a catch record for this vessel because its registration details are missing. " +
+                "Contact the MMO.",
+            mapped.message,
+        )
+        assertFalse(mapped.isRetryable)
     }
 }

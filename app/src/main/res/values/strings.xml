@@ -16,6 +16,9 @@
     <string name="records_reference_pending">Reference not yet assigned</string>
     <string name="records_trip_end_date_not_set">Not entered yet</string>
     <string name="records_created_by_you">You</string>
+    <!-- Visible date leads the name per WCAG 2.5.3; distinguishes a vessel's multiple drafts (ADR 0018). -->
+    <string name="records_row_accessible_label">%1$s, %2$s, %3$s, Trip ID %4$s</string>
+    <string name="records_reference_not_assigned">Not assigned yet</string>
     <string name="pagination_showing">Showing %1$d to %2$d of %3$d</string>
     <string name="pagination_previous">Previous</string>
     <string name="pagination_next">Next</string>
@@ -80,7 +83,7 @@
     <string name="gov_uk" translatable="false">GOV.UK</string>
     <string name="gov_uk_royal_crest">GOV.UK Royal Crest</string>
     <string name="save_and_continue">Save and continue</string>
-    <string name="cancel">Cancel</string>
+    <string name="cancel">Continue</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
     <string name="draft_resume_title">What do you want to do with your draft record?</string>
@@ -98,12 +101,14 @@
     <string name="date_month_label">Month</string>
     <string name="date_year_label">Year</string>
     <string name="error_summary_title">There is a problem</string>
-    <string name="date_error_not_confirmed">Select a date and press OK</string>
-    <string name="date_picker_ok">OK</string>
-    <string name="date_picker_selected">Selected date: %1$s</string>
     <string name="date_error_invalid_date">Enter a real date</string>
-    <string name="date_error_return_before_departure">Return date must be on or after the departure date</string>
-    <string name="departure_port_title">Select the port you set off from</string>
+    <string name="date_error_departure_before_earliest">Date you left for your trip must be on or after 24 July 2025</string>
+    <string name="date_error_departure_in_future">Date you left for your trip must be today or in the past</string>
+    <string name="date_error_return_in_future">Date you returned from your trip must be today or in the past</string>
+    <string name="date_error_return_before_departure">Date you returned from your trip must be the same as or after the date you left</string>
+    <string name="departure_port_title">Enter the port or closest port you set off from</string>
+    <string name="second_entry_departure_port_title">Select the port you set off from</string>
+    <string name="first_entry_return_port_title">Enter the port or closest port you returned to</string>
     <string name="return_port_title">Select the port you returned to</string>
     <string name="port_selection_confirm_title">Was %1$s the port or the closest port you set off from and returned to?</string>
     <string name="autocomplete_search_placeholder">Type to search (minimum 2 characters)</string>
@@ -150,7 +155,7 @@
     <string name="gear_stat_rectangle_body_select_other">Select the area where most of your catch was caught. If it is not listed, select Other to enter it.</string>
     <string name="gear_stat_rectangle_other_option">Other</string>
     <string name="gear_stat_rectangle_no_matches_found">No matching statistical sub areas found</string>
-    <string name="gear_stat_rectangle_error_required">Select a statistical sub area</string>
+    <string name="gear_stat_rectangle_error_required">Select the statistical sub area where the majority of your catch was caught.</string>
     <string name="gear_stat_rectangle_error_format">Enter a statistical sub area in the correct format, for example 38E84</string>
     <string name="gear_stat_rectangle_error_not_found">Enter a valid statistical sub area code.</string>
     <string name="gear_stat_rectangle_selected_area">Selected area: %1$s</string>
@@ -188,6 +193,11 @@
     <string name="add_a_species_action">Add a species</string>
     <string name="remove_a_species_action">Remove a species</string>
     <string name="species_checklist_error_required">Select at least one species</string>
+    <string name="remove_species_title">Remove a species caught with %1$s</string>
+    <string name="remove_species_title_fallback">Remove a species</string>
+    <string name="remove_species_instruction">Select all that apply.</string>
+    <string name="remove_species_error_required">Select the species you want to remove</string>
+    <string name="delete_action">Continue</string>
     <string name="species_weight_error_required_above_min">Enter the weight above minimum size retained</string>
     <string name="species_weight_error_required_kept_onboard">Enter the weight above minimum size kept onboard or in keep pots in kilograms</string>
     <string name="species_weight_error_below_minimum">Weight for %1$s must be more than 0kg</string>
@@ -202,6 +212,8 @@
     <string name="not_landed_straight_away_species_title">Which species from this trip are you not landing straight away?</string>
     <string name="not_landed_straight_away_species_helper">For example, keeping white fish onboard for bait or storing shellfish in keep pots.</string>
     <string name="weight_above_minimum_size_kept_onboard_label">Weight above minimum size kept onboard or in keep pots (kg)</string>
+    <string name="weight_input_format_hint">Weight must be a number with up to 1 decimal place, like 12.5</string>
+    <string name="weight_input_whole_number_hint">Weight must be a whole number, like 12</string>
     <plurals name="port_search_suggestions_available">
         <item quantity="one">%1$d suggestion available</item>
         <item quantity="other">%1$d suggestions available</item>

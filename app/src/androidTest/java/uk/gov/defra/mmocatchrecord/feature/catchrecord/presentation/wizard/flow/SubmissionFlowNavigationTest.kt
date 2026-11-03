@@ -74,12 +74,6 @@ class SubmissionFlowNavigationTest {
     ) : CatchRecordDraftRepository {
         private val drafts = mutableMapOf(seed.id to seed)
 
-        override suspend fun getActiveDraft(vesselId: String): Result<CatchRecordDraft?> =
-            Result.success(drafts.values.firstOrNull { it.vesselId == vesselId && it.status.isActive })
-
-        override suspend fun getAnyActiveDraft(): Result<CatchRecordDraft?> =
-            Result.success(drafts.values.firstOrNull { it.status.isActive })
-
         override suspend fun getDraftById(draftId: String): Result<CatchRecordDraft?> = Result.success(drafts[draftId])
 
         override suspend fun startDraft(candidate: CatchRecordDraft): Result<CatchRecordDraft> =
@@ -171,7 +165,7 @@ class SubmissionFlowNavigationTest {
             notLandedStraightAway = false,
             status = DraftStatus.Draft,
             modifiedAtEpochMillis = 0L,
-            catchRecordReference = "A1234520260727150815",
+            catchRecordReference = "B14974-27072026-150815",
             lateSubmissionWarningAcknowledged = true,
         )
 
@@ -245,9 +239,9 @@ class SubmissionFlowNavigationTest {
             SubmissionFlowHarness(viewModel = viewModel, navController = navController)
         }
 
-        // `EnterFlow` is genuinely asynchronous (loads reference data + the existing draft) — wait for the
-        // real ViewModel to resolve it, exactly as `CatchRecordFlowEntryScreen` does in production.
-        viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+        // Resuming a specific draft is genuinely asynchronous (reference data + the draft itself) — wait
+        // for the real ViewModel to resolve it, exactly as `DraftResumeScreen` does in production.
+        viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
         composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.state.value.status is UiStatus.Content<*> }
         composeTestRule.waitForIdle()
         return navController
@@ -283,7 +277,7 @@ class SubmissionFlowNavigationTest {
 
         // Real navigation to the real screen, not just a state change.
         composeTestRule.onNodeWithTag(SubmissionSuccessScreenTestTags.SCREEN).assertIsDisplayed()
-        composeTestRule.onNodeWithText("Your catch record reference A1234520260727150815").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Your catch record reference B14974-27072026-150815").assertIsDisplayed()
 
         // Real submission call chain reached (not skipped) and the draft's persisted status flipped.
         assertEquals(1, submissionRepository.submitCallCount)
@@ -321,7 +315,7 @@ class SubmissionFlowNavigationTest {
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithTag(SubmissionPendingSyncScreenTestTags.SCREEN).assertIsDisplayed()
-        composeTestRule.onNodeWithText("Your catch record reference A1234520260727150815").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Your catch record reference B14974-27072026-150815").assertIsDisplayed()
 
         // Offline path never attempts the network submission call.
         assertEquals(0, submissionRepository.submitCallCount)

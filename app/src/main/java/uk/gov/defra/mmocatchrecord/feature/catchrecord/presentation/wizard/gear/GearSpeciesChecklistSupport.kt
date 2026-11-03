@@ -1,5 +1,6 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear
 
+import uk.gov.defra.mmocatchrecord.common.design.GdsCheckboxOption
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
@@ -121,4 +122,14 @@ internal object GearSpeciesChecklistSupport {
         updatedGearUse: GearUse,
     ): CatchRecordDraft =
         draft.copy(gearUses = draft.gearUses.map { if (it.id == updatedGearUse.id) updatedGearUse else it })
+
+    /** Maps [gearUse]'s species weights to checkbox options, resolving each row's display label. */
+    fun checkboxOptionsFor(
+        gearUse: GearUse,
+        speciesList: List<Species>,
+    ): List<GdsCheckboxOption> =
+        gearUse.speciesWeights.map { entry ->
+            val species = speciesList.firstOrNull { it.id == entry.speciesId }
+            GdsCheckboxOption(id = entry.speciesId, label = species?.name ?: entry.speciesId)
+        }
 }

@@ -11,14 +11,16 @@ import androidx.room.PrimaryKey
  * aggregate. See ADR 0006 for the SQLCipher at-rest encryption wrapping this database, and ADR 0007 for how
  * this is driven by the wizard flow.
  *
- * The "one active draft per vessel" rule (draft singularity) is enforced by
- * [CatchRecordDraftDao]/the repository at the application layer within a transaction (a partial/conditional
- * unique index is not expressed by Room's annotation API), not by a SQL constraint on this table. The
- * `(vesselId, status)` index below exists purely to make that lookup query efficient.
+ * Drafts are independent — a vessel may hold many active ones (ADR 0018), so no uniqueness is enforced
+ * on `vesselId`. The `(vesselId, status)` index below serves the submitted-trip port-history lookup.
  */
 @Entity(
     tableName = "catch_record_draft",
-    indices = [Index(value = ["vesselId", "status"])],
+    indices = [
+        Index(value = ["vesselId", "status"]),
+        // Trip ID uniqueness (v10); SQLite unique indexes allow many NULLs, so unset references are fine.
+        Index(value = ["catchRecordReference"], unique = true),
+    ],
 )
 data class DraftEntity(
     @PrimaryKey val id: String,
@@ -38,7 +40,7 @@ data class DraftEntity(
     val modifiedAtEpochMillis: Long,
     /** Phase 5B: `null` (column default) until the "not landing straight away" question is answered. */
     val notLandedStraightAway: Boolean? = null,
-    /** Phase 8: user-facing reference generated once at draft creation — see [CatchRecordReferenceGenerator]. */
+    /** Trip ID generated once at draft creation (unique, see [CatchRecordReferenceGenerator]). */
     val catchRecordReference: String? = null,
     /**
      * Phase 8: see [uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft]'s

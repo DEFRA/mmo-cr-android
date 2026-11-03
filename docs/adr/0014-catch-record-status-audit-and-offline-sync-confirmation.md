@@ -58,6 +58,10 @@ still null) and only later, once `CatchRecordSyncWorker` (ADR 0009) succeeds, tr
 
 ### `PendingSync` is not "active"
 
+> Superseded by [ADR 0018](0018-independent-catch-record-drafts.md): the v6 partial unique index is dropped
+> and a vessel may hold any number of simultaneous drafts, so "active" no longer gates anything in SQL.
+> `DraftStatus.isActive` survives only as a presentation/domain predicate.
+
 `DraftStatus.isActive` remains `Draft || ReadyToSubmit` — `PendingSync` deliberately does **not** count.
 The v6 partial unique index predicate (`WHERE status IN ('Draft','ReadyToSubmit')`, ADR 0010) is unchanged.
 If `PendingSync` counted as active, a fisher with no signal would be blocked from starting a second trip's
@@ -66,6 +70,10 @@ ticket's entire purpose. A vessel can therefore have one `PendingSync` record aw
 active `Draft` in progress at the same time.
 
 ### Draft materialisation moved to the first "Save and continue" (BR-XX)
+
+> Superseded: `vesselSelected` persists a brand-new draft immediately again (to stop an abandoned selection
+> being silently lost), and per [ADR 0018](0018-independent-catch-record-drafts.md) it never reads an
+> existing one. `startDraft(candidate)`'s signature and `isDraftPersisted` are unchanged.
 
 Previously `CatchRecordFlowViewModel.vesselSelected()` called `startDraft(vesselId)`, which inserted a row
 immediately — so an abandoned vessel selection left an empty draft polluting the records list, violating

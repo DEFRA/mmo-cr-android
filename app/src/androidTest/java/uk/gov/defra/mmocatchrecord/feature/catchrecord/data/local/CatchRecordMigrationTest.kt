@@ -61,7 +61,7 @@ class CatchRecordMigrationTest {
     }
 
     @Test
-    fun migrate1To9fullChainPreservesARowAcrossEveryIntermediateSchemaChange() {
+    fun migrate1To11fullChainPreservesARowAcrossEveryIntermediateSchemaChange() {
         val db = helper.createDatabase(databaseName, 1)
         db.seedV1DraftWithChildren("draft-v1", "vessel-legacy", 9_000L)
 
@@ -139,6 +139,63 @@ class CatchRecordMigrationTest {
             }
         db.close()
     }
+
+    /** ADR 0018: the v6 partial unique index is dropped so one vessel can hold several active drafts. */
+    @Test
+    fun migrate10To11dropsTheActiveVesselIndexAndFreesAVesselToHoldSeveralDrafts() {
+        val db = helper.createDatabase(databaseName, VERSION_10)
+        db.execSQL(PARTIAL_UNIQUE_INDEX_SQL)
+        db.seedV10Draft("draft-a", "vessel-shared", "Draft")
+        runCatching { db.seedV10Draft("draft-b", "vessel-shared", "Draft") }.also {
+            assertTrue("The v10 partial index must reject a second active draft before the migration", it.isFailure)
+        }
+
+        CatchRecordMigrations.MIGRATION_10_11.migrate(db)
+
+        db.seedV10Draft("draft-b", "vessel-shared", "Draft")
+        db.seedV10Draft("draft-c", "vessel-shared", "ReadyToSubmit")
+        query(db, "SELECT COUNT(*) FROM catch_record_draft WHERE vesselId = 'vessel-shared'", 3)
+        db
+            .query(
+                "SELECT name FROM sqlite_master WHERE type = 'index' AND name = ?",
+                arrayOf("index_catch_record_draft_active_vessel"),
+            ).use { cursor -> assertTrue("The index must be gone after MIGRATION_10_11", !cursor.moveToFirst()) }
+        db.close()
+    }
+
+    /** Room can validate v11 because nothing raw-SQL remains for it to trip over (ADR 0018). */
+    @Test
+    fun migrate10To11producesASchemaRoomItselfValidates() {
+        helper.createDatabase(databaseName, VERSION_10).apply {
+            seedV10Draft("draft-validated", "vessel-1", "Draft")
+            close()
+        }
+
+        val migrated =
+            helper.runMigrationsAndValidate(databaseName, VERSION_11, true, CatchRecordMigrations.MIGRATION_10_11)
+
+        query(migrated, "SELECT COUNT(*) FROM catch_record_draft WHERE id = 'draft-validated'", 1)
+        migrated.close()
+    }
+
+    private fun query(
+        db: SupportSQLiteDatabase,
+        sql: String,
+        expected: Int,
+    ) = db.query(sql).use { cursor ->
+        assertTrue(cursor.moveToFirst())
+        assertEquals(sql, expected, cursor.getInt(0))
+    }
+
+    private fun SupportSQLiteDatabase.seedV10Draft(
+        id: String,
+        vesselId: String,
+        status: String,
+    ) = execSQL(
+        "INSERT INTO catch_record_draft (id, vesselId, status, modifiedAtEpochMillis, createdAtEpochMillis, " +
+            "lateSubmissionWarningAcknowledged) VALUES (?, ?, ?, 1000, 1000, 0)",
+        arrayOf<Any>(id, vesselId, status),
+    )
 
     private data class Seed(
         val id: String,
@@ -255,6 +312,8 @@ class CatchRecordMigrationTest {
 
     private companion object {
         const val VERSION_6 = 6
+        const val VERSION_10 = 10
+        const val VERSION_11 = 11
         const val PARTIAL_UNIQUE_INDEX_SQL =
             "CREATE UNIQUE INDEX IF NOT EXISTS index_catch_record_draft_active_vessel " +
                 "ON catch_record_draft (vesselId) WHERE status IN ('Draft', 'ReadyToSubmit')"

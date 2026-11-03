@@ -1,3 +1,4 @@
+import java.util.Base64
 import java.util.Properties
 
 plugins {
@@ -18,6 +19,33 @@ val appVersion =
     Properties().apply {
         rootProject.file("version.properties").inputStream().use { stream -> load(stream) }
     }
+
+// Upload-key signing for the release build type (Play App Signing — ci-cd.instructions.md). CI supplies
+// UPLOAD_KEYSTORE_BASE64 + passwords as env vars; locally, set the local.properties `upload.*` keys instead.
+val uploadKeystoreBase64: String? = System.getenv("UPLOAD_KEYSTORE_BASE64")
+val uploadKeystorePassword: String? =
+    System.getenv("UPLOAD_KEYSTORE_PASSWORD") ?: localProperties.getProperty("upload.keystore.password")
+val uploadKeyAlias: String? = System.getenv("UPLOAD_KEY_ALIAS") ?: localProperties.getProperty("upload.key.alias")
+val uploadKeyPassword: String? =
+    System.getenv("UPLOAD_KEY_PASSWORD") ?: localProperties.getProperty("upload.key.password")
+val uploadKeystoreFile: File? =
+    when {
+        uploadKeystoreBase64 != null ->
+            layout.buildDirectory.file("upload-keystore.jks").get().asFile.apply {
+                parentFile.mkdirs()
+                writeBytes(Base64.getDecoder().decode(uploadKeystoreBase64))
+            }
+        localProperties.getProperty("upload.keystore.path") != null ->
+            file(localProperties.getProperty("upload.keystore.path")!!)
+        else -> null
+    }
+// PKCS12 (.p12/.pfx) keystores need an explicit storeType; JKS auto-detects.
+val uploadKeystoreType: String? =
+    uploadKeystoreFile
+        ?.extension
+        ?.lowercase()
+        ?.takeIf { it == "p12" || it == "pfx" }
+        ?.let { "PKCS12" }
 
 android {
     namespace = "uk.gov.defra.mmocatchrecord"
@@ -43,6 +71,20 @@ android {
         )
     }
 
+    // Unsigned if no keystore is configured (e.g. a dev machine without upload-key access); CI and
+    // release-signing developers always provide the keys resolved above.
+    signingConfigs {
+        if (uploadKeystoreFile != null) {
+            create("upload") {
+                storeFile = uploadKeystoreFile
+                storeType = uploadKeystoreType
+                storePassword = uploadKeystorePassword
+                keyAlias = uploadKeyAlias
+                keyPassword = uploadKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         debug {
             // Lets a local debug build sit beside the Play-installed app on one device.
@@ -50,6 +92,7 @@ android {
         }
         // Built unsigned; the release lane signs the AAB with the upload key (ADR 0018).
         release {
+            signingConfigs.findByName("upload")?.let { signingConfig = it }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

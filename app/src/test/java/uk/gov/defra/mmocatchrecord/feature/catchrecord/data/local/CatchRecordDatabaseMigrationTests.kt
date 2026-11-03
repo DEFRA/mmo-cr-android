@@ -42,7 +42,7 @@ class CatchRecordDatabaseMigrationTests {
         val database =
             Room
                 .databaseBuilder(context(), CatchRecordDatabase::class.java, dbFile.path)
-                .addMigrations(CatchRecordMigrations.MIGRATION_7_8, CatchRecordMigrations.MIGRATION_8_9)
+                .addMigrations(*CatchRecordMigrations.ALL)
                 .build()
 
         val migratedDb = database.openHelper.writableDatabase

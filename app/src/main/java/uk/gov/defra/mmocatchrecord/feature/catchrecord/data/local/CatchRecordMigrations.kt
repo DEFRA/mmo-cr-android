@@ -4,7 +4,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
- * Real Room [Migration]s for every [CatchRecordDatabase] schema version bump, v1 through v8 — see ADR 0010.
+ * Real Room [Migration]s for every [CatchRecordDatabase] schema version bump, v1 through v11 — see ADR 0010.
  * Each migration's SQL is derived directly from the committed `app/schemas` JSON history (the authoritative
  * record of each version's actual column/table shape), never destructively dropping/recreating the whole
  * database. Registered via `.addMigrations(...)` in `di/DatabaseModule.kt`.
@@ -97,55 +97,11 @@ object CatchRecordMigrations {
             }
         }
 
-    /**
-     * v5 -> v6 (this remediation, see ADR 0010): enforces "one active draft per vessel" with a genuine
-     * partial unique index, first deduplicating any pre-existing violation (keeping the most-recently
-     * modified active draft per vessel, demoting the rest to [uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus.Discarded]
-     * — never deleting rows outright) so the index creation itself cannot fail against already-corrupted
-     * local state.
-     */
+    // v5 -> v6 is a no-op (ADR 0018): v6 had no Room-visible schema change, and its active-vessel dedupe
+    // and partial unique index are both reversed by MIGRATION_10_11.
     val MIGRATION_5_6 =
         object : Migration(5, 6) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                dedupeActiveDraftsPerVessel(db)
-                db.execSQL(
-                    "CREATE UNIQUE INDEX IF NOT EXISTS index_catch_record_draft_active_vessel " +
-                        "ON catch_record_draft (vesselId) WHERE status IN ('Draft', 'ReadyToSubmit')",
-                )
-            }
-
-            private fun dedupeActiveDraftsPerVessel(db: SupportSQLiteDatabase) {
-                val activeDraftsByVessel = mutableMapOf<String, MutableList<Pair<String, Long>>>()
-                db
-                    .query(
-                        "SELECT id, vesselId, modifiedAtEpochMillis FROM catch_record_draft " +
-                            "WHERE status IN ('Draft', 'ReadyToSubmit')",
-                    ).use { cursor ->
-                        val idIndex = cursor.getColumnIndexOrThrow("id")
-                        val vesselIdIndex = cursor.getColumnIndexOrThrow("vesselId")
-                        val modifiedAtIndex = cursor.getColumnIndexOrThrow("modifiedAtEpochMillis")
-                        while (cursor.moveToNext()) {
-                            val id = cursor.getString(idIndex)
-                            val vesselId = cursor.getString(vesselIdIndex)
-                            val modifiedAt = cursor.getLong(modifiedAtIndex)
-                            activeDraftsByVessel.getOrPut(vesselId) { mutableListOf() } += id to modifiedAt
-                        }
-                    }
-
-                activeDraftsByVessel.values
-                    .filter { it.size > 1 }
-                    .forEach { duplicates ->
-                        val keepId = duplicates.maxWithOrNull(compareBy({ it.second }, { it.first }))?.first
-                        duplicates.forEach { (id, _) ->
-                            if (id != keepId) {
-                                db.execSQL(
-                                    "UPDATE catch_record_draft SET status = 'Discarded' WHERE id = ?",
-                                    arrayOf(id),
-                                )
-                            }
-                        }
-                    }
-            }
+            override fun migrate(db: SupportSQLiteDatabase) = Unit
         }
 
     /** v6 -> v7 (CRAR-152 Phase A, FR10): [DraftEntity] gained three nullable audit columns — see ADR 0014. */
@@ -226,6 +182,66 @@ object CatchRecordMigrations {
             }
         }
 
+    // v9 -> v10: unique Trip IDs; the earliest duplicate keeps its value, later ones get the lowest free
+    // `-2`, `-3`… suffix so the unique index can be created.
+    val MIGRATION_9_10 =
+        object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                dedupeReferences(db)
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_catch_record_draft_catchRecordReference` " +
+                        "ON `catch_record_draft` (`catchRecordReference`)",
+                )
+            }
+
+            private fun dedupeReferences(db: SupportSQLiteDatabase) {
+                val taken = mutableSetOf<String>()
+                db
+                    .query("SELECT catchRecordReference FROM catch_record_draft WHERE catchRecordReference IS NOT NULL")
+                    .use { cursor -> while (cursor.moveToNext()) taken += cursor.getString(0) }
+                val renames = mutableListOf<Pair<String, String>>()
+                db
+                    .query(
+                        "SELECT id, catchRecordReference FROM catch_record_draft WHERE catchRecordReference IN (" +
+                            "SELECT catchRecordReference FROM catch_record_draft " +
+                            "WHERE catchRecordReference IS NOT NULL " +
+                            "GROUP BY catchRecordReference HAVING COUNT(*) > 1) " +
+                            "ORDER BY catchRecordReference, " +
+                            "COALESCE(createdAtEpochMillis, modifiedAtEpochMillis), id",
+                    ).use { cursor ->
+                        var previous: String? = null
+                        while (cursor.moveToNext()) {
+                            val id = cursor.getString(0)
+                            val reference = cursor.getString(1)
+                            if (reference == previous) {
+                                val renamed =
+                                    generateSequence(2) { it + 1 }
+                                        .map { "$reference-$it" }
+                                        .first { it !in taken }
+                                taken += renamed
+                                renames += id to renamed
+                            }
+                            previous = reference
+                        }
+                    }
+                renames.forEach { (id, reference) ->
+                    db.execSQL(
+                        "UPDATE catch_record_draft SET catchRecordReference = ? WHERE id = ?",
+                        arrayOf(reference, id),
+                    )
+                }
+            }
+        }
+
+    // v10 -> v11 (ADR 0018): drops the v6 partial unique index so a vessel may hold many independent
+    // active drafts. `IF EXISTS` because no fresh install or exported schema ever carried it.
+    val MIGRATION_10_11 =
+        object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("DROP INDEX IF EXISTS index_catch_record_draft_active_vessel")
+            }
+        }
+
     val ALL =
         arrayOf(
             MIGRATION_1_2,
@@ -236,5 +252,7 @@ object CatchRecordMigrations {
             MIGRATION_6_7,
             MIGRATION_7_8,
             MIGRATION_8_9,
+            MIGRATION_9_10,
+            MIGRATION_10_11,
         )
 }

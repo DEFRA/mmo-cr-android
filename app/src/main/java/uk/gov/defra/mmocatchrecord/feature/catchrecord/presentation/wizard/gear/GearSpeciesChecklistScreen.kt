@@ -23,7 +23,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.AppLanguageProvider
 import uk.gov.defra.mmocatchrecord.common.design.GdsCheckboxGroup
-import uk.gov.defra.mmocatchrecord.common.design.GdsCheckboxOption
 import uk.gov.defra.mmocatchrecord.common.design.GdsLinkAction
 import uk.gov.defra.mmocatchrecord.common.design.GdsNumericField
 import uk.gov.defra.mmocatchrecord.common.design.GdsNumericFieldKind
@@ -64,6 +63,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map.M
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.species.SpeciesSupport
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.species.SpeciesWeightFieldError
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.species.SpeciesWeightFieldKind
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.species.SpeciesWeightValidator
 
 object GearSpeciesChecklistScreenTestTags {
     const val SCREEN = "gear_species_checklist_screen"
@@ -85,8 +85,11 @@ object GearSpeciesChecklistScreenTestTags {
 /**
  * "Which species did you catch with {gear}?" checklist + progressive-disclosure weight capture (Phase 5A,
  * screen 2) — mirrors [GearSummaryScreenContent]'s checklist shape (checking a row reveals fields; "Add
- * a species"/"Remove a species" mirror "Add another gear"/"Remove gear" exactly), plus two new
- * add/remove-link progressive-disclosure cycles for the optional below-minimum/discarded weight fields.
+ * a species" mirrors "Add another gear" exactly), plus two new add/remove-link progressive-disclosure
+ * cycles for the optional below-minimum/discarded weight fields.
+ *
+ * "Remove a species" opens its own dedicated page ([RemoveSpeciesScreen]) with an independent,
+ * unchecked-by-default selection, rather than reusing this screen's "confirmed caught" checkboxes.
  */
 @Suppress("FunctionNaming")
 @Composable
@@ -98,6 +101,7 @@ fun GearSpeciesChecklistScreen(
     editGearUseId: String? = null,
     gearUseId: String? = null,
     onNavigateForGear: (WizardStep, String) -> Unit = { step, _ -> onNavigate(step) },
+    onNavigateToRemoveSpecies: (gearUseId: String) -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var hasUnsavedChanges by rememberSaveable { mutableStateOf(false) }
@@ -106,7 +110,7 @@ fun GearSpeciesChecklistScreen(
         state = state,
         editGearUseId = editGearUseId,
         gearUseId = gearUseId,
-        onRemoveSpecies = { updatedDraft -> viewModel.dispatch(CatchRecordFlowEvent.SpeciesRemoved(updatedDraft)) },
+        onRemoveSpeciesRequested = onNavigateToRemoveSpecies,
         onAddAnotherSpecies = { currentGearUseId ->
             if (editGearUseId != null) {
                 onNavigate(WizardStep.GearSpeciesSearch)
@@ -139,7 +143,7 @@ fun GearSpeciesChecklistScreen(
 @Composable
 private fun GearSpeciesChecklistScreen(
     state: CatchRecordFlowViewState,
-    onRemoveSpecies: (CatchRecordDraft) -> Unit,
+    onRemoveSpeciesRequested: (gearUseId: String) -> Unit,
     onAddAnotherSpecies: (gearUseId: String) -> Unit,
     onSubmit: (CatchRecordDraft) -> Unit,
     onBack: () -> Unit,
@@ -187,7 +191,7 @@ private fun GearSpeciesChecklistScreen(
                         draft = draft,
                         gearUse = currentGearUse,
                         speciesList = state.species,
-                        onRemoveSpecies = onRemoveSpecies,
+                        onRemoveSpeciesRequested = { onRemoveSpeciesRequested(currentGearUse.id) },
                         onAddAnotherSpecies = { onAddAnotherSpecies(currentGearUse.id) },
                         onSubmit = onSubmit,
                         onDirtyChanged = onDirtyChanged,
@@ -203,7 +207,7 @@ fun GearSpeciesChecklistScreenContent(
     draft: CatchRecordDraft,
     gearUse: GearUse,
     speciesList: List<Species>,
-    onRemoveSpecies: (CatchRecordDraft) -> Unit,
+    onRemoveSpeciesRequested: () -> Unit,
     onAddAnotherSpecies: () -> Unit,
     onSubmit: (CatchRecordDraft) -> Unit,
     modifier: Modifier = Modifier,
@@ -246,11 +250,7 @@ fun GearSpeciesChecklistScreenContent(
         }
     LaunchedEffect(isDirty) { onDirtyChanged(isDirty) }
 
-    val options =
-        gearUse.speciesWeights.map { entry ->
-            val species = speciesList.firstOrNull { it.id == entry.speciesId }
-            GdsCheckboxOption(id = entry.speciesId, label = species?.name ?: entry.speciesId)
-        }
+    val options = GearSpeciesChecklistSupport.checkboxOptionsFor(gearUse, speciesList)
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
         if (errors.isNotEmpty()) {
@@ -314,15 +314,8 @@ fun GearSpeciesChecklistScreenContent(
         )
         GdsLinkAction(
             text = stringResource(R.string.remove_a_species_action),
-            onClick = {
-                val updatedGearUse =
-                    gearUse.copy(speciesWeights = gearUse.speciesWeights.filterNot { it.speciesId in checkedIds })
-                checkedIds = emptySet()
-                onRemoveSpecies(replaceGearUse(draft, updatedGearUse))
-            },
+            onClick = onRemoveSpeciesRequested,
             testTag = GearSpeciesChecklistScreenTestTags.REMOVE_SPECIES_ACTION,
-            enabled = checkedIds.isNotEmpty(),
-            dimWhenDisabled = false,
         )
         PrimaryActionButton(
             text = stringResource(R.string.save_and_continue),
@@ -392,9 +385,11 @@ private fun SpeciesWeightFields(
     onToggleDisclosed: (key: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Precision (whole vs one-decimal) is a save-time SpeciesWeightValidator rule, not an input-time
-    // filter — blocking "." at input time would stop an invalid value ever reaching that validation (AC8).
+    // "." stays typeable for whole-number species so AC8's precision error is still reachable at save time;
+    // input itself is capped at one '.' and one digit after it.
     val numericKind = GdsNumericFieldKind.Decimal
+    val maxDecimalPlaces = SpeciesWeightValidator.MAX_INPUT_DECIMAL_PLACES
+    val invalidInputMessage = stringResource(R.string.weight_input_format_hint)
     val aboveKey = rawValueKey(speciesId, SpeciesWeightFieldKind.AboveMinimumSize)
     val belowKey = rawValueKey(speciesId, SpeciesWeightFieldKind.BelowMinimumSize)
     val discardedKey = rawValueKey(speciesId, SpeciesWeightFieldKind.LegallyDiscarded)
@@ -406,6 +401,8 @@ private fun SpeciesWeightFields(
             onValueChange = { onValueChange(aboveKey, it) },
             testTag = "${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_$speciesId",
             kind = numericKind,
+            maxDecimalPlaces = maxDecimalPlaces,
+            invalidInputMessage = invalidInputMessage,
             errorText =
                 errors[aboveKey]?.let {
                     speciesWeightErrorMessage(
@@ -423,6 +420,8 @@ private fun SpeciesWeightFields(
                 onValueChange = { onValueChange(belowKey, it) },
                 testTag = "${GearSpeciesChecklistScreenTestTags.BELOW_MIN_FIELD_PREFIX}_$speciesId",
                 kind = numericKind,
+                maxDecimalPlaces = maxDecimalPlaces,
+                invalidInputMessage = invalidInputMessage,
                 errorText =
                     errors[belowKey]?.let {
                         speciesWeightErrorMessage(
@@ -452,6 +451,8 @@ private fun SpeciesWeightFields(
                 onValueChange = { onValueChange(discardedKey, it) },
                 testTag = "${GearSpeciesChecklistScreenTestTags.DISCARDED_FIELD_PREFIX}_$speciesId",
                 kind = numericKind,
+                maxDecimalPlaces = maxDecimalPlaces,
+                invalidInputMessage = invalidInputMessage,
                 errorText =
                     errors[discardedKey]?.let {
                         speciesWeightErrorMessage(species, it, SpeciesWeightFieldKind.LegallyDiscarded)
@@ -556,7 +557,7 @@ fun GearSpeciesChecklistScreenPreview() {
         AppLanguageProvider(language = "en") {
             GearSpeciesChecklistScreen(
                 state = state,
-                onRemoveSpecies = {},
+                onRemoveSpeciesRequested = {},
                 onAddAnotherSpecies = {},
                 onSubmit = {},
                 onBack = {},

@@ -272,7 +272,7 @@ class GearSpeciesSearchScreenTests {
             val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
             repository.startDraft("vessel-achilles")
             repository.saveDraft(
-                repository.getAnyActiveDraft().getOrThrow()!!.copy(gearUses = listOf(gearUsePendingSpecies())),
+                repository.getDraftById("draft-1").getOrThrow()!!.copy(gearUses = listOf(gearUsePendingSpecies())),
             )
             val viewModel =
                 CatchRecordFlowViewModel(
@@ -292,7 +292,7 @@ class GearSpeciesSearchScreenTests {
                     GearSpeciesSearchScreen(viewModel = viewModel, onNavigate = { navigatedStep = it }, onBack = {})
                 }
             }
-            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
             testScheduler.advanceUntilIdle()
             composeTestRule.waitForIdle()
 
@@ -320,7 +320,7 @@ class GearSpeciesSearchScreenTests {
             val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
             repository.startDraft("vessel-achilles")
             repository.saveDraft(
-                repository.getAnyActiveDraft().getOrThrow()!!.copy(gearUses = listOf(gearUsePendingSpecies())),
+                repository.getDraftById("draft-1").getOrThrow()!!.copy(gearUses = listOf(gearUsePendingSpecies())),
             )
             val viewModel =
                 CatchRecordFlowViewModel(
@@ -345,7 +345,7 @@ class GearSpeciesSearchScreenTests {
                     )
                 }
             }
-            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
             testScheduler.advanceUntilIdle()
             composeTestRule.waitForIdle()
 
@@ -379,7 +379,7 @@ class GearSpeciesSearchScreenTests {
             val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
             repository.startDraft("vessel-achilles")
             repository.saveDraft(
-                repository.getAnyActiveDraft().getOrThrow()!!.copy(gearUses = listOf(gearUsePendingSpecies())),
+                repository.getDraftById("draft-1").getOrThrow()!!.copy(gearUses = listOf(gearUsePendingSpecies())),
             )
             val viewModel =
                 CatchRecordFlowViewModel(
@@ -406,7 +406,7 @@ class GearSpeciesSearchScreenTests {
                     )
                 }
             }
-            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
             testScheduler.advanceUntilIdle()
             composeTestRule.waitForIdle()
 

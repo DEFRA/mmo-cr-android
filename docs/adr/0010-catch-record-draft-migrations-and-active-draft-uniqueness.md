@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted
+Accepted — decisions 2 and 3 are superseded, and decision 4 is amended, by
+[ADR 0018](0018-independent-catch-record-drafts.md). Decision 1 (real migrations, no destructive fallback)
+remains in force.
 
 ## Context
 

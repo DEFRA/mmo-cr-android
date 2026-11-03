@@ -562,7 +562,9 @@ class MapScreenTests {
         composeTestRule.onNodeWithTag(MapScreenTestTags.AUTOCOMPLETE_SAVE_ACTION).performScrollTo().performClick()
 
         composeTestRule.onNodeWithTag(MapScreenTestTags.ERROR_SUMMARY).assertIsDisplayed()
-        composeTestRule.onNodeWithText("Select a statistical sub area").assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText("Select the statistical sub area where the majority of your catch was caught.")
+            .assertIsDisplayed()
     }
 
     @Test

@@ -104,9 +104,10 @@ class GearSummaryScreenTests {
     private fun buildViewModel(
         dispatcher: CoroutineDispatcher,
         repository: FakeCatchRecordDraftRepository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" }),
+        referenceDataRepository: FakeReferenceDataRepository = FakeReferenceDataRepository(),
     ) = CatchRecordFlowViewModel(
         repository,
-        FakeReferenceDataRepository(),
+        referenceDataRepository,
         FakeCatchRecordSubmissionRepository(),
         FakeNetworkConnectivityChecker(),
         FakeCatchRecordSyncScheduler(),
@@ -341,7 +342,7 @@ class GearSummaryScreenTests {
                     )
                 }
             }
-            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
             testScheduler.advanceUntilIdle()
             composeTestRule.waitForIdle()
 
@@ -381,7 +382,7 @@ class GearSummaryScreenTests {
                     )
                 }
             }
-            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
             testScheduler.advanceUntilIdle()
             composeTestRule.waitForIdle()
 
@@ -412,7 +413,7 @@ class GearSummaryScreenTests {
                     GearSummaryScreen(viewModel = viewModel, onNavigate = {}, onBack = {})
                 }
             }
-            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
             testScheduler.advanceUntilIdle()
             composeTestRule.waitForIdle()
 
@@ -450,7 +451,7 @@ class GearSummaryScreenTests {
                     )
                 }
             }
-            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
             testScheduler.advanceUntilIdle()
             composeTestRule.waitForIdle()
 
@@ -476,9 +477,12 @@ class GearSummaryScreenTests {
     @Test
     fun anOuterLoadErrorIsShownAsARetryableWizardErrorAndRecoversViaRetry() =
         runTest {
-            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
-            repository.failNextOperation = true
-            val viewModel = buildViewModel(dispatcher = StandardTestDispatcher(testScheduler), repository = repository)
+            val referenceData = FakeReferenceDataRepository().apply { failNextOperation = true }
+            val viewModel =
+                buildViewModel(
+                    dispatcher = StandardTestDispatcher(testScheduler),
+                    referenceDataRepository = referenceData,
+                )
 
             composeTestRule.setContent {
                 WizardTestTheme {

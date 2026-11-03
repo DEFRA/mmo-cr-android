@@ -17,8 +17,8 @@ import androidx.compose.ui.test.click
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
@@ -45,13 +45,9 @@ class GdsDateWheelPickerTests {
             monthWheel = "month",
             dayWheel = "day",
             yearWheel = "year",
-            okAction = "ok",
-            cancelAction = "cancel",
         )
 
     private var latest: LocalDate? = null
-    private var confirmed = 0
-    private var cancelled = 0
 
     private fun setContent(initial: LocalDate) {
         composeTestRule.setContent {
@@ -64,8 +60,6 @@ class GdsDateWheelPickerTests {
                         latest = it
                     },
                     yearRange = 2025..2027,
-                    onConfirm = { confirmed++ },
-                    onCancel = { cancelled++ },
                     testTags = tags,
                 )
             }
@@ -129,14 +123,11 @@ class GdsDateWheelPickerTests {
     }
 
     @Test
-    fun okAndCancelInvokeTheirCallbacks() {
+    fun noOkOrCancelButtonsAreShown() {
         setContent(LocalDate.of(2026, 1, 31))
 
-        composeTestRule.onNodeWithTag("ok").performClick()
-        composeTestRule.onNodeWithTag("cancel").performClick()
-
-        assertEquals(1, confirmed)
-        assertEquals(1, cancelled)
+        composeTestRule.onNodeWithText("OK").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Cancel").assertDoesNotExist()
     }
 
     @Test
@@ -182,8 +173,6 @@ class GdsDateWheelPickerTests {
                         latest = it
                     },
                     yearRange = 2025..2027,
-                    onConfirm = {},
-                    onCancel = {},
                     testTags = tags,
                 )
             }
@@ -212,7 +201,7 @@ class GdsDateWheelPickerTests {
     }
 
     @Test
-    fun atDoubleFontScaleEveryWheelAndButtonFitsOnScreenWithoutClipping() {
+    fun atDoubleFontScaleEveryWheelFitsOnScreenWithoutClipping() {
         composeTestRule.setContent {
             val density = LocalDensity.current
             CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 2f)) {
@@ -221,8 +210,6 @@ class GdsDateWheelPickerTests {
                         value = LocalDate.of(2026, 2, 28),
                         onValueChange = {},
                         yearRange = 2025..2027,
-                        onConfirm = {},
-                        onCancel = {},
                         testTags = tags,
                     )
                 }
@@ -230,7 +217,7 @@ class GdsDateWheelPickerTests {
         }
 
         val rootWidth = composeTestRule.onRoot().getUnclippedBoundsInRoot().right
-        listOf("month", "day", "year", "ok", "cancel").forEach { tag ->
+        listOf("month", "day", "year").forEach { tag ->
             val bounds = composeTestRule.onNodeWithTag(tag).assertIsDisplayed().getUnclippedBoundsInRoot()
             assertTrue("$tag overflows the screen", bounds.right <= rootWidth)
         }

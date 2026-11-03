@@ -34,6 +34,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.NotLandedStraightAwaySpeciesRoute
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.PhaseThreeCompleteRoute
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.PhaseThreeCompleteScreen
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.RemoveSpeciesRoute
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.ReturnDateRoute
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.ReturnPortRoute
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.SubmissionPendingSyncRoute
@@ -49,6 +50,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearSpeciesChecklistScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearSpeciesSearchScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearSummaryScreen
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.RemoveSpeciesScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.landing.NotLandedStraightAwayDecisionScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.landing.NotLandedStraightAwaySpeciesScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map.MapScreen
@@ -231,6 +233,17 @@ fun MmoNavHost(
                         )
                     },
                     onNavigateForGear = { step, gearUseId -> navController.navigate(gearRouteFor(step, gearUseId)) },
+                    onNavigateToRemoveSpecies = { gearUseId ->
+                        navController.navigate(RemoveSpeciesRoute(gearUseId = gearUseId))
+                    },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable<RemoveSpeciesRoute> { backStackEntry ->
+                val route = backStackEntry.toRoute<RemoveSpeciesRoute>()
+                RemoveSpeciesScreen(
+                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                    gearUseId = route.gearUseId,
                     onBack = { navController.popBackStack() },
                 )
             }

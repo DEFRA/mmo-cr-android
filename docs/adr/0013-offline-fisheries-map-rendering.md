@@ -221,3 +221,45 @@ The real reference-data service's `/map/land`, `/map/statistical-areas` and `/ma
 datasets are deliberately **not** consumed by this feature. This build-time preprocessing pipeline (bundled
 GeoJSON → `map_geometry.bin`) remains the sole, authoritative, fully-offline source of map geometry — see
 ADR 0016's "Out of scope" section.
+
+## Amendment — the selected cell is drawn above land and always labelled
+
+Section 6's draw order above left the selected highlight *below* land and gave labels only to cells whose
+centroid falls on sea. Together those meant a selected sub-rectangle that straddles the coast showed only its
+sea slice and no code at all — the defect users reported against the live Grid step.
+
+The selected cell is now drawn a second time **above** land (the same `MmoColors.MapSelectedFill` at 60%
+alpha, so the coastline still reads through, plus its opaque border), and its code is always drawn, bypassing
+the sea-only label rule and the visible-label cap, clamped to stay fully inside the viewport. Because the
+opaque fill is still drawn below land first, the sea portion composites to exactly the previous colour, so
+only the land portion changes appearance.
+
+The label is drawn after ports, so a port dot cannot obscure it, and at the time of this amendment carried a
+white halo: black text on `MapLand` (`#0B4143`) is roughly 1.85:1 and would fail WCAG 2.2 AA 1.4.3, whereas
+over the tinted land blend it is roughly 6.9:1. The halo was later replaced by the blue chip described in the
+amendment below. The over-land tint is bespoke map styling rather than a DesignSystem component and is logged
+as a design deviation. The authoritative, current draw order lives in
+[docs/development/offline-map.md](../development/offline-map.md); this amendment records why it changed.
+
+## Amendment — larger un-haloed sub-rectangle codes and named ports
+
+Users found the sub-rectangle codes too small to read in the field and the unlabelled port dots unidentifiable,
+so codes were enlarged from 14sp to 20sp and ports now render their name beneath the dot. Duplicate port
+records sharing a coordinate are de-duplicated by name and point, because the source data repeats many ports
+(229 coordinate groups, up to seven records at one point) which would otherwise overpaint the same name.
+
+Enlarging the code made its white halo heavy enough to obscure the surrounding grid, so the halo was removed.
+The selected code is instead drawn white on a `MapSelectedStroke` (GOV.UK blue, `#1D70B8`) chip, which gives a
+fixed ~5.2:1 contrast regardless of what the chip covers and visually ties the code to the cell border. It is
+clamped into the selected cell's own on-screen box (intersected with the viewport) so the chip stays within the
+cell it names; when the chip cannot fit there — a cell mostly scrolled off-screen — the clamp falls back to the
+viewport so the chip is never clipped off the edge. Unselected codes remain plain black and restricted to
+sea-centroid cells, so they were never haloed.
+
+Port names keep a white halo. Ports sit on the coastline, so a name spans both white sea and `MapLand`, and no
+single text colour passes AA against both. The haloed port name and the blue code chip are bespoke map styles,
+not DesignSystem components, and are logged as design deviations.
+
+Two known limitations are accepted for now and tracked as follow-up work: unselected codes are neither clamped
+nor haloed, so at large font scales they can overlap a neighbour or overhang onto land; and port names have no
+collision avoidance, so names of distinct ports close together can overlap.

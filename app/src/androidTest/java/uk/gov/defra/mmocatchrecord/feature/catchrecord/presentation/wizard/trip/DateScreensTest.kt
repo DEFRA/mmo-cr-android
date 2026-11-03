@@ -25,7 +25,7 @@ class DateScreensTest {
     private val today = LocalDate.of(2026, 10, 16)
 
     @Test
-    fun departureDateHappyPathSubmitsConfirmedDate() {
+    fun departureDateHappyPathSubmitsWheelDate() {
         var submittedDate: DmyDate? = null
         composeTestRule.setContent {
             MmoTheme {
@@ -39,29 +39,8 @@ class DateScreensTest {
         }
 
         spinTo(departureTags, DmyDate(11, 9, 2026))
-        composeTestRule.onNodeWithTag(departureTags.okAction).performClick()
         composeTestRule.onNodeWithTag(departureTags.saveAction).performClick()
         assertEquals(DmyDate(11, 9, 2026), submittedDate)
-    }
-
-    @Test
-    fun departureDateUnconfirmedSubmitShowsErrorSummary() {
-        var submittedDate: DmyDate? = null
-        composeTestRule.setContent {
-            MmoTheme {
-                WizardDateStepContent(
-                    initialDate = null,
-                    testTags = departureTags,
-                    onSubmit = { submittedDate = it },
-                    today = today,
-                )
-            }
-        }
-
-        spinTo(departureTags, DmyDate(11, 9, 2026))
-        composeTestRule.onNodeWithTag(departureTags.saveAction).performClick()
-        composeTestRule.onNodeWithTag(departureTags.summary).assertIsDisplayed()
-        assertNull(submittedDate)
     }
 
     @Test
@@ -81,7 +60,6 @@ class DateScreensTest {
         }
 
         spinTo(returnTags, DmyDate(10, 9, 2026))
-        composeTestRule.onNodeWithTag(returnTags.okAction).performClick()
         composeTestRule.onNodeWithTag(returnTags.saveAction).performClick()
         composeTestRule.onNodeWithTag(returnTags.summary).assertIsDisplayed()
         assertNull(submittedDate)

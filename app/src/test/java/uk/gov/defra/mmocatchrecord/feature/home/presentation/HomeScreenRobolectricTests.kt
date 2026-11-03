@@ -13,10 +13,12 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -35,6 +37,7 @@ import org.junit.runner.RunWith
 import org.mockito.kotlin.mock
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.GdsTopAppBarTestTags
 import uk.gov.defra.mmocatchrecord.common.design.MmoBottomNavigationBarTestTags
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
@@ -475,6 +478,7 @@ class HomeScreenRobolectricTests {
     }
 
     /** With exactly one page of records, both pagination links are disabled at once (ADR-0014 Phase F). */
+    @Config(qualifiers = "w412dp-h2000dp")
     @Test
     fun `pagination links are both disabled when there is only one page`() {
         composeTestRule.setContent {
@@ -487,6 +491,90 @@ class HomeScreenRobolectricTests {
         composeTestRule.onNodeWithTag(CatchRecordsListSectionTestTags.PAGINATION_PREVIOUS).assertIsNotEnabled()
         composeTestRule.onNodeWithTag(CatchRecordsListSectionTestTags.PAGINATION_NEXT).assertIsNotEnabled()
     }
+
+    /** ADR 0018: a vessel can hold several drafts, so each row must be separately resumable and must
+     *  announce a distinct name to TalkBack (WCAG 2.4.4 / 4.1.2, both Level A). */
+    @Config(qualifiers = "w412dp-h2000dp")
+    @Test
+    fun `two drafts for the same vessel render as distinct, independently resumable rows`() {
+        val sameVesselDrafts =
+            listOf(
+                CatchRecordSummary("draft-a", "B14974-14112023-221320", "v1", null, RecordStatusTag.Draft, "ACHILLES"),
+                CatchRecordSummary("draft-b", "B14974-14112023-221321", "v1", null, RecordStatusTag.Draft, "ACHILLES"),
+            )
+        val clicked = mutableListOf<String>()
+        composeTestRule.setContent {
+            MmoTheme {
+                LazyColumn {
+                    catchRecordsListSection(records = sameVesselDrafts, onRecordClick = { clicked += it })
+                }
+            }
+        }
+
+        composeTestRule.onNodeWithTag(CatchRecordsListSectionTestTags.row("draft-a")).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(CatchRecordsListSectionTestTags.row("draft-b")).assertIsDisplayed()
+
+        composeTestRule.onNodeWithContentDescription(accessibleLabel("B14974-14112023-221321")).performClick()
+        assertEquals(listOf("draft-b"), clicked)
+    }
+
+    /** SC 2.5.3 Label in Name: the visible date text must lead the accessible name. */
+    @Config(qualifiers = "w412dp-h2000dp")
+    @Test
+    fun `each resumable row link exposes a distinct accessible name led by its visible text`() {
+        val sameVesselDrafts =
+            listOf(
+                CatchRecordSummary("draft-a", "REF-A", "v1", DmyDate(3, 1, 2026), RecordStatusTag.Draft, "ACHILLES"),
+                CatchRecordSummary("draft-b", "REF-B", "v1", null, RecordStatusTag.Draft, "ACHILLES"),
+            )
+        composeTestRule.setContent {
+            MmoTheme {
+                LazyColumn {
+                    catchRecordsListSection(records = sameVesselDrafts, onRecordClick = {})
+                }
+            }
+        }
+
+        composeTestRule
+            .onNodeWithContentDescription(accessibleLabel("REF-A", visibleText = "3 Jan 2026"))
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithContentDescription(accessibleLabel("REF-B", visibleText = notEnteredYet()))
+            .assertIsDisplayed()
+    }
+
+    /** A draft with no Trip ID yet must still get a usable, non-duplicate name and visible fallback. */
+    @Config(qualifiers = "w412dp-h2000dp")
+    @Test
+    fun `a row with no catch record reference falls back without losing its accessible name`() {
+        val records =
+            listOf(
+                CatchRecordSummary("draft-a", null, "v1", DmyDate(3, 1, 2026), RecordStatusTag.Draft, "ACHILLES"),
+            )
+        composeTestRule.setContent {
+            MmoTheme {
+                LazyColumn {
+                    catchRecordsListSection(records = records, onRecordClick = {})
+                }
+            }
+        }
+
+        val fallback = context().getString(R.string.records_reference_not_assigned)
+        composeTestRule
+            .onNodeWithContentDescription(accessibleLabel(fallback, visibleText = "3 Jan 2026"))
+            .assertIsDisplayed()
+    }
+
+    private fun context(): Context = ApplicationProvider.getApplicationContext()
+
+    private fun notEnteredYet(): String = context().getString(R.string.records_trip_end_date_not_set)
+
+    private fun accessibleLabel(
+        reference: String,
+        visibleText: String = notEnteredYet(),
+        vesselName: String = "ACHILLES",
+        status: String = "Draft",
+    ): String = context().getString(R.string.records_row_accessible_label, visibleText, vesselName, status, reference)
 
     /** On the last of several pages, "Next" is disabled while "Previous" stays enabled — the opposite
      * boundary from the first-page case already covered by the "clickable" pagination test above. */

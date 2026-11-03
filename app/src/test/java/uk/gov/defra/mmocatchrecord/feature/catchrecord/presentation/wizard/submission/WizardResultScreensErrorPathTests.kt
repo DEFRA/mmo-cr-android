@@ -46,10 +46,6 @@ class WizardResultScreensErrorPathTests {
     val composeTestRule = createComposeRule()
 
     private class FailingDraftRepository : CatchRecordDraftRepository {
-        override suspend fun getActiveDraft(vesselId: String): Result<CatchRecordDraft?> = failure()
-
-        override suspend fun getAnyActiveDraft(): Result<CatchRecordDraft?> = failure()
-
         override suspend fun getDraftById(draftId: String): Result<CatchRecordDraft?> = failure()
 
         override suspend fun startDraft(candidate: CatchRecordDraft): Result<CatchRecordDraft> = failure()
@@ -69,12 +65,6 @@ class WizardResultScreensErrorPathTests {
         seed: CatchRecordDraft,
     ) : CatchRecordDraftRepository {
         private val drafts = mutableMapOf(seed.id to seed)
-
-        override suspend fun getActiveDraft(vesselId: String): Result<CatchRecordDraft?> =
-            Result.success(drafts.values.firstOrNull { it.vesselId == vesselId && it.status.isActive })
-
-        override suspend fun getAnyActiveDraft(): Result<CatchRecordDraft?> =
-            Result.success(drafts.values.firstOrNull { it.status.isActive })
 
         override suspend fun getDraftById(draftId: String): Result<CatchRecordDraft?> = Result.success(drafts[draftId])
 
@@ -146,7 +136,7 @@ class WizardResultScreensErrorPathTests {
             notLandedStraightAway = false,
             status = DraftStatus.Draft,
             modifiedAtEpochMillis = 0L,
-            catchRecordReference = "A1234520200102150815",
+            catchRecordReference = "B14974-02012020-150815",
             lateSubmissionWarningAcknowledged = false,
         )
 
@@ -166,13 +156,13 @@ class WizardResultScreensErrorPathTests {
         )
 
     private fun enterFlowAndAwaitError(viewModel: CatchRecordFlowViewModel) {
-        viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+        viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
         composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.state.value.status is UiStatus.Error }
         composeTestRule.waitForIdle()
     }
 
     private fun enterFlowAndAwaitContent(viewModel: CatchRecordFlowViewModel) {
-        viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+        viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
         composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.state.value.status is UiStatus.Content<*> }
         composeTestRule.waitForIdle()
     }

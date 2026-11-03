@@ -1,7 +1,8 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
@@ -87,7 +88,7 @@ class GearSpeciesChecklistScreenTest {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = { submitted = it },
                 )
@@ -119,7 +120,7 @@ class GearSpeciesChecklistScreenTest {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
                 )
@@ -156,7 +157,7 @@ class GearSpeciesChecklistScreenTest {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = { submitted = it },
                 )
@@ -194,7 +195,7 @@ class GearSpeciesChecklistScreenTest {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = { submitted = it },
                 )
@@ -216,7 +217,7 @@ class GearSpeciesChecklistScreenTest {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
                 )
@@ -240,7 +241,7 @@ class GearSpeciesChecklistScreenTest {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = { submitted = it },
                 )
@@ -271,7 +272,7 @@ class GearSpeciesChecklistScreenTest {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
                 )
@@ -281,7 +282,7 @@ class GearSpeciesChecklistScreenTest {
         composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
         composeTestRule
             .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${plaice.id}")
-            .performTextInput("10.55")
+            .performTextInput("10.5")
         composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performClick()
 
         composeTestRule
@@ -300,7 +301,7 @@ class GearSpeciesChecklistScreenTest {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
                 )
@@ -326,10 +327,7 @@ class GearSpeciesChecklistScreenTest {
     }
 
     @Test
-    fun oneDecimalPlaceSpeciesRejectsATwoDecimalPlaceWeightWithAPrecisionError() {
-        // The Decimal-kind field allows a single '.' but does not limit how many digits follow it, so a
-        // two-decimal-place value like "5.55" is exactly what a real user could type and still trip the
-        // precision rule.
+    fun weightFieldBlocksASecondDecimalDigitAndASecondDecimalPoint() {
         val gearUse = gearUseWithAddedSpecies(listOf(cod.id))
         composeTestRule.setContent {
             MmoTheme {
@@ -337,7 +335,7 @@ class GearSpeciesChecklistScreenTest {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
                 )
@@ -345,15 +343,12 @@ class GearSpeciesChecklistScreenTest {
         }
 
         composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
-        composeTestRule
-            .onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${cod.id}")
-            .performTextInput("5.55")
-        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performClick()
-
-        composeTestRule
-            .onAllNodesWithText("Weight for Atlantic cod must be a number with up to 1 decimal place")
-            .onFirst()
-            .assertIsDisplayed()
+        val field =
+            composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${cod.id}")
+        field.performTextInput("5.5")
+        field.performTextInput("5")
+        field.performTextInput(".")
+        field.assertTextEquals("5.5")
     }
 
     @Test
@@ -365,7 +360,7 @@ class GearSpeciesChecklistScreenTest {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
                 )
@@ -393,7 +388,7 @@ class GearSpeciesChecklistScreenTest {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
                 )
@@ -421,7 +416,7 @@ class GearSpeciesChecklistScreenTest {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
                 )
@@ -441,7 +436,7 @@ class GearSpeciesChecklistScreenTest {
     }
 
     @Test
-    fun removeASpeciesLinkIsDisabledWhenNothingIsCheckedButRemainsVisible() {
+    fun removeASpeciesLinkIsAlwaysEnabledWhenSpeciesAreAdded() {
         val gearUse = gearUseWithAddedSpecies(listOf(cod.id))
         composeTestRule.setContent {
             MmoTheme {
@@ -449,7 +444,7 @@ class GearSpeciesChecklistScreenTest {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = {},
+                    onRemoveSpeciesRequested = {},
                     onAddAnotherSpecies = {},
                     onSubmit = {},
                 )
@@ -459,12 +454,12 @@ class GearSpeciesChecklistScreenTest {
         composeTestRule
             .onNodeWithTag(GearSpeciesChecklistScreenTestTags.REMOVE_SPECIES_ACTION)
             .assertIsDisplayed()
-            .assertIsNotEnabled()
+            .assertIsEnabled()
     }
 
     @Test
-    fun removeASpeciesLinkRemovesOnlyCheckedSpeciesFromTheGearUse() {
-        var updated: CatchRecordDraft? = null
+    fun removeASpeciesLinkNavigatesToTheRemoveSpeciesPage() {
+        var navigated = false
         val gearUse = gearUseWithAddedSpecies(listOf(cod.id, plaice.id))
         composeTestRule.setContent {
             MmoTheme {
@@ -472,22 +467,15 @@ class GearSpeciesChecklistScreenTest {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onRemoveSpecies = { updated = it },
+                    onRemoveSpeciesRequested = { navigated = true },
                     onAddAnotherSpecies = {},
                     onSubmit = {},
                 )
             }
         }
 
-        composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
         composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.REMOVE_SPECIES_ACTION).performClick()
 
-        val remainingSpeciesIds =
-            updated
-                ?.gearUses
-                ?.single()
-                ?.speciesWeights
-                ?.map { it.speciesId }
-        assertEquals(listOf(plaice.id), remainingSpeciesIds)
+        assertTrue(navigated)
     }
 }

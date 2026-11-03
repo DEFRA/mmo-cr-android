@@ -5,6 +5,7 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.CatchRecordReferenceGenerator
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftFactory
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftRepository
@@ -25,29 +26,30 @@ class FakeCatchRecordDraftRepository(
     var startDraftCallCount: Int = 0
         private set
 
-    override suspend fun getActiveDraft(vesselId: String): Result<CatchRecordDraft?> {
-        if (failNextOperation) return failure()
-        return Result.success(drafts.values.firstOrNull { it.vesselId == vesselId && it.status.isActive })
-    }
-
-    override suspend fun getAnyActiveDraft(): Result<CatchRecordDraft?> {
-        if (failNextOperation) return failure()
-        return Result.success(drafts.values.filter { it.status.isActive }.maxByOrNull { it.modifiedAtEpochMillis })
-    }
+    /** Every persisted draft, for assertions that must not guess the view model's generated draft id. */
+    val persistedDrafts: List<CatchRecordDraft>
+        get() = drafts.values.toList()
 
     override suspend fun getDraftById(draftId: String): Result<CatchRecordDraft?> {
         if (failNextOperation) return failure()
         return Result.success(drafts[draftId])
     }
 
+    /** Mirrors the real DAO: always a new row, never adopting an existing draft (ADR 0018). */
     override suspend fun startDraft(candidate: CatchRecordDraft): Result<CatchRecordDraft> {
         startDraftCallCount++
         if (failNextOperation) return failure()
-        val existing = drafts.values.firstOrNull { it.vesselId == candidate.vesselId && it.status.isActive }
-        if (existing != null) return Result.success(existing)
+        if (drafts.containsKey(candidate.id)) {
+            return Result.failure(IllegalStateException("Draft '${candidate.id}' already exists"))
+        }
         val creationTime = clock()
+        var reference = candidate.catchRecordReference
+        while (reference != null && drafts.values.any { it.catchRecordReference == reference }) {
+            reference = CatchRecordReferenceGenerator.nextAfter(reference)
+        }
         val stamped =
             candidate.copy(
+                catchRecordReference = reference,
                 createdAtEpochMillis = candidate.createdAtEpochMillis ?: creationTime,
                 modifiedAtEpochMillis = creationTime,
             )

@@ -124,15 +124,11 @@ fun GdsDateWheelPickerPreview() {
             value = value,
             onValueChange = { value = it },
             yearRange = 2025..2027,
-            onConfirm = {},
-            onCancel = {},
             testTags =
                 GdsDateWheelPickerTestTags(
                     monthWheel = "preview_month",
                     dayWheel = "preview_day",
                     yearWheel = "preview_year",
-                    okAction = "preview_ok",
-                    cancelAction = "preview_cancel",
                 ),
             modifier = Modifier.padding(Spacing.m),
         )

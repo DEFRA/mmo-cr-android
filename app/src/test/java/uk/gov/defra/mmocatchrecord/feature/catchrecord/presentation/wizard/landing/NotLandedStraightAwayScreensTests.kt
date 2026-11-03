@@ -1,12 +1,18 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.landing
 
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -23,6 +29,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import uk.gov.defra.mmocatchrecord.common.design.INVALID_INPUT_MESSAGE_TAG_SUFFIX
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
@@ -80,9 +87,10 @@ class NotLandedStraightAwayScreensTests {
     private fun buildViewModel(
         dispatcher: CoroutineDispatcher,
         repository: FakeCatchRecordDraftRepository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" }),
+        referenceDataRepository: FakeReferenceDataRepository = FakeReferenceDataRepository(),
     ) = CatchRecordFlowViewModel(
         repository,
-        FakeReferenceDataRepository(),
+        referenceDataRepository,
         FakeCatchRecordSubmissionRepository(),
         FakeNetworkConnectivityChecker(),
         FakeCatchRecordSyncScheduler(),
@@ -199,6 +207,65 @@ class NotLandedStraightAwayScreensTests {
         val entry = submitted?.notLandedSpeciesEntries?.single()
         assertEquals(cod.id, entry?.speciesId)
         assertEquals(3.5, entry?.weightAboveMinimumSizeKeptOnboardKg)
+    }
+
+    @Test
+    fun keptOnboardFieldBlocksASecondDecimalDigitOrPointAndAnnouncesWhy() {
+        composeTestRule.setContent {
+            MmoTheme {
+                NotLandedStraightAwaySpeciesScreenContent(
+                    draft = draftWithConfirmedSpecies(listOf(cod.id)),
+                    speciesList = listOf(cod),
+                    onSubmit = {},
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("${NotLandedStraightAwaySpeciesScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
+        val tag = "${NotLandedStraightAwaySpeciesScreenTestTags.WEIGHT_FIELD_PREFIX}_${cod.id}"
+        val hintTag = "${tag}_$INVALID_INPUT_MESSAGE_TAG_SUFFIX"
+        val field = composeTestRule.onNodeWithTag(tag)
+        field.performTextInput("5.5")
+        composeTestRule.onNodeWithTag(hintTag).assertDoesNotExist()
+
+        field.performTextInput("5")
+        field.assertTextEquals("5.5")
+        composeTestRule
+            .onNodeWithTag(hintTag)
+            .assertTextEquals("Weight must be a number with up to 1 decimal place, like 12.5")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
+
+        field.performTextInput(".")
+        field.assertTextEquals("5.5")
+
+        field.performTextClearance()
+        composeTestRule.onNodeWithTag(hintTag).assertDoesNotExist()
+        field.performTextInput("1.2.3")
+        field.assertTextEquals("")
+        composeTestRule.onNodeWithTag(hintTag).assertIsDisplayed()
+    }
+
+    @Test
+    fun keptOnboardFieldForAWholeNumberSpeciesExplainsWhyADecimalPointIsBlocked() {
+        composeTestRule.setContent {
+            MmoTheme {
+                NotLandedStraightAwaySpeciesScreenContent(
+                    draft = draftWithConfirmedSpecies(listOf(haddock.id)),
+                    speciesList = listOf(haddock),
+                    onSubmit = {},
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("${NotLandedStraightAwaySpeciesScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
+        val tag = "${NotLandedStraightAwaySpeciesScreenTestTags.WEIGHT_FIELD_PREFIX}_${haddock.id}"
+        val field = composeTestRule.onNodeWithTag(tag)
+        field.performTextInput("12")
+        field.performTextInput(".")
+        field.assertTextEquals("12")
+        composeTestRule
+            .onNodeWithTag("${tag}_$INVALID_INPUT_MESSAGE_TAG_SUFFIX")
+            .assertTextEquals("Weight must be a whole number, like 12")
     }
 
     @Test
@@ -382,7 +449,7 @@ class NotLandedStraightAwayScreensTests {
                     )
                 }
             }
-            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
             testScheduler.advanceUntilIdle()
             composeTestRule.waitForIdle()
 
@@ -401,9 +468,12 @@ class NotLandedStraightAwayScreensTests {
     @Test
     fun anOuterLoadErrorOnTheDecisionScreenIsShownAsARetryableWizardErrorAndRecoversViaRetry() =
         runTest {
-            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
-            repository.failNextOperation = true
-            val viewModel = buildViewModel(dispatcher = StandardTestDispatcher(testScheduler), repository = repository)
+            val referenceData = FakeReferenceDataRepository().apply { failNextOperation = true }
+            val viewModel =
+                buildViewModel(
+                    dispatcher = StandardTestDispatcher(testScheduler),
+                    referenceDataRepository = referenceData,
+                )
 
             composeTestRule.setContent {
                 WizardTestTheme {
@@ -443,7 +513,7 @@ class NotLandedStraightAwayScreensTests {
                     )
                 }
             }
-            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
             testScheduler.advanceUntilIdle()
             composeTestRule.waitForIdle()
 
@@ -465,9 +535,12 @@ class NotLandedStraightAwayScreensTests {
     @Test
     fun anOuterLoadErrorOnTheSpeciesScreenIsShownAsARetryableWizardErrorAndRecoversViaRetry() =
         runTest {
-            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
-            repository.failNextOperation = true
-            val viewModel = buildViewModel(dispatcher = StandardTestDispatcher(testScheduler), repository = repository)
+            val referenceData = FakeReferenceDataRepository().apply { failNextOperation = true }
+            val viewModel =
+                buildViewModel(
+                    dispatcher = StandardTestDispatcher(testScheduler),
+                    referenceDataRepository = referenceData,
+                )
 
             composeTestRule.setContent {
                 WizardTestTheme {

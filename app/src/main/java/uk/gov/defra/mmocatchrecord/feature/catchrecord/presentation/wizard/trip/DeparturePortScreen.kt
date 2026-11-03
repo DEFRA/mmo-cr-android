@@ -92,9 +92,17 @@ private fun DeparturePortScreen(
     val favouritePorts = state.previouslyUsedPorts
     val initialDeparturePort = (state.status as? UiStatus.Content)?.value?.departurePort
     var showingPortConfirmation by rememberPortConfirmationVisible(favouritePorts, initialDeparturePort)
+    var showingSearch by rememberPortSearchVisible(favouritePorts, initialDeparturePort)
     CatchRecordWizardScaffold(
         screenTestTag = DeparturePortScreenTestTags.SCREEN,
-        title = portSelectionScaffoldTitle(showingPortConfirmation, favouritePorts, R.string.departure_port_title),
+        title =
+            portSelectionScaffoldTitle(
+                showingPortConfirmation = showingPortConfirmation,
+                favouritePorts = favouritePorts,
+                showSearch = showingSearch,
+                firstEntryTitleRes = R.string.departure_port_title,
+                secondEntryTitleRes = R.string.second_entry_departure_port_title,
+            ),
         onBack = onBack,
         modifier = modifier,
         referenceNumber = state.catchRecordReference,
@@ -117,6 +125,7 @@ private fun DeparturePortScreen(
                     onSubmit = onSubmit,
                     onDirtyChanged = onDirtyChanged,
                     onShowingPortConfirmationChanged = { showingPortConfirmation = it },
+                    onShowSearchChanged = { showingSearch = it },
                 )
         }
     }
@@ -132,6 +141,7 @@ fun DeparturePortScreenContent(
     modifier: Modifier = Modifier,
     onDirtyChanged: (Boolean) -> Unit = {},
     onShowingPortConfirmationChanged: (Boolean) -> Unit = {},
+    onShowSearchChanged: (Boolean) -> Unit = {},
 ) {
     PortSelectionStepContent(
         modifier = modifier,
@@ -151,6 +161,7 @@ fun DeparturePortScreenContent(
         onSubmit = { selection -> onSubmit(draft.copy(departurePort = selection)) },
         onDirtyChanged = onDirtyChanged,
         onShowingPortConfirmationChanged = onShowingPortConfirmationChanged,
+        onShowSearchChanged = onShowSearchChanged,
     )
 }
 
@@ -174,6 +185,7 @@ fun PortSelectionStepContent(
     confirmOptionPrefix: String = "",
     onDirtyChanged: (Boolean) -> Unit = {},
     onShowingPortConfirmationChanged: (Boolean) -> Unit = {},
+    onShowSearchChanged: (Boolean) -> Unit = {},
 ) {
     val initialPortName =
         remember(initialSelection, allPorts) {
@@ -185,8 +197,9 @@ fun PortSelectionStepContent(
                 .orEmpty()
         }
     var showSearch by rememberSaveable(initialSelection?.selectionMode, favouritePorts.isEmpty()) {
-        mutableStateOf(favouritePorts.isEmpty() || initialSelection?.selectionMode == PortSelectionMode.FirstTime)
+        mutableStateOf(isPortSearchInitiallyShown(favouritePorts, initialSelection))
     }
+    LaunchedEffect(showSearch) { onShowSearchChanged(showSearch) }
     var selectedFavouriteId by rememberSaveable {
         mutableStateOf(
             initialSelection

@@ -26,6 +26,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftInvalid
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftSubmissionValidation
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MissingVesselRegistrationException
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
@@ -125,29 +126,24 @@ class CatchRecordFlowViewModel
             return historyIds.mapNotNull { portsById[it] }
         }
 
+        /** "Create a new catch record" always starts fresh at vessel selection; an existing draft is
+         *  resumed only from the Home records list (FR2, [enterFlowForDraft]). */
         private fun enterFlow() {
             updateState { it.copy(status = UiStatus.Loading) }
             launchInViewModelScope {
                 runCatching {
                     val referenceData = loadReferenceData()
-                    val existingDraft =
-                        draftRepository.getAnyActiveDraft().getOrThrow()?.let {
-                            reconcileAgainstLiveGearTypes(it, referenceData.gearTypes)
-                        }
-                    val previouslyUsedPorts = previouslyUsedPortsFor(existingDraft, referenceData.ports)
+                    // Built from scratch rather than copied, so no field of a previously loaded draft can
+                    // survive into the new record.
                     updateState {
-                        it.copy(
-                            status = existingDraft?.let { draft -> UiStatus.Content(draft) } ?: UiStatus.Idle,
-                            currentStep =
-                                if (existingDraft == null) WizardStep.VesselSelection else WizardStep.DraftResume,
+                        CatchRecordFlowViewState(
+                            status = UiStatus.Idle,
+                            currentStep = WizardStep.VesselSelection,
                             vessels = referenceData.vessels,
                             ports = referenceData.ports,
                             gearTypes = referenceData.gearTypes,
                             statisticalSubRectangles = referenceData.statisticalSubRectangles,
                             species = referenceData.species,
-                            previouslyUsedPorts = previouslyUsedPorts,
-                            departurePortEntryMode = deriveDeparturePortEntryMode(previouslyUsedPorts),
-                            isDraftPersisted = existingDraft != null,
                             isFlowEntered = true,
                         )
                     }
@@ -223,15 +219,17 @@ class CatchRecordFlowViewModel
             }
         }
 
+        /** ADR 0018: always creates a new, independent draft — a vessel's existing drafts are resumed only
+         *  from the Home records list. The [UiStatus.Loading] guard stops a double tap creating two. */
         private fun vesselSelected(vesselId: String) {
+            if (currentState.status == UiStatus.Loading) return
             updateState { it.copy(status = UiStatus.Loading) }
             launchInViewModelScope {
                 runCatching {
-                    val existingDraft = draftRepository.getActiveDraft(vesselId).getOrThrow()
-                    val draft = existingDraft ?: startNewDraft(vesselId)
-                    val previouslyUsedPorts = previouslyUsedPortsForVessel(vesselId, currentState.ports)
                     val vesselLength = currentState.vessels.firstOrNull { it.id == vesselId }?.lengthOverallMetres
                     val gearTypes = referenceDataRepository.getGearTypes(vesselLength).getOrThrow()
+                    val draft = startNewDraft(vesselId)
+                    val previouslyUsedPorts = previouslyUsedPortsForVessel(vesselId, currentState.ports)
                     emitLoadedDraft(
                         draft,
                         WizardStep.TripToday,
@@ -243,22 +241,23 @@ class CatchRecordFlowViewModel
             }
         }
 
-        /**
-         * Persists a brand-new draft candidate the moment a vessel is chosen (race-safe via
-         * [CatchRecordDraftRepository.startDraft]), so the selection survives a back-navigation or app exit
-         * before the user answers a later wizard question — fixes a data-loss bug where an abandoned
-         * selection was silently discarded. This supersedes ADR 0014's original BR-XX deferral, which only
-         * persisted on the *next* step's "Save and continue"; see that ADR for the superseded rationale.
-         */
-        private suspend fun startNewDraft(vesselId: String): CatchRecordDraft =
-            draftRepository
+        /** Persists a brand-new draft the moment a vessel is chosen, so it survives back-navigation
+         *  or app exit before the next step's save — supersedes ADR 0014's original deferral. */
+        private suspend fun startNewDraft(vesselId: String): CatchRecordDraft {
+            val vessels = currentState.vessels.ifEmpty { referenceDataRepository.getVessels().getOrThrow() }
+            val rssNumber =
+                CatchRecordReferenceGenerator.normaliseRssNumber(
+                    vessels.firstOrNull { it.id == vesselId }?.pln,
+                ) ?: throw MissingVesselRegistrationException()
+            return draftRepository
                 .startDraft(
                     CatchRecordDraftFactory.newDraft(
                         vesselId = vesselId,
                         id = idFactory(),
-                        reference = CatchRecordReferenceGenerator.generate(clock()),
+                        reference = CatchRecordReferenceGenerator.generate(rssNumber, clock()),
                     ),
                 ).getOrThrow()
+        }
 
         private fun tripTodayAnswered(isTripToday: Boolean) {
             val draft = currentDraftOrNull() ?: return

@@ -34,13 +34,15 @@ class CatchRecordRoutesTests {
         )
 
     @Test
-    fun `draft resume route defaults draftId to null when omitted`() {
-        assertNull(DraftResumeRoute().draftId)
+    fun `draft resume has no argument-free route because it always carries a draft id`() {
+        val failure = runCatching { routeFor(WizardStep.DraftResume) }.exceptionOrNull()
+        assertNotNull(failure)
+        assertEquals(DraftResumeRoute("draft-1"), DraftResumeRoute("draft-1").copy())
     }
 
     @Test
     fun `routeFor constructs a route for every wizard step`() {
-        allSteps.forEach { step -> assertNotNull(routeFor(step)) }
+        allSteps.filterNot { it == WizardStep.DraftResume }.forEach { step -> assertNotNull(routeFor(step)) }
     }
 
     @Test
@@ -66,6 +68,7 @@ class CatchRecordRoutesTests {
             .filterNot {
                 it in
                     setOf(
+                        WizardStep.DraftResume,
                         WizardStep.GearMeasurement,
                         WizardStep.GearStatRectangle,
                         WizardStep.GearSpeciesSearch,
@@ -91,6 +94,10 @@ class CatchRecordRoutesTests {
         val speciesChecklist = GearSpeciesChecklistRoute(editGearUseId = "a")
         assertEquals(speciesChecklist, speciesChecklist.copy())
         assertNotNull(speciesChecklist.toString())
+
+        val removeSpecies = RemoveSpeciesRoute(gearUseId = "a")
+        assertEquals(removeSpecies, removeSpecies.copy())
+        assertNotNull(removeSpecies.toString())
     }
 
     /** Navigation serialization uses generated constructors not reached by regular route construction. */
@@ -110,6 +117,9 @@ class CatchRecordRoutesTests {
             speciesChecklist,
             Json.decodeFromString<GearSpeciesChecklistRoute>(Json.encodeToString(speciesChecklist)),
         )
+
+        val removeSpecies = RemoveSpeciesRoute(gearUseId = "a")
+        assertEquals(removeSpecies, Json.decodeFromString<RemoveSpeciesRoute>(Json.encodeToString(removeSpecies)))
     }
 
     /** Missing editGearUseId JSON covers the generated constructor's default-field branch. */

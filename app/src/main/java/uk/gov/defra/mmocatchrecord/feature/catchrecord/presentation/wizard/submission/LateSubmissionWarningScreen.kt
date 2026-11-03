@@ -207,7 +207,7 @@ fun LateSubmissionWarningScreenPreview() {
                     ),
                 ),
             daysSinceReturn = 3,
-            referenceNumber = "A1234520260727150815",
+            referenceNumber = "B14974-27072026-150815",
             actions =
                 LateSubmissionWarningActions(
                     onRetry = {},

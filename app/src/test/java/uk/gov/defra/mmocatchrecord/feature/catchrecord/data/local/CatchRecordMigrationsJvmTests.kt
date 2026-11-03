@@ -154,24 +154,16 @@ class CatchRecordMigrationsJvmTests {
 
     @Suppress("LongMethod")
     @Test
-    fun `MIGRATION_5_6 dedupes active drafts per vessel keeping the most recently modified then enforces uniqueness`() {
+    fun `MIGRATION_5_6 is a no-op that neither discards active drafts nor creates the active-vessel index`() {
         val db =
             createDb(
                 5,
                 listOf(
                     "CREATE TABLE catch_record_draft (id TEXT PRIMARY KEY NOT NULL, vesselId TEXT NOT NULL, " +
                         "status TEXT NOT NULL, modifiedAtEpochMillis INTEGER NOT NULL)",
-                    // Vessel A: two active drafts, differing modifiedAt -- the newer one must be kept.
                     "INSERT INTO catch_record_draft VALUES ('a1', 'vessel-a', 'Draft', 100)",
                     "INSERT INTO catch_record_draft VALUES ('a2', 'vessel-a', 'Draft', 200)",
-                    // Vessel B: two active drafts with a modifiedAt tie -- the higher id wins the tie-break.
                     "INSERT INTO catch_record_draft VALUES ('b1', 'vessel-b', 'ReadyToSubmit', 100)",
-                    "INSERT INTO catch_record_draft VALUES ('b2', 'vessel-b', 'Draft', 100)",
-                    // Vessel C: a single active draft -- must be left untouched (no-op case).
-                    "INSERT INTO catch_record_draft VALUES ('c1', 'vessel-c', 'Draft', 50)",
-                    // Vessel D: two terminal/inactive drafts -- dedupe must never touch inactive statuses.
-                    "INSERT INTO catch_record_draft VALUES ('d1', 'vessel-d', 'Submitted', 10)",
-                    "INSERT INTO catch_record_draft VALUES ('d2', 'vessel-d', 'Submitted', 20)",
                 ),
             )
 
@@ -183,19 +175,129 @@ class CatchRecordMigrationsJvmTests {
                 cursor.getString(cursor.getColumnIndexOrThrow("status"))
             }
 
-        assertEquals("Discarded", statusOf("a1"))
+        assertEquals("Draft", statusOf("a1"))
         assertEquals("Draft", statusOf("a2"))
-        assertEquals("Discarded", statusOf("b1"))
-        assertEquals("Draft", statusOf("b2"))
-        assertEquals("Draft", statusOf("c1"))
-        assertEquals("Submitted", statusOf("d1"))
-        assertEquals("Submitted", statusOf("d2"))
+        assertEquals("ReadyToSubmit", statusOf("b1"))
+        assertTrue(activeVesselIndexNames(db).isEmpty())
+        db.close()
+    }
 
-        assertThrows(SQLiteConstraintException::class.java) {
-            db.execSQL(
-                "INSERT INTO catch_record_draft VALUES ('c2', 'vessel-c', 'Draft', 60)",
+    @Test
+    fun `MIGRATION_10_11 drops the active-vessel index and lets a vessel hold several active drafts`() {
+        val db =
+            createDb(
+                10,
+                listOf(
+                    "CREATE TABLE catch_record_draft (id TEXT PRIMARY KEY NOT NULL, vesselId TEXT NOT NULL, " +
+                        "status TEXT NOT NULL, modifiedAtEpochMillis INTEGER NOT NULL)",
+                    "CREATE UNIQUE INDEX index_catch_record_draft_active_vessel " +
+                        "ON catch_record_draft (vesselId) WHERE status IN ('Draft', 'ReadyToSubmit')",
+                    "INSERT INTO catch_record_draft VALUES ('a1', 'vessel-a', 'Draft', 100)",
+                ),
             )
+        assertThrows(SQLiteConstraintException::class.java) {
+            db.execSQL("INSERT INTO catch_record_draft VALUES ('a2', 'vessel-a', 'Draft', 200)")
         }
+
+        CatchRecordMigrations.MIGRATION_10_11.migrate(db)
+
+        assertTrue(activeVesselIndexNames(db).isEmpty())
+        db.execSQL("INSERT INTO catch_record_draft VALUES ('a2', 'vessel-a', 'Draft', 200)")
+        db.execSQL("INSERT INTO catch_record_draft VALUES ('a3', 'vessel-a', 'ReadyToSubmit', 300)")
+        db.query("SELECT COUNT(*) FROM catch_record_draft WHERE vesselId = 'vessel-a'").use { cursor ->
+            cursor.moveToFirst()
+            assertEquals(3, cursor.getInt(0))
+        }
+        db.close()
+    }
+
+    /** Tolerates a DB that never had the index — a fresh install never created it (see ADR 0018). */
+    @Test
+    fun `MIGRATION_10_11 succeeds when the active-vessel index was never created`() {
+        val db =
+            createDb(
+                10,
+                listOf(
+                    "CREATE TABLE catch_record_draft (id TEXT PRIMARY KEY NOT NULL, vesselId TEXT NOT NULL, " +
+                        "status TEXT NOT NULL, modifiedAtEpochMillis INTEGER NOT NULL)",
+                    "INSERT INTO catch_record_draft VALUES ('a1', 'vessel-a', 'Draft', 100)",
+                ),
+            )
+
+        CatchRecordMigrations.MIGRATION_10_11.migrate(db)
+
+        db.query("SELECT COUNT(*) FROM catch_record_draft").use { cursor ->
+            cursor.moveToFirst()
+            assertEquals(1, cursor.getInt(0))
+        }
+        db.close()
+    }
+
+    private fun activeVesselIndexNames(db: SupportSQLiteDatabase): List<String> =
+        db
+            .query(
+                "SELECT name FROM sqlite_master WHERE type = 'index' AND " +
+                    "name = 'index_catch_record_draft_active_vessel'",
+            ).use { cursor -> buildList { while (cursor.moveToNext()) add(cursor.getString(0)) } }
+
+    @Test
+    fun `MIGRATION_9_10 suffixes duplicate references then enforces uniqueness`() {
+        val db =
+            createDb(
+                9,
+                listOf(
+                    "CREATE TABLE catch_record_draft (id TEXT PRIMARY KEY NOT NULL, catchRecordReference TEXT, " +
+                        "createdAtEpochMillis INTEGER, modifiedAtEpochMillis INTEGER NOT NULL)",
+                    "INSERT INTO catch_record_draft VALUES ('a', 'REF1', 10, 10)",
+                    "INSERT INTO catch_record_draft VALUES ('b', 'REF1', 20, 20)",
+                    "INSERT INTO catch_record_draft VALUES ('c', 'REF1', NULL, 30)",
+                    "INSERT INTO catch_record_draft VALUES ('d', 'REF2', 5, 5)",
+                    "INSERT INTO catch_record_draft VALUES ('e', NULL, 1, 1)",
+                    "INSERT INTO catch_record_draft VALUES ('f', NULL, 2, 2)",
+                ),
+            )
+
+        CatchRecordMigrations.MIGRATION_9_10.migrate(db)
+
+        fun referenceOf(id: String): String? =
+            db.query("SELECT catchRecordReference FROM catch_record_draft WHERE id = ?", arrayOf(id)).use { cursor ->
+                cursor.moveToFirst()
+                if (cursor.isNull(0)) null else cursor.getString(0)
+            }
+
+        assertEquals("REF1", referenceOf("a"))
+        assertEquals("REF1-2", referenceOf("b"))
+        assertEquals("REF1-3", referenceOf("c"))
+        assertEquals("REF2", referenceOf("d"))
+        assertEquals(null, referenceOf("e"))
+        assertThrows(SQLiteConstraintException::class.java) {
+            db.execSQL("INSERT INTO catch_record_draft VALUES ('g', 'REF2', 1, 1)")
+        }
+        db.close()
+    }
+
+    @Test
+    fun `MIGRATION_9_10 skips suffixes already held by another record`() {
+        val db =
+            createDb(
+                9,
+                listOf(
+                    "CREATE TABLE catch_record_draft (id TEXT PRIMARY KEY NOT NULL, catchRecordReference TEXT, " +
+                        "createdAtEpochMillis INTEGER, modifiedAtEpochMillis INTEGER NOT NULL)",
+                    "INSERT INTO catch_record_draft VALUES ('a', 'REF1', 10, 10)",
+                    "INSERT INTO catch_record_draft VALUES ('b', 'REF1', 20, 20)",
+                    "INSERT INTO catch_record_draft VALUES ('c', 'REF1-2', 5, 5)",
+                    "INSERT INTO catch_record_draft VALUES ('d', 'REF1-2', 6, 6)",
+                ),
+            )
+
+        CatchRecordMigrations.MIGRATION_9_10.migrate(db)
+
+        val references =
+            db.query("SELECT id, catchRecordReference FROM catch_record_draft ORDER BY id").use { cursor ->
+                buildMap { while (cursor.moveToNext()) put(cursor.getString(0), cursor.getString(1)) }
+            }
+        assertEquals(mapOf("a" to "REF1", "b" to "REF1-3", "c" to "REF1-2", "d" to "REF1-2-2"), references)
         db.close()
     }
 
@@ -204,7 +306,7 @@ class CatchRecordMigrationsJvmTests {
         val versions = CatchRecordMigrations.ALL.map { it.startVersion to it.endVersion }
 
         assertEquals(
-            listOf(1 to 2, 2 to 3, 3 to 4, 4 to 5, 5 to 6, 6 to 7, 7 to 8, 8 to 9),
+            listOf(1 to 2, 2 to 3, 3 to 4, 4 to 5, 5 to 6, 6 to 7, 7 to 8, 8 to 9, 9 to 10, 10 to 11),
             versions,
         )
     }

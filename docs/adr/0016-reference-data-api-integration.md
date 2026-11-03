@@ -174,6 +174,15 @@ models and are deliberately kept DTO/entity-only rather than growing the models:
 these are currently needed by any screen; adding them was judged out of this phase's scope and is flagged
 for a product decision rather than silently added.
 
+**Update (Trip ID):** vessel `pln` is now carried into the domain `Vessel` as the interim prefix of the
+catch-record Trip ID `RSS_NUMBER-DDMMYYYY-HHMMSS` (UK local time), generated once when a record is started
+(`CatchRecordReferenceGenerator`). The true RSS number (`identifiers.registrationNumber`) exists only in the
+canonical vessel view, not the mobile view; swap the prefix source if the mobile projection gains it.
+Uniqueness: Room DB v10 adds a unique index on `catchRecordReference` (the migration de-duplicates existing rows
+with `-2`, `-3` suffixes). On a clash, the DAO's find-or-create transaction moves the time on by 1 second, so the
+Trip ID can be a few seconds after `createdAt`. Starting a record is blocked when the vessel has no PLN.
+Cross-device uniqueness still needs a backend unique constraint and 409 handling (follow-up).
+
 **Species language-cache strategy:** `ReferenceDataMetadataEntity.languageTag` stores the `Accept-Language`
 tag the cached `species` rows were resolved under. The *storage* exists now; the invalidate-on-change
 *enforcement* (compare the ADR-0012 current language against the stored tag before serving/trusting the
@@ -245,9 +254,16 @@ Phase 4.
 
 **Stub-ID draft resume.** A draft saved before this change references stub ids (e.g. `port-hastings`) that
 will not exist in live reference data. `DraftInvalidation.reconcileAgainstLiveGearTypes` already clears a
-gear use's dependent answers when its `gearTypeId` is not among the live gear types; `CatchRecordFlowView
-Model.enterFlow` now runs this reconciliation against whatever `getGearTypes()` currently returns before
-showing the draft. **What the user sees:** the affected gear's "Used on trip?" question reverts to
+gear use's dependent answers when its `gearTypeId` is not among the live gear types. This reconciliation
+runs on the single path that surfaces a persisted draft, against exactly the gear-type list the gear
+screens will then render, so what is reconciled and what is displayed can never disagree:
+
+- `CatchRecordFlowViewModel.enterFlowForDraft` (Home records list resume) — against the unbanded
+  `getGearTypes()` it loads with the rest of the reference-data bundle. Since
+  [ADR 0018](0018-independent-catch-record-drafts.md) made vessel selection always create a new draft,
+  this is the only path that surfaces a persisted draft and so the only one that needs reconciling.
+
+**What the user sees:** the affected gear's "Used on trip?" question reverts to
 unanswered and its statistical rectangle/species entries are cleared — nothing crashes, and every other
 part of the draft (vessel, trip dates, other gear uses) is unaffected. The user simply re-answers that one
 question.

@@ -76,12 +76,6 @@ class CheckYourAnswersNavigationTests {
     ) : CatchRecordDraftRepository {
         private val drafts = mutableMapOf(seed.id to seed)
 
-        override suspend fun getActiveDraft(vesselId: String): Result<CatchRecordDraft?> =
-            Result.success(drafts.values.firstOrNull { it.vesselId == vesselId && it.status.isActive })
-
-        override suspend fun getAnyActiveDraft(): Result<CatchRecordDraft?> =
-            Result.success(drafts.values.firstOrNull { it.status.isActive })
-
         override suspend fun getDraftById(draftId: String): Result<CatchRecordDraft?> = Result.success(drafts[draftId])
 
         override suspend fun startDraft(candidate: CatchRecordDraft): Result<CatchRecordDraft> =
@@ -164,7 +158,7 @@ class CheckYourAnswersNavigationTests {
             notLandedStraightAway = false,
             status = DraftStatus.Draft,
             modifiedAtEpochMillis = 0L,
-            catchRecordReference = "A1234520260727150815",
+            catchRecordReference = "B14974-27072026-150815",
             lateSubmissionWarningAcknowledged = true,
         )
 
@@ -250,7 +244,7 @@ class CheckYourAnswersNavigationTests {
             )
         }
 
-        viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+        viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
         composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.state.value.status is UiStatus.Content<*> }
         composeTestRule.waitForIdle()
         return navController
@@ -291,7 +285,7 @@ class CheckYourAnswersNavigationTests {
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithTag(SubmissionSuccessScreenTestTags.SCREEN).assertIsDisplayed()
-        composeTestRule.onNodeWithText("Your catch record reference A1234520260727150815").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Your catch record reference B14974-27072026-150815").assertIsDisplayed()
 
         assertEquals(1, submissionRepository.submitCallCount)
         assertEquals(DraftStatus.Submitted, draftRepository.statusOf(seedDraft.id))
@@ -327,7 +321,7 @@ class CheckYourAnswersNavigationTests {
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithTag(SubmissionPendingSyncScreenTestTags.SCREEN).assertIsDisplayed()
-        composeTestRule.onNodeWithText("Your catch record reference A1234520260727150815").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Your catch record reference B14974-27072026-150815").assertIsDisplayed()
 
         assertEquals(0, submissionRepository.submitCallCount)
         assertEquals(DraftStatus.PendingSync, draftRepository.statusOf(seedDraft.id))

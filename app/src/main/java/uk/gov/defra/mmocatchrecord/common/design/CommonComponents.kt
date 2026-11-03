@@ -249,13 +249,12 @@ fun StatusTag(
     status: RecordStatusTag,
     modifier: Modifier = Modifier,
 ) {
-    val (bg, textCol, labelRes) =
+    val (bg, textCol) =
         when (status) {
-            RecordStatusTag.Draft -> Triple(MmoColors.Background, MmoColors.Text, R.string.status_draft)
-            RecordStatusTag.ReadyToSubmit ->
-                Triple(Color(0xFFE1EDF7), MmoColors.GovBlueHover, R.string.status_ready_to_submit)
-            RecordStatusTag.AwaitingSync -> Triple(Color(0xFFFFF5CC), Color(0xFF6F5200), R.string.status_awaiting_sync)
-            RecordStatusTag.Submitted -> Triple(Color(0xFFDFEFE5), Color(0xFF005A30), R.string.status_submitted)
+            RecordStatusTag.Draft -> MmoColors.Background to MmoColors.Text
+            RecordStatusTag.ReadyToSubmit -> Color(0xFFE1EDF7) to MmoColors.GovBlueHover
+            RecordStatusTag.AwaitingSync -> Color(0xFFFFF5CC) to Color(0xFF6F5200)
+            RecordStatusTag.Submitted -> Color(0xFFDFEFE5) to Color(0xFF005A30)
         }
 
     Surface(
@@ -264,7 +263,7 @@ fun StatusTag(
         modifier = modifier,
     ) {
         Text(
-            text = stringResource(labelRes),
+            text = stringResource(status.labelRes),
             style =
                 MaterialTheme.typography.labelLarge.copy(
                     color = textCol,

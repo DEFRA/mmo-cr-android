@@ -59,9 +59,10 @@ class GearSpeciesChecklistScreenViewModelTests {
     private fun buildViewModel(
         dispatcher: CoroutineDispatcher,
         repository: FakeCatchRecordDraftRepository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" }),
+        referenceDataRepository: FakeReferenceDataRepository = FakeReferenceDataRepository(),
     ) = CatchRecordFlowViewModel(
         repository,
-        FakeReferenceDataRepository(),
+        referenceDataRepository,
         FakeCatchRecordSubmissionRepository(),
         FakeNetworkConnectivityChecker(),
         FakeCatchRecordSyncScheduler(),
@@ -101,7 +102,7 @@ class GearSpeciesChecklistScreenViewModelTests {
             val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
             repository.startDraft("vessel-achilles")
             repository.saveDraft(
-                repository.getAnyActiveDraft().getOrThrow()!!.copy(
+                repository.getDraftById("draft-1").getOrThrow()!!.copy(
                     gearUses = listOf(gearUseWithAddedSpecies(listOf(cod.id))),
                 ),
             )
@@ -113,7 +114,7 @@ class GearSpeciesChecklistScreenViewModelTests {
                     GearSpeciesChecklistScreen(viewModel = viewModel, onNavigate = { navigatedStep = it }, onBack = {})
                 }
             }
-            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
             testScheduler.advanceUntilIdle()
             composeTestRule.waitForIdle()
 
@@ -152,7 +153,7 @@ class GearSpeciesChecklistScreenViewModelTests {
             val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
             repository.startDraft("vessel-achilles")
             repository.saveDraft(
-                repository.getAnyActiveDraft().getOrThrow()!!.copy(
+                repository.getDraftById("draft-1").getOrThrow()!!.copy(
                     gearUses = listOf(gearUseWithAddedSpecies(listOf(cod.id))),
                 ),
             )
@@ -169,7 +170,7 @@ class GearSpeciesChecklistScreenViewModelTests {
                     )
                 }
             }
-            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
             testScheduler.advanceUntilIdle()
             composeTestRule.waitForIdle()
 
@@ -203,9 +204,12 @@ class GearSpeciesChecklistScreenViewModelTests {
     @Test
     fun anOuterLoadErrorIsShownAsARetryableWizardErrorAndRecoversViaRetry() =
         runTest {
-            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
-            repository.failNextOperation = true
-            val viewModel = buildViewModel(dispatcher = StandardTestDispatcher(testScheduler), repository = repository)
+            val referenceData = FakeReferenceDataRepository().apply { failNextOperation = true }
+            val viewModel =
+                buildViewModel(
+                    dispatcher = StandardTestDispatcher(testScheduler),
+                    referenceDataRepository = referenceData,
+                )
 
             composeTestRule.setContent {
                 WizardTestTheme {
@@ -232,7 +236,7 @@ class GearSpeciesChecklistScreenViewModelTests {
             val dispatcher = StandardTestDispatcher(testScheduler)
             val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
             repository.startDraft("vessel-achilles")
-            repository.saveDraft(repository.getAnyActiveDraft().getOrThrow()!!.copy(gearUses = emptyList()))
+            repository.saveDraft(repository.getDraftById("draft-1").getOrThrow()!!.copy(gearUses = emptyList()))
             val viewModel = buildViewModel(dispatcher, repository)
 
             composeTestRule.setContent {
@@ -240,7 +244,7 @@ class GearSpeciesChecklistScreenViewModelTests {
                     GearSpeciesChecklistScreen(viewModel = viewModel, onNavigate = {}, onBack = {})
                 }
             }
-            viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
             testScheduler.advanceUntilIdle()
             composeTestRule.waitForIdle()
 
