@@ -4,11 +4,11 @@ package uk.gov.defra.mmocatchrecord.core.security
  * Abstraction over the user's persisted biometric-re-entry preference (opted in/out of biometric app
  * lock).
  *
- * **Real implementation contract (Stage 2+):** persist via **Jetpack DataStore** with the preference
- * value itself encrypted using an **Android Keystore**-backed **Tink** AEAD key (this is a user
- * preference flag, not a secret, but is still treated as security-relevant configuration and must not be
- * stored in plain `SharedPreferences`/`EncryptedSharedPreferences`). Never log the preference value
- * alongside any user-identifying context.
+ * **Real implementation contract (Stage 2+):** persist via **Jetpack DataStore**, encrypting the value
+ * with [uk.gov.defra.mmocatchrecord.core.security.KeystoreAesGcmCipher] behind a `Serializer`, exactly as
+ * `DataStoreSessionStore` does (ADR 0006). This is a user preference flag, not a secret, but is still
+ * security-relevant configuration and must not be stored in plain `SharedPreferences`. Do **not** use Tink
+ * or `androidx.security-crypto`. Never log the preference value alongside user-identifying context.
  */
 interface BiometricPreferenceStore {
     suspend fun isBiometricReentryEnabled(): Boolean
