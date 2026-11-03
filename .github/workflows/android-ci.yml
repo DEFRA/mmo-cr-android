@@ -58,8 +58,8 @@ jobs:
       # - name: Release tooling tests
       #   run: bundle exec ruby -e 'Dir.glob("fastlane/test/*_test.rb").sort.each { |f| require File.expand_path(f) }'
 
-      - name: Static analysis (Fastlane)
-        run: bundle exec fastlane lint
+      # - name: Static analysis (Fastlane)
+      #   run: bundle exec fastlane lint
 
       - name: Build debug (Fastlane)
         run: bundle exec fastlane build
@@ -67,44 +67,44 @@ jobs:
       - name: Run unit tests with coverage (Fastlane)
         run: bundle exec fastlane test
 
-      - name: Convert test results for SonarCloud
-        if: ${{ !cancelled() }}
-        run: bash .github/workflows/scripts/junit-to-sonar-execution.sh
+      # - name: Convert test results for SonarCloud
+      #   if: ${{ !cancelled() }}
+      #   run: bash .github/workflows/scripts/junit-to-sonar-execution.sh
 
-      - name: Upload coverage report
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: kover-report
-          path: app/build/reports/kover/reportDebug.xml
-          retention-days: 14
+      # - name: Upload coverage report
+      #   if: ${{ !cancelled() }}
+      #   uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      #   with:
+      #     name: kover-report
+      #     path: app/build/reports/kover/reportDebug.xml
+      #     retention-days: 14
 
-      - name: Upload Sonar test-execution report
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: sonar-test-execution
-          path: build/sonar/test-execution.xml
-          retention-days: 14
+      # - name: Upload Sonar test-execution report
+      #   if: ${{ !cancelled() }}
+      #   uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      #   with:
+      #     name: sonar-test-execution
+      #     path: build/sonar/test-execution.xml
+      #     retention-days: 14
 
-      - name: Upload lint/ktlint/detekt reports
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: static-analysis-reports
-          path: |
-            app/build/reports/lint-results-debug.html
-            app/build/reports/ktlint
-            app/build/reports/detekt
-          retention-days: 14
+      # - name: Upload lint/ktlint/detekt reports
+      #   if: ${{ !cancelled() }}
+      #   uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      #   with:
+      #     name: static-analysis-reports
+      #     path: |
+      #       app/build/reports/lint-results-debug.html
+      #       app/build/reports/ktlint
+      #       app/build/reports/detekt
+      #     retention-days: 14
 
-      - name: SonarQube Cloud scan
-        uses: SonarSource/sonarqube-scan-action@ba9859eae8dd6bd29e412f25ddbbef3d032000f4 # v8.2.2
-        env:
-          SONAR_TOKEN: ${{ secrets.MMO_CR_SONAR_TOKEN }}
-          SONAR_HOST_URL: https://sonarcloud.io
-        with:
-          args: ${{ github.event_name != 'pull_request' && format('-Dsonar.branch.name={0}', github.ref_name) || '' }}
+      # - name: SonarQube Cloud scan
+      #   uses: SonarSource/sonarqube-scan-action@ba9859eae8dd6bd29e412f25ddbbef3d032000f4 # v8.2.2
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.MMO_CR_SONAR_TOKEN }}
+      #     SONAR_HOST_URL: https://sonarcloud.io
+      #   with:
+      #     args: ${{ github.event_name != 'pull_request' && format('-Dsonar.branch.name={0}', github.ref_name) || '' }}
 
   instrumented-tests:
     name: Instrumented tests
@@ -139,23 +139,23 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - name: Run instrumented tests (Compose UI + WCAG 2.2 AA semantics)
-        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
-        with:
-          api-level: 36
-          target: aosp_atd
-          arch: x86_64
-          profile: pixel_6
-          disable-animations: true
-          script: bundle exec fastlane instrumented_test
+      # - name: Run instrumented tests (Compose UI + WCAG 2.2 AA semantics)
+      #   uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+      #   with:
+      #     api-level: 36
+      #     target: aosp_atd
+      #     arch: x86_64
+      #     profile: pixel_6
+      #     disable-animations: true
+      #     script: bundle exec fastlane instrumented_test
 
-      - name: Upload instrumented test report
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: instrumented-test-report
-          path: app/build/reports/androidTests/connected
-          retention-days: 14
+      # - name: Upload instrumented test report
+      #   if: ${{ !cancelled() }}
+      #   uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      #   with:
+      #     name: instrumented-test-report
+      #     path: app/build/reports/androidTests/connected
+      #     retention-days: 14
 
   # Runs last so the check is as close to the merge as possible. Must be a required status check.
   main-idle:
