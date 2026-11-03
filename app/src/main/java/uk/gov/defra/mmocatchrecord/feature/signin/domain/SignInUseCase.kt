@@ -1,6 +1,7 @@
 package uk.gov.defra.mmocatchrecord.feature.signin.domain
 
 import javax.inject.Inject
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Repository abstraction over authenticating a user against MMO identity. Must call the identity endpoint
@@ -22,16 +23,28 @@ class SignInUseCase
     constructor(
         private val repository: SignInRepository,
     ) {
+        @Suppress("TooGenericExceptionCaught")
         suspend operator fun invoke(
             username: String,
             password: String,
         ): Result<SignInSession> {
             val result =
-                runCatching { repository.signIn(username, password) }
-                    .getOrElse { thrown -> Result.failure(thrown) }
+                try {
+                    repository.signIn(username, password)
+                } catch (cancellation: CancellationException) {
+                    throw cancellation
+                } catch (thrown: Exception) {
+                    Result.failure(thrown)
+                }
             return result.fold(
                 onSuccess = { session -> Result.success(session) },
-                onFailure = { thrown -> Result.failure(thrown.asSignInException()) },
+                onFailure = { thrown ->
+                    // Cancellation is structured concurrency unwinding, not a sign-in failure to report.
+                    if (thrown is CancellationException) {
+                        throw thrown
+                    }
+                    Result.failure(thrown.asSignInException())
+                },
             )
         }
 

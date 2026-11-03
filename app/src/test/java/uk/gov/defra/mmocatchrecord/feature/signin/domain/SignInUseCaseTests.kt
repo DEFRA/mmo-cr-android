@@ -2,11 +2,13 @@ package uk.gov.defra.mmocatchrecord.feature.signin.domain
 
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import uk.gov.defra.mmocatchrecord.feature.signin.data.FakeSignInRepository
+import kotlin.coroutines.cancellation.CancellationException
 
 class SignInUseCaseTests {
     private val accounts = mapOf("alice@example.com" to "valid-fixture-input")
@@ -72,6 +74,35 @@ class SignInUseCaseTests {
             // Nothing in the thrown value may hint at which half of the credential pair was wrong.
             assertNull(unknownUser.message)
             assertNull(wrongPassword.message)
+        }
+
+    @Test
+    fun `a cancellation thrown by the repository propagates instead of being mapped to a failure`() =
+        runTest {
+            val repository = SignInRepository { _, _ -> throw CancellationException("cancelled") }
+
+            val propagated = cancellationFrom { SignInUseCase(repository)("alice@example.com", "valid-fixture-input") }
+
+            assertNotNull("Cancellation must unwind the coroutine, not become a sign-in failure", propagated)
+        }
+
+    @Test
+    fun `a cancellation carried in a failure result also propagates`() =
+        runTest {
+            val repository =
+                FakeSignInRepository(forcedResult = Result.failure(CancellationException("cancelled")))
+
+            val propagated = cancellationFrom { SignInUseCase(repository)("alice@example.com", "valid-fixture-input") }
+
+            assertNotNull("Cancellation must unwind the coroutine, not become a sign-in failure", propagated)
+        }
+
+    private suspend fun cancellationFrom(block: suspend () -> Result<SignInSession>): CancellationException? =
+        try {
+            block()
+            null
+        } catch (expected: CancellationException) {
+            expected
         }
 
     @Test
