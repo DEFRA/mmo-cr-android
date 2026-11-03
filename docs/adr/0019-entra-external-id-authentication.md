@@ -161,13 +161,48 @@ device ever going online. The PoC defaulted to 7 days; the value for this app is
 | Q2 | Is self-service forgot-password in scope? | **Open** — product decision only. Natively supported by the SDK; the PoC's "comparable to the whole sign-up flow" sizing is outdated. |
 | Q3 | Is the token audienced to the gateway / central Authentication Service, and what is its app registration, Application ID URI, scope name(s) and user-ID/role/scope claim contract? | **Open — critical path.** Blocks the Phase 1 token spike and all real-token work. *Catch Recording Service Design* §23 still lists the gateway user ID/role/scope claim contract as an unresolved **backend** decision. |
 | Q3b | Do reference-data and catch-record share **one** audience, or are **two** access tokens needed? | **Open** — MSAL supports acquiring multiple access tokens, so two audiences are implementable, but it changes `TokenProvider` from one token to a per-service lookup. |
-| Q4 | Offline authorisation grace period | **Open** — PoC used 7 days; needs a product/security decision for field use. Evaluated against `lastVerifiedOnlineAtMillis` only. |
+| Q4 | Offline authorisation grace period | **Open** — PoC used 7 days; needs a product/security decision for field use. Evaluated against `lastVerifiedOnlineAtMillis` only. **Dependency: "surface and handle session-write failure" must close first** — see below. |
 | Q5 | Which custom attributes does the sign-up user flow collect? | **Open** — the client renders them dynamically, so this does not block code, but it does affect UX and testing. |
 | Q6 | Does the app need role/permission authorisation from token claims? | **Open** — the PoC models authentication state only, with no concept of roles. Overlaps Q3's claim contract. |
 | Q7 | Is there a separate TEST/PROD External ID tenant? | **Open** — only a DEV tenant is documented. Affects the flavor matrix. |
 | Q8 | Confirm the tenant ID from the tenant's own OIDC discovery document | **Open** — the PoC warns that assumed tenant IDs caused real confusion; verify independently. |
 | Q9 | Native auth GA status and current MSAL Android version | **Closed 2026-11-02** — native auth is **GA**; MSAL Android **8.6.0** (2026-10-21), minSdk 24. Caveat: Native Auth **V1 is GA, V2 is private preview** — build against V1. |
 | Q10 | Governance: native auth is a conscious deviation from Microsoft's own security preference | **Open — needs owning, not resolving.** Microsoft states "browser-delegated authentication is the more secure option… before you choose native authentication, discuss the security implications with your app's business owner and development team." This ADR chose native auth for offline-first field use and to preserve the GDS-patterned screens already built — defensible, and **no DEFRA or GDS standard mandates browser-delegated authentication**, so this is *not* a DEFRA breach. It is a deviation from vendor security guidance and must be recorded and owned: raise with DEFRA Delivery Architecture (`delivery.architecture@defra.gov.uk`). |
+
+## Known gaps carried from the first implementation slice (2026-11-03)
+
+### Session-write failure must be surfaced and handled (blocks Q4)
+
+`DataStoreSessionStore` reads fail safe: a read `IOException` emits an empty `SessionMetadata`, which means
+"never authenticated" and routes the user to sign-in. That is the secure default.
+
+**Writes have no equivalent.** An `IOException` from `recordSignedInNow` / `recordVerifiedOnlineNow`
+propagates out of `SessionCoordinator`'s `viewModelScope.launch` with no handler, crashing the app
+immediately after a successful sign-in — on a full-storage device in the field, the worst-looking possible
+failure.
+
+Swallowing the exception is **not** the fix: unlike a read, a failed write has no safe default. Recording a
+sign-in that did not persist leaves `lastVerifiedOnlineAtMillis` stale while the user appears authenticated.
+
+The work is therefore scoped as **"surface and handle session-write failure"**, not "catch `IOException`":
+log via Timber (redacted, user-shareable per the DEFRA diagnostics requirement), map to a terminal error
+state per ADR 0011's safe error mapping, and keep the user on the sign-in screen with actionable recovery
+copy.
+
+**This must close before the Q4 offline grace period ships.** Until a grace period exists, an unpersisted
+`lastVerifiedOnlineAtMillis` is cosmetic. The moment authorisation is evaluated against that field, a
+silently-failed write becomes a security-relevant correctness bug — the user either keeps offline access
+they should have lost, or loses access they are entitled to.
+
+### `recordVerifiedOnlineNow` has no production call site
+
+The method is deliberately unreferenced in `app/src/main`. It is the forward half of the two-timestamp
+split: the silent-refresh / token-acquisition path that will call it does not land until the MSAL slice
+(Phase 2.3). Only `recordSignedInNow` is wired today.
+
+Detekt, Sonar or IDE unused-member inspections may flag it before that caller arrives. It is intentional —
+do not delete it, and do not "use" it from the biometric path, which is precisely the defect the split was
+introduced to prevent.
 
 ## Amendments (2026-11-02)
 
