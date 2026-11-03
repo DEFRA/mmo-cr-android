@@ -51,6 +51,17 @@ class InMemorySessionStoreTests {
         }
 
     @Test
+    fun `signing in advances both timestamps together`() =
+        runTest {
+            val store = InMemorySessionStore()
+
+            store.recordSignedInNow(999L)
+
+            assertEquals(999L, store.getLastAuthenticatedAtMillis())
+            assertEquals(999L, store.getLastVerifiedOnlineAtMillis())
+        }
+
+    @Test
     fun `clearing resets both timestamps`() =
         runTest {
             val store = InMemorySessionStore(10L, 20L)

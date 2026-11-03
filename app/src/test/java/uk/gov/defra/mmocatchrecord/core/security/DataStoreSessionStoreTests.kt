@@ -3,11 +3,13 @@ package uk.gov.defra.mmocatchrecord.core.security
 import androidx.datastore.core.DataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import java.io.IOException
 
 /**
  * [DataStoreSessionStore] is tested against an in-memory [DataStore]; the real file and `AndroidKeyStore`
@@ -70,20 +72,60 @@ class DataStoreSessionStoreTests {
             assertEquals(SessionMetadata(), dataStore.current())
         }
 
+    @Test
+    fun `signing in records both timestamps in a single write`() =
+        runTest {
+            store.recordSignedInNow(ONLINE_AT)
+
+            assertEquals(ONLINE_AT, store.getLastAuthenticatedAtMillis())
+            assertEquals(ONLINE_AT, store.getLastVerifiedOnlineAtMillis())
+            // One write means process death cannot leave app-lock recorded but online verification missing.
+            assertEquals(1, dataStore.writeCount())
+        }
+
+    @Test
+    fun `an unreadable file reads as never authenticated rather than crashing`() =
+        runTest {
+            val failing = DataStoreSessionStore(FailingDataStore(IOException("disk unavailable")))
+
+            assertNull(failing.getLastAuthenticatedAtMillis())
+            assertNull(failing.getLastVerifiedOnlineAtMillis())
+        }
+
+    @Test(expected = IllegalStateException::class)
+    fun `a non-IO read failure still propagates`() =
+        runTest {
+            DataStoreSessionStore(FailingDataStore(IllegalStateException("programming error")))
+                .getLastAuthenticatedAtMillis()
+        }
+
     private class FakeDataStore(
         initial: SessionMetadata,
     ) : DataStore<SessionMetadata> {
         private val state = MutableStateFlow(initial)
+        private var writes = 0
 
         override val data: Flow<SessionMetadata> = state
 
         override suspend fun updateData(transform: suspend (t: SessionMetadata) -> SessionMetadata): SessionMetadata {
             val updated = transform(state.value)
+            writes++
             state.update { updated }
             return updated
         }
 
         fun current(): SessionMetadata = state.value
+
+        fun writeCount(): Int = writes
+    }
+
+    private class FailingDataStore(
+        private val error: Throwable,
+    ) : DataStore<SessionMetadata> {
+        override val data: Flow<SessionMetadata> = flow { throw error }
+
+        override suspend fun updateData(transform: suspend (t: SessionMetadata) -> SessionMetadata): SessionMetadata =
+            throw error
     }
 
     private companion object {

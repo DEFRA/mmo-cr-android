@@ -20,6 +20,9 @@ interface SessionStore {
      */
     suspend fun recordVerifiedOnlineNow(nowMillis: Long)
 
+    /** Records both timestamps in one write, so process death cannot leave sign-in half-recorded. */
+    suspend fun recordSignedInNow(nowMillis: Long)
+
     /** Clears session state (e.g. on sign-out). */
     suspend fun clear()
 }
@@ -44,6 +47,11 @@ class InMemorySessionStore(
     override suspend fun getLastVerifiedOnlineAtMillis(): Long? = lastVerifiedOnlineAtMillis
 
     override suspend fun recordVerifiedOnlineNow(nowMillis: Long) {
+        lastVerifiedOnlineAtMillis = nowMillis
+    }
+
+    override suspend fun recordSignedInNow(nowMillis: Long) {
+        lastAuthenticatedAtMillis = nowMillis
         lastVerifiedOnlineAtMillis = nowMillis
     }
 

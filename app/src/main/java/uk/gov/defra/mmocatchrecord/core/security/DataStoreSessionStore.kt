@@ -7,9 +7,11 @@ import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.core.Serializer
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.dataStoreFile
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.security.GeneralSecurityException
@@ -59,21 +61,33 @@ class SessionMetadataSerializer(
 class DataStoreSessionStore(
     private val dataStore: DataStore<SessionMetadata>,
 ) : SessionStore {
-    override suspend fun getLastAuthenticatedAtMillis(): Long? = dataStore.data.first().lastAuthenticatedAtMillis
+    override suspend fun getLastAuthenticatedAtMillis(): Long? = read().lastAuthenticatedAtMillis
 
     override suspend fun recordAuthenticatedNow(nowMillis: Long) {
         dataStore.updateData { it.copy(lastAuthenticatedAtMillis = nowMillis) }
     }
 
-    override suspend fun getLastVerifiedOnlineAtMillis(): Long? = dataStore.data.first().lastVerifiedOnlineAtMillis
+    override suspend fun getLastVerifiedOnlineAtMillis(): Long? = read().lastVerifiedOnlineAtMillis
 
     override suspend fun recordVerifiedOnlineNow(nowMillis: Long) {
         dataStore.updateData { it.copy(lastVerifiedOnlineAtMillis = nowMillis) }
     }
 
+    override suspend fun recordSignedInNow(nowMillis: Long) {
+        dataStore.updateData {
+            it.copy(lastAuthenticatedAtMillis = nowMillis, lastVerifiedOnlineAtMillis = nowMillis)
+        }
+    }
+
     override suspend fun clear() {
         dataStore.updateData { SessionMetadata() }
     }
+
+    /** An unreadable file reads as "never authenticated", routing to sign-in rather than crashing on launch. */
+    private suspend fun read(): SessionMetadata =
+        dataStore.data
+            .catch { error -> if (error is IOException) emit(SessionMetadata()) else throw error }
+            .first()
 }
 
 /** DataStore file name, under `filesDir/datastore/` — already excluded from backup by the allowlist. */
