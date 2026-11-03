@@ -138,26 +138,19 @@ class SignInScreenAccessibilityTests {
     }
 
     @Test
-    fun `the error is announced after the submit action in traversal order`() {
+    fun `the error precedes the submit action in traversal order`() {
         renderSignIn(R.string.signin_error_generic)
 
         val group =
             composeTestRule
                 .onNodeWithTag(SignInScreenTestTags.ACTIONS_GROUP, useUnmergedTree = true)
                 .fetchSemanticsNode()
-        val submitIndex =
-            composeTestRule
-                .onNodeWithTag(SignInScreenTestTags.SUBMIT_ACTION, useUnmergedTree = true)
-                .fetchSemanticsNode()
-                .config[SemanticsProperties.TraversalIndex]
-        val errorIndex =
-            composeTestRule
-                .onNodeWithTag(SignInScreenTestTags.ERROR_MESSAGE, useUnmergedTree = true)
-                .fetchSemanticsNode()
-                .config[SemanticsProperties.TraversalIndex]
 
         assertTrue(group.config[SemanticsProperties.IsTraversalGroup])
-        assertTrue(errorIndex > submitIndex)
+        // Neither node may override the order, so natural top-to-bottom traversal stands (SC 1.3.2).
+        assertEquals(0f, traversalIndexOf(SignInScreenTestTags.SUBMIT_ACTION), 0f)
+        assertEquals(0f, traversalIndexOf(SignInScreenTestTags.ERROR_MESSAGE), 0f)
+        assertTrue(topOf(SignInScreenTestTags.ERROR_MESSAGE) < topOf(SignInScreenTestTags.SUBMIT_ACTION))
     }
 
     @Test
@@ -322,6 +315,13 @@ class SignInScreenAccessibilityTests {
             .onNodeWithTag(tag, useUnmergedTree = true)
             .fetchSemanticsNode()
             .positionInRoot.y
+
+    private fun traversalIndexOf(tag: String): Float =
+        composeTestRule
+            .onNodeWithTag(tag, useUnmergedTree = true)
+            .fetchSemanticsNode()
+            .config
+            .getOrElse(SemanticsProperties.TraversalIndex) { 0f }
 
     private fun contrastRatio(
         foreground: Color,

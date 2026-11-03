@@ -40,7 +40,6 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -350,10 +349,9 @@ private fun SignInActionsSection(
                         .padding(bottom = Spacing.s)
                         .testTag(SignInScreenTestTags.ERROR_MESSAGE)
                         .semantics {
-                            // Announced without stealing focus (SC 4.1.3); read last so the submit button
-                            // keeps its place in the traversal order (SC 2.4.3).
+                            // Announced without stealing focus (SC 4.1.3). Natural top-to-bottom traversal
+                            // is left intact so the error precedes the submit button (SC 1.3.2, SC 2.4.3).
                             liveRegion = LiveRegionMode.Polite
-                            traversalIndex = 1f
                             contentDescription = "$errorPrefix $message"
                         },
             )
@@ -377,8 +375,7 @@ private fun SignInActionsSection(
                 Modifier
                     .fillMaxWidth()
                     .padding(bottom = Spacing.l)
-                    .testTag(SignInScreenTestTags.SUBMIT_ACTION)
-                    .semantics { traversalIndex = 0f },
+                    .testTag(SignInScreenTestTags.SUBMIT_ACTION),
         )
     }
 }
