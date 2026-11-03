@@ -11,7 +11,6 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
-import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -27,6 +26,8 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import uk.gov.defra.mmocatchrecord.R
+import uk.gov.defra.mmocatchrecord.common.design.AppLanguageProvider
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.core.language.AppLanguage
@@ -51,6 +52,33 @@ class SignInScreenTests {
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+    }
+
+    @Test
+    fun `the error copy follows the in-app welsh toggle rather than the device locale`() {
+        composeTestRule.setContent {
+            MmoTheme {
+                AppLanguageProvider(language = "cy") {
+                    SignInContent(
+                        state =
+                            SignInViewState(
+                                error = SignInError(R.string.signin_error_generic, isRetryable = true),
+                            ),
+                        currentLanguage = "cy",
+                        onLanguageToggle = {},
+                        onUsernameChanged = {},
+                        onPasswordChanged = {},
+                        onSubmit = {},
+                    )
+                }
+            }
+        }
+
+        // Resolving in composition is what makes the Welsh copy reachable at all (B1).
+        composeTestRule
+            .onNodeWithText("Aeth rhywbeth o'i le. Rhowch gynnig arall ar fewngofnodi.")
+            .performScrollTo()
+            .assertIsDisplayed()
     }
 
     @Test
@@ -112,7 +140,7 @@ class SignInScreenTests {
                 SignInContent(
                     state =
                         SignInViewState(
-                            status = UiStatus.Error("Something went wrong. Try signing in again.", isRetryable = true),
+                            error = SignInError(R.string.signin_error_generic, isRetryable = true),
                         ),
                     currentLanguage = "cy",
                     onLanguageToggle = { toggled = true },
@@ -137,7 +165,6 @@ class SignInScreenTests {
             val viewModel =
                 SignInViewModel(
                     SignInUseCase(repository),
-                    ApplicationProvider.getApplicationContext(),
                     defaultDispatcher = dispatcher,
                 )
 
@@ -179,7 +206,6 @@ class SignInScreenTests {
             val viewModel =
                 SignInViewModel(
                     SignInUseCase(repository),
-                    ApplicationProvider.getApplicationContext(),
                     defaultDispatcher = dispatcher,
                 )
             val languageViewModel = AppLanguageViewModel(FakeAppLanguageRepository())

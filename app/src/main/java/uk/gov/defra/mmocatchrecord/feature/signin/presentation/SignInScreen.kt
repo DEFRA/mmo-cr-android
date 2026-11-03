@@ -172,8 +172,8 @@ private fun SignInHeaderSection(
             modifier =
                 Modifier
                     .testTag(SignInScreenTestTags.LANGUAGE_TOGGLE)
-                    .clickable(role = Role.Button) { onLanguageToggle() }
-                    .semantics { contentDescription = switchLanguageLabel }
+                    // SC 2.5.3: the accessible name stays "CYM"/"ENG" so speech input can target it.
+                    .clickable(onClickLabel = switchLanguageLabel, role = Role.Button) { onLanguageToggle() }
                     .sizeIn(
                         minWidth = Spacing.minTouchTarget,
                         minHeight = Spacing.minTouchTarget,
@@ -210,14 +210,17 @@ private fun SignInFieldsSection(
     onUsernameChanged: (String) -> Unit,
     onPasswordChanged: (String) -> Unit,
 ) {
-    EmailAddressField(value = state.username, onValueChange = onUsernameChanged)
-    PasswordField(value = state.password, onValueChange = onPasswordChanged)
+    // Flagged on both fields, never one: singling a field out would leak which value was wrong.
+    val isError = state.error != null
+    EmailAddressField(value = state.username, onValueChange = onUsernameChanged, isError = isError)
+    PasswordField(value = state.password, onValueChange = onPasswordChanged, isError = isError)
 }
 
 @Composable
 private fun EmailAddressField(
     value: String,
     onValueChange: (String) -> Unit,
+    isError: Boolean,
 ) {
     val label = stringResource(R.string.email_address)
     Column(
@@ -241,6 +244,7 @@ private fun EmailAddressField(
             value = value,
             onValueChange = onValueChange,
             singleLine = true,
+            isError = isError,
             shape = RectangleShape,
             keyboardOptions =
                 KeyboardOptions(
@@ -266,6 +270,7 @@ private fun EmailAddressField(
 private fun PasswordField(
     value: String,
     onValueChange: (String) -> Unit,
+    isError: Boolean,
 ) {
     val label = stringResource(R.string.password)
     Column(
@@ -288,6 +293,7 @@ private fun PasswordField(
             value = value,
             onValueChange = onValueChange,
             singleLine = true,
+            isError = isError,
             visualTransformation = PasswordVisualTransformation(),
             shape = RectangleShape,
             keyboardOptions =
@@ -333,8 +339,8 @@ private fun SignInActionsSection(
                 .testTag(SignInScreenTestTags.ACTIONS_GROUP)
                 .semantics { isTraversalGroup = true },
     ) {
-        if (state.status is UiStatus.Error) {
-            val message = state.status.message
+        if (state.error != null) {
+            val message = stringResource(state.error.messageRes)
             Text(
                 text = message,
                 color = MaterialTheme.colorScheme.error,

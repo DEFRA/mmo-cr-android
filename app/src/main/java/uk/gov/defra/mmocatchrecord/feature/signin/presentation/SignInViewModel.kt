@@ -1,9 +1,7 @@
 package uk.gov.defra.mmocatchrecord.feature.signin.presentation
 
-import android.content.Context
 import androidx.annotation.StringRes
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import timber.log.Timber
@@ -24,7 +22,6 @@ class SignInViewModel
     @Inject
     constructor(
         private val signInUseCase: SignInUseCase,
-        @ApplicationContext private val context: Context,
         defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
     ) : BaseViewModel<SignInViewState, SignInEvent>(
             initialState = SignInViewState(),
@@ -41,27 +38,27 @@ class SignInViewModel
         private fun submit() {
             val username = currentState.username
             val password = currentState.password
-            updateState { it.copy(status = UiStatus.Loading) }
+            updateState { it.copy(status = UiStatus.Loading, error = null) }
 
             launchInViewModelScope {
                 val result = signInUseCase(username, password)
                 result.fold(
                     onSuccess = { session ->
-                        updateState { it.copy(status = UiStatus.Content(session)) }
+                        updateState { it.copy(status = UiStatus.Content(session), error = null) }
                     },
                     onFailure = { error ->
-                        updateState { it.copy(status = errorStatus(error)) }
+                        updateState { it.copy(status = UiStatus.Idle, error = signInError(error)) }
                     },
                 )
             }
         }
 
-        /** Only ever reads the mapped [SignInFailure] — [Throwable.message] must never reach the UI. */
-        private fun errorStatus(error: Throwable): UiStatus.Error {
+        /** Carries only a resource id — neither [Throwable.message] nor a resolved string reaches the state. */
+        private fun signInError(error: Throwable): SignInError {
             val failure = (error as? SignInException)?.failure ?: SignInFailure.Unknown(UNMAPPED_FAILURE)
             Timber.w("Sign-in failed: %s", failure.diagnostic())
-            return UiStatus.Error(
-                message = context.getString(failure.messageRes()),
+            return SignInError(
+                messageRes = failure.messageRes(),
                 // Only a transport failure is worth retrying unchanged; the rest are terminal (auth/validation).
                 isRetryable = failure is SignInFailure.Network,
             )
@@ -75,12 +72,8 @@ class SignInViewModel
                 is SignInFailure.Unknown -> R.string.signin_error_generic
             }
 
-        private fun SignInFailure.diagnostic(): String =
-            when (this) {
-                SignInFailure.InvalidCredentials -> "InvalidCredentials"
-                SignInFailure.Network -> "Network"
-                is SignInFailure.Unknown -> "Unknown(${this.message})"
-            }
+        /** Class name only: [SignInFailure.Unknown] is free text an MSAL error could fill with a username. */
+        private fun SignInFailure.diagnostic(): String = this::class.simpleName ?: "SignInFailure"
 
         private companion object {
             const val UNMAPPED_FAILURE = "repository returned a non-SignInException failure"

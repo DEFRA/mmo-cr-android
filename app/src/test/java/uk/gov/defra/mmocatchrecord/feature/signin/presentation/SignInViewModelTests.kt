@@ -1,7 +1,5 @@
 package uk.gov.defra.mmocatchrecord.feature.signin.presentation
 
-import android.content.Context
-import androidx.test.core.app.ApplicationProvider
 import app.cash.turbine.test
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -13,11 +11,10 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.signin.data.FakeSignInRepository
@@ -26,12 +23,9 @@ import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInFailure
 import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInSession
 import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInUseCase
 
-/** Robolectric is needed so the mapped failure messages resolve to the real, localised string resources. */
+/** Needs no Robolectric: the view model emits unresolved resource ids, never resolved strings. */
 @OptIn(ExperimentalCoroutinesApi::class)
-@RunWith(RobolectricTestRunner::class)
 class SignInViewModelTests {
-    private val context: Context = ApplicationProvider.getApplicationContext()
-
     /** A deliberately mismatched fixture input, distinct from the valid fixture used elsewhere in this file. */
     private val otherTestInput = "mismatched-fixture-input"
 
@@ -48,28 +42,26 @@ class SignInViewModelTests {
     private fun buildViewModel(
         repository: FakeSignInRepository,
         dispatcher: CoroutineDispatcher,
-    ) = SignInViewModel(SignInUseCase(repository), context, defaultDispatcher = dispatcher)
+    ) = SignInViewModel(SignInUseCase(repository), defaultDispatcher = dispatcher)
 
     private suspend fun signInAndAwaitError(
         repository: FakeSignInRepository,
         dispatcher: CoroutineDispatcher,
         username: String = "alice@example.com",
         password: String = "valid-fixture-input",
-    ): UiStatus.Error {
+    ): SignInViewState {
         val viewModel = buildViewModel(repository, dispatcher)
         viewModel.dispatch(SignInEvent.UsernameChanged(username))
         viewModel.dispatch(SignInEvent.PasswordChanged(password))
 
-        var error: UiStatus.Error? = null
+        var errored: SignInViewState? = null
         viewModel.state.test {
             assertEquals(password, awaitItem().password)
             viewModel.dispatch(SignInEvent.SubmitRequested)
             assertEquals(UiStatus.Loading, awaitItem().status)
-            val status = awaitItem().status
-            assertTrue(status is UiStatus.Error)
-            error = status as UiStatus.Error
+            errored = awaitItem()
         }
-        return requireNotNull(error)
+        return requireNotNull(errored)
     }
 
     @Test
@@ -87,9 +79,13 @@ class SignInViewModelTests {
                 viewModel.dispatch(SignInEvent.SubmitRequested)
 
                 assertEquals(UiStatus.Loading, awaitItem().status)
-                val content = awaitItem().status
-                assertTrue(content is UiStatus.Content)
-                assertEquals("alice@example.com", (content as UiStatus.Content<SignInSession>).value.userId)
+                val signedIn = awaitItem()
+                assertTrue(signedIn.status is UiStatus.Content)
+                assertNull(signedIn.error)
+                assertEquals(
+                    "alice@example.com",
+                    (signedIn.status as UiStatus.Content<SignInSession>).value.userId,
+                )
             }
         }
 
@@ -113,6 +109,20 @@ class SignInViewModelTests {
         }
 
     @Test
+    fun `the error state carries a resource id rather than a resolved string`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository =
+                FakeSignInRepository(forcedResult = Result.failure(SignInException(SignInFailure.Network)))
+
+            val errored = signInAndAwaitError(repository, dispatcher)
+
+            // Resolved in composition instead, where AppLanguageProvider's locale override applies.
+            assertEquals(R.string.signin_error_network, errored.error?.messageRes)
+            assertEquals(UiStatus.Idle, errored.status)
+        }
+
+    @Test
     fun `an unknown account and a wrong password produce an identical, generic error state`() =
         runTest {
             val dispatcher = StandardTestDispatcher(testScheduler)
@@ -132,17 +142,10 @@ class SignInViewModelTests {
                 )
 
             // Account-enumeration control: the two paths must be indistinguishable to the UI.
-            assertEquals(unknownUser, wrongPassword)
-            assertEquals(context.getString(R.string.signin_error_invalid_credentials), unknownUser.message)
-            assertFalse(unknownUser.isRetryable)
+            assertEquals(unknownUser.error, wrongPassword.error)
+            assertEquals(R.string.signin_error_invalid_credentials, unknownUser.error?.messageRes)
+            assertFalse(unknownUser.error?.isRetryable ?: true)
         }
-
-    @Test
-    fun `the generic invalid credentials message names neither the email nor the password as wrong`() {
-        val message = context.getString(R.string.signin_error_invalid_credentials)
-
-        assertTrue(message.contains("email address or password"))
-    }
 
     @Test
     fun `a network failure maps to the retryable network message`() =
@@ -151,10 +154,10 @@ class SignInViewModelTests {
             val repository =
                 FakeSignInRepository(forcedResult = Result.failure(SignInException(SignInFailure.Network)))
 
-            val error = signInAndAwaitError(repository, dispatcher)
+            val errored = signInAndAwaitError(repository, dispatcher)
 
-            assertEquals(context.getString(R.string.signin_error_network), error.message)
-            assertTrue(error.isRetryable)
+            assertEquals(R.string.signin_error_network, errored.error?.messageRes)
+            assertTrue(errored.error?.isRetryable ?: false)
         }
 
     @Test
@@ -167,11 +170,10 @@ class SignInViewModelTests {
                     forcedResult = Result.failure(SignInException(SignInFailure.Unknown(diagnostic))),
                 )
 
-            val error = signInAndAwaitError(repository, dispatcher)
+            val errored = signInAndAwaitError(repository, dispatcher)
 
-            assertEquals(context.getString(R.string.signin_error_generic), error.message)
-            assertFalse(error.message.contains(diagnostic))
-            assertFalse(error.isRetryable)
+            assertEquals(R.string.signin_error_generic, errored.error?.messageRes)
+            assertFalse(errored.toString().contains(diagnostic))
         }
 
     @Test
@@ -181,20 +183,43 @@ class SignInViewModelTests {
             val rawMessage = "MSAL AADSTS50126: user bob@example.com not found; token=abc123"
             val repository = FakeSignInRepository(forcedResult = Result.failure(IllegalStateException(rawMessage)))
 
-            val error = signInAndAwaitError(repository, dispatcher)
+            val errored = signInAndAwaitError(repository, dispatcher)
 
-            assertEquals(context.getString(R.string.signin_error_generic), error.message)
-            assertFalse(error.message.contains("MSAL"))
-            assertFalse(error.message.contains("AADSTS50126"))
-            assertFalse(error.message.contains("bob@example.com"))
-            assertFalse(error.message.contains("abc123"))
+            assertEquals(R.string.signin_error_generic, errored.error?.messageRes)
+            // The whole state is searched, so no future field can reintroduce the leak unnoticed.
+            listOf("MSAL", "AADSTS50126", "bob@example.com", "abc123").forEach {
+                assertFalse(it, errored.toString().contains(it))
+            }
+        }
+
+    @Test
+    fun `a retried submit clears the previous error before it reports the next outcome`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository =
+                FakeSignInRepository(forcedResult = Result.failure(SignInException(SignInFailure.Network)))
+            val viewModel = buildViewModel(repository, dispatcher)
+
+            viewModel.state.test {
+                assertNull(awaitItem().error)
+                viewModel.dispatch(SignInEvent.SubmitRequested)
+                assertNull(awaitItem().error)
+                assertEquals(R.string.signin_error_network, awaitItem().error?.messageRes)
+
+                viewModel.dispatch(SignInEvent.SubmitRequested)
+
+                val loading = awaitItem()
+                assertEquals(UiStatus.Loading, loading.status)
+                assertNull(loading.error)
+            }
         }
 
     @Test
     fun `the default dispatcher parameter constructs a usable view model with its initial state`() {
-        val viewModel = SignInViewModel(SignInUseCase(FakeSignInRepository()), context)
+        val viewModel = SignInViewModel(SignInUseCase(FakeSignInRepository()))
 
         assertEquals("", viewModel.state.value.username)
         assertEquals("", viewModel.state.value.password)
+        assertNull(viewModel.state.value.error)
     }
 }
