@@ -1,7 +1,11 @@
-﻿package uk.gov.defra.mmocatchrecord.feature.signin.presentation
+package uk.gov.defra.mmocatchrecord.feature.signin.presentation
 
+import android.content.Context
+import android.content.res.Resources
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
@@ -20,6 +24,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -27,9 +32,9 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.MmoColors
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
-import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
@@ -42,6 +47,8 @@ import kotlin.math.pow
 class SignInScreenAccessibilityTests {
     @get:Rule
     val composeTestRule = createComposeRule()
+
+    private val resources: Resources = ApplicationProvider.getApplicationContext<Context>().resources
 
     @Test
     fun `the email field advertises the username content type for password managers`() {
@@ -97,7 +104,7 @@ class SignInScreenAccessibilityTests {
 
     @Test
     fun `an auth error is a polite live region so it is announced without stealing focus`() {
-        renderSignIn(errorMessage = "Your email address or password is incorrect. Check them and try again.")
+        renderSignIn(R.string.signin_error_invalid_credentials)
 
         val config =
             composeTestRule
@@ -112,8 +119,8 @@ class SignInScreenAccessibilityTests {
 
     @Test
     fun `the error is identified in text with a recovery suggestion and never names the wrong field`() {
-        val message = "Your email address or password is incorrect. Check them and try again."
-        renderSignIn(errorMessage = message)
+        val message = resources.getString(R.string.signin_error_invalid_credentials)
+        renderSignIn(R.string.signin_error_invalid_credentials)
 
         val config =
             composeTestRule
@@ -132,7 +139,7 @@ class SignInScreenAccessibilityTests {
 
     @Test
     fun `the error is announced after the submit action in traversal order`() {
-        renderSignIn(errorMessage = "Something went wrong. Try signing in again.")
+        renderSignIn(R.string.signin_error_generic)
 
         val group =
             composeTestRule
@@ -195,13 +202,16 @@ class SignInScreenAccessibilityTests {
                 .fetchSemanticsNode()
                 .config[SemanticsProperties.Role],
         )
-        assertEquals(
-            listOf("Switch to Welsh"),
+        val toggle =
             composeTestRule
                 .onNodeWithTag(SignInScreenTestTags.LANGUAGE_TOGGLE)
                 .fetchSemanticsNode()
-                .config[SemanticsProperties.ContentDescription],
-        )
+                .config
+        // SC 2.5.3 Label in Name: the accessible name must still be the visible "CYM" for speech input,
+        // so the action is described by the click label instead of an overriding contentDescription.
+        assertEquals(listOf("CYM"), toggle[SemanticsProperties.Text].map { it.text })
+        assertFalse(toggle.contains(SemanticsProperties.ContentDescription))
+        assertEquals("Switch to Welsh", toggle[SemanticsActions.OnClick].label)
         assertEquals(
             Role.Button,
             composeTestRule
@@ -209,6 +219,20 @@ class SignInScreenAccessibilityTests {
                 .fetchSemanticsNode()
                 .config[SemanticsProperties.Role],
         )
+    }
+
+    @Test
+    fun `the forgotten password link keeps its visible text as its accessible name`() {
+        renderSignIn()
+
+        val link =
+            composeTestRule
+                .onNodeWithTag(SignInScreenTestTags.FORGOTTEN_PASSWORD)
+                .fetchSemanticsNode()
+                .config
+
+        assertEquals(listOf("Forgotten your password?"), link[SemanticsProperties.Text].map { it.text })
+        assertFalse(link.contains(SemanticsProperties.ContentDescription))
     }
 
     @Test
@@ -221,7 +245,10 @@ class SignInScreenAccessibilityTests {
                 MmoTheme {
                     Box(modifier = Modifier.fillMaxSize()) {
                         SignInContent(
-                            state = SignInViewState(status = UiStatus.Error(GENERIC_ERROR, isRetryable = false)),
+                            state =
+                                SignInViewState(
+                                    error = SignInError(R.string.signin_error_generic, isRetryable = false),
+                                ),
                             currentLanguage = "en",
                             onLanguageToggle = {},
                             onUsernameChanged = {},
@@ -245,21 +272,40 @@ class SignInScreenAccessibilityTests {
 
     @Test
     fun `sign-in text colours meet the 4 point 5 to 1 minimum contrast ratio on white`() {
-        listOf(MmoColors.Text, MmoColors.Grey1, MmoColors.Link, MmoColors.ErrorRed).forEach { foreground ->
-            assertTrue(
-                foreground.toString(),
-                contrastRatio(foreground, MmoColors.White) >= MIN_CONTRAST,
-            )
+        var themeErrorColor: Color? = null
+        composeTestRule.setContent {
+            MmoTheme { themeErrorColor = MaterialTheme.colorScheme.error }
+        }
+
+        // The error Text renders colorScheme.error, so the theme value is asserted rather than the palette.
+        listOf(MmoColors.Text, MmoColors.Grey1, MmoColors.Link, requireNotNull(themeErrorColor))
+            .forEach { foreground ->
+                assertTrue(
+                    foreground.toString(),
+                    contrastRatio(foreground, MmoColors.White) >= MIN_CONTRAST,
+                )
+            }
+    }
+
+    @Test
+    fun `the generic invalid credentials copy names neither the email nor the password as wrong`() {
+        val message = resources.getString(R.string.signin_error_invalid_credentials)
+
+        assertTrue(message, message.contains("email address or password"))
+        listOf("not found", "does not exist", "no account", "incorrect password").forEach {
+            assertFalse(it, message.lowercase().contains(it))
         }
     }
 
-    private fun renderSignIn(errorMessage: String? = null) {
+    private fun renderSignIn(
+        @StringRes errorRes: Int? = null,
+    ) {
         composeTestRule.setContent {
             MmoTheme {
                 SignInContent(
                     state =
                         SignInViewState(
-                            status = errorMessage?.let { UiStatus.Error(it, isRetryable = false) } ?: UiStatus.Idle,
+                            error = errorRes?.let { SignInError(it, isRetryable = false) },
                         ),
                     currentLanguage = "en",
                     onLanguageToggle = {},
@@ -298,6 +344,5 @@ class SignInScreenAccessibilityTests {
         val MIN_TARGET = 48.dp
         const val MAX_FONT_SCALE = 2f
         const val MIN_CONTRAST = 4.5
-        const val GENERIC_ERROR = "Something went wrong. Try signing in again."
     }
 }
