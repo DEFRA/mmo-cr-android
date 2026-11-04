@@ -16,7 +16,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Vess
 internal fun ReferenceDataVesselEntity.toDomain(): Vessel =
     Vessel(
         id = id,
-        name = displayName,
+        name = name,
         lengthOverallMetres = lengthOverallMetres,
         pln = pln,
     )
