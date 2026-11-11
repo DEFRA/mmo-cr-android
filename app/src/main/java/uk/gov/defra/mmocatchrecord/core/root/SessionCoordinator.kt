@@ -1,6 +1,7 @@
 package uk.gov.defra.mmocatchrecord.core.root
 
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import timber.log.Timber
@@ -11,6 +12,7 @@ import uk.gov.defra.mmocatchrecord.core.security.BiometricReentryPolicy
 import uk.gov.defra.mmocatchrecord.core.security.BiometricRepository
 import uk.gov.defra.mmocatchrecord.core.security.ReentryDecision
 import uk.gov.defra.mmocatchrecord.core.security.SessionStore
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.ReferenceDataRefreshScheduler
 import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignOutRepository
 import javax.inject.Inject
 
@@ -46,6 +48,7 @@ sealed interface RootEvent {
  */
 @HiltViewModel
 class SessionCoordinator
+    @Suppress("LongParameterList")
     @Inject
     constructor(
         private val sessionStore: SessionStore,
@@ -53,6 +56,7 @@ class SessionCoordinator
         private val reentryPolicy: BiometricReentryPolicy,
         private val biometricRepository: BiometricRepository,
         private val signOutRepository: SignOutRepository = SignOutRepository { true },
+        private val referenceDataRefreshScheduler: ReferenceDataRefreshScheduler = ReferenceDataRefreshScheduler {},
         private val clock: () -> Long = System::currentTimeMillis,
         dispatcher: CoroutineDispatcher = Dispatchers.Default,
     ) : BaseViewModel<RootUiState, RootEvent>(
@@ -70,6 +74,7 @@ class SessionCoordinator
                         // Sign-in is the only event that reaches the identity provider, so it alone may
                         // refresh the online-verification timestamp the offline grace period is judged on.
                         sessionStore.recordSignedInNow(clock())
+                        scheduleReferenceDataRefreshSafely()
                         refreshPhaseNow()
                     }
 
@@ -103,6 +108,18 @@ class SessionCoordinator
 
         private fun refreshPhase() {
             launchInViewModelScope { refreshPhaseNow() }
+        }
+
+        // Deliberately broad: a scheduling failure must never fail a sign-in that otherwise succeeded.
+        @Suppress("TooGenericExceptionCaught")
+        private fun scheduleReferenceDataRefreshSafely() {
+            try {
+                referenceDataRefreshScheduler.scheduleRefreshAfterSignIn()
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (error: Exception) {
+                Timber.w("SessionCoordinator: could not schedule reference-data refresh (%s)", error::class.simpleName)
+            }
         }
 
         private suspend fun refreshPhaseNow() {

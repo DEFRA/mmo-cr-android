@@ -10,6 +10,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import dagger.hilt.android.qualifiers.ApplicationContext
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.ReferenceDataRefreshScheduler
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
@@ -28,7 +29,7 @@ class WorkManagerReferenceDataSyncScheduler
     @Inject
     constructor(
         @ApplicationContext private val context: Context,
-    ) {
+    ) : ReferenceDataRefreshScheduler {
         fun schedulePeriodicRefresh() {
             val request =
                 PeriodicWorkRequestBuilder<ReferenceDataSyncWorker>(PERIODIC_REFRESH_HOURS, TimeUnit.HOURS)
@@ -50,6 +51,10 @@ class WorkManagerReferenceDataSyncScheduler
                 .getInstance(context)
                 .enqueueUniqueWork(UNIQUE_ONE_TIME_WORK_NAME, ExistingWorkPolicy.REPLACE, request)
         }
+
+        /** Same worker/unique name/`REPLACE` policy as [scheduleStartupRefresh]: a fresh token read at
+         * execution time supersedes any run (in-flight or already-failed) that 401'd pre-sign-in. */
+        override fun scheduleRefreshAfterSignIn() = scheduleStartupRefresh()
 
         private fun connectedConstraints(): Constraints =
             Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
