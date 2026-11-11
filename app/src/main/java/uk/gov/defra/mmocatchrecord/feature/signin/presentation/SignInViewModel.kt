@@ -69,6 +69,7 @@ class SignInViewModel
             when (this) {
                 SignInFailure.InvalidCredentials -> R.string.signin_error_invalid_credentials
                 SignInFailure.Network -> R.string.signin_error_network
+                SignInFailure.VerificationNotSupported -> R.string.signin_error_verification_not_supported
                 is SignInFailure.Unknown -> R.string.signin_error_generic
             }
 

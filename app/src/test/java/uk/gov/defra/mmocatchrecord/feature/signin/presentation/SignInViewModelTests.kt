@@ -215,6 +215,21 @@ class SignInViewModelTests {
         }
 
     @Test
+    fun `a VerificationNotSupported failure maps to its own non-retryable message`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository =
+                FakeSignInRepository(
+                    forcedResult = Result.failure(SignInException(SignInFailure.VerificationNotSupported)),
+                )
+
+            val errored = signInAndAwaitError(repository, dispatcher)
+
+            assertEquals(R.string.signin_error_verification_not_supported, errored.error?.messageRes)
+            assertFalse(errored.error?.isRetryable ?: true)
+        }
+
+    @Test
     fun `the default dispatcher parameter constructs a usable view model with its initial state`() {
         val viewModel = SignInViewModel(SignInUseCase(FakeSignInRepository()))
 

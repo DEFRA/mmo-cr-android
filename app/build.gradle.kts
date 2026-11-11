@@ -108,6 +108,8 @@ android {
             )
             // DEV's auth stub accepts any non-empty bearer token (ADR 0016) — see TokenProvider.
             buildConfigField("boolean", "USE_STUB_AUTH", "true")
+            // No committed Entra credentials (ADR 0019) — local keeps the Stage-1 sign-in fake.
+            buildConfigField("boolean", "USE_FAKE_SIGN_IN", "true")
         }
         create("dev") {
             dimension = "environment"
@@ -120,6 +122,8 @@ android {
                 }\"",
             )
             buildConfigField("boolean", "USE_STUB_AUTH", "true")
+            // Real Entra native authentication against the DEV tenant (ADR 0019).
+            buildConfigField("boolean", "USE_FAKE_SIGN_IN", "false")
         }
         create("prod") {
             dimension = "environment"
@@ -127,6 +131,7 @@ android {
             // pointing production at DEV. Never overridable via local.properties.
             buildConfigField("String", "REFERENCE_DATA_SERVICE_URL", "\"\"")
             buildConfigField("boolean", "USE_STUB_AUTH", "false")
+            buildConfigField("boolean", "USE_FAKE_SIGN_IN", "false")
         }
     }
 

@@ -20,6 +20,9 @@ sealed class SignInFailure {
     /** Transient connectivity/transport failure — retryable. */
     data object Network : SignInFailure()
 
+    /** The account requires a verification step (e.g. a one-time code) this build does not render yet. */
+    data object VerificationNotSupported : SignInFailure()
+
     /**
      * Unclassified failure. [message] is a **mapped, safe** diagnostic (never an SDK/HTTP exception
      * message) and is never displayed; user-facing copy is always resolved from string resources.
