@@ -239,6 +239,12 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.kotlinx.serialization)
 
+    // MSAL native authentication (ADR 0019). display-mask (Surface Duo, via common:25.0.0) is
+    // excluded as unused and non-mirrored off Microsoft's Azure Artifacts feed — see ADR 0019.
+    implementation(libs.msal) {
+        exclude(group = "com.microsoft.device.display", module = "display-mask")
+    }
+
     testImplementation(libs.junit)
     testImplementation(libs.mockito.core)
     testImplementation(libs.mockito.kotlin)

@@ -19,3 +19,11 @@
 -keep class net.zetetic.** { *; }
 -dontwarn net.sqlcipher.**
 -dontwarn net.zetetic.**
+
+# MSAL (ADR 0019): nimbus-jose-jwt's optional Tink backend is unreachable at runtime — Tink is
+# deliberately not a dependency of this project (ADR 0006), so R8 only needs to stop warning.
+-dontwarn com.google.crypto.tink.**
+
+# MSAL (ADR 0019): display-mask excluded in app/build.gradle.kts as unused Surface Duo hinge
+# detection; the class is unreachable, so R8 only needs to stop warning, not keep it.
+-dontwarn com.microsoft.device.display.**
