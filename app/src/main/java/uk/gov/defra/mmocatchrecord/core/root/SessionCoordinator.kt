@@ -23,9 +23,8 @@ sealed interface RootEvent {
     data object SignedIn : RootEvent
 
     /**
-     * The user tapped "Unlock" on the app-lock screen. This does **not** unlock the app by itself —
-     * [SessionCoordinator] must run [BiometricRepository.authenticate] and only record a new
-     * authentication (and therefore leave [RootPhase.APP_LOCK]) if that call succeeds.
+     * The user tapped "Unlock" on the app-lock screen. [SessionCoordinator] must run
+     * [BiometricRepository.authenticate] and only record a new authentication if that call succeeds.
      */
     data object BiometricUnlockRequested : RootEvent
 
@@ -65,16 +64,19 @@ class SessionCoordinator
             when (event) {
                 RootEvent.SignedIn ->
                     launchInViewModelScope {
-                        sessionStore.recordAuthenticatedNow(clock())
+                        // Sign-in is the only event that reaches the identity provider, so it alone may
+                        // refresh the online-verification timestamp the offline grace period is judged on.
+                        sessionStore.recordSignedInNow(clock())
                         refreshPhaseNow()
                     }
 
                 RootEvent.BiometricUnlockRequested ->
                     launchInViewModelScope {
-                        // Only treat the app as re-entered if the biometric prompt actually succeeds.
-                        // A cancelled/failed attempt must leave the state (and therefore RootPhase.APP_LOCK)
-                        // unchanged — never optimistically unlock on user intent alone.
+                        // A cancelled or failed prompt must leave RootPhase.APP_LOCK unchanged: never
+                        // optimistically unlock on user intent alone.
                         if (biometricRepository.authenticate().isSuccess) {
+                            // Deliberately does NOT touch lastVerifiedOnlineAtMillis: a local gesture must
+                            // never renew a remote authorisation decision (ADR 0019).
                             sessionStore.recordAuthenticatedNow(clock())
                         }
                         refreshPhaseNow()

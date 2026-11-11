@@ -11,7 +11,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -24,20 +27,28 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.contentType
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.isTraversalGroup
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.AppLanguageProvider
 import uk.gov.defra.mmocatchrecord.common.design.CrownLogo
-import uk.gov.defra.mmocatchrecord.common.design.ExpandableDetails
 import uk.gov.defra.mmocatchrecord.common.design.MmoColors
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
@@ -52,12 +63,14 @@ object SignInScreenTestTags {
     const val PASSWORD_FIELD = "signin_password_field"
     const val SUBMIT_ACTION = "signin_submit_action"
     const val ERROR_MESSAGE = "signin_error_message"
+    const val ACTIONS_GROUP = "signin_actions_group"
+    const val LANGUAGE_TOGGLE = "signin_language_toggle"
+    const val FORGOTTEN_PASSWORD = "signin_forgotten_password"
 }
 
 /**
- * Sign-in feature screen. Accessible: heading semantics on the title, labelled text fields, an explicit
- * error state conveyed by text (never colour alone), and a 48x48dp minimum touch target on the submit
- * action.
+ * Sign-in feature screen. WCAG 2.2 AA: password-manager content types (SC 3.3.8), a polite live region for
+ * errors (SC 4.1.3), text-only error identification (SC 3.3.1) and 48x48dp targets throughout.
  */
 @Composable
 fun SignInScreen(
@@ -140,6 +153,14 @@ private fun SignInHeaderSection(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.End,
     ) {
+        val switchLanguageLabel =
+            stringResource(
+                if (currentLanguage == "en") {
+                    R.string.signin_language_switch_to_welsh
+                } else {
+                    R.string.signin_language_switch_to_english
+                },
+            )
         Text(
             text = if (currentLanguage == "en") "CYM" else "ENG",
             style =
@@ -149,8 +170,13 @@ private fun SignInHeaderSection(
                 ),
             modifier =
                 Modifier
-                    .clickable { onLanguageToggle() }
-                    .padding(vertical = Spacing.xs),
+                    .testTag(SignInScreenTestTags.LANGUAGE_TOGGLE)
+                    // SC 2.5.3: the accessible name stays "CYM"/"ENG" so speech input can target it.
+                    .clickable(onClickLabel = switchLanguageLabel, role = Role.Button) { onLanguageToggle() }
+                    .sizeIn(
+                        minWidth = Spacing.minTouchTarget,
+                        minHeight = Spacing.minTouchTarget,
+                    ).wrapContentSize(Alignment.Center),
         )
     }
 
@@ -183,15 +209,19 @@ private fun SignInFieldsSection(
     onUsernameChanged: (String) -> Unit,
     onPasswordChanged: (String) -> Unit,
 ) {
-    EmailAddressField(value = state.username, onValueChange = onUsernameChanged)
-    PasswordField(value = state.password, onValueChange = onPasswordChanged)
+    // Flagged on both fields, never one: singling a field out would leak which value was wrong.
+    val isError = state.error != null
+    EmailAddressField(value = state.username, onValueChange = onUsernameChanged, isError = isError)
+    PasswordField(value = state.password, onValueChange = onPasswordChanged, isError = isError)
 }
 
 @Composable
 private fun EmailAddressField(
     value: String,
     onValueChange: (String) -> Unit,
+    isError: Boolean,
 ) {
+    val label = stringResource(R.string.email_address)
     Column(
         modifier =
             Modifier
@@ -200,32 +230,37 @@ private fun EmailAddressField(
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         Text(
-            text = stringResource(R.string.email_address),
+            text = label,
             style =
                 MaterialTheme.typography.bodyLarge.copy(
                     fontWeight = FontWeight.Normal,
                     color = MmoColors.Grey1,
                 ),
+            // Compose has no labelFor, so the label is voiced by the field below, not announced twice.
+            modifier = Modifier.clearAndSetSemantics { },
         )
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
             singleLine = true,
+            isError = isError,
             shape = RectangleShape,
-            colors =
-                OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MmoColors.Text,
-                    unfocusedBorderColor = MmoColors.Text,
-                    focusedContainerColor = MmoColors.White,
-                    unfocusedContainerColor = MmoColors.White,
-                    cursorColor = MmoColors.Text,
-                    focusedTextColor = MmoColors.Text,
-                    unfocusedTextColor = MmoColors.Text,
+            keyboardOptions =
+                KeyboardOptions(
+                    keyboardType = KeyboardType.Email,
+                    imeAction = ImeAction.Next,
+                    autoCorrectEnabled = false,
                 ),
+            colors = signInFieldColors(),
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .testTag(SignInScreenTestTags.USERNAME_FIELD),
+                    .testTag(SignInScreenTestTags.USERNAME_FIELD)
+                    .semantics {
+                        contentDescription = label
+                        // SC 3.3.8: lets a password manager fill this field instead of recalling it.
+                        contentType = ContentType.Username
+                    },
         )
     }
 }
@@ -234,7 +269,9 @@ private fun EmailAddressField(
 private fun PasswordField(
     value: String,
     onValueChange: (String) -> Unit,
+    isError: Boolean,
 ) {
+    val label = stringResource(R.string.password)
     Column(
         modifier =
             Modifier
@@ -243,134 +280,103 @@ private fun PasswordField(
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         Text(
-            text = stringResource(R.string.password),
+            text = label,
             style =
                 MaterialTheme.typography.bodyLarge.copy(
                     fontWeight = FontWeight.Normal,
                     color = MmoColors.Grey1,
                 ),
+            modifier = Modifier.clearAndSetSemantics { },
         )
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
             singleLine = true,
+            isError = isError,
             visualTransformation = PasswordVisualTransformation(),
             shape = RectangleShape,
-            colors =
-                OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MmoColors.Text,
-                    unfocusedBorderColor = MmoColors.Text,
-                    focusedContainerColor = MmoColors.White,
-                    unfocusedContainerColor = MmoColors.White,
-                    cursorColor = MmoColors.Text,
-                    focusedTextColor = MmoColors.Text,
-                    unfocusedTextColor = MmoColors.Text,
+            keyboardOptions =
+                KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Done,
+                    autoCorrectEnabled = false,
                 ),
+            colors = signInFieldColors(),
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .testTag(SignInScreenTestTags.PASSWORD_FIELD),
+                    .testTag(SignInScreenTestTags.PASSWORD_FIELD)
+                    .semantics {
+                        contentDescription = label
+                        contentType = ContentType.Password
+                    },
         )
     }
 }
+
+@Composable
+private fun signInFieldColors() =
+    OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = MmoColors.Text,
+        unfocusedBorderColor = MmoColors.Text,
+        focusedContainerColor = MmoColors.White,
+        unfocusedContainerColor = MmoColors.White,
+        cursorColor = MmoColors.Text,
+        focusedTextColor = MmoColors.Text,
+        unfocusedTextColor = MmoColors.Text,
+    )
 
 @Composable
 private fun SignInActionsSection(
     state: SignInViewState,
     onSubmit: () -> Unit,
 ) {
-    if (state.status is UiStatus.Error) {
-        Text(
-            text = state.status.message,
-            color = MaterialTheme.colorScheme.error,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier =
-                Modifier
-                    .padding(bottom = Spacing.s)
-                    .testTag(SignInScreenTestTags.ERROR_MESSAGE),
-        )
-    }
-    if (state.status is UiStatus.Loading) {
-        Box(
+    val errorPrefix = stringResource(R.string.signin_error_prefix)
+    Column(
+        modifier =
+            Modifier
+                .testTag(SignInScreenTestTags.ACTIONS_GROUP)
+                .semantics { isTraversalGroup = true },
+    ) {
+        if (state.error != null) {
+            val message = stringResource(state.error.messageRes)
+            Text(
+                text = message,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier =
+                    Modifier
+                        .padding(bottom = Spacing.s)
+                        .testTag(SignInScreenTestTags.ERROR_MESSAGE)
+                        .semantics {
+                            // Announced without stealing focus (SC 4.1.3). Natural top-to-bottom traversal
+                            // is left intact so the error precedes the submit button (SC 1.3.2, SC 2.4.3).
+                            liveRegion = LiveRegionMode.Polite
+                            contentDescription = "$errorPrefix $message"
+                        },
+            )
+        }
+        if (state.status is UiStatus.Loading) {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = Spacing.s),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator(color = MmoColors.GovBlue)
+            }
+        }
+
+        PrimaryActionButton(
+            text = stringResource(R.string.signin_title),
+            onClick = onSubmit,
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(bottom = Spacing.s),
-            contentAlignment = Alignment.Center,
-        ) {
-            CircularProgressIndicator(color = MmoColors.GovBlue)
-        }
-    }
-
-    PrimaryActionButton(
-        text = stringResource(R.string.signin_title),
-        onClick = onSubmit,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(bottom = Spacing.l)
-                .testTag(SignInScreenTestTags.SUBMIT_ACTION),
-    )
-}
-
-@Composable
-private fun SignInTroubleSection() {
-    Text(
-        text = stringResource(R.string.having_trouble_signing_in),
-        style =
-            MaterialTheme.typography.titleLarge.copy(
-                color = MmoColors.Text,
-                fontWeight = FontWeight.Bold,
-            ),
-        modifier = Modifier.padding(bottom = Spacing.s),
-    )
-
-    Text(
-        text = stringResource(R.string.forgotten_your_password),
-        style =
-            MaterialTheme.typography.bodyLarge.copy(
-                color = MmoColors.Link,
-                textDecoration = TextDecoration.Underline,
-            ),
-        modifier =
-            Modifier
-                .clickable { /* Web workflow in later stages */ }
-                .padding(bottom = Spacing.l),
-    )
-
-    ExpandableDetails(
-        title = stringResource(R.string.create_an_account),
-        modifier = Modifier.padding(bottom = Spacing.xl),
-    ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(Spacing.s),
-        ) {
-            Text(
-                text = stringResource(R.string.vessel_owner_label),
-                style =
-                    MaterialTheme.typography.bodyLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = MmoColors.Text,
-                    ),
-            )
-            Text(
-                text = stringResource(R.string.vessel_owner_text),
-                style = MaterialTheme.typography.bodyMedium.copy(color = MmoColors.Text),
-            )
-            Spacer(modifier = Modifier.height(Spacing.xs))
-            Text(
-                text = stringResource(R.string.skipper_or_agent_label),
-                style =
-                    MaterialTheme.typography.bodyLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = MmoColors.Text,
-                    ),
-            )
-            Text(
-                text = stringResource(R.string.skipper_or_agent_text),
-                style = MaterialTheme.typography.bodyMedium.copy(color = MmoColors.Text),
-            )
-        }
+                    .padding(bottom = Spacing.l)
+                    .testTag(SignInScreenTestTags.SUBMIT_ACTION),
+        )
     }
 }
 

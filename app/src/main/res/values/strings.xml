@@ -74,6 +74,12 @@
     <string name="password">Password</string>
     <string name="having_trouble_signing_in">Having trouble signing in?</string>
     <string name="forgotten_your_password">Forgotten your password?</string>
+    <string name="signin_error_prefix">Error:</string>
+    <string name="signin_error_invalid_credentials">Your email address or password is incorrect. Check them and try again.</string>
+    <string name="signin_error_network">We could not reach the sign-in service. Check your connection and try again.</string>
+    <string name="signin_error_generic">Something went wrong. Try signing in again.</string>
+    <string name="signin_language_switch_to_welsh">Switch to Welsh</string>
+    <string name="signin_language_switch_to_english">Switch to English</string>
     <string name="create_an_account">Create an account</string>
     <string name="vessel_owner_label">Vessel owner:</string>
     <string name="vessel_owner_text">You will receive an email invitation to register when your vessel is added to the system.</string>

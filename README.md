@@ -77,10 +77,12 @@ split per feature package, per
 - **Material 3, light-only GOV.UK theme** — no dark mode, no dynamic colour, system-font fallback (GDS
   Transport is not licensed for non-gov.uk products, so it is not bundled; the font is swapped in one
   place, `common/design/Typography.kt`, if a licensed alternative becomes available).
-- **Security** — `androidx.biometric` + `androidx.security:security-crypto` are wired as dependencies;
-  Stage 1 ships interfaces and in-memory fakes only. Real implementations must use Android Keystore
-  (+ Tink) for data-at-rest, never plain `EncryptedSharedPreferences`, and must never log biometric/session
-  state or PII — see the KDoc on each interface in `core/security/`.
+- **Security** — `androidx.biometric` is wired as a dependency; biometric prompt/preference remain Stage-1
+  interfaces and in-memory fakes. Data at rest is protected with **non-auth-bound Android Keystore AES-GCM**
+  keys (`core/security/KeystoreAesGcmCipher`) — the SQLCipher passphrase (ADR 0006) and the encrypted
+  session timestamps behind `core/security/SessionStore` (ADR 0019). **Neither Tink nor
+  `androidx.security-crypto` is used**: the latter is deprecated upstream and was removed. Never log
+  biometric/session state or PII — see the KDoc on each interface in `core/security/`.
 - **Offline fisheries statistical sub-rectangle map** — a fully offline, custom Compose `Canvas`-rendered
   map (no map SDK/tiles/API key/network) with a build-time GeoJSON preprocessing task in the `build-logic/`
   composite Gradle build — see ADR 0013 and [`docs/development/offline-map.md`](docs/development/offline-map.md).
@@ -117,11 +119,20 @@ split per feature package, per
 | [0003](docs/adr/0003-room-offline-persistence.md) | Room for offline-first persistence |
 | [0004](docs/adr/0004-koin-dependency-injection.md) | Koin for dependency injection (superseded) |
 | [0005](docs/adr/0005-hilt-dependency-injection.md) | Hilt for dependency injection |
+| [0006](docs/adr/0006-catch-record-draft-persistence-and-encryption.md) | Catch-record draft persistence and encryption |
+| [0007](docs/adr/0007-wizard-navigation-and-state-model.md) | Wizard navigation and state model |
 | [0008](docs/adr/0008-reference-data-stub.md) | Reference-data stub (superseded by 0016) |
+| [0009](docs/adr/0009-workmanager-background-submission-sync.md) | WorkManager background submission sync |
+| [0010](docs/adr/0010-catch-record-draft-migrations-and-active-draft-uniqueness.md) | Catch-record draft migrations and active-draft uniqueness |
+| [0011](docs/adr/0011-structured-logging-and-safe-error-mapping.md) | Structured logging and safe error mapping |
+| [0012](docs/adr/0012-app-language-preference-datastore.md) | App language preference in DataStore |
 | [0013](docs/adr/0013-offline-fisheries-map-rendering.md) | Offline fisheries statistical sub-rectangle map rendering |
 | [0014](docs/adr/0014-catch-record-status-audit-and-offline-sync-confirmation.md) | Catch-record status, audit timestamps and offline-sync confirmation |
 | [0015](docs/adr/0015-http-client-retrofit-okhttp.md) | HTTP client: Retrofit + OkHttp |
 | [0016](docs/adr/0016-reference-data-api-integration.md) | Reference-data API integration |
+| [0017](docs/adr/0017-statistical-sub-area-coordinates-and-ices-rectangle-display.md) | Statistical sub-area coordinates and ICES rectangle display |
+| [0018](docs/adr/0018-independent-catch-record-drafts.md) | Independent catch-record drafts |
+| [0019](docs/adr/0019-entra-external-id-authentication.md) | Authentication via Microsoft Entra External ID (native auth) |
 | [0000](docs/adr/0000-ios-adr-references-TBC.md) | iOS ADR references — TBC |
 
 ## CI

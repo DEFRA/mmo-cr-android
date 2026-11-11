@@ -26,6 +26,8 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import uk.gov.defra.mmocatchrecord.R
+import uk.gov.defra.mmocatchrecord.common.design.AppLanguageProvider
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.core.language.AppLanguage
@@ -50,6 +52,33 @@ class SignInScreenTests {
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+    }
+
+    @Test
+    fun `the error copy follows the in-app welsh toggle rather than the device locale`() {
+        composeTestRule.setContent {
+            MmoTheme {
+                AppLanguageProvider(language = "cy") {
+                    SignInContent(
+                        state =
+                            SignInViewState(
+                                error = SignInError(R.string.signin_error_generic, isRetryable = true),
+                            ),
+                        currentLanguage = "cy",
+                        onLanguageToggle = {},
+                        onUsernameChanged = {},
+                        onPasswordChanged = {},
+                        onSubmit = {},
+                    )
+                }
+            }
+        }
+
+        // Resolving in composition is what makes the Welsh copy reachable at all (B1).
+        composeTestRule
+            .onNodeWithText("Aeth rhywbeth o'i le. Rhowch gynnig arall ar fewngofnodi.")
+            .performScrollTo()
+            .assertIsDisplayed()
     }
 
     @Test
@@ -111,7 +140,7 @@ class SignInScreenTests {
                 SignInContent(
                     state =
                         SignInViewState(
-                            status = UiStatus.Error("Sign in failed. Please try again.", isRetryable = true),
+                            error = SignInError(R.string.signin_error_generic, isRetryable = true),
                         ),
                     currentLanguage = "cy",
                     onLanguageToggle = { toggled = true },
@@ -132,8 +161,12 @@ class SignInScreenTests {
         runTest {
             val dispatcher = StandardTestDispatcher(testScheduler)
             val repository =
-                FakeSignInRepository(result = { Result.failure(IllegalStateException("Invalid credentials")) })
-            val viewModel = SignInViewModel(SignInUseCase(repository), defaultDispatcher = dispatcher)
+                FakeSignInRepository(accounts = mapOf("alice@example.com" to "valid-fixture-input"))
+            val viewModel =
+                SignInViewModel(
+                    SignInUseCase(repository),
+                    defaultDispatcher = dispatcher,
+                )
 
             composeTestRule.setContent {
                 MmoTheme {
@@ -170,7 +203,11 @@ class SignInScreenTests {
         runTest {
             val dispatcher = StandardTestDispatcher(testScheduler)
             val repository = FakeSignInRepository()
-            val viewModel = SignInViewModel(SignInUseCase(repository), defaultDispatcher = dispatcher)
+            val viewModel =
+                SignInViewModel(
+                    SignInUseCase(repository),
+                    defaultDispatcher = dispatcher,
+                )
             val languageViewModel = AppLanguageViewModel(FakeAppLanguageRepository())
             var signedIn = false
 

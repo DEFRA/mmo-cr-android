@@ -10,6 +10,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import uk.gov.defra.mmocatchrecord.core.security.BiometricReentryPolicy
@@ -223,6 +224,88 @@ class SessionCoordinatorTests {
         }
 
     @Test
+    fun `signing in records both the app-lock and the online verification timestamps`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val sessionStore = InMemorySessionStore()
+            val coordinator =
+                buildCoordinator(sessionStore = sessionStore, clock = { 1_000L }, dispatcher = dispatcher)
+
+            coordinator.state.test {
+                assertEquals(RootPhase.SPLASH, awaitItem().phase)
+                assertEquals(RootPhase.SIGN_IN, awaitItem().phase)
+
+                coordinator.dispatch(RootEvent.SignedIn)
+                assertEquals(RootPhase.HOME, awaitItem().phase)
+            }
+
+            assertEquals(1_000L, sessionStore.getLastAuthenticatedAtMillis())
+            assertEquals(1_000L, sessionStore.getLastVerifiedOnlineAtMillis())
+        }
+
+    @Test
+    fun `biometric unlock refreshes app-lock re-entry but never the online verification timestamp`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val sessionStore = InMemorySessionStore()
+            sessionStore.recordAuthenticatedNow(0L)
+            sessionStore.recordVerifiedOnlineNow(0L)
+            val biometricPreferenceStore = InMemoryBiometricPreferenceStore(initiallyEnabled = true)
+            val coordinator =
+                buildCoordinator(
+                    sessionStore = sessionStore,
+                    biometricPreferenceStore = biometricPreferenceStore,
+                    reentryPolicy = BiometricReentryPolicy(reentryTimeoutMillis = 60_000L),
+                    clock = { 120_000L },
+                    dispatcher = dispatcher,
+                )
+
+            coordinator.state.test {
+                assertEquals(RootPhase.SPLASH, awaitItem().phase)
+                assertEquals(RootPhase.APP_LOCK, awaitItem().phase)
+
+                coordinator.dispatch(RootEvent.BiometricUnlockRequested)
+                assertEquals(RootPhase.HOME, awaitItem().phase)
+            }
+
+            assertEquals(120_000L, sessionStore.getLastAuthenticatedAtMillis())
+            // A local gesture must never renew a remote authorisation decision (ADR 0019).
+            assertEquals(0L, sessionStore.getLastVerifiedOnlineAtMillis())
+        }
+
+    @Test
+    fun `a failed biometric unlock advances neither timestamp`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val sessionStore = InMemorySessionStore()
+            sessionStore.recordAuthenticatedNow(0L)
+            sessionStore.recordVerifiedOnlineNow(0L)
+            val coordinator =
+                buildCoordinator(
+                    sessionStore = sessionStore,
+                    biometricPreferenceStore = InMemoryBiometricPreferenceStore(initiallyEnabled = true),
+                    reentryPolicy = BiometricReentryPolicy(reentryTimeoutMillis = 60_000L),
+                    biometricRepository =
+                        FakeBiometricRepository(
+                            authenticationResult = Result.failure(IllegalStateException("user cancelled")),
+                        ),
+                    clock = { 120_000L },
+                    dispatcher = dispatcher,
+                )
+
+            coordinator.state.test {
+                assertEquals(RootPhase.SPLASH, awaitItem().phase)
+                assertEquals(RootPhase.APP_LOCK, awaitItem().phase)
+
+                coordinator.dispatch(RootEvent.BiometricUnlockRequested)
+                assertEquals(RootPhase.APP_LOCK, coordinator.state.value.phase)
+            }
+
+            assertEquals(0L, sessionStore.getLastAuthenticatedAtMillis())
+            assertEquals(0L, sessionStore.getLastVerifiedOnlineAtMillis())
+        }
+
+    @Test
     fun `signing out clears session and returns to SIGN_IN`() =
         runTest {
             val dispatcher = StandardTestDispatcher(testScheduler)
@@ -239,5 +322,8 @@ class SessionCoordinatorTests {
                 coordinator.dispatch(RootEvent.SignedOut)
                 assertEquals(RootPhase.SIGN_IN, awaitItem().phase)
             }
+
+            assertNull(sessionStore.getLastAuthenticatedAtMillis())
+            assertNull(sessionStore.getLastVerifiedOnlineAtMillis())
         }
 }
