@@ -11,6 +11,9 @@ internal interface NativeAuthClient {
         scopes: List<String>,
     ): NativeAuthOutcome
 
+    /** The browser web-fallback leg (ADR 0019 Phase 2.1c); gets its Activity from a [CurrentActivityProvider]. */
+    suspend fun signInInteractively(scopes: List<String>): NativeAuthOutcome
+
     suspend fun currentAccountUserId(): String?
 
     suspend fun accessToken(
@@ -27,8 +30,11 @@ internal sealed interface NativeAuthOutcome {
         val userId: String,
     ) : NativeAuthOutcome
 
-    /** MSAL requires the interactive browser leg (ADR 0019 Phase 2.1c); not yet wired. */
+    /** MSAL requires the interactive browser leg (ADR 0019 Phase 2.1c). */
     data object BrowserRequired : NativeAuthOutcome
+
+    /** The user backed out of the browser leg — only returned by [NativeAuthClient.signInInteractively]. */
+    data object BrowserCancelled : NativeAuthOutcome
 
     /** A one-time-passcode challenge was issued; this build renders no OTP UI. */
     data object CodeRequired : NativeAuthOutcome

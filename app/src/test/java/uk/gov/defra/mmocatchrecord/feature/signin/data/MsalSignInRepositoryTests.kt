@@ -2,7 +2,10 @@ package uk.gov.defra.mmocatchrecord.feature.signin.data
 
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -11,19 +14,17 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInException
 import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInFailure
+import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInStage
 import kotlin.coroutines.cancellation.CancellationException
 
-/**
- * [MsalSignInRepository] against a hand-written [FakeNativeAuthClient] (ADR 0019 Phase 2.1b) —
- * covers every outcome mapping, the enumeration guard, cancellation and zeroisation.
- */
+/** [MsalSignInRepository] against [FakeNativeAuthClient] (ADR 0019 2.1b/c) — outcome mapping, browser fallback. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class MsalSignInRepositoryTests {
     private val fixtureEmail = "alice@example.com"
     private val fixtureSecret = "unit-test-placeholder-value"
 
     private fun repository(
-        client: FakeNativeAuthClient,
+        client: NativeAuthClient,
         dispatcher: CoroutineDispatcher,
     ) = MsalSignInRepository(client, dispatcher)
 
@@ -79,14 +80,143 @@ class MsalSignInRepositoryTests {
         }
 
     @Test
-    fun `BrowserRequired is an interim Unknown failure until the web fallback ships`() =
+    fun `BrowserRequired falls back to the browser leg and succeeds`() =
         runTest {
-            val client = FakeNativeAuthClient(outcome = NativeAuthOutcome.BrowserRequired)
+            val client =
+                FakeNativeAuthClient(
+                    outcome = NativeAuthOutcome.BrowserRequired,
+                    interactiveOutcome = NativeAuthOutcome.Succeeded(userId = "entra-user-guid"),
+                )
+
+            val result = repository(client, StandardTestDispatcher(testScheduler)).signIn(fixtureEmail, fixtureSecret)
+
+            assertTrue(result.isSuccess)
+            assertEquals("entra-user-guid", result.getOrThrow().userId)
+            assertEquals(1, client.interactiveCallCount)
+        }
+
+    @Test
+    fun `BrowserRequired then an interactive error maps to a safe Unknown failure`() =
+        runTest {
+            val client =
+                FakeNativeAuthClient(
+                    outcome = NativeAuthOutcome.BrowserRequired,
+                    interactiveOutcome = NativeAuthOutcome.Failed("safe-mapped-constant"),
+                )
 
             val result = repository(client, StandardTestDispatcher(testScheduler)).signIn(fixtureEmail, fixtureSecret)
 
             val failure = failureOf(result)
             assertTrue(failure is SignInFailure.Unknown)
+            assertEquals("safe-mapped-constant", (failure as SignInFailure.Unknown).message)
+        }
+
+    @Test
+    fun `BrowserRequired then an interactive network failure maps to Network`() =
+        runTest {
+            val client =
+                FakeNativeAuthClient(
+                    outcome = NativeAuthOutcome.BrowserRequired,
+                    interactiveOutcome = NativeAuthOutcome.NetworkUnavailable,
+                )
+
+            val result = repository(client, StandardTestDispatcher(testScheduler)).signIn(fixtureEmail, fixtureSecret)
+
+            assertEquals(SignInFailure.Network, failureOf(result))
+        }
+
+    @Test
+    fun `a second BrowserRequired from the interactive leg is terminal, not retried again`() =
+        runTest {
+            val client =
+                FakeNativeAuthClient(
+                    outcome = NativeAuthOutcome.BrowserRequired,
+                    interactiveOutcome = NativeAuthOutcome.BrowserRequired,
+                )
+
+            val result = repository(client, StandardTestDispatcher(testScheduler)).signIn(fixtureEmail, fixtureSecret)
+
+            assertTrue(failureOf(result) is SignInFailure.Unknown)
+            assertEquals(1, client.interactiveCallCount)
+        }
+
+    @Test
+    fun `no foreground activity maps to a safe Unknown failure via the interactive leg`() =
+        runTest {
+            val client =
+                FakeNativeAuthClient(
+                    outcome = NativeAuthOutcome.BrowserRequired,
+                    interactiveOutcome =
+                        NativeAuthOutcome.Failed("no foreground activity for the interactive browser leg"),
+                )
+
+            val result = repository(client, StandardTestDispatcher(testScheduler)).signIn(fixtureEmail, fixtureSecret)
+
+            assertTrue(failureOf(result) is SignInFailure.Unknown)
+        }
+
+    @Test
+    fun `the user cancelling the browser leg maps to Cancelled, not an error`() =
+        runTest {
+            val client =
+                FakeNativeAuthClient(
+                    outcome = NativeAuthOutcome.BrowserRequired,
+                    interactiveOutcome = NativeAuthOutcome.BrowserCancelled,
+                )
+
+            val result = repository(client, StandardTestDispatcher(testScheduler)).signIn(fixtureEmail, fixtureSecret)
+
+            assertEquals(SignInFailure.Cancelled, failureOf(result))
+        }
+
+    @Test
+    fun `the stage reports RedirectingToBrowser only while the browser leg is in flight`() =
+        runTest {
+            val client =
+                FakeNativeAuthClient(
+                    outcome = NativeAuthOutcome.BrowserRequired,
+                    interactiveOutcome = NativeAuthOutcome.Succeeded(userId = "u"),
+                )
+            val repo = repository(client, StandardTestDispatcher(testScheduler))
+
+            assertEquals(SignInStage.Idle, repo.stage.value)
+            repo.signIn(fixtureEmail, fixtureSecret)
+            assertEquals(SignInStage.Idle, repo.stage.value)
+        }
+
+    @Test
+    fun `the password CharArray is zeroised before the browser leg is invoked`() =
+        runTest {
+            var passwordWasZeroisedBeforeInteractiveCall = false
+            val client =
+                object : NativeAuthClient {
+                    val delegate = FakeNativeAuthClient(outcome = NativeAuthOutcome.BrowserRequired)
+
+                    override suspend fun signIn(
+                        username: String,
+                        password: CharArray,
+                        scopes: List<String>,
+                    ) = delegate.signIn(username, password, scopes)
+
+                    override suspend fun signInInteractively(scopes: List<String>): NativeAuthOutcome {
+                        passwordWasZeroisedBeforeInteractiveCall =
+                            delegate.lastPasswordReference?.all { it == '\u0000' } == true
+                        return NativeAuthOutcome.Succeeded(userId = "u")
+                    }
+
+                    override suspend fun currentAccountUserId(): String? = null
+
+                    override suspend fun accessToken(
+                        scopes: List<String>,
+                        forceRefresh: Boolean,
+                    ): String? = null
+
+                    override suspend fun signOut() = Unit
+                }
+
+            repository(client, StandardTestDispatcher(testScheduler)).signIn(fixtureEmail, fixtureSecret)
+
+            assertTrue(passwordWasZeroisedBeforeInteractiveCall)
         }
 
     @Test
@@ -181,6 +311,59 @@ class MsalSignInRepositoryTests {
             repository(client, StandardTestDispatcher(testScheduler)).signIn(fixtureEmail, fixtureSecret)
 
             assertZeroised(client.lastPasswordReference)
+        }
+
+    @Test
+    fun `handoffToBrowser waits for the UI acknowledgement before launching the browser`() =
+        runTest {
+            val client =
+                FakeNativeAuthClient(
+                    outcome = NativeAuthOutcome.BrowserRequired,
+                    interactiveOutcome = NativeAuthOutcome.Succeeded(userId = "u"),
+                )
+            val repo = repository(client, StandardTestDispatcher(testScheduler))
+
+            val job = launch { repo.signIn(fixtureEmail, fixtureSecret) }
+            runCurrent()
+            assertEquals(0, client.interactiveCallCount)
+
+            repo.acknowledgeBrowserNoticeShown()
+            advanceUntilIdle()
+
+            assertEquals(1, client.interactiveCallCount)
+            job.join()
+        }
+
+    @Test
+    fun `the browser leg still proceeds via the timeout fallback if never acknowledged`() =
+        runTest {
+            val client =
+                FakeNativeAuthClient(
+                    outcome = NativeAuthOutcome.BrowserRequired,
+                    interactiveOutcome = NativeAuthOutcome.Succeeded(userId = "u"),
+                )
+            val repo = repository(client, StandardTestDispatcher(testScheduler))
+
+            val job = launch { repo.signIn(fixtureEmail, fixtureSecret) }
+            advanceUntilIdle()
+
+            assertEquals(1, client.interactiveCallCount)
+            job.join()
+        }
+
+    @Test
+    fun `the stage resets to Idle when the browser leg throws`() =
+        runTest {
+            val client =
+                FakeNativeAuthClient(
+                    outcome = NativeAuthOutcome.BrowserRequired,
+                    interactiveThrown = IllegalStateException("boom"),
+                )
+            val repo = repository(client, StandardTestDispatcher(testScheduler))
+
+            repo.signIn(fixtureEmail, fixtureSecret)
+
+            assertEquals(SignInStage.Idle, repo.stage.value)
         }
 
     private fun assertZeroised(chars: CharArray?) {

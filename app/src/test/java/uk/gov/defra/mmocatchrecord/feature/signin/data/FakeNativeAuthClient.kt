@@ -6,6 +6,8 @@ package uk.gov.defra.mmocatchrecord.feature.signin.data
  */
 internal class FakeNativeAuthClient(
     var outcome: NativeAuthOutcome = NativeAuthOutcome.Succeeded(userId = "fixture-user-id"),
+    var interactiveOutcome: NativeAuthOutcome = NativeAuthOutcome.Succeeded(userId = "fixture-user-id"),
+    var interactiveThrown: Throwable? = null,
     var thrown: Throwable? = null,
 ) : NativeAuthClient {
     var lastUsername: String? = null
@@ -13,6 +15,10 @@ internal class FakeNativeAuthClient(
     var lastPasswordReference: CharArray? = null
         private set
     var lastScopes: List<String>? = null
+        private set
+    var lastInteractiveScopes: List<String>? = null
+        private set
+    var interactiveCallCount: Int = 0
         private set
 
     override suspend fun signIn(
@@ -25,6 +31,13 @@ internal class FakeNativeAuthClient(
         lastPasswordReference = password
         thrown?.let { throw it }
         return outcome
+    }
+
+    override suspend fun signInInteractively(scopes: List<String>): NativeAuthOutcome {
+        interactiveCallCount++
+        lastInteractiveScopes = scopes
+        interactiveThrown?.let { throw it }
+        return interactiveOutcome
     }
 
     override suspend fun currentAccountUserId(): String? = null

@@ -23,6 +23,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -66,6 +67,7 @@ object SignInScreenTestTags {
     const val ACTIONS_GROUP = "signin_actions_group"
     const val LANGUAGE_TOGGLE = "signin_language_toggle"
     const val FORGOTTEN_PASSWORD = "signin_forgotten_password"
+    const val BROWSER_HANDOFF_MESSAGE = "signin_browser_handoff_message"
 }
 
 /**
@@ -99,12 +101,14 @@ fun SignInScreen(
             onUsernameChanged = { viewModel.dispatch(SignInEvent.UsernameChanged(it)) },
             onPasswordChanged = { viewModel.dispatch(SignInEvent.PasswordChanged(it)) },
             onSubmit = { viewModel.dispatch(SignInEvent.SubmitRequested) },
+            onBrowserNoticeShown = { viewModel.dispatch(SignInEvent.BrowserNoticeShown) },
             modifier = Modifier.padding(innerPadding),
         )
     }
 }
 
 @Composable
+@Suppress("LongParameterList")
 fun SignInContent(
     state: SignInViewState,
     currentLanguage: String,
@@ -113,6 +117,7 @@ fun SignInContent(
     onPasswordChanged: (String) -> Unit,
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
+    onBrowserNoticeShown: () -> Unit = {},
 ) {
     val scrollState = rememberScrollState()
     Column(
@@ -138,6 +143,7 @@ fun SignInContent(
         SignInActionsSection(
             state = state,
             onSubmit = onSubmit,
+            onBrowserNoticeShown = onBrowserNoticeShown,
         )
 
         SignInTroubleSection()
@@ -330,6 +336,7 @@ private fun signInFieldColors() =
 private fun SignInActionsSection(
     state: SignInViewState,
     onSubmit: () -> Unit,
+    onBrowserNoticeShown: () -> Unit = {},
 ) {
     val errorPrefix = stringResource(R.string.signin_error_prefix)
     Column(
@@ -354,6 +361,21 @@ private fun SignInActionsSection(
                             liveRegion = LiveRegionMode.Polite
                             contentDescription = "$errorPrefix $message"
                         },
+            )
+        }
+        if (state.isRedirectingToBrowser) {
+            // Fires once the notice composes, so the repository knows TalkBack has had a chance to speak it.
+            LaunchedEffect(Unit) { onBrowserNoticeShown() }
+            Text(
+                text = stringResource(R.string.signin_redirecting_to_browser),
+                color = MmoColors.Text,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier =
+                    Modifier
+                        .padding(bottom = Spacing.s)
+                        .testTag(SignInScreenTestTags.BROWSER_HANDOFF_MESSAGE)
+                        // Announced politely (SC 4.1.3): a context switch to the browser is imminent.
+                        .semantics { liveRegion = LiveRegionMode.Polite },
             )
         }
         if (state.status is UiStatus.Loading) {

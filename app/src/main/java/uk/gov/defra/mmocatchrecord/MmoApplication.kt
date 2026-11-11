@@ -5,6 +5,7 @@ import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
+import uk.gov.defra.mmocatchrecord.core.android.CurrentActivityProviderImpl
 import uk.gov.defra.mmocatchrecord.core.connectivity.ConnectivityObserver
 import uk.gov.defra.mmocatchrecord.core.logging.ReleaseTree
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.sync.WorkManagerReferenceDataSyncScheduler
@@ -36,11 +37,16 @@ class MmoApplication :
     @Inject
     lateinit var connectivityObserver: ConnectivityObserver
 
+    // Registered in onCreate, before any Activity can resume, so MSAL's browser leg always has an Activity.
+    @Inject
+    lateinit var currentActivityProviderImpl: CurrentActivityProviderImpl
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
 
     override fun onCreate() {
         super.onCreate()
+        registerActivityLifecycleCallbacks(currentActivityProviderImpl)
         // Structured, redacted logging (ADR 0011): unrestricted Timber.DebugTree for local development,
         // a redacted, WARN+-only ReleaseTree in release builds — see ReleaseTree's doc comment.
         Timber.plant(if (BuildConfig.DEBUG) Timber.DebugTree() else ReleaseTree())

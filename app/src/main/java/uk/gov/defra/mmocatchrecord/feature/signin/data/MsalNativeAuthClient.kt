@@ -1,7 +1,12 @@
 package uk.gov.defra.mmocatchrecord.feature.signin.data
 
+import android.app.Activity
 import android.content.Context
+import com.microsoft.identity.client.AcquireTokenParameters
+import com.microsoft.identity.client.AuthenticationCallback
+import com.microsoft.identity.client.IAuthenticationResult
 import com.microsoft.identity.client.PublicClientApplication
+import com.microsoft.identity.client.exception.MsalException
 import com.microsoft.identity.nativeauth.INativeAuthPublicClientApplication
 import com.microsoft.identity.nativeauth.parameters.NativeAuthGetAccessTokenParameters
 import com.microsoft.identity.nativeauth.parameters.NativeAuthSignInParameters
@@ -11,12 +16,16 @@ import com.microsoft.identity.nativeauth.statemachine.results.GetAccountResult
 import com.microsoft.identity.nativeauth.statemachine.results.SignInResult
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import timber.log.Timber
+import uk.gov.defra.mmocatchrecord.core.android.CurrentActivityProvider
 import java.io.IOException
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 /**
  * The only file permitted to import `com.microsoft.identity.*` (ADR 0019); maps every MSAL
@@ -26,7 +35,9 @@ import kotlin.coroutines.cancellation.CancellationException
 internal class MsalNativeAuthClient(
     private val context: Context,
     private val configResId: Int,
+    private val currentActivityProvider: CurrentActivityProvider,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
 ) : NativeAuthClient {
     private val initMutex = Mutex()
 
@@ -67,6 +78,55 @@ internal class MsalNativeAuthClient(
             } catch (thrown: Exception) {
                 thrown.toOutcome(SIGN_IN_THREW)
             }
+        }
+
+    override suspend fun signInInteractively(scopes: List<String>): NativeAuthOutcome {
+        val activity = currentActivityProvider.current() ?: return NativeAuthOutcome.Failed(NO_FOREGROUND_ACTIVITY)
+        return try {
+            val client = client()
+            val result = withContext(mainDispatcher) { acquireTokenInteractive(client, activity, scopes) }
+            NativeAuthOutcome.Succeeded(result.account.id)
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (_: BrowserSignInCancelledException) {
+            NativeAuthOutcome.BrowserCancelled
+        } catch (thrown: Exception) {
+            thrown.toOutcome(INTERACTIVE_SIGN_IN_THREW)
+        }
+    }
+
+    /** Bridges MSAL's callback-based interactive flow; `acquireToken` must be invoked on the main thread. */
+    private suspend fun acquireTokenInteractive(
+        client: INativeAuthPublicClientApplication,
+        activity: Activity,
+        scopes: List<String>,
+    ): IAuthenticationResult =
+        suspendCancellableCoroutine { continuation ->
+            val callback =
+                object : AuthenticationCallback {
+                    override fun onSuccess(authenticationResult: IAuthenticationResult) {
+                        if (continuation.isActive) continuation.resume(authenticationResult)
+                    }
+
+                    override fun onError(exception: MsalException) {
+                        if (continuation.isActive) continuation.resumeWithException(exception)
+                    }
+
+                    override fun onCancel() {
+                        if (continuation.isActive) continuation.resumeWithException(BrowserSignInCancelledException())
+                    }
+                }
+            // MSAL exposes no cancel API for an in-flight interactive request; this only detaches our
+            // callback, it can't dismiss an already-open Custom Tab.
+            continuation.invokeOnCancellation {}
+            client.acquireToken(
+                AcquireTokenParameters
+                    .Builder()
+                    .startAuthorizationFromActivity(activity)
+                    .withScopes(scopes)
+                    .withCallback(callback)
+                    .build(),
+            )
         }
 
     override suspend fun currentAccountUserId(): String? =
@@ -141,9 +201,14 @@ internal class MsalNativeAuthClient(
         return false
     }
 
+    /** Internal marker for [AuthenticationCallback.onCancel] — never a [CancellationException] (see onCancel). */
+    private class BrowserSignInCancelledException : Exception()
+
     private companion object {
         const val UNMAPPED_SIGN_IN_RESULT = "unmapped native-auth sign-in result"
         const val SIGN_IN_THREW = "native-auth client threw during sign-in"
         const val SAFE_SIGN_IN_ERROR = "unclassified native-auth sign-in error"
+        const val INTERACTIVE_SIGN_IN_THREW = "native-auth client threw during interactive sign-in"
+        const val NO_FOREGROUND_ACTIVITY = "no foreground activity for the interactive browser leg"
     }
 }

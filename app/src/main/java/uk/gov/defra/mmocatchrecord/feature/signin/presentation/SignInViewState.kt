@@ -17,6 +17,8 @@ data class SignInViewState(
     val password: String = "",
     val status: UiStatus<SignInSession> = UiStatus.Idle,
     val error: SignInError? = null,
+    // True only while the browser web-fallback leg (ADR 0019 Phase 2.1c) is being launched.
+    val isRedirectingToBrowser: Boolean = false,
 ) : ViewState
 
 /** UI-originated events for the sign-in screen. */
@@ -30,4 +32,7 @@ sealed interface SignInEvent {
     ) : SignInEvent
 
     data object SubmitRequested : SignInEvent
+
+    /** The UI confirms the browser hand-off notice has been composed (WCAG 2.2 SC 4.1.3). */
+    data object BrowserNoticeShown : SignInEvent
 }

@@ -290,6 +290,68 @@ class SignInScreenAccessibilityTests {
         }
     }
 
+    @Test
+    fun `the browser hand-off notice is a polite live region announced before the browser opens`() {
+        composeTestRule.setContent {
+            MmoTheme {
+                SignInContent(
+                    state = SignInViewState(isRedirectingToBrowser = true),
+                    currentLanguage = "en",
+                    onLanguageToggle = {},
+                    onUsernameChanged = {},
+                    onPasswordChanged = {},
+                    onSubmit = {},
+                )
+            }
+        }
+
+        val config =
+            composeTestRule
+                .onNodeWithTag(SignInScreenTestTags.BROWSER_HANDOFF_MESSAGE, useUnmergedTree = true)
+                .fetchSemanticsNode()
+                .config
+
+        assertEquals(LiveRegionMode.Polite, config[SemanticsProperties.LiveRegion])
+        assertEquals(
+            listOf(resources.getString(R.string.signin_redirecting_to_browser)),
+            config[SemanticsProperties.Text].map { it.text },
+        )
+    }
+
+    @Test
+    fun `the screen dispatches the acknowledgement once the hand-off notice is composed`() {
+        var acknowledged = false
+        composeTestRule.setContent {
+            MmoTheme {
+                SignInContent(
+                    state = SignInViewState(isRedirectingToBrowser = true),
+                    currentLanguage = "en",
+                    onLanguageToggle = {},
+                    onUsernameChanged = {},
+                    onPasswordChanged = {},
+                    onSubmit = {},
+                    onBrowserNoticeShown = { acknowledged = true },
+                )
+            }
+        }
+
+        composeTestRule.waitForIdle()
+
+        assertTrue(acknowledged)
+    }
+
+    @Test
+    fun `the browser hand-off notice is absent when no redirect is in flight`() {
+        renderSignIn()
+
+        assertTrue(
+            composeTestRule
+                .onAllNodesWithText(resources.getString(R.string.signin_redirecting_to_browser))
+                .fetchSemanticsNodes()
+                .isEmpty(),
+        )
+    }
+
     private fun renderSignIn(
         @StringRes errorRes: Int? = null,
     ) {

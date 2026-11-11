@@ -1,0 +1,17 @@
+{
+  "client_id": "6d6542d5-0a1f-44bc-a7d9-fd2b775800fb",
+  "redirect_uri": "msauth://mmo.catchrecording.android/sqG1xGPA4C0X17hWfm7QrMw%2BTVc%3D",
+  "authorization_user_agent": "BROWSER",
+  "authorities": [
+    {
+      "type": "CIAM",
+      "authority_url": "https://EXTIDMMOExternalTenantDev.ciamlogin.com/EXTIDMMOExternalTenantDev.onmicrosoft.com/"
+    }
+  ],
+  "challenge_types": ["oob", "password"],
+  "logging": {
+    "pii_enabled": false,
+    "log_level": "WARNING",
+    "logcat_enabled": false
+  }
+}
