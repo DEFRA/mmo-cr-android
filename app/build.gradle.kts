@@ -121,7 +121,7 @@ android {
                         ?: "https://mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud/reference-data-service/"
                 }\"",
             )
-            buildConfigField("boolean", "USE_STUB_AUTH", "true")
+            buildConfigField("boolean", "USE_STUB_AUTH", "false")
             // Real Entra native authentication against the DEV tenant (ADR 0019).
             buildConfigField("boolean", "USE_FAKE_SIGN_IN", "false")
         }

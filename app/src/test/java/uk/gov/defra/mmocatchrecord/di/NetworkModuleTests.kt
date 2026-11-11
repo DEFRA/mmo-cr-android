@@ -35,7 +35,7 @@ class NetworkModuleTests {
     val serverRule = MockWebServerRule()
 
     @Test
-    fun `tokenProviderFor binds the stub provider when useStubAuth is set (local, dev before the flip)`() {
+    fun `tokenProviderFor binds the stub provider when useStubAuth is set (local)`() {
         val provider =
             NetworkModule.tokenProviderFor(
                 useStubAuth = true,
