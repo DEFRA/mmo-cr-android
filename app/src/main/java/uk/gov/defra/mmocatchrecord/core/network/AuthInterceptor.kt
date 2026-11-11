@@ -12,6 +12,7 @@ import timber.log.Timber
  */
 class AuthInterceptor(
     private val tokenProvider: TokenProvider,
+    private val timeoutMillis: Long = TOKEN_LOOKUP_TIMEOUT_MS,
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val token = currentTokenOrNull()
@@ -32,13 +33,27 @@ class AuthInterceptor(
     @Suppress("TooGenericExceptionCaught")
     private fun currentTokenOrNull(): String? =
         try {
-            runBlocking { withTimeoutOrNull(TOKEN_LOOKUP_TIMEOUT_MS) { tokenProvider.currentToken() } }
+            runBlocking {
+                // Wrap in Pair so a legitimate null token is distinguished from a null (timed-out) outcome.
+                val outcome = withTimeoutOrNull(timeoutMillis) { tokenProvider.currentToken() to Unit }
+                if (outcome == null) logTimeoutAndReturnNull() else outcome.first
+            }
         } catch (error: Exception) {
             Timber.w(error, "AuthInterceptor: token lookup failed, sending request unauthenticated")
             null
         }
 
+    private fun logTimeoutAndReturnNull(): String? {
+        Timber.w(
+            "AuthInterceptor: token lookup timed out after %d ms; sending unauthenticated",
+            timeoutMillis,
+        )
+        return null
+    }
+
     private companion object {
-        const val TOKEN_LOOKUP_TIMEOUT_MS = 2_000L
+        // 10s, bounded by NetworkModule's 15s OkHttp read/connect timeouts (R7): a slow silent refresh
+        // over a coastal link should not routinely lose the race and send the request unauthenticated.
+        const val TOKEN_LOOKUP_TIMEOUT_MS = 10_000L
     }
 }

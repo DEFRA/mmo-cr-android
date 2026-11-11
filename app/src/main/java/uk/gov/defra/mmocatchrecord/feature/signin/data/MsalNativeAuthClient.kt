@@ -31,7 +31,7 @@ import kotlin.coroutines.resumeWithException
  * The only file permitted to import `com.microsoft.identity.*` (ADR 0019); maps every MSAL
  * result/error onto [NativeAuthOutcome] via public predicates only — never an SDK message.
  */
-@Suppress("TooGenericExceptionCaught")
+@Suppress("TooGenericExceptionCaught", "TooManyFunctions")
 internal class MsalNativeAuthClient(
     private val context: Context,
     private val configResId: Int,
@@ -166,15 +166,28 @@ internal class MsalNativeAuthClient(
             }
         }
 
-    override suspend fun signOut() {
+    override suspend fun signOut(): Boolean =
         withContext(ioDispatcher) {
             try {
                 (client().getCurrentAccount() as? GetAccountResult.AccountFound)?.resultValue?.signOut()
-                Unit
+                true
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (thrown: Exception) {
                 Timber.w("signOut failed: %s", thrown::class.simpleName)
+                false
+            }
+        }
+
+    /** Off-thread so [client] (blocking MSAL config I/O) never stalls a caller's first token lookup. */
+    override suspend fun warmUp() {
+        withContext(ioDispatcher) {
+            try {
+                client()
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (thrown: Exception) {
+                Timber.w("warmUp failed: %s", thrown::class.simpleName)
             }
         }
     }

@@ -14,6 +14,9 @@ import uk.gov.defra.mmocatchrecord.core.network.AuthInterceptor
 import uk.gov.defra.mmocatchrecord.core.network.MissingTokenProvider
 import uk.gov.defra.mmocatchrecord.core.network.StubTokenProvider
 import uk.gov.defra.mmocatchrecord.core.network.TokenProvider
+import uk.gov.defra.mmocatchrecord.core.security.SessionStore
+import uk.gov.defra.mmocatchrecord.feature.signin.data.MsalTokenProvider
+import uk.gov.defra.mmocatchrecord.feature.signin.data.NativeAuthClient
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
@@ -32,13 +35,34 @@ object NetworkModule {
     @Singleton
     fun provideJson(): Json = Json { ignoreUnknownKeys = true }
 
-    /** Visible for testing both branches without compiling three build variants. */
-    internal fun tokenProviderFor(useStubAuth: Boolean): TokenProvider =
-        if (useStubAuth) StubTokenProvider() else MissingTokenProvider()
+    /** Visible for testing all three flavors without compiling three build variants (ADR 0019 2.1d). */
+    internal fun tokenProviderFor(
+        useStubAuth: Boolean,
+        useFakeSignIn: Boolean,
+        referenceDataServiceUrl: String,
+        nativeAuthClient: NativeAuthClient,
+        sessionStore: SessionStore,
+    ): TokenProvider =
+        when {
+            useStubAuth -> StubTokenProvider()
+            // prod's empty URL (ADR 0016) is the fail-fast placeholder: never bind MSAL to it.
+            !useFakeSignIn && referenceDataServiceUrl.isNotBlank() -> MsalTokenProvider(nativeAuthClient, sessionStore)
+            else -> MissingTokenProvider()
+        }
 
     @Provides
     @Singleton
-    fun provideTokenProvider(): TokenProvider = tokenProviderFor(BuildConfig.USE_STUB_AUTH)
+    internal fun provideTokenProvider(
+        nativeAuthClient: NativeAuthClient,
+        sessionStore: SessionStore,
+    ): TokenProvider =
+        tokenProviderFor(
+            useStubAuth = BuildConfig.USE_STUB_AUTH,
+            useFakeSignIn = BuildConfig.USE_FAKE_SIGN_IN,
+            referenceDataServiceUrl = BuildConfig.REFERENCE_DATA_SERVICE_URL,
+            nativeAuthClient = nativeAuthClient,
+            sessionStore = sessionStore,
+        )
 
     @Provides
     @Singleton

@@ -10,6 +10,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInException
@@ -211,7 +212,7 @@ class MsalSignInRepositoryTests {
                         forceRefresh: Boolean,
                     ): String? = null
 
-                    override suspend fun signOut() = Unit
+                    override suspend fun signOut() = true
                 }
 
             repository(client, StandardTestDispatcher(testScheduler)).signIn(fixtureEmail, fixtureSecret)
@@ -314,6 +315,57 @@ class MsalSignInRepositoryTests {
         }
 
     @Test
+    fun `signOut delegates to the native-auth client and reports its result`() =
+        runTest {
+            val client = FakeNativeAuthClient(signOutResult = false)
+
+            val reportedSuccess = repository(client, StandardTestDispatcher(testScheduler)).signOut()
+
+            assertEquals(1, client.signOutCallCount)
+            assertFalse(reportedSuccess)
+        }
+
+    @Test
+    fun `a stale cached account is cleared before a native sign-in attempt`() =
+        runTest {
+            val client =
+                FakeNativeAuthClient(
+                    currentAccountUserIdResult = "fixture-stale-user-id",
+                    outcome = NativeAuthOutcome.Succeeded(userId = "entra-user-guid"),
+                )
+
+            val result = repository(client, StandardTestDispatcher(testScheduler)).signIn(fixtureEmail, fixtureSecret)
+
+            assertTrue(result.isSuccess)
+            assertEquals(1, client.signOutCallCount)
+        }
+
+    @Test
+    fun `no stale account means sign-out is never called before sign-in`() =
+        runTest {
+            val client = FakeNativeAuthClient(currentAccountUserIdResult = null)
+
+            repository(client, StandardTestDispatcher(testScheduler)).signIn(fixtureEmail, fixtureSecret)
+
+            assertEquals(0, client.signOutCallCount)
+        }
+
+    @Test
+    fun `a stale account that fails to clear fails the sign-in safely, never authenticating over it`() =
+        runTest {
+            val client =
+                FakeNativeAuthClient(
+                    currentAccountUserIdResult = "fixture-stale-user-id",
+                    signOutResult = false,
+                )
+
+            val result = repository(client, StandardTestDispatcher(testScheduler)).signIn(fixtureEmail, fixtureSecret)
+
+            assertTrue(failureOf(result) is SignInFailure.Unknown)
+            assertNull(client.lastUsername)
+        }
+
+    @Test
     fun `handoffToBrowser waits for the UI acknowledgement before launching the browser`() =
         runTest {
             val client =
@@ -364,6 +416,16 @@ class MsalSignInRepositoryTests {
             repo.signIn(fixtureEmail, fixtureSecret)
 
             assertEquals(SignInStage.Idle, repo.stage.value)
+        }
+
+    @Test
+    fun `signOut delegates to the native-auth client`() =
+        runTest {
+            val client = FakeNativeAuthClient()
+
+            repository(client, StandardTestDispatcher(testScheduler)).signOut()
+
+            assertEquals(1, client.signOutCallCount)
         }
 
     private fun assertZeroised(chars: CharArray?) {

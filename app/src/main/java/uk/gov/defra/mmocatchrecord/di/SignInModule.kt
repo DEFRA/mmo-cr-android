@@ -16,6 +16,7 @@ import uk.gov.defra.mmocatchrecord.feature.signin.data.NativeAuthClient
 import uk.gov.defra.mmocatchrecord.feature.signin.data.NoOpSignInStageObserver
 import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInRepository
 import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInStageObserver
+import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignOutRepository
 import javax.inject.Singleton
 
 /**
@@ -48,4 +49,10 @@ object SignInModule {
     @Singleton
     internal fun provideSignInStageObserver(signInRepository: SignInRepository): SignInStageObserver =
         signInRepository as? SignInStageObserver ?: NoOpSignInStageObserver
+
+    /** Falls back to a no-op for [FakeSignInRepository], which has no MSAL account to clear (ADR 0019 2.1d). */
+    @Provides
+    @Singleton
+    internal fun provideSignOutRepository(signInRepository: SignInRepository): SignOutRepository =
+        signInRepository as? SignOutRepository ?: SignOutRepository { true }
 }

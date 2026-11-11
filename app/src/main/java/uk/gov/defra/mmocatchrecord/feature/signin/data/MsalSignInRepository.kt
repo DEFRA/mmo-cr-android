@@ -15,18 +15,20 @@ import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInRepository
 import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInSession
 import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInStage
 import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInStageObserver
+import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignOutRepository
 import java.util.Arrays
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * MSAL-free [SignInRepository] depending only on [NativeAuthClient] (ADR 0019 Phase 2.1b/c) —
- * token delivery to the API (2.1d) lands in a later phase.
+ * MSAL-free [SignInRepository] depending only on [NativeAuthClient] (ADR 0019 Phase 2.1b/c/d) —
+ * also the [SignOutRepository] binding, so sign-out always clears MSAL's own cached account.
  */
 internal class MsalSignInRepository(
     private val nativeAuthClient: NativeAuthClient,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : SignInRepository,
-    SignInStageObserver {
+    SignInStageObserver,
+    SignOutRepository {
     private val mutableStage = MutableStateFlow(SignInStage.Idle)
     override val stage: StateFlow<SignInStage> = mutableStage.asStateFlow()
 
@@ -37,6 +39,8 @@ internal class MsalSignInRepository(
         pendingBrowserNoticeAck?.complete(Unit)
     }
 
+    override suspend fun signOut(): Boolean = nativeAuthClient.signOut()
+
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     override suspend fun signIn(
         username: String,
@@ -44,6 +48,7 @@ internal class MsalSignInRepository(
     ): Result<SignInSession> =
         withContext(ioDispatcher) {
             try {
+                clearStaleAccountIfPresent()?.let { return@withContext it }
                 when (val outcome = nativeSignIn(username, password)) {
                     NativeAuthOutcome.BrowserRequired -> handoffToBrowser()
                     else -> outcome.toResult()
@@ -55,6 +60,16 @@ internal class MsalSignInRepository(
                 Result.failure(SignInException(SignInFailure.Unknown(UNEXPECTED_SIGN_IN_FAILURE)))
             }
         }
+
+    /** A cached account from a previous sign-in must never be reused/signed-in-over (review fix 2.3). */
+    private suspend fun clearStaleAccountIfPresent(): Result<SignInSession>? {
+        if (nativeAuthClient.currentAccountUserId() == null) return null
+        return if (nativeAuthClient.signOut()) {
+            null
+        } else {
+            Result.failure(SignInException(SignInFailure.Unknown(STALE_ACCOUNT_SIGN_OUT_FAILED)))
+        }
+    }
 
     /** The domain hands us a String, which can't be wiped; zeroised before any browser hand-off. */
     private suspend fun nativeSignIn(
@@ -118,9 +133,9 @@ internal class MsalSignInRepository(
         }
 
     private companion object {
-        const val API_SCOPE = "api://8bc065bf-046f-4d18-834a-753b325e5221/access_as_user"
         const val UNEXPECTED_SIGN_IN_FAILURE = "native-auth client threw an unexpected exception"
         const val BROWSER_REQUIRED_LOOP = "native-auth required the browser leg again after the browser leg"
+        const val STALE_ACCOUNT_SIGN_OUT_FAILED = "could not clear a stale native-auth account before sign-in"
         const val ACK_TIMEOUT_MILLIS = 3_000L
         const val POST_ACK_PAUSE_MILLIS = 1_200L
     }

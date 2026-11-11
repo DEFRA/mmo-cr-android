@@ -17,6 +17,7 @@ import uk.gov.defra.mmocatchrecord.core.security.BiometricReentryPolicy
 import uk.gov.defra.mmocatchrecord.core.security.FakeBiometricRepository
 import uk.gov.defra.mmocatchrecord.core.security.InMemoryBiometricPreferenceStore
 import uk.gov.defra.mmocatchrecord.core.security.InMemorySessionStore
+import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignOutRepository
 
 /**
  * [SessionCoordinator] tests using fakes (no Android framework dependencies needed) + coroutines-test,
@@ -42,6 +43,7 @@ class SessionCoordinatorTests {
         biometricPreferenceStore: InMemoryBiometricPreferenceStore = InMemoryBiometricPreferenceStore(),
         reentryPolicy: BiometricReentryPolicy = BiometricReentryPolicy(reentryTimeoutMillis = 60_000L),
         biometricRepository: FakeBiometricRepository = FakeBiometricRepository(),
+        signOutRepository: FakeSignOutRepository = FakeSignOutRepository(),
         clock: () -> Long = { 0L },
         dispatcher: kotlinx.coroutines.CoroutineDispatcher = mainDispatcher,
     ) = SessionCoordinator(
@@ -49,6 +51,7 @@ class SessionCoordinatorTests {
         biometricPreferenceStore = biometricPreferenceStore,
         reentryPolicy = reentryPolicy,
         biometricRepository = biometricRepository,
+        signOutRepository = signOutRepository,
         clock = clock,
         dispatcher = dispatcher,
     )
@@ -310,7 +313,13 @@ class SessionCoordinatorTests {
         runTest {
             val dispatcher = StandardTestDispatcher(testScheduler)
             val sessionStore = InMemorySessionStore()
-            val coordinator = buildCoordinator(sessionStore = sessionStore, dispatcher = dispatcher)
+            val signOutRepository = FakeSignOutRepository()
+            val coordinator =
+                buildCoordinator(
+                    sessionStore = sessionStore,
+                    signOutRepository = signOutRepository,
+                    dispatcher = dispatcher,
+                )
 
             coordinator.state.test {
                 assertEquals(RootPhase.SPLASH, awaitItem().phase)
@@ -325,5 +334,48 @@ class SessionCoordinatorTests {
 
             assertNull(sessionStore.getLastAuthenticatedAtMillis())
             assertNull(sessionStore.getLastVerifiedOnlineAtMillis())
+            assertEquals(1, signOutRepository.signOutCallCount)
         }
+
+    @Test
+    fun `a failed native-auth sign-out still clears the app session and returns to SIGN_IN`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val sessionStore = InMemorySessionStore()
+            val signOutRepository = FakeSignOutRepository(signOutResult = false)
+            val coordinator =
+                buildCoordinator(
+                    sessionStore = sessionStore,
+                    signOutRepository = signOutRepository,
+                    dispatcher = dispatcher,
+                )
+
+            coordinator.state.test {
+                assertEquals(RootPhase.SPLASH, awaitItem().phase)
+                assertEquals(RootPhase.SIGN_IN, awaitItem().phase)
+
+                coordinator.dispatch(RootEvent.SignedIn)
+                assertEquals(RootPhase.HOME, awaitItem().phase)
+
+                coordinator.dispatch(RootEvent.SignedOut)
+                assertEquals(RootPhase.SIGN_IN, awaitItem().phase)
+            }
+
+            // User intent to sign out always wins locally, even though MSAL's own clear failed.
+            assertNull(sessionStore.getLastAuthenticatedAtMillis())
+            assertEquals(1, signOutRepository.signOutCallCount)
+        }
+}
+
+/** Tracks invocations so sign-out tests can assert MSAL's cached account is actually cleared. */
+private class FakeSignOutRepository(
+    private val signOutResult: Boolean = true,
+) : SignOutRepository {
+    var signOutCallCount: Int = 0
+        private set
+
+    override suspend fun signOut(): Boolean {
+        signOutCallCount++
+        return signOutResult
+    }
 }

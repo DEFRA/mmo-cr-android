@@ -21,7 +21,11 @@ internal interface NativeAuthClient {
         forceRefresh: Boolean,
     ): String?
 
-    suspend fun signOut()
+    /** Reports whether MSAL's cached account was actually cleared (review fix 2.2) — never silently swallowed. */
+    suspend fun signOut(): Boolean
+
+    /** Warms the MSAL client off the caller's thread; a no-op default for fakes (review fix 1.3). */
+    suspend fun warmUp() {}
 }
 
 /** Mapped outcome of a native-auth sign-in attempt. Never carries an SDK message or username. */

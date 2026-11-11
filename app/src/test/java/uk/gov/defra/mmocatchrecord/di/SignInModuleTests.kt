@@ -2,6 +2,7 @@ package uk.gov.defra.mmocatchrecord.di
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -65,5 +66,21 @@ class SignInModuleTests {
         val observer = SignInModule.provideSignInStageObserver(FakeSignInRepository())
 
         assertTrue(observer.stage.value == SignInStage.Idle)
+    }
+
+    @Test
+    fun `provideSignOutRepository reuses the MSAL repository as its own sign-out`() {
+        val repository = MsalSignInRepository(mock<NativeAuthClient>())
+
+        val signOutRepository = SignInModule.provideSignOutRepository(repository)
+
+        assertTrue(signOutRepository === repository)
+    }
+
+    @Test
+    fun `provideSignOutRepository falls back to a no-op for a repository that isn't one`() {
+        val signOutRepository = SignInModule.provideSignOutRepository(FakeSignInRepository())
+
+        runBlocking { signOutRepository.signOut() }
     }
 }
