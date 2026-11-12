@@ -30,6 +30,11 @@ class MapRectangleSearchTests {
     }
 
     @Test
+    fun `text in the middle of a code does not match`() {
+        assertTrue(MapRectangleSearch.filterSuggestions("8e9", rectangles).isEmpty())
+    }
+
+    @Test
     fun `searches the full list, not just one port's nearby subset`() {
         val results = MapRectangleSearch.filterSuggestions("30f10", rectangles)
         assertEquals(listOf("30F10"), results.map { it.code })

@@ -31,9 +31,24 @@ class SpeciesSearchTests {
 
     @Test
     fun `query matching multiple species returns them sorted by name`() {
-        val result = SpeciesSearch.filterSuggestions("co", allSpecies)
+        val hake = Species(id = "species-hake", name = "Hake (HKE)", faoCode = "HKE")
 
-        assertEquals(listOf(cod, codling), result)
+        val result = SpeciesSearch.filterSuggestions("ha", listOf(hake) + allSpecies)
+
+        assertEquals(listOf(haddock, hake), result)
+    }
+
+    @Test
+    fun `query matches the start of any word in the name`() {
+        assertEquals(listOf(cod, codling), SpeciesSearch.filterSuggestions("cod", allSpecies))
+        assertEquals(listOf(cod), SpeciesSearch.filterSuggestions("atlantic co", allSpecies))
+        assertEquals(listOf(haddock), SpeciesSearch.filterSuggestions("had)", allSpecies))
+    }
+
+    @Test
+    fun `query does not match text in the middle of a word`() {
+        assertTrue(SpeciesSearch.filterSuggestions("lantic", allSpecies).isEmpty())
+        assertTrue(SpeciesSearch.filterSuggestions("dling", allSpecies).isEmpty())
     }
 
     @Test

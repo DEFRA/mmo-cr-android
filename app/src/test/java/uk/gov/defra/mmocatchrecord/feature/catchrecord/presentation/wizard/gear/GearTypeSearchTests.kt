@@ -77,6 +77,11 @@ class GearTypeSearchTests {
     }
 
     @Test
+    fun `text in the middle of a name does not match`() {
+        assertTrue(GearTypeSearch.filterSuggestions("trawls", gearTypes).isEmpty())
+    }
+
+    @Test
     fun `min query length constant mirrors port search`() {
         assertEquals(PortSearch.MIN_QUERY_LENGTH, GearTypeSearch.MIN_QUERY_LENGTH)
     }
