@@ -48,7 +48,9 @@ interface SignInStageObserver {
     val stage: StateFlow<SignInStage>
 
     /** The UI confirms the hand-off notice has been composed (WCAG 2.2 SC 4.1.3); default no-op for fakes. */
-    fun acknowledgeBrowserNoticeShown() {}
+    fun acknowledgeBrowserNoticeShown() {
+        // Intentionally empty: only an observer that actually redirects needs to react to this.
+    }
 }
 
 /**

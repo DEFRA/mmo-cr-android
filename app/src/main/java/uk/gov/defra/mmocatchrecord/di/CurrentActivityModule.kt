@@ -11,8 +11,8 @@ import javax.inject.Singleton
 /** Binds [CurrentActivityProvider] to the single [CurrentActivityProviderImpl] registered in `MmoApplication`. */
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class CurrentActivityModule {
+interface CurrentActivityModule {
     @Binds
     @Singleton
-    abstract fun bindCurrentActivityProvider(impl: CurrentActivityProviderImpl): CurrentActivityProvider
+    fun bindCurrentActivityProvider(impl: CurrentActivityProviderImpl): CurrentActivityProvider
 }

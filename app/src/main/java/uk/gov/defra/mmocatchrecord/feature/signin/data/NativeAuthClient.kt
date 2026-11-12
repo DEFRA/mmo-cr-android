@@ -25,7 +25,9 @@ internal interface NativeAuthClient {
     suspend fun signOut(): Boolean
 
     /** Warms the MSAL client off the caller's thread; a no-op default for fakes (review fix 1.3). */
-    suspend fun warmUp() {}
+    suspend fun warmUp() {
+        // Intentionally empty: only the real MSAL-backed implementation needs to pre-warm anything.
+    }
 }
 
 /** Mapped outcome of a native-auth sign-in attempt. Never carries an SDK message or username. */
