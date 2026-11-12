@@ -46,10 +46,20 @@ internal class MsalNativeAuthClient(
 
     private suspend fun client(): INativeAuthPublicClientApplication =
         cachedClient ?: initMutex.withLock {
-            cachedClient ?: PublicClientApplication
-                .createNativeAuthPublicClientApplication(context, configResId)
-                .also { cachedClient = it }
+            cachedClient ?: run {
+                MsalNativeAuthConfig.requireProvisioned(readConfigJson())
+                PublicClientApplication
+                    .createNativeAuthPublicClientApplication(context, configResId)
+                    .also { cachedClient = it }
+            }
         }
+
+    /** The config is a small bundled raw resource; read once per init attempt, not cached. */
+    private fun readConfigJson(): String =
+        context.resources
+            .openRawResource(configResId)
+            .bufferedReader()
+            .use { it.readText() }
 
     override suspend fun signIn(
         username: String,
@@ -75,6 +85,8 @@ internal class MsalNativeAuthClient(
                 }
             } catch (cancellation: CancellationException) {
                 throw cancellation
+            } catch (_: MsalConfigNotProvisionedException) {
+                NativeAuthOutcome.Failed(MSAL_CONFIG_NOT_PROVISIONED)
             } catch (thrown: Exception) {
                 thrown.toOutcome(SIGN_IN_THREW)
             }
@@ -90,6 +102,8 @@ internal class MsalNativeAuthClient(
             throw cancellation
         } catch (_: BrowserSignInCancelledException) {
             NativeAuthOutcome.BrowserCancelled
+        } catch (_: MsalConfigNotProvisionedException) {
+            NativeAuthOutcome.Failed(MSAL_CONFIG_NOT_PROVISIONED)
         } catch (thrown: Exception) {
             thrown.toOutcome(INTERACTIVE_SIGN_IN_THREW)
         }
@@ -136,7 +150,7 @@ internal class MsalNativeAuthClient(
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (thrown: Exception) {
-                Timber.w("currentAccountUserId failed: %s", thrown::class.simpleName)
+                Timber.w("currentAccountUserId failed: %s", thrown.diagnosticTag())
                 null
             }
         }
@@ -161,7 +175,7 @@ internal class MsalNativeAuthClient(
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (thrown: Exception) {
-                Timber.w("accessToken failed: %s", thrown::class.simpleName)
+                Timber.w("accessToken failed: %s", thrown.diagnosticTag())
                 null
             }
         }
@@ -174,7 +188,7 @@ internal class MsalNativeAuthClient(
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (thrown: Exception) {
-                Timber.w("signOut failed: %s", thrown::class.simpleName)
+                Timber.w("signOut failed: %s", thrown.diagnosticTag())
                 false
             }
         }
@@ -187,7 +201,7 @@ internal class MsalNativeAuthClient(
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (thrown: Exception) {
-                Timber.w("warmUp failed: %s", thrown::class.simpleName)
+                Timber.w("warmUp failed: %s", thrown.diagnosticTag())
             }
         }
     }
@@ -204,6 +218,10 @@ internal class MsalNativeAuthClient(
 
     private fun Exception.toOutcome(fallback: String): NativeAuthOutcome =
         if (hasNetworkCause(this)) NativeAuthOutcome.NetworkUnavailable else NativeAuthOutcome.Failed(fallback)
+
+    /** Names the unprovisioned-config case explicitly; every other exception keeps its class name. */
+    private fun Exception.diagnosticTag(): String =
+        if (this is MsalConfigNotProvisionedException) MSAL_CONFIG_NOT_PROVISIONED else this::class.simpleName.orEmpty()
 
     private fun hasNetworkCause(thrown: Throwable?): Boolean {
         var cause = thrown
@@ -223,5 +241,6 @@ internal class MsalNativeAuthClient(
         const val SAFE_SIGN_IN_ERROR = "unclassified native-auth sign-in error"
         const val INTERACTIVE_SIGN_IN_THREW = "native-auth client threw during interactive sign-in"
         const val NO_FOREGROUND_ACTIVITY = "no foreground activity for the interactive browser leg"
+        const val MSAL_CONFIG_NOT_PROVISIONED = "MSAL config has no client_id/authorities for this build flavor"
     }
 }

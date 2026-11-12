@@ -17,6 +17,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import timber.log.Timber
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.signin.data.FakeSignInRepository
@@ -179,6 +180,56 @@ class SignInViewModelTests {
             assertEquals(R.string.signin_error_generic, errored.error?.messageRes)
             assertFalse(errored.toString().contains(diagnostic))
         }
+
+    @Test
+    fun `an Unknown failure logs its mapped-safe message, so a sign-in attempt is diagnosable`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val diagnostic = "native-auth required the browser leg again after the browser leg"
+            val repository =
+                FakeSignInRepository(
+                    forcedResult = Result.failure(SignInException(SignInFailure.Unknown(diagnostic))),
+                )
+
+            val warnings = captureWarnLogsDuring { signInAndAwaitError(repository, dispatcher) }
+
+            assertTrue(warnings.any { it == "Sign-in failed: Unknown($diagnostic)" })
+        }
+
+    @Test
+    fun `a Network failure logs only its class name, with no payload parentheses`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository =
+                FakeSignInRepository(forcedResult = Result.failure(SignInException(SignInFailure.Network)))
+
+            val warnings = captureWarnLogsDuring { signInAndAwaitError(repository, dispatcher) }
+
+            assertTrue(warnings.any { it == "Sign-in failed: Network" })
+        }
+
+    /** Plants a [Timber.Tree] capturing WARN-level messages for the duration of [block], then removes it. */
+    private suspend fun captureWarnLogsDuring(block: suspend () -> Unit): List<String> {
+        val warnings = mutableListOf<String>()
+        val tree =
+            object : Timber.Tree() {
+                override fun log(
+                    priority: Int,
+                    tag: String?,
+                    message: String,
+                    t: Throwable?,
+                ) {
+                    if (priority == android.util.Log.WARN) warnings += message
+                }
+            }
+        Timber.plant(tree)
+        try {
+            block()
+        } finally {
+            Timber.uproot(tree)
+        }
+        return warnings
+    }
 
     @Test
     fun `a raw exception from a misbehaving repository never reaches the view state`() =

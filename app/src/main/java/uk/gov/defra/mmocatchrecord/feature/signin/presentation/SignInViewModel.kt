@@ -99,8 +99,11 @@ class SignInViewModel
                 is SignInFailure.Unknown -> R.string.signin_error_generic
             }
 
-        /** Class name only: [SignInFailure.Unknown] is free text an MSAL error could fill with a username. */
-        private fun SignInFailure.diagnostic(): String = this::class.simpleName ?: "SignInFailure"
+        /** Includes [SignInFailure.Unknown]'s mapped-safe message so it's diagnosable; others stay class-name-only. */
+        private fun SignInFailure.diagnostic(): String {
+            val name = this::class.simpleName ?: "SignInFailure"
+            return if (this is SignInFailure.Unknown) "$name($message)" else name
+        }
 
         private companion object {
             const val UNMAPPED_FAILURE = "repository returned a non-SignInException failure"

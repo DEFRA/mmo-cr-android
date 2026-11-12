@@ -11,7 +11,7 @@
   "challenge_types": ["oob", "password"],
   "logging": {
     "pii_enabled": false,
-    "log_level": "WARNING",
-    "logcat_enabled": false
+    "log_level": "VERBOSE",
+    "logcat_enabled": true
   }
 }
