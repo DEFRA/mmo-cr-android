@@ -22,6 +22,10 @@ class FakeCatchRecordDraftRepository(
     val deletedDraftIds = mutableListOf<String>()
     var failNextOperation: Boolean = false
 
+    /** Throws [throwOnNextSaveDraft] from the next [saveDraft] call instead of returning, then clears
+     *  itself — simulates an unexpected exception (not a [Result] failure) bypassing `.fold`. */
+    var throwOnNextSaveDraft: Throwable? = null
+
     /** Number of real [startDraft] invocations — used by BR-XX tests to assert "exactly one write". */
     var startDraftCallCount: Int = 0
         private set
@@ -69,6 +73,10 @@ class FakeCatchRecordDraftRepository(
 
     /** Mirrors [uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.RoomCatchRecordDraftRepository]. */
     override suspend fun saveDraft(draft: CatchRecordDraft): Result<CatchRecordDraft> {
+        throwOnNextSaveDraft?.let {
+            throwOnNextSaveDraft = null
+            throw it
+        }
         if (failNextOperation) return failure()
         val now = clock()
         val isSynced = draft.status == DraftStatus.Submitted

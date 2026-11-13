@@ -7,7 +7,15 @@ class FakeCatchRecordSyncScheduler : CatchRecordSyncScheduler {
     var scheduledDraftIds: List<String> = emptyList()
         private set
 
+    /** Throws [throwOnNextScheduleSync] from the next [scheduleSync] call instead of returning, then
+     *  clears itself. */
+    var throwOnNextScheduleSync: Throwable? = null
+
     override fun scheduleSync(draftId: String) {
+        throwOnNextScheduleSync?.let {
+            throwOnNextScheduleSync = null
+            throw it
+        }
         scheduledDraftIds = scheduledDraftIds + draftId
     }
 }

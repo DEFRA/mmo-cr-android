@@ -142,6 +142,7 @@ fun CheckYourAnswersScreen(
                     },
                     onSubmit = { viewModel.dispatch(CatchRecordFlowEvent.AcceptDeclarationAndSubmit) },
                     isOffline = isOffline,
+                    isSubmitting = state.isSubmitting,
                 )
         }
     }
@@ -158,6 +159,7 @@ fun CheckYourAnswersScreenContent(
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
     isOffline: Boolean = false,
+    isSubmitting: Boolean = false,
 ) {
     val sections = CheckYourAnswersSupport.buildSections(draft, vessels, ports, gearTypes, species)
     val sectionsByKind = sections.groupBy { it.kind }
@@ -196,6 +198,7 @@ fun CheckYourAnswersScreenContent(
         PrimaryActionButton(
             text = stringResource(R.string.check_your_answers_submit_action),
             onClick = onSubmit,
+            enabled = !isSubmitting,
             modifier = Modifier.testTag(CheckYourAnswersScreenTestTags.SUBMIT_ACTION),
         )
     }
