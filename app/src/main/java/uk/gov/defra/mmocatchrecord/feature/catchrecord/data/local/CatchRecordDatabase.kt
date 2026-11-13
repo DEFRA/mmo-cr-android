@@ -43,6 +43,9 @@ import androidx.room.RoomDatabase
  * v11 -> v12 (ADR 0022): six nullable resumable-submission columns on [DraftEntity], plus a legacy
  * `catchRecordReference` rewrite to the server format — see [CatchRecordMigrations.MIGRATION_11_12].
  *
+ * v12 -> v13 (ADR 0022 OQ-3): a nullable `apiMeasurementId` cache column carries the live gear-measurement
+ * id through to `characteristicId` — see [ReferenceDataGearMeasurementEntity].
+ *
  * Every version bump above has a real [androidx.room.migration.Migration] registered in
  * [CatchRecordMigrations] (see `di/DatabaseModule.kt`) — a draft in progress must survive every schema
  * change, so `fallbackToDestructiveMigration` must never be reintroduced for this database (ADR 0010).
@@ -62,7 +65,7 @@ import androidx.room.RoomDatabase
         ReferenceDataGearMeasurementEntity::class,
         ReferenceDataMetadataEntity::class,
     ],
-    version = 12,
+    version = 13,
     exportSchema = true,
 )
 abstract class CatchRecordDatabase : RoomDatabase() {

@@ -227,7 +227,8 @@ class CachingReferenceDataRepositoryTests {
 
         val result = repository().getGearTypes(vesselLengthMetres)
 
-        assertEquals(listOf(GearType(id = "gear-$expectedBand", name = "Gear $expectedBand")), result.getOrThrow())
+        val expectedGear = GearType(id = "gear-$expectedBand", name = "Gear $expectedBand", code = "CODE-$expectedBand")
+        assertEquals(listOf(expectedGear), result.getOrThrow())
     }
 
     @Test
@@ -326,7 +327,8 @@ class CachingReferenceDataRepositoryTests {
             whenever(remoteDataSource.fetchPorts()).thenReturn(
                 modified(listOf(PortMobileDto(id = "p1", code = "GBHTG", name = "HASTINGS", displayName = "Hastings"))),
             )
-            val expected = listOf(Port("p1", "Hastings", PortStatisticalAreaLookup.statisticalAreaId("GBHTG")))
+            val areaId = PortStatisticalAreaLookup.statisticalAreaId("GBHTG")
+            val expected = listOf(Port("p1", "Hastings", areaId, code = "GBHTG"))
 
             val fetched = repository().getPorts()
             val cached = repository().getPorts()

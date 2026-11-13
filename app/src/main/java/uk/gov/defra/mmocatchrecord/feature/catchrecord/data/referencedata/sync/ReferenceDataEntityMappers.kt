@@ -76,5 +76,6 @@ internal fun GearMobileDto.measurementEntitiesFor(
                 type = gearMeasurementTypeFor(measurement.unit).name,
                 unit = gearMeasurementUnitFor(measurement.unit),
                 orderIndex = index,
+                apiMeasurementId = measurement.id,
             )
         }

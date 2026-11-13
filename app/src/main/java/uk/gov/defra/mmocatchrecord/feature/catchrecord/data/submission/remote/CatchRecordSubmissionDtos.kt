@@ -3,7 +3,7 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission.remote
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 
-// Write-side DTOs: minimal `{id}` refs per the backend example; see ADR 0022 (pending OQ-2/5/6).
+// Shared ref/snapshot shapes (write and read-side both carry snapshots per ADR 0022's backend answers).
 
 @Serializable
 internal data class CreateDraftCatchRecordPayloadDto(
@@ -19,16 +19,22 @@ internal data class VesselRefDto(
 @Serializable
 internal data class PortRefDto(
     val id: String,
+    val codeSnapshot: String,
+    val nameSnapshot: String,
 )
 
 @Serializable
 internal data class GearRefDto(
     val id: String,
+    val codeSnapshot: String,
+    val nameSnapshot: String,
 )
 
 @Serializable
-internal data class StatisticalAreaRefDto(
+internal data class StatisticalAreaDto(
     val id: String,
+    val codeSnapshot: String,
+    val nameSnapshot: String,
 )
 
 @Serializable
@@ -51,25 +57,31 @@ internal data class PairFishingDto(
 @Serializable
 internal data class CharacteristicDto(
     val characteristicId: String,
+    val nameSnapshot: String,
     val value: JsonElement,
+    val unitSnapshot: String? = null,
 )
 
-/** Weight fields are always sent explicitly (even when `null`) — no default. */
+/** Unset weights are omitted, not sent as explicit `null` (ADR 0022) — every weight field defaults `null`. */
 @Serializable
 internal data class SpeciesWeightEntryDto(
     val id: String,
-    val weightAboveMinimumKg: Double?,
-    val weightBelowMinimumKg: Double?,
-    val weightLegallyDiscardedKg: Double?,
+    val faoCodeSnapshot: String,
+    val nameSnapshot: String,
+    val weightAboveMinimumKg: Double? = null,
+    val weightBelowMinimumKg: Double? = null,
+    val weightLegallyDiscardedKg: Double? = null,
     val weightPrecision: String? = null,
 )
 
 @Serializable
 internal data class GearAssociationDto(
     val gear: GearRefDto,
-    val statisticalArea: StatisticalAreaRefDto,
+    val statisticalArea: StatisticalAreaDto,
     val characteristics: List<CharacteristicDto>,
     val speciesCaught: List<SpeciesWeightEntryDto>,
+    /** OQ-7: omitted by default (server generates it); flip to `GearUse.id` if a 422 names it (ADR 0022). */
+    val associationId: String? = null,
 )
 
 @Serializable
@@ -133,15 +145,7 @@ internal data class SubmissionResponseDto(
     val artifacts: List<ArtifactMetadataDto>,
 )
 
-// Read-side (recovery GET, OQ-1) DTOs — the full Canonical Catch Record snapshot shape, distinct from
-// the write-side refs above because the service returns resolved snapshots, not bare ids.
-
-@Serializable
-internal data class PortSnapshotDto(
-    val id: String,
-    val codeSnapshot: String,
-    val nameSnapshot: String,
-)
+// Read-side (recovery GET, OQ-1) DTOs — the full Canonical Catch Record snapshot shape.
 
 @Serializable
 internal data class VesselSnapshotDto(
@@ -157,57 +161,17 @@ internal data class TripSnapshotDto(
     val startedAndFinishedToday: Boolean,
     val dateStarted: String,
     val dateEnded: String,
-    val departurePort: PortSnapshotDto,
-    val returnPort: PortSnapshotDto,
-)
-
-@Serializable
-internal data class PairFishingSnapshotDto(
-    val enabled: Boolean,
-    val pairVessel: String?,
-    val pairSkipperName: String?,
-)
-
-@Serializable
-internal data class CharacteristicSnapshotDto(
-    val characteristicId: String,
-    val nameSnapshot: String,
-    val value: JsonElement,
-    val unitSnapshot: String? = null,
-)
-
-@Serializable
-internal data class StatisticalAreaSnapshotDto(
-    val id: String,
-    val codeSnapshot: String,
-    val nameSnapshot: String,
-)
-
-@Serializable
-internal data class SpeciesWeightEntrySnapshotDto(
-    val id: String,
-    val faoCodeSnapshot: String,
-    val nameSnapshot: String,
-    val weightAboveMinimumKg: Double? = null,
-    val weightBelowMinimumKg: Double? = null,
-    val weightLegallyDiscardedKg: Double? = null,
-    val weightPrecision: String? = null,
-)
-
-@Serializable
-internal data class GearRefSnapshotDto(
-    val id: String,
-    val codeSnapshot: String,
-    val nameSnapshot: String,
+    val departurePort: PortRefDto,
+    val returnPort: PortRefDto,
 )
 
 @Serializable
 internal data class GearAssociationSnapshotDto(
     val associationId: String,
-    val gear: GearRefSnapshotDto,
-    val characteristics: List<CharacteristicSnapshotDto>,
-    val statisticalArea: StatisticalAreaSnapshotDto? = null,
-    val speciesCaught: List<SpeciesWeightEntrySnapshotDto>,
+    val gear: GearRefDto,
+    val characteristics: List<CharacteristicDto>,
+    val statisticalArea: StatisticalAreaDto? = null,
+    val speciesCaught: List<SpeciesWeightEntryDto>,
 )
 
 /** Flattens the OpenAPI `allOf` of `CatchRecord` + the derived retrieval-only fields (ADR 0022). */
@@ -223,9 +187,9 @@ internal data class RetrieveCatchRecordResponseDto(
     val hasUnsubmittedChanges: Boolean,
     val vessel: VesselSnapshotDto,
     val trip: TripSnapshotDto,
-    val pairFishing: PairFishingSnapshotDto,
+    val pairFishing: PairFishingDto,
     val gears: List<GearAssociationSnapshotDto>,
-    val speciesNotLanded: List<SpeciesWeightEntrySnapshotDto>,
+    val speciesNotLanded: List<SpeciesWeightEntryDto>,
     val artifacts: List<ArtifactMetadataDto>,
     val createdAt: String,
     val createdBy: String,

@@ -271,6 +271,14 @@ object CatchRecordMigrations {
             }
         }
 
+    /** v12 -> v13 (ADR 0022 OQ-3): a nullable `apiMeasurementId` cache column; existing rows backfill on sync. */
+    val MIGRATION_12_13 =
+        object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE reference_data_gear_measurement ADD COLUMN apiMeasurementId TEXT")
+            }
+        }
+
     val ALL =
         arrayOf(
             MIGRATION_1_2,
@@ -284,5 +292,6 @@ object CatchRecordMigrations {
             MIGRATION_9_10,
             MIGRATION_10_11,
             MIGRATION_11_12,
+            MIGRATION_12_13,
         )
 }

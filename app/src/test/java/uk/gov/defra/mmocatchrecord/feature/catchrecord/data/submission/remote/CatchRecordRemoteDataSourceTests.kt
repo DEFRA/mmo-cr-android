@@ -89,8 +89,8 @@ class CatchRecordRemoteDataSourceTests {
                     trip =
                         TripDto(
                             startedAndFinishedToday = true,
-                            departurePort = PortRefDto("port-1"),
-                            returnPort = PortRefDto("port-1"),
+                            departurePort = PortRefDto("port-1", "GBHTG", "Hastings"),
+                            returnPort = PortRefDto("port-1", "GBHTG", "Hastings"),
                         ),
                     pairFishing = PairFishingDto(enabled = false, pairVessel = null, pairSkipperName = null),
                     gears = emptyList(),

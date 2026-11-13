@@ -278,6 +278,27 @@ class CatchRecordMigrationsJvmTests {
         db.close()
     }
 
+    @Test
+    fun `MIGRATION_12_13 adds apiMeasurementId as a nullable column`() {
+        val db =
+            createDb(
+                12,
+                listOf(
+                    "CREATE TABLE reference_data_gear_measurement (rowId INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                        "gearId TEXT NOT NULL)",
+                    "INSERT INTO reference_data_gear_measurement (gearId) VALUES ('gear-1')",
+                ),
+            )
+
+        CatchRecordMigrations.MIGRATION_12_13.migrate(db)
+
+        db.query("SELECT apiMeasurementId FROM reference_data_gear_measurement WHERE gearId = 'gear-1'").use {
+            assertTrue(it.moveToFirst())
+            assertTrue(it.isNull(it.getColumnIndexOrThrow("apiMeasurementId")))
+        }
+        db.close()
+    }
+
     private fun activeVesselIndexNames(db: SupportSQLiteDatabase): List<String> =
         db
             .query(
@@ -351,7 +372,20 @@ class CatchRecordMigrationsJvmTests {
         val versions = CatchRecordMigrations.ALL.map { it.startVersion to it.endVersion }
 
         assertEquals(
-            listOf(1 to 2, 2 to 3, 3 to 4, 4 to 5, 5 to 6, 6 to 7, 7 to 8, 8 to 9, 9 to 10, 10 to 11, 11 to 12),
+            listOf(
+                1 to 2,
+                2 to 3,
+                3 to 4,
+                4 to 5,
+                5 to 6,
+                6 to 7,
+                7 to 8,
+                8 to 9,
+                9 to 10,
+                10 to 11,
+                11 to 12,
+                12 to 13,
+            ),
             versions,
         )
     }

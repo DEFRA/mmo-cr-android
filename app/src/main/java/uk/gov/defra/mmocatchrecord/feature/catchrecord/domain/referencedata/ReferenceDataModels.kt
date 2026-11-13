@@ -12,11 +12,12 @@ data class Vessel(
     val pln: String? = null,
 )
 
-/** A UK/EU landing port. */
+/** A UK/EU landing port. [code] (e.g. `"GBHTG"`) feeds the ADR 0022 `portSnapshot.codeSnapshot`. */
 data class Port(
     val id: String,
     val name: String,
     val statisticalAreaId: String,
+    val code: String = "",
 )
 
 /** The kind of numeric input a gear-type measurement field requires (see [GearMeasurementField]). */
@@ -38,6 +39,8 @@ data class GearMeasurementField(
     val label: String,
     val type: GearMeasurementFieldType,
     val unit: String? = null,
+    /** ADR 0022 OQ-3: the live API's own measurement id, carried through for `characteristicId`. */
+    val id: String = "",
 )
 
 /**
@@ -76,6 +79,8 @@ data class GearType(
      * falls back to its usual lowercased-display-name derivation.
      */
     val measurementTitleOverride: String? = null,
+    /** The live API's own gear `code`, feeding ADR 0022's `gear.codeSnapshot`. */
+    val code: String = "",
 )
 
 /**
