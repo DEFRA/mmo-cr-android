@@ -120,6 +120,9 @@ sealed interface WizardStep {
 
     /** Phase 8, screen 4: submitted while offline (or the online attempt failed) — queued for background sync. */
     data object SubmissionPendingSync : WizardStep
+
+    /** Terminal submission failure — "Could not send" with "Try again" (ADR 0022). */
+    data object SubmissionFailed : WizardStep
 }
 
 fun routeFor(step: WizardStep): Any =
@@ -145,6 +148,7 @@ fun routeFor(step: WizardStep): Any =
         WizardStep.CheckYourAnswers -> CheckYourAnswersRoute
         WizardStep.SubmissionSuccess -> SubmissionSuccessRoute
         WizardStep.SubmissionPendingSync -> SubmissionPendingSyncRoute
+        WizardStep.SubmissionFailed -> SubmissionFailedRoute
     }
 
 /**
@@ -182,7 +186,11 @@ fun editRouteFor(
  * instrumented test exercising this exact navigation behaviour cannot silently drift apart.
  */
 fun NavOptionsBuilder.applySubmissionResultNavOptions(step: WizardStep) {
-    if (step == WizardStep.SubmissionSuccess || step == WizardStep.SubmissionPendingSync) {
+    if (
+        step == WizardStep.SubmissionSuccess ||
+        step == WizardStep.SubmissionPendingSync ||
+        step == WizardStep.SubmissionFailed
+    ) {
         popUpTo<CatchRecordGraphRoute> { inclusive = false }
     }
 }
@@ -260,6 +268,7 @@ fun resolveSubmissionStep(
     when {
         draft.status == DraftStatus.Submitted -> WizardStep.SubmissionSuccess
         draft.status == DraftStatus.PendingSync -> WizardStep.SubmissionPendingSync
+        draft.status == DraftStatus.SubmissionFailed -> WizardStep.SubmissionFailed
         !draft.lateSubmissionWarningAcknowledged &&
             LateSubmissionSupport.isLateSubmission(draft.returnDate, nowEpochMillis) ->
             WizardStep.LateSubmissionWarning

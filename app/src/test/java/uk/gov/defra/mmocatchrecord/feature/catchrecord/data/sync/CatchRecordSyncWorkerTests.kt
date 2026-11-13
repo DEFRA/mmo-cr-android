@@ -14,6 +14,8 @@ import org.junit.Assert.assertNotNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission.remote.CatchRecordHttpException
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission.remote.CatchRecordUnauthorizedException
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftValidation
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DmyDate
@@ -22,8 +24,10 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelection
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectionMode
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SubmissionFailureReason
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.FakeCatchRecordDraftRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.FakeCatchRecordSubmissionRepository
+import java.io.IOException
 
 /**
  * Unit tests for [CatchRecordSyncWorker] using `androidx.work:work-testing`'s [TestListenableWorkerBuilder]
@@ -78,6 +82,7 @@ class CatchRecordSyncWorkerTests {
     private fun buildWorker(
         submissionRepository: FakeCatchRecordSubmissionRepository,
         draftId: String?,
+        runAttemptCount: Int = 0,
     ): CatchRecordSyncWorker {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val inputData =
@@ -97,6 +102,7 @@ class CatchRecordSyncWorkerTests {
             }
         return TestListenableWorkerBuilder<CatchRecordSyncWorker>(context, inputData = inputData)
             .setWorkerFactory(factory)
+            .setRunAttemptCount(runAttemptCount)
             .build()
     }
 
@@ -184,10 +190,11 @@ class CatchRecordSyncWorkerTests {
         }
 
     @Test
-    fun `a failed submission requests a retry and leaves the draft pending sync`() =
+    fun `a transient (IOException) failure requests a retry and leaves the draft pending sync`() =
         runTest {
             val draft = pendingDraft()
-            val submissionRepository = FakeCatchRecordSubmissionRepository(shouldSucceed = false)
+            val submissionRepository =
+                FakeCatchRecordSubmissionRepository(shouldSucceed = false, failure = IOException("offline"))
             val worker = buildWorker(submissionRepository, draftId = draft.id)
 
             val result = worker.doWork()
@@ -196,4 +203,67 @@ class CatchRecordSyncWorkerTests {
             val updated = draftRepository.getDraftById(draft.id).getOrThrow()
             assertEquals(DraftStatus.PendingSync, updated?.status)
         }
+
+    @Test
+    fun `a terminal (403) failure fails and persists SubmissionFailed with its reason`() =
+        runTest {
+            val draft = pendingDraft()
+            val forbidden =
+                CatchRecordHttpException(
+                    operation = "submit",
+                    httpStatusCode = HTTP_FORBIDDEN,
+                    serverCode = null,
+                    correlationId = null,
+                    retryable = false,
+                )
+            val submissionRepository = FakeCatchRecordSubmissionRepository(shouldSucceed = false, failure = forbidden)
+            val worker = buildWorker(submissionRepository, draftId = draft.id)
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.failure(), result)
+            val updated = draftRepository.getDraftById(draft.id).getOrThrow()
+            assertEquals(DraftStatus.SubmissionFailed, updated?.status)
+            assertEquals(SubmissionFailureReason.NotAuthorisedForVessel.name, updated?.submissionFailureReason)
+        }
+
+    @Test
+    fun `runAttemptCount at the cap turns a still-transient failure terminal`() =
+        runTest {
+            val draft = pendingDraft()
+            val submissionRepository =
+                FakeCatchRecordSubmissionRepository(shouldSucceed = false, failure = IOException("offline"))
+            val worker = buildWorker(submissionRepository, draftId = draft.id, runAttemptCount = MAX_ATTEMPTS_CAP)
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.failure(), result)
+            val updated = draftRepository.getDraftById(draft.id).getOrThrow()
+            assertEquals(DraftStatus.SubmissionFailed, updated?.status)
+            assertEquals(SubmissionFailureReason.Rejected.name, updated?.submissionFailureReason)
+        }
+
+    @Test
+    fun `a 401 retries once silently, then fails terminally as NeedsSignIn`() =
+        runTest {
+            val draft = pendingDraft()
+            val submissionRepository =
+                FakeCatchRecordSubmissionRepository(
+                    shouldSucceed = false,
+                    failure = CatchRecordUnauthorizedException(operation = "submit", correlationId = null),
+                )
+            val worker = buildWorker(submissionRepository, draftId = draft.id)
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.failure(), result)
+            // Two submit() attempts: the original call plus the one silent-refresh retry (ADR 0022).
+            assertEquals(2, submissionRepository.submittedDrafts.size)
+            val updated = draftRepository.getDraftById(draft.id).getOrThrow()
+            assertEquals(DraftStatus.SubmissionFailed, updated?.status)
+            assertEquals(SubmissionFailureReason.NeedsSignIn.name, updated?.submissionFailureReason)
+        }
 }
+
+private const val HTTP_FORBIDDEN = 403
+private const val MAX_ATTEMPTS_CAP = CatchRecordSyncWorker.MAX_ATTEMPTS

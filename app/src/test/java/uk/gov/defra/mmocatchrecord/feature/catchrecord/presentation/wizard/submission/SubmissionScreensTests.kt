@@ -266,4 +266,61 @@ class SubmissionScreensTests {
         assertTrue(checkedTripEndDate)
         assertTrue(submitted)
     }
+
+    // --- ADR 0022: terminal submission failure ------------------------------------------------
+
+    @Test
+    fun submissionFailedScreenShowsBannerReferenceBodyAndRetryAction() {
+        composeTestRule.setContent {
+            MmoTheme {
+                SubmissionFailedScreenContent(
+                    draft = draft(),
+                    onRetry = {},
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag(SubmissionFailedScreenTestTags.BANNER).assertIsDisplayed()
+        composeTestRule.onNodeWithText("Could not send your catch record").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Your catch record reference GBR-B14974-270726-150815").assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText("Your catch record is still saved on this device")
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(SubmissionFailedScreenTestTags.RETRY_ACTION)
+            .performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun tappingTryAgainOnSubmissionFailedScreenInvokesCallback() {
+        var tapped = false
+        composeTestRule.setContent {
+            MmoTheme {
+                SubmissionFailedScreenContent(
+                    draft = draft(),
+                    onRetry = { tapped = true },
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithTag(SubmissionFailedScreenTestTags.RETRY_ACTION)
+            .performScrollTo()
+            .performClick()
+
+        assertTrue(tapped)
+    }
+
+    @Test
+    fun submissionFailedScreenContentPreviewRendersWithoutError() {
+        composeTestRule.setContent {
+            SubmissionFailedScreenContentPreview()
+        }
+
+        composeTestRule.onNodeWithTag(SubmissionFailedScreenTestTags.BANNER).assertIsDisplayed()
+    }
 }

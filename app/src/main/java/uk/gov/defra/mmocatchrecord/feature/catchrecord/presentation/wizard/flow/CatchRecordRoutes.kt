@@ -95,3 +95,6 @@ data object SubmissionSuccessRoute
 
 @Serializable
 data object SubmissionPendingSyncRoute
+
+@Serializable
+data object SubmissionFailedRoute

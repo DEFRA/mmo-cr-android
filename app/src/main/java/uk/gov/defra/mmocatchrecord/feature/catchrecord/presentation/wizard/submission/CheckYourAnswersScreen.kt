@@ -100,7 +100,9 @@ fun CheckYourAnswersScreen(
     var hasNavigatedToSubmissionResult by remember { mutableStateOf(false) }
     LaunchedEffect(state.currentStep) {
         val isSubmissionResultStep =
-            state.currentStep == WizardStep.SubmissionSuccess || state.currentStep == WizardStep.SubmissionPendingSync
+            state.currentStep == WizardStep.SubmissionSuccess ||
+                state.currentStep == WizardStep.SubmissionPendingSync ||
+                state.currentStep == WizardStep.SubmissionFailed
         if (isSubmissionResultStep && !hasNavigatedToSubmissionResult) {
             hasNavigatedToSubmissionResult = true
             onNavigate(state.currentStep)

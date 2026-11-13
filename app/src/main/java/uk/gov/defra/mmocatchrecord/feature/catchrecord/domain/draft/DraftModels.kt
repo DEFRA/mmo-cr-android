@@ -28,19 +28,22 @@ enum class DraftStatus {
         get() = this == Draft || this == ReadyToSubmit
 }
 
-/** Why a [DraftStatus.SubmissionFailed] draft stopped retrying — drives the "Could not send" copy (ADR 0022). */
+/** Why a [DraftStatus.SubmissionFailed] draft stopped retrying — see ADR 0022 §6 for the full mapping. */
 enum class SubmissionFailureReason {
-    /** A regulatory field could not be resolved, or the server rejected the payload as invalid. */
-    InvalidData,
-
-    /** Too many retry attempts (`runAttemptCount` cap) without success. */
-    RetryLimitExceeded,
-
     /** A 401 persisted even after one silent token refresh — the user must sign in again. */
     NeedsSignIn,
 
-    /** Any other non-retryable server/client error. */
-    Other,
+    /** A 403 — the signed-in user is not linked to this vessel server-side. */
+    NotAuthorisedForVessel,
+
+    /** A 422/400, or the `runAttemptCount` cap was reached — retrying cannot fix this. */
+    Rejected,
+
+    /** A 413 — the payload exceeded the server's size limit. */
+    TooLarge,
+
+    /** A 404 on replace/submit, an unresolved version conflict, or a mapping failure. */
+    DataProblem,
 }
 
 /** How the user selected a port: typed/searched for the first time, or picked from their favourites. */

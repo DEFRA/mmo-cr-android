@@ -13,7 +13,9 @@ import timber.log.Timber
 import uk.gov.defra.mmocatchrecord.core.architecture.BaseViewModel
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.core.connectivity.NetworkConnectivityChecker
+import uk.gov.defra.mmocatchrecord.core.error.CatchRecordErrorClassification
 import uk.gov.defra.mmocatchrecord.core.error.SafeErrorMapper
+import uk.gov.defra.mmocatchrecord.core.error.submissionFailureReasonFor
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.CatchRecordReferenceGenerator
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftFactory
@@ -28,6 +30,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftSubmiss
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MissingVesselRegistrationException
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SubmissionFailureReason
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.ReferenceDataRepository
@@ -84,6 +87,7 @@ class CatchRecordFlowViewModel
                 CatchRecordFlowEvent.MarkReadyToSubmit -> markReadyToSubmit()
                 CatchRecordFlowEvent.AcceptDeclarationAndSubmit -> acceptDeclarationAndSubmit()
                 CatchRecordFlowEvent.Retry -> retryLastFailedEvent()
+                CatchRecordFlowEvent.RetryFailedSubmission -> retryFailedSubmission()
                 is CatchRecordFlowEvent.EditGearMeasurements -> editGearMeasurements(event)
                 is CatchRecordFlowEvent.EditGearStatRectangle -> editGearStatRectangle(event)
                 is CatchRecordFlowEvent.SpeciesAddedToGearUse -> speciesAddedToGearUse(event)
@@ -518,14 +522,58 @@ class CatchRecordFlowViewModel
             updateState { it.copy(status = UiStatus.Loading) }
             launchInViewModelScope {
                 if (connectivityChecker.isConnected()) {
-                    submissionRepository.submit(draft).fold(
-                        onSuccess = { completeSubmission(draft) },
-                        onFailure = { enqueuePendingSync(draft) },
-                    )
+                    attemptOnlineSubmit(draft)
                 } else {
                     enqueuePendingSync(draft)
                 }
             }
+        }
+
+        /** [isTokenRetry] bounds the 401 path to a single same-attempt retry — see ADR 0022 §6. */
+        private suspend fun attemptOnlineSubmit(
+            draft: CatchRecordDraft,
+            isTokenRetry: Boolean = false,
+        ) {
+            submissionRepository.submit(draft).fold(
+                onSuccess = { completeSubmission(draft) },
+                onFailure = { handleOnlineSubmitFailure(draft, it, isTokenRetry) },
+            )
+        }
+
+        private suspend fun handleOnlineSubmitFailure(
+            draft: CatchRecordDraft,
+            error: Throwable,
+            isTokenRetry: Boolean,
+        ) {
+            val classification = SafeErrorMapper.classify(error)
+            when {
+                classification == CatchRecordErrorClassification.NeedsAuthentication && !isTokenRetry ->
+                    attemptOnlineSubmit(draft, isTokenRetry = true)
+                classification == CatchRecordErrorClassification.Transient -> enqueuePendingSync(draft)
+                else -> failSubmission(draft, submissionFailureReasonFor(error))
+            }
+        }
+
+        private suspend fun failSubmission(
+            draft: CatchRecordDraft,
+            reason: SubmissionFailureReason,
+        ) {
+            draftRepository
+                .saveDraft(draft.copy(status = DraftStatus.SubmissionFailed, submissionFailureReason = reason.name))
+                .fold(
+                    onSuccess = { saved ->
+                        updateState {
+                            it.copy(status = UiStatus.Content(saved), currentStep = WizardStep.SubmissionFailed)
+                        }
+                    },
+                    onFailure = { emitLoadError(CatchRecordFlowEvent.AcceptDeclarationAndSubmit, it) },
+                )
+        }
+
+        /** "Try again": re-queues a [DraftStatus.SubmissionFailed] draft, keeping its server id/version/keys. */
+        private fun retryFailedSubmission() {
+            val draft = currentDraftOrNull() ?: return
+            launchInViewModelScope { enqueuePendingSync(draft) }
         }
 
         private suspend fun completeSubmission(draft: CatchRecordDraft) {

@@ -1193,7 +1193,43 @@ class CatchRecordFlowViewModelTests {
         }
 
     @Test
-    fun `accepting the declaration while online but the submission fails falls back to pending sync`() =
+    fun `accepting the declaration while online but a transient failure falls back to pending sync`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            val started = repository.startDraft("vessel-achilles").getOrThrow()
+            repository.saveDraft(started.asSubmissionReady()).getOrThrow()
+            val submissionRepository =
+                FakeCatchRecordSubmissionRepository(shouldSucceed = false, failure = java.io.IOException("offline"))
+            val connectivityChecker = FakeNetworkConnectivityChecker(connected = true)
+            val syncScheduler = FakeCatchRecordSyncScheduler()
+            val viewModel =
+                buildViewModel(
+                    repository = repository,
+                    submissionRepository = submissionRepository,
+                    connectivityChecker = connectivityChecker,
+                    syncScheduler = syncScheduler,
+                    dispatcher = dispatcher,
+                )
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
+            testScheduler.advanceUntilIdle()
+            viewModel.dispatch(CatchRecordFlowEvent.ResumeDraft)
+            testScheduler.advanceUntilIdle()
+
+            viewModel.state.test {
+                awaitItem()
+                viewModel.dispatch(CatchRecordFlowEvent.AcceptDeclarationAndSubmit)
+                assertEquals(UiStatus.Loading, awaitItem().status)
+                val submitted = awaitItem()
+                assertEquals(WizardStep.SubmissionPendingSync, submitted.currentStep)
+                val draft = (submitted.status as UiStatus.Content<CatchRecordDraft>).value
+                assertEquals(DraftStatus.PendingSync, draft.status)
+            }
+            assertEquals(listOf(started.id), syncScheduler.scheduledDraftIds)
+        }
+
+    @Test
+    fun `accepting the declaration while online but a terminal failure sets could-not-send, not pending sync`() =
         runTest {
             val dispatcher = StandardTestDispatcher(testScheduler)
             val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
@@ -1220,11 +1256,11 @@ class CatchRecordFlowViewModelTests {
                 viewModel.dispatch(CatchRecordFlowEvent.AcceptDeclarationAndSubmit)
                 assertEquals(UiStatus.Loading, awaitItem().status)
                 val submitted = awaitItem()
-                assertEquals(WizardStep.SubmissionPendingSync, submitted.currentStep)
+                assertEquals(WizardStep.SubmissionFailed, submitted.currentStep)
                 val draft = (submitted.status as UiStatus.Content<CatchRecordDraft>).value
-                assertEquals(DraftStatus.PendingSync, draft.status)
+                assertEquals(DraftStatus.SubmissionFailed, draft.status)
             }
-            assertEquals(listOf(started.id), syncScheduler.scheduledDraftIds)
+            assertTrue(syncScheduler.scheduledDraftIds.isEmpty())
         }
 
     @Test

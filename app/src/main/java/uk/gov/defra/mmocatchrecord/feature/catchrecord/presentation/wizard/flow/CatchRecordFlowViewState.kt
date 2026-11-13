@@ -149,6 +149,9 @@ sealed interface CatchRecordFlowEvent {
      */
     data object Retry : CatchRecordFlowEvent
 
+    /** "Try again" on the "Could not send" screen: re-queues a failed submission for background sync (ADR 0022). */
+    data object RetryFailedSubmission : CatchRecordFlowEvent
+
     /**
      * Check-your-answers "Change" edit flow (finding: "Completed gear measurement/stat/species must be
      * editable through Change and back flows"): updates the *existing*

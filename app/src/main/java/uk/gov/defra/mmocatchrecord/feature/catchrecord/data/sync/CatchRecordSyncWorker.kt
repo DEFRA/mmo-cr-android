@@ -7,11 +7,16 @@ import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import timber.log.Timber
+import uk.gov.defra.mmocatchrecord.core.error.CatchRecordErrorClassification
+import uk.gov.defra.mmocatchrecord.core.error.SafeErrorMapper
+import uk.gov.defra.mmocatchrecord.core.error.submissionFailureReasonFor
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftValidation
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordSubmissionRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftSubmissionValidation
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SubmissionFailureReason
 
 /**
  * Background retry of a queued (`PendingSync`) catch-record submission once connectivity returns — see
@@ -48,22 +53,58 @@ class CatchRecordSyncWorker
                 return Result.failure()
             }
 
-            return submissionRepository
-                .submit(draft)
-                .fold(
-                    onSuccess = {
-                        draftRepository
-                            .saveDraft(draft.copy(status = DraftStatus.Submitted))
-                            .fold(
-                                onSuccess = { Result.success() },
-                                onFailure = { Result.retry() },
-                            )
-                    },
-                    onFailure = { Result.retry() },
+            return submissionRepository.submit(draft).fold(
+                onSuccess = { markSubmitted(draft) },
+                onFailure = { handleFailure(draft, it) },
+            )
+        }
+
+        private suspend fun markSubmitted(draft: CatchRecordDraft): Result =
+            draftRepository.saveDraft(draft.copy(status = DraftStatus.Submitted)).fold(
+                onSuccess = { Result.success() },
+                onFailure = { Result.retry() },
+            )
+
+        /** 401: one same-attempt retry (the token provider silently refreshes) before giving up — ADR 0022. */
+        private suspend fun handleFailure(
+            draft: CatchRecordDraft,
+            error: Throwable,
+            isTokenRetry: Boolean = false,
+        ): Result {
+            val classification = SafeErrorMapper.classify(error)
+            if (classification == CatchRecordErrorClassification.NeedsAuthentication && !isTokenRetry) {
+                return submissionRepository.submit(draft).fold(
+                    onSuccess = { markSubmitted(draft) },
+                    onFailure = { handleFailure(draft, it, isTokenRetry = true) },
                 )
+            }
+            if (classification == CatchRecordErrorClassification.Transient && runAttemptCount < MAX_ATTEMPTS) {
+                return Result.retry()
+            }
+            val reason =
+                if (classification == CatchRecordErrorClassification.Transient) {
+                    SubmissionFailureReason.Rejected
+                } else {
+                    submissionFailureReasonFor(error)
+                }
+            return failTerminally(draft, reason)
+        }
+
+        private suspend fun failTerminally(
+            draft: CatchRecordDraft,
+            reason: SubmissionFailureReason,
+        ): Result {
+            Timber.e("Draft %s submission terminal (%s); not retrying", draft.id, reason)
+            draftRepository.saveDraft(
+                draft.copy(status = DraftStatus.SubmissionFailed, submissionFailureReason = reason.name),
+            )
+            return Result.failure()
         }
 
         companion object {
             const val KEY_DRAFT_ID = "draftId"
+
+            /** ADR 0009 amendment: caps indefinite exponential retry of a never-resolving transient failure. */
+            const val MAX_ATTEMPTS = 8
         }
     }

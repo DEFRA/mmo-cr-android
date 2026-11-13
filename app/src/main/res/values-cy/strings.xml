@@ -299,6 +299,10 @@
     <string name="submission_pending_sync_check_records">Gwiriwch eich cofnodion dalfa</string>
     <string name="submission_pending_sync_check_records_suffix">i wneud yn siŵr bod y statws yn newid i Wedi\'i Gyflwyno. Chi sy\'n gyfrifol am wneud yn siŵr ein bod yn ei dderbyn.</string>
     <string name="submission_pending_sync_warning">Rhaid i chi gofnodi eich dalfa o fewn 24 awr i lanio.</string>
+    <string name="submission_failed_banner_title">Methwyd anfon eich cofnod dalfa</string>
+    <string name="submission_failed_body_title">Mae eich cofnod dalfa wedi\'i gadw o hyd ar y ddyfais hon</string>
+    <string name="submission_failed_body">Ni allem anfon eich cofnod dalfa at yr awdurdod pysgota perthnasol. Rhowch gynnig arall, neu wiriwch eich cysylltiad a dewch yn ôl yn nes ymlaen.</string>
+    <string name="submission_failed_retry_action">Rhowch gynnig arall arni</string>
     <string name="wizard_error_retry_action">Rhowch gynnig arall arni</string>
     <string name="unsaved_changes_dialog_title">Mae gennych newidiadau heb eu cadw</string>
     <string name="unsaved_changes_dialog_body">Os byddwch yn gadael y dudalen hon, ni fydd y wybodaeth rydych wedi\'i nodi yn cael ei chadw.</string>

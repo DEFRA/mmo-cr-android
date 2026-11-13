@@ -6,6 +6,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordS
 /** Test double for [CatchRecordSubmissionRepository] — succeeds or fails deterministically per test. */
 class FakeCatchRecordSubmissionRepository(
     private val shouldSucceed: Boolean = true,
+    private val failure: Throwable = IllegalStateException("Simulated submission failure"),
 ) : CatchRecordSubmissionRepository {
     var submittedDrafts: List<CatchRecordDraft> = emptyList()
         private set
@@ -15,7 +16,7 @@ class FakeCatchRecordSubmissionRepository(
         return if (shouldSucceed) {
             Result.success(Unit)
         } else {
-            Result.failure(IllegalStateException("Simulated submission failure"))
+            Result.failure(failure)
         }
     }
 }
