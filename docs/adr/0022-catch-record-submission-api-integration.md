@@ -16,10 +16,10 @@ client-owned sections) → `POST /v1/catch-records/{id}/submission` (submit) —
 previous step's server id/version, so a process death or lost response mid-sequence must resume without
 re-creating a server record for a regulatory submission that may already have landed.
 
-This ADR covers the full integration design (the approved plan's Phases 1-7); only Phases 0-2 — the ADR
-itself, the Room v11→v12 migration and reference-format switch, and the network layer (API/DTOs/exceptions/
-DI, not yet wired into app behaviour) — are implemented alongside it. Phases 3 (payload mapper) and 4-7
-(repository, worker/status, UI, Hilt wiring) follow once the blocking backend questions below are answered.
+This ADR covers the full integration design (the approved plan's Phases 1-7). Phases 0-2 landed first (ADR,
+Room v11→v12 migration and reference-format switch, network layer not yet wired into app behaviour); Phases
+3-7 (mapper, repository, worker/status, UI, Hilt wiring) landed once the blocking backend questions below
+were answered.
 
 ## Decision
 
@@ -87,20 +87,32 @@ catch-recording service's `ErrorResponse` is flat (`statusCode`, `code`, `messag
 HTTP status alone (`>= 500` transient, else terminal) as a Phase 2 placeholder; Phase 5 replaces this with
 the full §6 classification table (409 vs 412, etc.).
 
-## Open backend questions (blocking Phase 3 unless noted)
+## Open backend questions — now resolved (2026-11-13)
 
-| # | Question | Default taken now |
+All blocking questions below were answered by the backend team and are authoritative; Phase 3 (mapper) is
+unblocked by this resolution.
+
+| # | Question | Resolution |
 |---|---|---|
-| OQ-2 (**blocking**) | `gears[].statisticalArea.id` is a reference-data row id; the app persists only the sub-rectangle **code**. Resolve via cached reference data once confirmed — do not guess. | Phase 3 stays gated |
-| OQ-3 | `characteristics[].characteristicId` (UUID) is currently dropped at `ReferenceDataMappers.kt:73-79`. | Carry `GearMeasurementDto.id` through (no backend dependency) |
-| OQ-4 | No RSS available to mobile, only PLN. | Send `GBR-{PLN}-…` (see above); raised with backend |
-| OQ-5 (**blocking**) | `NotLandedSpeciesEntry` holds one weight; unclear which server field it maps to. | Default `weightAboveMinimumKg`; Phase 3 stays gated |
-| OQ-6 (**blocking**) | `trip.dateStarted`/`dateEnded` format and required-ness are undocumented. | Default `YYYY-MM-DD`, sent only when `startedAndFinishedToday=false`; Phase 3 stays gated |
-| OQ-7 | `gears[].associationId` is required by the canonical schema but absent from the backend's own example. | Omit; resend `GearUse.id` if the server 422s |
-| OQ-9 | Idempotency-Key replay-window retention is undocumented. | Client assumes it may lapse; relies on the OQ-1 read-back |
-| `numberOfShots` | No server field exists for this locally-captured value. | Data is dropped on submission; raised with backend as a possible contract gap |
+| OQ-2 | `gears[].statisticalArea.id` is a reference-data row id; the app persists only the sub-rectangle **code**. | It is the **sub-rectangle id**. The app resolves its persisted code (e.g. `38E95`) to the cached `StatisticalSubRectangle` id and snapshot fields; unresolvable → terminal `SubmissionMappingException`. |
+| OQ-3 | `characteristics[].characteristicId` (UUID) is currently dropped. | Carried through as `GearMeasurementDto.id`; one entry per gear measurement with `nameSnapshot`/`unitSnapshot`. |
+| OQ-4 | No RSS available to mobile, only PLN. | Accepted: `GBR-{PLN}-…` (see above). |
+| OQ-5 | `NotLandedSpeciesEntry` holds one weight; unclear which server field it maps to. | Confirmed `weightAboveMinimumKg`. |
+| OQ-6 | `trip.dateStarted`/`dateEnded` format and required-ness. | Confirmed `YYYY-MM-DD`, required only when `startedAndFinishedToday=false` (omitted when true). |
+| OQ-7 | `gears[].associationId` is required by the canonical schema but absent from the backend's own example. | Backend itself is unsure it is required. Default: **omit**; the mapper keeps the value (`GearUse.id`) trivially switchable to "send" — a 422 naming `associationId` on device verification is the signal to flip it (Phase 7 check). |
+| OQ-9 | Idempotency-Key replay-window retention is undocumented. | Backend confirms the key's purpose (de-duplicating same-request double-clicks) but not a retention window. Client still relies on the OQ-1 read-back as a durable fallback. |
+| `numberOfShots` | No server field exists for this locally-captured value. | Confirmed: gear values are per-characteristic only, there is no separate field. `numberOfShots` does **not** correspond to any reference-data gear measurement, so it is **not sent** — this is a confirmed data-drop on submission, not a mapping bug. |
 | RSS vs PLN | See OQ-4. | — |
-| 409 vs 412 | RFC 9110 §13.1.1/§15.5.13 mandate `412` for a failed precondition (`If-Match`); the server uses `409` for both version conflicts and other state conflicts. | Client accepts `409` as the server's documented behaviour; raised with backend as a contract-conformance item (R-5) |
+| 409 vs 412 (R-5) | RFC 9110 mandates `412` for a failed precondition (`If-Match`); the server uses `409`. | Backend confirms `409` for version mismatch is **intentional**, not a bug. Client treats `409` as the version-conflict signal; a `412` is also accepted harmlessly (same handling) in case any endpoint is later conformed to RFC 9110. |
+
+### Snapshot fields — sent wherever locally resolvable
+
+The backend's newer examples include snapshot fields and the OpenAPI schema requires them (gear, port,
+species, statistical area, characteristics). The mapper sends a snapshot wherever the cached reference data
+can supply one. No snapshot field was found to be unavailable locally during Phase 3 mapping — every
+required snapshot (`codeSnapshot`/`nameSnapshot`/`unitSnapshot`/`faoCodeSnapshot`) has a corresponding
+cached reference-data field. Unset weights are **omitted** (not sent as explicit `null`), matching the
+backend's own examples; `pairFishing` is the one field that keeps an explicit `null` by contract.
 
 ## Risk R-1 (security, backend follow-up, not fixed here)
 
@@ -122,8 +134,9 @@ verification (Phase 7) must be re-run afterwards.
   header carrying a precondition/replay-key value should be added to the same list.
 - ADR 0009's "no custom retry logic" is superseded for this worker — see the amendment below — but still
   holds for any *other* future `CoroutineWorker`, until that worker also needs a terminal/transient split.
-- Phases 3-7 are sequenced behind this ADR; Phase 3 is explicitly gated on OQ-2/OQ-5/OQ-6 landing from the
-  backend team.
+- `numberOfShots` is a confirmed, permanent data-drop on submission (no server field) — not a bug to fix.
+- OQ-7's `associationId` omission is a **device-verification checkpoint**, not a closed decision: a `422`
+  naming `associationId` is the trigger to flip the mapper to send `GearUse.id`.
 
 ## Amendment to ADR 0009 — `runAttemptCount` cap and terminal classification (2026-11-13)
 
@@ -142,3 +155,31 @@ failure (network errors, `5xx`) — no custom backoff/delay logic is introduced.
 (`SubmissionFailed`) rather than retrying indefinitely. A terminal classification always wins immediately,
 regardless of `runAttemptCount`. See the approved plan's §6 error-classification table for the full mapping
 and `CatchRecordSyncWorker` (Phase 5) for the implementation.
+
+`MAX_ATTEMPTS = 8` is a judgment call (no backend/user-specified number exists): generous enough to absorb a
+flaky mobile connection across WorkManager's exponential backoff, bounded enough not to leave a draft
+silently retrying for days. It should be revisited once real-world sync telemetry exists.
+
+### 401 handling: one retry via the existing silent token refresh, not a new MSAL call
+
+The plan asks for "one `acquireTokenSilent` attempt" before giving up on a `401`. Rather than plumb
+`NativeAuthClient` into the worker and view model, both simply **retry the whole `submit()` call once**:
+`AuthInterceptor` already calls `tokenProvider.currentToken()` on every HTTP request, which performs a
+normal MSAL silent-flow lookup (auto-refreshing via the refresh token if the access token has expired). A
+retried call therefore gets a fresh silent-refresh attempt for free. If the retry still fails
+authentication, the draft becomes terminal `SubmissionFailed(NeedsSignIn)`. This avoids a second,
+worker/view-model-specific path into MSAL for the same effect.
+
+### Phase 4: double-submit prevention and legacy non-`GBR-` references
+
+The online (view-model) and background (worker) paths must never run the create→replace→submit sequence
+concurrently for the same draft. `RealCatchRecordSubmissionRepository` holds a per-draft
+`ConcurrentHashMap<String, Mutex>`, acquired for the whole sequence: an in-process concurrent call for the
+same `draft.id` suspends until the first finishes, then observes the already-advanced `submissionStep` and
+short-circuits the steps already done. This is process-local only (both callers run in the same app
+process), which is sufficient here — there is no multi-process writer to this repository.
+
+Legacy references created under `MIGRATION_9_10`'s `-2`/`-3` collision-suffix scheme do not match
+`^GBR-[A-Z0-9]+-\d{6}-\d{6}$` and were deliberately left untouched by the v11→v12 rewrite (R-4): the
+repository regenerates and writes back a fresh `GBR-…` reference for any draft whose reference fails this
+pattern check, **before** the first `POST /v1/catch-records` call of its sequence.
