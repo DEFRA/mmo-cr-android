@@ -42,10 +42,7 @@ object SubmissionFailedScreenTestTags {
     const val ERROR_MESSAGE = "submission_failed_error_message"
 }
 
-/**
- * ADR 0022: terminal online-submission failure — "Could not send", with "Try again" re-queuing the
- * draft for background sync. The record is never lost: it stays saved on-device either way.
- */
+/** ADR 0022: terminal online-submission failure — "Could not send"; "Try again" re-queues for sync. */
 @Suppress("FunctionNaming")
 @Composable
 fun SubmissionFailedScreen(
