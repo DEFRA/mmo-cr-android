@@ -10,6 +10,8 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordD
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordSubmissionRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MissingVesselRegistrationException
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.UnresolvedGearMeasurementException
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.ReferenceDataRefreshScheduler
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.ReferenceDataRepository
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
@@ -32,6 +34,7 @@ internal class RealCatchRecordSubmissionRepository
         private val draftRepository: CatchRecordDraftRepository,
         private val referenceDataRepository: ReferenceDataRepository,
         private val idFactory: () -> String,
+        private val referenceDataRefreshScheduler: ReferenceDataRefreshScheduler = ReferenceDataRefreshScheduler {},
         private val clock: () -> Long,
     ) : CatchRecordSubmissionRepository {
         private val locksByDraftId = ConcurrentHashMap<String, Mutex>()
@@ -43,8 +46,15 @@ internal class RealCatchRecordSubmissionRepository
                     current = ensureCreated(current)
                     current = ensureReplaced(current)
                     ensureSubmitted(current)
-                }
+                }.onFailure(::scheduleRefreshIfStaleGearData)
             }
+
+        /** A blank `apiMeasurementId` means the cached gears dataset is stale, not permanently wrong (ADR 0022). */
+        private fun scheduleRefreshIfStaleGearData(error: Throwable) {
+            if (error is UnresolvedGearMeasurementException) {
+                referenceDataRefreshScheduler.scheduleRefreshAfterSignIn()
+            }
+        }
 
         /** MIGRATION_9_10's `-2`/`-3`-suffixed legacy references never matched the server's regex. */
         private suspend fun ensureConformingReference(draft: CatchRecordDraft): CatchRecordDraft {

@@ -7,6 +7,8 @@ import org.junit.Test
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.DraftMappingException
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.remote.ReferenceDataHttpException
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MissingVesselRegistrationException
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SubmissionMappingException
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.UnresolvedGearMeasurementException
 import java.io.IOException
 
 /** [SafeErrorMapper] never surfaces a raw message and classifies every known failure kind (ADR 0011/0015). */
@@ -38,6 +40,22 @@ class SafeErrorMapperTests {
     @Test
     fun `a generic IOException classifies as Transient`() {
         assertEquals(CatchRecordErrorClassification.Transient, SafeErrorMapper.classify(IOException("boom")))
+    }
+
+    @Test
+    fun `a submission mapping failure classifies as Terminal`() {
+        assertEquals(
+            CatchRecordErrorClassification.Terminal,
+            SafeErrorMapper.classify(SubmissionMappingException("species-1 unresolvable")),
+        )
+    }
+
+    @Test
+    fun `an unresolved gear measurement classifies as Transient, not Terminal, and hides the field id`() {
+        val error = UnresolvedGearMeasurementException("measurement gear-1:mesh_size_mm has no apiMeasurementId")
+
+        assertEquals(CatchRecordErrorClassification.Transient, SafeErrorMapper.classify(error))
+        assertFalse(SafeErrorMapper.map(error).message.contains("mesh_size_mm"))
     }
 
     @Test

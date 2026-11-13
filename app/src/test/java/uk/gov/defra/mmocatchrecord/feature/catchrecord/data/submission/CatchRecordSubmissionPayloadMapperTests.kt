@@ -15,6 +15,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectio
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectionMode
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SubmissionMappingException
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.UnresolvedGearMeasurementException
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementField
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldKeys.MESH_SIZE_MM
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldType
@@ -178,6 +179,14 @@ class CatchRecordSubmissionPayloadMapperTests {
         assertThrows(SubmissionMappingException::class.java) {
             replace(fixtureDraft(gearUses = listOf(gearUseWithUnknownMeasurement)))
         }
+    }
+
+    @Test
+    fun `a measurement field with no apiMeasurementId throws the transient unresolved variant`() {
+        val staleField = gearTypes.single().measurementFields[0].copy(id = "")
+        val staleGearTypes = listOf(gearTypes.single().copy(measurementFields = listOf(staleField)))
+
+        assertThrows(UnresolvedGearMeasurementException::class.java) { replace(gearTypes = staleGearTypes) }
     }
 
     @Test

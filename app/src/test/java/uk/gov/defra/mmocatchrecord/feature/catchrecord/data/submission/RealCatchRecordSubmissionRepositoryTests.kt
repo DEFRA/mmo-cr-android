@@ -31,12 +31,17 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission.remote.Ve
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementValue
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelection
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectionMode
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SubmissionMappingException
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.UnresolvedGearMeasurementException
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementField
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.ReferenceDataRefreshScheduler
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Species
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.StatisticalSubRectangle
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Vessel
@@ -341,5 +346,62 @@ class RealCatchRecordSubmissionRepositoryTests {
 
             assertFalse(result.isSuccess)
             assertTrue(result.exceptionOrNull() is SubmissionMappingException)
+        }
+
+    @Test
+    fun `a blank apiMeasurementId is a transient mapping failure that schedules a reference-data refresh`() =
+        runTest {
+            val staleGearData =
+                FakeReferenceDataRepository(
+                    vessels = referenceDataRepository.getVessels().getOrThrow(),
+                    ports = referenceDataRepository.getPorts().getOrThrow(),
+                    gearTypes =
+                        listOf(
+                            GearType(
+                                id = "gear-1",
+                                name = "Seine net",
+                                code = "DRB",
+                                measurementFields =
+                                    listOf(
+                                        GearMeasurementField(
+                                            key = "mesh_size_mm",
+                                            label = "Mesh",
+                                            type = GearMeasurementFieldType.Decimal,
+                                        ),
+                                    ),
+                            ),
+                        ),
+                    species = referenceDataRepository.getSpecies().getOrThrow(),
+                    statisticalSubRectangles = referenceDataRepository.getStatisticalSubRectangles().getOrThrow(),
+                )
+            val draft =
+                fixtureDraft(status = "created", serverCatchRecordId = "cr-1", serverVersion = 1)
+                    .copy(
+                        gearUses =
+                            listOf(
+                                GearUse(
+                                    id = "gear-use-1",
+                                    gearTypeId = "gear-1",
+                                    statisticalSubRectangleCode = "38E95",
+                                    measurements = mapOf("mesh_size_mm" to MeasurementValue.Numeric(80.0, "mm")),
+                                    confirmedUsedOnTrip = true,
+                                ),
+                            ),
+                    )
+            seed(draft)
+            val scheduler = mock<ReferenceDataRefreshScheduler>()
+            val repository =
+                RealCatchRecordSubmissionRepository(
+                    remote,
+                    draftRepository,
+                    staleGearData,
+                    idFactory,
+                    scheduler,
+                ) { 0L }
+
+            val result = repository.submit(draftRepository.persistedDrafts.single())
+
+            assertTrue(result.exceptionOrNull() is UnresolvedGearMeasurementException)
+            verify(scheduler).scheduleRefreshAfterSignIn()
         }
 }

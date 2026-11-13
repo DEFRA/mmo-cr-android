@@ -271,11 +271,13 @@ object CatchRecordMigrations {
             }
         }
 
-    /** v12 -> v13 (ADR 0022 OQ-3): a nullable `apiMeasurementId` cache column; existing rows backfill on sync. */
+    /** v12 -> v13 (ADR 0022 OQ-3): new `apiMeasurementId` column, backfilled by a forced gears re-fetch. */
     val MIGRATION_12_13 =
         object : Migration(12, 13) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE reference_data_gear_measurement ADD COLUMN apiMeasurementId TEXT")
+                // Drop cached gears metadata so the next sync is an unconditional GET, not a 304 — see ADR 0022.
+                db.execSQL("DELETE FROM reference_data_metadata WHERE datasetKey LIKE 'gears:%'")
             }
         }
 

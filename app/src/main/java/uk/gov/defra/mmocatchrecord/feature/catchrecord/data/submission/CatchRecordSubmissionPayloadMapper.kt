@@ -18,18 +18,15 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementValue
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SubmissionMappingException
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.UnresolvedGearMeasurementException
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Species
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.SpeciesWeightPrecision
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.StatisticalSubRectangle
 
-/**
- * Translates a [CatchRecordDraft] + its already-resolved reference data into the wire payloads the
- * catch-recording service expects (ADR 0022). Pure/synchronous: Phase 4's repository fetches current
- * reference data first. Every unresolvable lookup throws a terminal [SubmissionMappingException] —
- * regulatory data is never silently dropped or guessed. OQ-7: see [SEND_ASSOCIATION_ID].
- */
+/** Maps a [CatchRecordDraft] + its resolved reference data to the wire payloads (ADR 0022); unresolvable
+ * lookups throw a terminal [SubmissionMappingException] — see [SEND_ASSOCIATION_ID] for OQ-7. */
 internal object CatchRecordSubmissionPayloadMapper {
     private const val SEND_ASSOCIATION_ID = false
 
@@ -150,7 +147,7 @@ internal object CatchRecordSubmissionPayloadMapper {
             gearType.measurementFields.firstOrNull { it.key == key }
                 ?: throw SubmissionMappingException("Unresolvable gear measurement key '$key' for '${gearType.id}'")
         if (field.id.isBlank()) {
-            throw SubmissionMappingException("Gear measurement '$key' has no reference-data characteristic id")
+            throw UnresolvedGearMeasurementException("Gear measurement '$key' has no reference-data characteristic id")
         }
         val jsonValue =
             when (value) {

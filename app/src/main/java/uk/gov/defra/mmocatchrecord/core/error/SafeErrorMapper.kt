@@ -6,6 +6,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission.remote.Ca
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission.remote.CatchRecordUnauthorizedException
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MissingVesselRegistrationException
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SubmissionMappingException
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.UnresolvedGearMeasurementException
 import java.io.IOException
 
 /** How a [Throwable] was classified by [SafeErrorMapper] — drives both the safe message and retryability. */
@@ -53,6 +54,8 @@ object SafeErrorMapper {
         when (throwable) {
             // Data corruption / an unexpected persisted value — retrying the same operation will not help.
             is DraftMappingException -> CatchRecordErrorClassification.Terminal
+            // Stale cached gear data (e.g. a just-migrated apiMeasurementId) — a refresh can resolve it.
+            is UnresolvedGearMeasurementException -> CatchRecordErrorClassification.Transient
             // A regulatory field could not be resolved against cached reference data — never retryable.
             is SubmissionMappingException -> CatchRecordErrorClassification.Terminal
             is CatchRecordUnauthorizedException -> CatchRecordErrorClassification.NeedsAuthentication

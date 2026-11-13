@@ -287,6 +287,7 @@ class CatchRecordMigrationsJvmTests {
                     "CREATE TABLE reference_data_gear_measurement (rowId INTEGER PRIMARY KEY AUTOINCREMENT, " +
                         "gearId TEXT NOT NULL)",
                     "INSERT INTO reference_data_gear_measurement (gearId) VALUES ('gear-1')",
+                    "CREATE TABLE reference_data_metadata (datasetKey TEXT NOT NULL PRIMARY KEY)",
                 ),
             )
 
@@ -295,6 +296,31 @@ class CatchRecordMigrationsJvmTests {
         db.query("SELECT apiMeasurementId FROM reference_data_gear_measurement WHERE gearId = 'gear-1'").use {
             assertTrue(it.moveToFirst())
             assertTrue(it.isNull(it.getColumnIndexOrThrow("apiMeasurementId")))
+        }
+        db.close()
+    }
+
+    /** ADR 0022: an existing install's stale gears metadata must be dropped, forcing an unconditional refetch. */
+    @Test
+    fun `MIGRATION_12_13 invalidates cached gears metadata but leaves other datasets alone`() {
+        val db =
+            createDb(
+                12,
+                listOf(
+                    "CREATE TABLE reference_data_gear_measurement (rowId INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                        "gearId TEXT NOT NULL)",
+                    "CREATE TABLE reference_data_metadata (datasetKey TEXT NOT NULL PRIMARY KEY)",
+                    "INSERT INTO reference_data_metadata (datasetKey) VALUES ('gears:under-10m')",
+                    "INSERT INTO reference_data_metadata (datasetKey) VALUES ('gears:all')",
+                    "INSERT INTO reference_data_metadata (datasetKey) VALUES ('vessels')",
+                ),
+            )
+
+        CatchRecordMigrations.MIGRATION_12_13.migrate(db)
+
+        db.query("SELECT datasetKey FROM reference_data_metadata").use { cursor ->
+            val remaining = buildList { while (cursor.moveToNext()) add(cursor.getString(0)) }
+            assertEquals(listOf("vessels"), remaining)
         }
         db.close()
     }

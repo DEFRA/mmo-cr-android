@@ -61,7 +61,7 @@ class CatchRecordMigrationTest {
     }
 
     @Test
-    fun migrate1To12fullChainPreservesARowAcrossEveryIntermediateSchemaChange() {
+    fun migrate1To13fullChainPreservesARowAcrossEveryIntermediateSchemaChange() {
         val db = helper.createDatabase(databaseName, 1)
         db.seedV1DraftWithChildren("draft-v1", "vessel-legacy", 9_000L)
 
@@ -162,6 +162,68 @@ class CatchRecordMigrationTest {
         assertReferenceRewrittenTo(migrated, "draft-validated", "GBR-B14974-270726-150815")
         migrated.close()
     }
+
+    /** ADR 0022: a stale cached `gears:*` metadata row must be dropped so the next sync is unconditional. */
+    @Test
+    fun migrate12To13invalidatesCachedGearsMetadataButLeavesOtherDatasetsAlone() {
+        val db = helper.createDatabase(databaseName, VERSION_12)
+        db.seedV12GearWithMeasurement("gear-1", "under-10m")
+        db.seedV12Metadata("gears:under-10m")
+        db.seedV12Metadata("gears:all")
+        db.seedV12Metadata("vessels")
+
+        CatchRecordMigrations.MIGRATION_12_13.migrate(db)
+
+        db.query("SELECT datasetKey FROM reference_data_metadata ORDER BY datasetKey").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("vessels", cursor.getString(0))
+            assertTrue("only the non-gears metadata row must survive", !cursor.moveToNext())
+        }
+        db
+            .query("SELECT apiMeasurementId FROM reference_data_gear_measurement WHERE gearId = 'gear-1'")
+            .use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertTrue(cursor.isNull(0))
+            }
+        db.close()
+    }
+
+    @Test
+    fun migrate12To13producesASchemaRoomItselfValidates() {
+        helper.createDatabase(databaseName, VERSION_12).apply {
+            seedV12GearWithMeasurement("gear-1", "under-10m")
+            close()
+        }
+
+        val migrated =
+            helper.runMigrationsAndValidate(databaseName, VERSION_13, true, CatchRecordMigrations.MIGRATION_12_13)
+
+        migrated.close()
+    }
+
+    private fun SupportSQLiteDatabase.seedV12GearWithMeasurement(
+        gearId: String,
+        band: String,
+    ) {
+        execSQL(
+            "INSERT INTO reference_data_gear (id, vesselLengthBand, code, name, categoryId, categoryCode, " +
+                "categoryName, pairFishing, orderIndex) VALUES (?, ?, 'TBB', 'Beam trawl', 'c1', 'TRAWL_NETS', " +
+                "'Trawl nets', 0, 0)",
+            arrayOf(gearId, band),
+        )
+        execSQL(
+            "INSERT INTO reference_data_gear_measurement (gearId, vesselLengthBand, key, label, type, orderIndex) " +
+                "VALUES (?, ?, 'mesh_size_mm', 'Mesh size', 'Decimal', 0)",
+            arrayOf(gearId, band),
+        )
+    }
+
+    private fun SupportSQLiteDatabase.seedV12Metadata(datasetKey: String) =
+        execSQL(
+            "INSERT INTO reference_data_metadata (datasetKey, collectionId, schemaVersion, fetchedAtEpochMillis) " +
+                "VALUES (?, 'col-1', '1.0', 1000)",
+            arrayOf(datasetKey),
+        )
 
     private fun assertReferenceRewrittenTo(
         db: SupportSQLiteDatabase,
@@ -385,6 +447,7 @@ class CatchRecordMigrationTest {
         const val VERSION_10 = 10
         const val VERSION_11 = 11
         const val VERSION_12 = 12
+        const val VERSION_13 = 13
         const val PARTIAL_UNIQUE_INDEX_SQL =
             "CREATE UNIQUE INDEX IF NOT EXISTS index_catch_record_draft_active_vessel " +
                 "ON catch_record_draft (vesselId) WHERE status IN ('Draft', 'ReadyToSubmit')"

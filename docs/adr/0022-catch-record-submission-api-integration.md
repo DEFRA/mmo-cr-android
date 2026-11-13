@@ -138,6 +138,23 @@ verification (Phase 7) must be re-run afterwards.
 - OQ-7's `associationId` omission is a **device-verification checkpoint**, not a closed decision: a `422`
   naming `associationId` is the trigger to flip the mapper to send `GearUse.id`.
 
+## Amendment — `apiMeasurementId` cache staleness classified Transient, not Terminal (2026-11-20)
+
+`MIGRATION_12_13` added a nullable `apiMeasurementId` column to `reference_data_gear_measurement` but, on
+its own, left existing installs' cached gears dataset untouched: `ReferenceDataRefresher` skips re-fetching
+a dataset whose manifest version/etag already matches the stored metadata, so the column would otherwise
+stay `null` until the backend happens to bump the gears dataset — making every submission with a gear
+measurement fail as "Could not send" forever, on every pre-existing install. The migration now also deletes
+the `gears:*` rows from `reference_data_metadata`, forcing an unconditional re-fetch on the very next sync.
+Separately, the mapper's blank-`apiMeasurementId` failure is reclassified from `SubmissionMappingException`
+(Terminal) to a new `UnresolvedGearMeasurementException` subtype (Transient): this specific cause is a
+cache-freshness problem, not a genuine data mismatch, so retrying after a reference-data refresh can
+resolve it without user action. `RealCatchRecordSubmissionRepository` schedules that refresh itself
+(reusing `ReferenceDataRefreshScheduler.scheduleRefreshAfterSignIn()`) whenever this exception is caught,
+so the next retry attempt has a real chance of succeeding. The other `SubmissionMappingException` causes
+(missing port/gear/species/rectangle, unknown measurement key) remain Terminal — they reflect reference
+data genuinely absent from the schema, which a refresh cannot fix.
+
 ## Amendment to ADR 0009 — `runAttemptCount` cap and terminal classification (2026-11-13)
 
 ADR 0009 states: *"No custom retry/backoff logic is written. Any `Result.retry()` relies entirely on
