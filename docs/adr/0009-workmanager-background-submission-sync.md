@@ -94,3 +94,15 @@ while still enqueuing after a terminal state (correct — retry works). This is 
 retry use case and the reconciliation sweep free idempotence with no `getWorkInfosForUniqueWork` guard
 needed in either caller. See ADR 0014's Phase C section for the sweep and `syncedAt` stamping this enabled.
 
+## Amendment — ADR 0022 (2026-11-13): `runAttemptCount` cap and terminal classification required
+
+"No custom retry/backoff logic is written" (above) is **superseded**, not reversed, now that
+`StubCatchRecordSubmissionRepository` is being replaced with a real backend integration (ADR 0022): a real
+terminal 4xx (e.g. `403`/`422`) would otherwise retry forever under WorkManager's own backoff, which was
+never a risk against a stub that always succeeded. WorkManager's built-in exponential backoff policy is
+still used unchanged for every transient failure — no custom delay/backoff math is added. What ADR 0022
+adds is (a) a terminal/transient classification of the submission failure, and (b) a cap on
+`CoroutineWorker.runAttemptCount` so a failure that is classified transient but never resolves still
+becomes terminal (`DraftStatus.SubmissionFailed`) after `MAX_ATTEMPTS`, rather than retrying indefinitely.
+See ADR 0022 for the full classification table and rationale.
+
