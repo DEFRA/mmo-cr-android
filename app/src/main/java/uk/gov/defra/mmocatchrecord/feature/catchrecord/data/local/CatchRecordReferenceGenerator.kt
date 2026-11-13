@@ -18,6 +18,9 @@ object CatchRecordReferenceGenerator {
     private val NON_ALPHANUMERIC = Regex("[^A-Za-z0-9]")
     private val REFERENCE_PATTERN = Regex("^GBR-([A-Z0-9]+)-(\\d{6}-\\d{6})$")
 
+    /** Whether [reference] already matches the current `GBR-{PLN}-ddMMyy-HHmmss` server format. */
+    fun matches(reference: String): Boolean = REFERENCE_PATTERN.matches(reference)
+
     /** Upper-case alphanumerics only, or `null` when nothing usable remains. */
     fun normaliseRssNumber(raw: String?): String? =
         raw

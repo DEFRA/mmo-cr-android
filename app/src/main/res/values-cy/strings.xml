@@ -39,6 +39,7 @@
     <string name="status_draft">Drafft</string>
     <string name="status_ready_to_submit">Wedi\'i diwygio</string>
     <string name="status_awaiting_sync">Heb ei anfon</string>
+    <string name="status_could_not_send">Methu anfon</string>
     <string name="help_with_catch_recording">Cymorth gyda chofnodi dalfeydd</string>
     <string name="catch_record_statuses">Statysau cofnodion dalfa</string>
     <string name="status_draft_title">Drafft:</string>
@@ -49,6 +50,8 @@
     <string name="status_awaiting_sync_desc">Ceisiwyd cyflwyno ond heb ei anfon.</string>
     <string name="status_submitted_title">Wedi cyflwyno:</string>
     <string name="status_submitted_desc">Cyflwynwyd yn llwyddiannus.</string>
+    <string name="status_could_not_send_title">Methu anfon:</string>
+    <string name="status_could_not_send_desc">Methodd y cyflwyniad. Rhowch gynnig arall arni o\'r cofnod.</string>
     <string name="status_check_tab">Gwiriwch y tab Sut i gofnodi dalfa i wneud yn siŵr eich bod yn cofnodi eich dalfeydd ar yr amser cywir.</string>
     <string name="offline_banner_label">All-lein</string>
     <string name="offline_banner_message">Gallwch barhau i gofnodi eich dalfa. Bydd eich cofnod yn cael ei gadw a\'i anfon pan fyddwch ar-lein eto.</string>

@@ -18,11 +18,29 @@ enum class DraftStatus {
     PendingSync,
     Submitted,
     Discarded,
+
+    /** Terminal submission failure — "Could not send" with "Try again" re-queuing to [PendingSync] (ADR 0022). */
+    SubmissionFailed,
     ;
 
     /** Whether this status counts as the vessel's single "active" (in-progress) draft. */
     val isActive: Boolean
         get() = this == Draft || this == ReadyToSubmit
+}
+
+/** Why a [DraftStatus.SubmissionFailed] draft stopped retrying — drives the "Could not send" copy (ADR 0022). */
+enum class SubmissionFailureReason {
+    /** A regulatory field could not be resolved, or the server rejected the payload as invalid. */
+    InvalidData,
+
+    /** Too many retry attempts (`runAttemptCount` cap) without success. */
+    RetryLimitExceeded,
+
+    /** A 401 persisted even after one silent token refresh — the user must sign in again. */
+    NeedsSignIn,
+
+    /** Any other non-retryable server/client error. */
+    Other,
 }
 
 /** How the user selected a port: typed/searched for the first time, or picked from their favourites. */

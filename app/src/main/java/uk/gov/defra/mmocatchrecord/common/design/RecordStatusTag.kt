@@ -14,4 +14,5 @@ enum class RecordStatusTag(
     ReadyToSubmit(R.string.status_ready_to_submit),
     AwaitingSync(R.string.status_awaiting_sync),
     Submitted(R.string.status_submitted),
+    CouldNotSend(R.string.status_could_not_send),
 }

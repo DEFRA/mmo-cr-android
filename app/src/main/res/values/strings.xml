@@ -33,6 +33,7 @@
     <string name="status_draft">Draft</string>
     <string name="status_ready_to_submit">Amended</string>
     <string name="status_awaiting_sync">Unsent</string>
+    <string name="status_could_not_send">Could not send</string>
     <string name="help_with_catch_recording">Help with catch recording</string>
     <string name="catch_record_statuses">Catch record statuses</string>
     <string name="status_draft_title">Draft:</string>
@@ -43,6 +44,8 @@
     <string name="status_awaiting_sync_desc">Submission attempted but not sent.</string>
     <string name="status_submitted_title">Submitted:</string>
     <string name="status_submitted_desc">Successfully submitted.</string>
+    <string name="status_could_not_send_title">Could not send:</string>
+    <string name="status_could_not_send_desc">Submission failed. Try again from the record.</string>
     <string name="status_check_tab">Check the How to record a catch tab to make sure you are recording your catches at the correct time.</string>
     <string name="offline_banner_label">Offline</string>
     <string name="offline_banner_message">You can still record your catch. Your record will be saved and sent when you\'re back online.</string>

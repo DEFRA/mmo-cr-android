@@ -11,4 +11,5 @@ fun DraftStatus.toRecordStatusTag(): RecordStatusTag? =
         DraftStatus.PendingSync -> RecordStatusTag.AwaitingSync
         DraftStatus.Submitted -> RecordStatusTag.Submitted
         DraftStatus.Discarded -> null
+        DraftStatus.SubmissionFailed -> RecordStatusTag.CouldNotSend
     }

@@ -4,6 +4,8 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import uk.gov.defra.mmocatchrecord.BuildConfig
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission.RealCatchRecordSubmissionRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission.StubCatchRecordSubmissionRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordSubmissionRepository
 import javax.inject.Singleton
@@ -14,6 +16,8 @@ import javax.inject.Singleton
 object SubmissionModule {
     @Provides
     @Singleton
-    fun provideCatchRecordSubmissionRepository(): CatchRecordSubmissionRepository =
-        StubCatchRecordSubmissionRepository()
+    internal fun provideCatchRecordSubmissionRepository(
+        real: RealCatchRecordSubmissionRepository,
+    ): CatchRecordSubmissionRepository =
+        submissionRepositoryFor(BuildConfig.USE_STUB_AUTH, real, StubCatchRecordSubmissionRepository())
 }

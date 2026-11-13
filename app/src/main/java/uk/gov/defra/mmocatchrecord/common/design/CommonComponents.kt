@@ -255,6 +255,7 @@ fun StatusTag(
             RecordStatusTag.ReadyToSubmit -> Color(0xFFE1EDF7) to MmoColors.GovBlueHover
             RecordStatusTag.AwaitingSync -> Color(0xFFFFF5CC) to Color(0xFF6F5200)
             RecordStatusTag.Submitted -> Color(0xFFDFEFE5) to Color(0xFF005A30)
+            RecordStatusTag.CouldNotSend -> Color(0xFFF6D7D2) to MmoColors.ErrorRed
         }
 
     Surface(

@@ -2,7 +2,10 @@ package uk.gov.defra.mmocatchrecord.core.error
 
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.DraftMappingException
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.remote.ReferenceDataApiException
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission.remote.CatchRecordApiException
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission.remote.CatchRecordUnauthorizedException
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MissingVesselRegistrationException
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SubmissionMappingException
 import java.io.IOException
 
 /** How a [Throwable] was classified by [SafeErrorMapper] — drives both the safe message and retryability. */
@@ -12,6 +15,9 @@ enum class CatchRecordErrorClassification {
 
     /** A terminal failure (data corruption, programming error, unexpected state) — retrying will not help. */
     Terminal,
+
+    /** A 401: one silent token refresh is attempted before this is surfaced (ADR 0022, Phase 5). */
+    NeedsAuthentication,
 }
 
 /** The result of mapping a [Throwable] to something safe to show the user — see [SafeErrorMapper]. */
@@ -38,6 +44,8 @@ object SafeErrorMapper {
         return when (classify(throwable)) {
             CatchRecordErrorClassification.Transient -> SafeUserFacingError(TRANSIENT_MESSAGE, isRetryable = true)
             CatchRecordErrorClassification.Terminal -> SafeUserFacingError(TERMINAL_MESSAGE, isRetryable = false)
+            CatchRecordErrorClassification.NeedsAuthentication ->
+                SafeUserFacingError(TERMINAL_MESSAGE, isRetryable = false)
         }
     }
 
@@ -45,7 +53,16 @@ object SafeErrorMapper {
         when (throwable) {
             // Data corruption / an unexpected persisted value — retrying the same operation will not help.
             is DraftMappingException -> CatchRecordErrorClassification.Terminal
-            // The reference-data API already tells us whether a failure is retryable (ADR 0016); honour it.
+            // A regulatory field could not be resolved against cached reference data — never retryable.
+            is SubmissionMappingException -> CatchRecordErrorClassification.Terminal
+            is CatchRecordUnauthorizedException -> CatchRecordErrorClassification.NeedsAuthentication
+            // The catch-recording/reference-data APIs already tell us whether a failure is retryable.
+            is CatchRecordApiException ->
+                if (throwable.retryable) {
+                    CatchRecordErrorClassification.Transient
+                } else {
+                    CatchRecordErrorClassification.Terminal
+                }
             is ReferenceDataApiException ->
                 if (throwable.retryable) {
                     CatchRecordErrorClassification.Transient
