@@ -65,4 +65,24 @@ class SafeErrorMapperTests {
         )
         assertFalse(mapped.isRetryable)
     }
+
+    @Test
+    fun `mapSubmitLocalSave maps a missing vessel registration to the specific non-retryable message`() {
+        val mapped = SafeErrorMapper.mapSubmitLocalSave(MissingVesselRegistrationException())
+
+        assertEquals(
+            "You cannot start a catch record for this vessel because its registration details are missing. " +
+                "Contact the MMO.",
+            mapped.message,
+        )
+        assertFalse(mapped.isRetryable)
+    }
+
+    @Test
+    fun `mapSubmitLocalSave maps a terminal failure to the shared, non-retryable terminal message`() {
+        val mapped = SafeErrorMapper.mapSubmitLocalSave(DraftMappingException("corrupt draft"))
+
+        assertEquals("Something went wrong and we could not complete that action.", mapped.message)
+        assertFalse(mapped.isRetryable)
+    }
 }

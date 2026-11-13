@@ -10,7 +10,14 @@ class FakeCatchRecordSubmissionRepository(
     var submittedDrafts: List<CatchRecordDraft> = emptyList()
         private set
 
+    /** Throws [throwOnNextSubmit] from the next [submit] call instead of returning, then clears itself. */
+    var throwOnNextSubmit: Throwable? = null
+
     override suspend fun submit(draft: CatchRecordDraft): Result<Unit> {
+        throwOnNextSubmit?.let {
+            throwOnNextSubmit = null
+            throw it
+        }
         submittedDrafts = submittedDrafts + draft
         return if (shouldSucceed) {
             Result.success(Unit)
