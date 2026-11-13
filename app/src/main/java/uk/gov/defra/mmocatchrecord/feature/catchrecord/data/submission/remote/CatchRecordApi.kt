@@ -9,12 +9,7 @@ import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
 
-/**
- * Catch-record submission endpoints on the catch-recording service root (ADR 0022). Mirrors
- * [uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.remote.ReferenceDataApi]: every
- * method returns [Response] so error bodies and headers (`ETag`, `If-Match`) are inspectable by the
- * caller. The two `GET`s exist only for drafted/submitted-record recovery (OQ-1) — not general listing.
- */
+/** Catch-record submission endpoints (ADR 0022); the two `GET`s exist only for recovery (OQ-1). */
 internal interface CatchRecordApi {
     @POST("v1/catch-records")
     suspend fun createDraft(

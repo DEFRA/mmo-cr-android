@@ -6,11 +6,7 @@ internal sealed class CatchRecordApiException(
     open val retryable: Boolean,
 ) : Exception(message)
 
-/**
- * A non-2xx response. Unlike the reference-data service, the catch-recording service's
- * [ErrorResponseDto] has no `retryable` field of its own, so it is derived from the HTTP status
- * (`>= 500` transient, else terminal) — see ADR 0022; Phase 5 refines this with the full §6 table.
- */
+/** A non-2xx response; `retryable` is a Phase 2 status-based placeholder — see ADR 0022. */
 internal class CatchRecordHttpException(
     val operation: String,
     val httpStatusCode: Int,

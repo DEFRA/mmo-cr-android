@@ -40,11 +40,8 @@ import androidx.room.RoomDatabase
  *
  * v10 -> v11 (ADR 0018): drops the v6 partial unique index so a vessel may hold many independent drafts.
  *
- * v11 -> v12 (ADR 0022): [DraftEntity] gained six nullable resumable-submission columns
- * (`serverCatchRecordId`/`serverVersion`/`createIdempotencyKey`/`submitIdempotencyKey`/`submissionStep`/
- * `submissionFailureReason`), and every legacy `catchRecordReference` is deterministically rewritten from
- * `{PREFIX}-DDMMYYYY-HHMMSS` to the server-compatible `GBR-{PREFIX}-DDMMYY-HHMMSS` format — see
- * [CatchRecordMigrations.MIGRATION_11_12].
+ * v11 -> v12 (ADR 0022): six nullable resumable-submission columns on [DraftEntity], plus a legacy
+ * `catchRecordReference` rewrite to the server format — see [CatchRecordMigrations.MIGRATION_11_12].
  *
  * Every version bump above has a real [androidx.room.migration.Migration] registered in
  * [CatchRecordMigrations] (see `di/DatabaseModule.kt`) — a draft in progress must survive every schema

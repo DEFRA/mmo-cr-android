@@ -3,9 +3,7 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission.remote
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 
-// Write-side (request) DTOs. These are minimal `{id}` references — the service resolves snapshots
-// server-side — matching the backend's example PUT body, not the full read-side Canonical Catch
-// Record shape below. Exact field completeness is pending Phase 3 (OQ-2/5/6, ADR 0022).
+// Write-side DTOs: minimal `{id}` refs per the backend example; see ADR 0022 (pending OQ-2/5/6).
 
 @Serializable
 internal data class CreateDraftCatchRecordPayloadDto(

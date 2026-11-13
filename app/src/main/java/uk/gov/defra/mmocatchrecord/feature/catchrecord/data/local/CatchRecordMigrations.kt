@@ -242,15 +242,7 @@ object CatchRecordMigrations {
             }
         }
 
-    /**
-     * v11 -> v12 (ADR 0022): six new nullable resumable-submission columns on [DraftEntity], plus a
-     * deterministic, one-time rewrite of every legacy `{PREFIX}-DDMMYYYY-HHMMSS` reference to the new
-     * `GBR-{PREFIX}-DDMMYY-HHMMSS` format the server's generator/validation pattern requires — a pure
-     * substring transform dropping the century digits. Safe only now: nothing has ever left the device
-     * (every submission has only ever gone through the stub repository), so no reference has ever been
-     * shown to MMO. A row whose `catchRecordReference` does not match the legacy pattern (`null`, or
-     * already rewritten) is left untouched — see ADR 0022 risk R-4.
-     */
+    /** v11 -> v12 (ADR 0022): resumable-submission columns on [DraftEntity], plus a legacy reference rewrite. */
     val MIGRATION_11_12 =
         object : Migration(11, 12) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -263,20 +255,9 @@ object CatchRecordMigrations {
                 rewriteLegacyReferences(db)
             }
 
-            /**
-             * `{PREFIX}-DDMMYYYY-HHMMSS` (e.g. `B14974-27072026-150815`, 8-digit date) -> `GBR-{PREFIX}-
-             * DDMMYY-HHMMSS` (e.g. `GBR-B14974-270726-150815`, century digits dropped). Matched with SQLite
-             * `GLOB` (case-sensitive, unlike `LIKE`) against the legacy shape, then rewritten with `substr`
-             * — no row-by-row Kotlin loop needed, unlike v9 -> v10's dedupe (there is no collision risk
-             * here: prefixing every legacy reference with the same literal `GBR-` cannot introduce a new
-             * duplicate that didn't already exist as a legacy duplicate, and v9 -> v10 already guarantees
-             * uniqueness).
-             */
+            /** `{PREFIX}-DDMMYYYY-HHMMSS` -> `GBR-{PREFIX}-DDMMYY-HHMMSS`; rationale/safety in ADR 0022. */
             private fun rewriteLegacyReferences(db: SupportSQLiteDatabase) {
-                // L = length(catchRecordReference). The last 16 characters are always `-DDMMYYYY-HHMMSS`:
-                // prefix is everything before that (positions 1..L-16); DD/MM/the last 2 digits of YYYY/
-                // HHMMSS are each extracted by position from the end, dropping the century digits (YYYY's
-                // first 2 digits), and re-joined behind the new `GBR-` prefix and a 6-digit date.
+                // substr positions count back from the end of the fixed 16-char `-DDMMYYYY-HHMMSS` suffix.
                 db.execSQL(
                     "UPDATE catch_record_draft SET catchRecordReference = " +
                         "'GBR-' || substr(catchRecordReference, 1, length(catchRecordReference) - 16) || '-' || " +

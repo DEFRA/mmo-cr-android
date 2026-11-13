@@ -7,11 +7,8 @@ import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 
 /**
- * Generates the Trip ID (`GBR-{PLN}-ddMMyy-HHmmss`, e.g. `GBR-B14974-200926-112233`) once, when a catch
- * record is started; it then stays with the draft through submission and sync for traceability. The
- * `GBR-` prefix and 6-digit date match the catch-recording service's own generator/validation pattern
- * (`^GBR-[A-Z0-9]+-\d{6}-\d{6}$`) — see ADR 0022. No RSS number is available to mobile (only a PLN), so the
- * normalised PLN is sent in its place (ADR 0022 OQ-4).
+ * Generates the Trip ID (`GBR-{PLN}-ddMMyy-HHmmss`) once, when a catch record is started; it then stays
+ * with the draft through submission and sync for traceability. See ADR 0022 (format, OQ-4).
  */
 object CatchRecordReferenceGenerator {
     // UK local time (GMT/BST) regardless of the device's own time zone.

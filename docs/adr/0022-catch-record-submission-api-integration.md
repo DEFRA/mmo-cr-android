@@ -45,6 +45,13 @@ repository has only ever been the stub), so no reference has ever been shown to 
 *is* already shown to the fisher (GDS confirmation-page guidance requires a stable reference once shown).
 Rows that do not match the legacy pattern are left untouched. This is recorded as risk R-4.
 
+The rewrite is pure SQL (no row-by-row Kotlin loop, unlike v9→v10's dedupe): legacy references are
+matched with SQLite `GLOB` (case-sensitive, unlike `LIKE`) against the fixed 16-character
+`-DDMMYYYY-HHMMSS` suffix, then rewritten with `substr` by position from the end of the string,
+dropping the century digits. There is no collision risk — prefixing every legacy reference with the
+same literal `GBR-` cannot introduce a duplicate that did not already exist as a legacy duplicate,
+and v9→v10 already guarantees uniqueness.
+
 **OQ-4 (accepted):** the app persists no RSS number for a vessel, only a PLN (`Vessel.pln`). The reference
 is sent as `GBR-{normalised PLN}-…`, which passes the server's regex; raised with the backend/reference-data
 team as a follow-up (no RSS is available to mobile today).
@@ -71,6 +78,14 @@ Docker stack). `Idempotency-Key`, `If-Match`, and `ETag` are added to `HttpLoggi
 redaction list (ADR 0011 + `security.instructions.md`): none of these three carry PII, but an idempotency
 key or version precondition is still a value that should never appear in a shared log, consistent with the
 existing `Authorization` redaction.
+
+### Error shape and a Phase 2 status-based `retryable` default
+
+Unlike the reference-data service's nested `{"error": {...}}` envelope with its own `retryable` field, the
+catch-recording service's `ErrorResponse` is flat (`statusCode`, `code`, `message`, `correlationId?`,
+`details?`) and carries no `retryable` field of its own. `CatchRecordHttpException` derives it from the
+HTTP status alone (`>= 500` transient, else terminal) as a Phase 2 placeholder; Phase 5 replaces this with
+the full §6 classification table (409 vs 412, etc.).
 
 ## Open backend questions (blocking Phase 3 unless noted)
 

@@ -11,10 +11,7 @@ import javax.inject.Inject
 private const val HTTP_UNAUTHORIZED = 401
 private const val HTTP_SERVER_ERROR_THRESHOLD = 500
 
-/**
- * Thin wrapper over [CatchRecordApi] turning its raw [Response]s into typed DTOs or a classified
- * [CatchRecordApiException] (ADR 0022) — not yet wired into any repository (Phase 4).
- */
+/** Turns [CatchRecordApi]'s raw [Response]s into typed DTOs/exceptions; not wired in yet (Phase 4). */
 internal class CatchRecordRemoteDataSource
     @Inject
     constructor(
