@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <!-- MSAL web-fallback redirect target (ADR 0019 Phase 2.1c). Debug-signature-specific hash, so
+             this lives in the debug source set only; release needs the Play App Signing hash (R4, DevOps). -->
+        <activity
+            android:name="com.microsoft.identity.client.BrowserTabActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="msauth"
+                    android:host="${applicationId}"
+                    android:path="/sqG1xGPA4C0X17hWfm7QrMw+TVc=" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

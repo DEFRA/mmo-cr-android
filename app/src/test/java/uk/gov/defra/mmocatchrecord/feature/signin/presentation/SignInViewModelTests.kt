@@ -4,6 +4,8 @@ import app.cash.turbine.test
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -15,12 +17,15 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import timber.log.Timber
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.signin.data.FakeSignInRepository
 import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInException
 import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInFailure
 import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInSession
+import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInStage
+import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInStageObserver
 import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInUseCase
 
 /** Needs no Robolectric: the view model emits unresolved resource ids, never resolved strings. */
@@ -177,6 +182,56 @@ class SignInViewModelTests {
         }
 
     @Test
+    fun `an Unknown failure logs its mapped-safe message, so a sign-in attempt is diagnosable`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val diagnostic = "native-auth required the browser leg again after the browser leg"
+            val repository =
+                FakeSignInRepository(
+                    forcedResult = Result.failure(SignInException(SignInFailure.Unknown(diagnostic))),
+                )
+
+            val warnings = captureWarnLogsDuring { signInAndAwaitError(repository, dispatcher) }
+
+            assertTrue(warnings.any { it == "Sign-in failed: Unknown($diagnostic)" })
+        }
+
+    @Test
+    fun `a Network failure logs only its class name, with no payload parentheses`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository =
+                FakeSignInRepository(forcedResult = Result.failure(SignInException(SignInFailure.Network)))
+
+            val warnings = captureWarnLogsDuring { signInAndAwaitError(repository, dispatcher) }
+
+            assertTrue(warnings.any { it == "Sign-in failed: Network" })
+        }
+
+    /** Plants a [Timber.Tree] capturing WARN-level messages for the duration of [block], then removes it. */
+    private suspend fun captureWarnLogsDuring(block: suspend () -> Unit): List<String> {
+        val warnings = mutableListOf<String>()
+        val tree =
+            object : Timber.Tree() {
+                override fun log(
+                    priority: Int,
+                    tag: String?,
+                    message: String,
+                    t: Throwable?,
+                ) {
+                    if (priority == android.util.Log.WARN) warnings += message
+                }
+            }
+        Timber.plant(tree)
+        try {
+            block()
+        } finally {
+            Timber.uproot(tree)
+        }
+        return warnings
+    }
+
+    @Test
     fun `a raw exception from a misbehaving repository never reaches the view state`() =
         runTest {
             val dispatcher = StandardTestDispatcher(testScheduler)
@@ -215,11 +270,88 @@ class SignInViewModelTests {
         }
 
     @Test
+    fun `a VerificationNotSupported failure maps to its own non-retryable message`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository =
+                FakeSignInRepository(
+                    forcedResult = Result.failure(SignInException(SignInFailure.VerificationNotSupported)),
+                )
+
+            val errored = signInAndAwaitError(repository, dispatcher)
+
+            assertEquals(R.string.signin_error_verification_not_supported, errored.error?.messageRes)
+            assertFalse(errored.error?.isRetryable ?: true)
+        }
+
+    @Test
     fun `the default dispatcher parameter constructs a usable view model with its initial state`() {
         val viewModel = SignInViewModel(SignInUseCase(FakeSignInRepository()))
 
         assertEquals("", viewModel.state.value.username)
         assertEquals("", viewModel.state.value.password)
         assertNull(viewModel.state.value.error)
+    }
+
+    @Test
+    fun `a Cancelled failure returns to idle with no error and no stuck spinner`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository =
+                FakeSignInRepository(forcedResult = Result.failure(SignInException(SignInFailure.Cancelled)))
+
+            val afterCancel = signInAndAwaitError(repository, dispatcher)
+
+            assertEquals(UiStatus.Idle, afterCancel.status)
+            assertNull(afterCancel.error)
+        }
+
+    @Test
+    fun `the stage observer's RedirectingToBrowser is reflected in isRedirectingToBrowser`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val stage = MutableStateFlow(SignInStage.Idle)
+            val observer =
+                object : SignInStageObserver {
+                    override val stage: StateFlow<SignInStage> = stage
+                }
+            val viewModel =
+                SignInViewModel(
+                    SignInUseCase(FakeSignInRepository()),
+                    defaultDispatcher = dispatcher,
+                    signInStageObserver = observer,
+                )
+
+            viewModel.state.test {
+                assertFalse(awaitItem().isRedirectingToBrowser)
+                stage.value = SignInStage.RedirectingToBrowser
+                assertTrue(awaitItem().isRedirectingToBrowser)
+                stage.value = SignInStage.Idle
+                assertFalse(awaitItem().isRedirectingToBrowser)
+            }
+        }
+
+    @Test
+    fun `BrowserNoticeShown forwards to the stage observer's acknowledgement`() {
+        val dispatcher = StandardTestDispatcher()
+        var acknowledged = false
+        val observer =
+            object : SignInStageObserver {
+                override val stage: StateFlow<SignInStage> = MutableStateFlow(SignInStage.Idle)
+
+                override fun acknowledgeBrowserNoticeShown() {
+                    acknowledged = true
+                }
+            }
+        val viewModel =
+            SignInViewModel(
+                SignInUseCase(FakeSignInRepository()),
+                defaultDispatcher = dispatcher,
+                signInStageObserver = observer,
+            )
+
+        viewModel.dispatch(SignInEvent.BrowserNoticeShown)
+
+        assertTrue(acknowledged)
     }
 }

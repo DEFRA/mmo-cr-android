@@ -1,0 +1,57 @@
+package uk.gov.defra.mmocatchrecord.feature.signin.data
+
+/**
+ * Narrow internal port over MSAL native authentication (ADR 0019 Phase 2.1b) — the only abstraction
+ * [MsalSignInRepository] depends on, so it stays JVM-unit-testable with a hand-written fake.
+ */
+internal interface NativeAuthClient {
+    suspend fun signIn(
+        username: String,
+        password: CharArray,
+        scopes: List<String>,
+    ): NativeAuthOutcome
+
+    /** The browser web-fallback leg (ADR 0019 Phase 2.1c); gets its Activity from a [CurrentActivityProvider]. */
+    suspend fun signInInteractively(scopes: List<String>): NativeAuthOutcome
+
+    suspend fun currentAccountUserId(): String?
+
+    suspend fun accessToken(
+        scopes: List<String>,
+        forceRefresh: Boolean,
+    ): String?
+
+    /** Reports whether MSAL's cached account was actually cleared (review fix 2.2) — never silently swallowed. */
+    suspend fun signOut(): Boolean
+
+    /** Warms the MSAL client off the caller's thread; a no-op default for fakes (review fix 1.3). */
+    suspend fun warmUp() {
+        // Intentionally empty: only the real MSAL-backed implementation needs to pre-warm anything.
+    }
+}
+
+/** Mapped outcome of a native-auth sign-in attempt. Never carries an SDK message or username. */
+internal sealed interface NativeAuthOutcome {
+    data class Succeeded(
+        val userId: String,
+    ) : NativeAuthOutcome
+
+    /** MSAL requires the interactive browser leg (ADR 0019 Phase 2.1c). */
+    data object BrowserRequired : NativeAuthOutcome
+
+    /** The user backed out of the browser leg — only returned by [NativeAuthClient.signInInteractively]. */
+    data object BrowserCancelled : NativeAuthOutcome
+
+    /** A one-time-passcode challenge was issued; this build renders no OTP UI. */
+    data object CodeRequired : NativeAuthOutcome
+
+    /** Fuses "no such account" and "wrong password" — the account-enumeration guard (ADR 0019). */
+    data object InvalidCredentialsOrUnknownAccount : NativeAuthOutcome
+
+    data object NetworkUnavailable : NativeAuthOutcome
+
+    /** [safeDiagnostic] is a mapped constant — never an SDK exception/error message. */
+    data class Failed(
+        val safeDiagnostic: String,
+    ) : NativeAuthOutcome
+}

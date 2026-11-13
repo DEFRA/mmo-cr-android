@@ -78,6 +78,8 @@
     <string name="signin_error_invalid_credentials">Your email address or password is incorrect. Check them and try again.</string>
     <string name="signin_error_network">We could not reach the sign-in service. Check your connection and try again.</string>
     <string name="signin_error_generic">Something went wrong. Try signing in again.</string>
+    <string name="signin_error_verification_not_supported">This account needs a verification step the app does not support yet. Contact support for help signing in.</string>
+    <string name="signin_redirecting_to_browser">Taking you to a secure sign-in page</string>
     <string name="signin_language_switch_to_welsh">Switch to Welsh</string>
     <string name="signin_language_switch_to_english">Switch to English</string>
     <string name="create_an_account">Create an account</string>

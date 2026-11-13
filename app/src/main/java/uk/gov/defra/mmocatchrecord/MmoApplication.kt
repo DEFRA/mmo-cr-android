@@ -5,10 +5,12 @@ import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
+import uk.gov.defra.mmocatchrecord.core.android.CurrentActivityProviderImpl
 import uk.gov.defra.mmocatchrecord.core.connectivity.ConnectivityObserver
 import uk.gov.defra.mmocatchrecord.core.logging.ReleaseTree
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.sync.WorkManagerReferenceDataSyncScheduler
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.sync.CatchRecordSyncSweep
+import uk.gov.defra.mmocatchrecord.feature.signin.data.NativeAuthClientWarmer
 import javax.inject.Inject
 
 /**
@@ -36,14 +38,24 @@ class MmoApplication :
     @Inject
     lateinit var connectivityObserver: ConnectivityObserver
 
+    // Registered in onCreate, before any Activity can resume, so MSAL's browser leg always has an Activity.
+    @Inject
+    lateinit var currentActivityProviderImpl: CurrentActivityProviderImpl
+
+    @Inject
+    lateinit var nativeAuthClientWarmer: NativeAuthClientWarmer
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
 
     override fun onCreate() {
         super.onCreate()
+        registerActivityLifecycleCallbacks(currentActivityProviderImpl)
         // Structured, redacted logging (ADR 0011): unrestricted Timber.DebugTree for local development,
         // a redacted, WARN+-only ReleaseTree in release builds — see ReleaseTree's doc comment.
         Timber.plant(if (BuildConfig.DEBUG) Timber.DebugTree() else ReleaseTree())
+        // Off-thread MSAL client warm-up (review fix 1.3) — never blocks or crashes startup.
+        nativeAuthClientWarmer.warmUp()
         // Manifest/ETag-driven reference-data cache refresh (ADR 0016): one now, one every ~12h after.
         referenceDataSyncScheduler.scheduleStartupRefresh()
         referenceDataSyncScheduler.schedulePeriodicRefresh()

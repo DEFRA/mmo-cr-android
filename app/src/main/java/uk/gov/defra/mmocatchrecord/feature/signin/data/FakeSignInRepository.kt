@@ -4,6 +4,7 @@ import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInException
 import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInFailure
 import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInRepository
 import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInSession
+import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignOutRepository
 
 /**
  * Stage-1 [SignInRepository] fake, replaced by the MSAL-backed implementation in ADR 0019 Phase 2. With no
@@ -12,7 +13,11 @@ import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInSession
 class FakeSignInRepository(
     var accounts: Map<String, String> = emptyMap(),
     var forcedResult: Result<SignInSession>? = null,
-) : SignInRepository {
+) : SignInRepository,
+    SignOutRepository {
+    /** Nothing to clear — there is no MSAL account behind this fake. */
+    override suspend fun signOut() = true
+
     override suspend fun signIn(
         username: String,
         password: String,

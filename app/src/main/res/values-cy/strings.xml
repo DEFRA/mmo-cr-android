@@ -84,6 +84,10 @@
     <string name="signin_error_invalid_credentials">Mae eich cyfeiriad e-bost neu gyfrinair yn anghywir. Gwiriwch nhw a rhowch gynnig arall arni.</string>
     <string name="signin_error_network">Nid oeddem yn gallu cysylltu â\'r gwasanaeth mewngofnodi. Gwiriwch eich cysylltiad a rhowch gynnig arall arni.</string>
     <string name="signin_error_generic">Aeth rhywbeth o\'i le. Rhowch gynnig arall ar fewngofnodi.</string>
+    <!-- Not professionally translated; follows the machine-assisted convention already used nearby. -->
+    <string name="signin_error_verification_not_supported">Mae angen cam gwirio ar y cyfrif hwn nad yw\'r ap yn ei gefnogi eto. Cysylltwch â chymorth i gael help i fewngofnodi.</string>
+    <!-- Not professionally translated; follows the machine-assisted convention already used nearby. -->
+    <string name="signin_redirecting_to_browser">Mynd â chi i dudalen fewngofnodi ddiogel</string>
     <string name="signin_language_switch_to_welsh">Newid i\'r Gymraeg</string>
     <string name="signin_language_switch_to_english">Newid i\'r Saesneg</string>
     <string name="create_an_account">Creu cyfrif</string>

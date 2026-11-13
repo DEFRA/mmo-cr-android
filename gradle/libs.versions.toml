@@ -35,6 +35,9 @@ timber = "5.0.1"
 datastore = "1.2.1"
 okhttp = "5.5.0"
 retrofit = "3.0.0"
+# Pinned exactly (no dynamic range, unlike Microsoft's docs): >= 8.5.0 pulls in httpcore5 5.4.3,
+# the transitive fix for Apache HttpCore CVE-2026-54399 — not an MSAL CVE itself.
+msal = "8.6.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -89,6 +92,7 @@ okhttp-mockwebserver3-junit4 = { group = "com.squareup.okhttp3", name = "mockweb
 retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
 retrofit-converter-kotlinx-serialization = { group = "com.squareup.retrofit2", name = "converter-kotlinx-serialization", version.ref = "retrofit" }
 map-data-core = { module = "uk.gov.defra.mmocatchrecord.mapdata:map-data-core" }
+msal = { group = "com.microsoft.identity.client", name = "msal", version.ref = "msal" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

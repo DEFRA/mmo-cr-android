@@ -108,6 +108,8 @@ android {
             )
             // DEV's auth stub accepts any non-empty bearer token (ADR 0016) — see TokenProvider.
             buildConfigField("boolean", "USE_STUB_AUTH", "true")
+            // No committed Entra credentials (ADR 0019) — local keeps the Stage-1 sign-in fake.
+            buildConfigField("boolean", "USE_FAKE_SIGN_IN", "true")
         }
         create("dev") {
             dimension = "environment"
@@ -119,7 +121,9 @@ android {
                         ?: "https://mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud/reference-data-service/"
                 }\"",
             )
-            buildConfigField("boolean", "USE_STUB_AUTH", "true")
+            buildConfigField("boolean", "USE_STUB_AUTH", "false")
+            // Real Entra native authentication against the DEV tenant (ADR 0019).
+            buildConfigField("boolean", "USE_FAKE_SIGN_IN", "false")
         }
         create("prod") {
             dimension = "environment"
@@ -127,6 +131,7 @@ android {
             // pointing production at DEV. Never overridable via local.properties.
             buildConfigField("String", "REFERENCE_DATA_SERVICE_URL", "\"\"")
             buildConfigField("boolean", "USE_STUB_AUTH", "false")
+            buildConfigField("boolean", "USE_FAKE_SIGN_IN", "false")
         }
     }
 
@@ -239,6 +244,12 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.kotlinx.serialization)
 
+    // MSAL native authentication (ADR 0019). display-mask (Surface Duo, via common:25.0.0) is
+    // excluded as unused and non-mirrored off Microsoft's Azure Artifacts feed — see ADR 0019.
+    implementation(libs.msal) {
+        exclude(group = "com.microsoft.device.display", module = "display-mask")
+    }
+
     testImplementation(libs.junit)
     testImplementation(libs.mockito.core)
     testImplementation(libs.mockito.kotlin)
@@ -260,6 +271,7 @@ dependencies {
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     // Needed for the CatchRecordMigrationTest instrumented migration test (CRAR-152 Phase C).

@@ -17,6 +17,8 @@ import uk.gov.defra.mmocatchrecord.core.security.BiometricReentryPolicy
 import uk.gov.defra.mmocatchrecord.core.security.FakeBiometricRepository
 import uk.gov.defra.mmocatchrecord.core.security.InMemoryBiometricPreferenceStore
 import uk.gov.defra.mmocatchrecord.core.security.InMemorySessionStore
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.ReferenceDataRefreshScheduler
+import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignOutRepository
 
 /**
  * [SessionCoordinator] tests using fakes (no Android framework dependencies needed) + coroutines-test,
@@ -37,11 +39,14 @@ class SessionCoordinatorTests {
         Dispatchers.resetMain()
     }
 
+    @Suppress("LongParameterList")
     private fun buildCoordinator(
         sessionStore: InMemorySessionStore = InMemorySessionStore(),
         biometricPreferenceStore: InMemoryBiometricPreferenceStore = InMemoryBiometricPreferenceStore(),
         reentryPolicy: BiometricReentryPolicy = BiometricReentryPolicy(reentryTimeoutMillis = 60_000L),
         biometricRepository: FakeBiometricRepository = FakeBiometricRepository(),
+        signOutRepository: FakeSignOutRepository = FakeSignOutRepository(),
+        referenceDataRefreshScheduler: FakeReferenceDataRefreshScheduler = FakeReferenceDataRefreshScheduler(),
         clock: () -> Long = { 0L },
         dispatcher: kotlinx.coroutines.CoroutineDispatcher = mainDispatcher,
     ) = SessionCoordinator(
@@ -49,6 +54,8 @@ class SessionCoordinatorTests {
         biometricPreferenceStore = biometricPreferenceStore,
         reentryPolicy = reentryPolicy,
         biometricRepository = biometricRepository,
+        signOutRepository = signOutRepository,
+        referenceDataRefreshScheduler = referenceDataRefreshScheduler,
         clock = clock,
         dispatcher = dispatcher,
     )
@@ -310,7 +317,15 @@ class SessionCoordinatorTests {
         runTest {
             val dispatcher = StandardTestDispatcher(testScheduler)
             val sessionStore = InMemorySessionStore()
-            val coordinator = buildCoordinator(sessionStore = sessionStore, dispatcher = dispatcher)
+            val signOutRepository = FakeSignOutRepository()
+            val scheduler = FakeReferenceDataRefreshScheduler()
+            val coordinator =
+                buildCoordinator(
+                    sessionStore = sessionStore,
+                    signOutRepository = signOutRepository,
+                    referenceDataRefreshScheduler = scheduler,
+                    dispatcher = dispatcher,
+                )
 
             coordinator.state.test {
                 assertEquals(RootPhase.SPLASH, awaitItem().phase)
@@ -325,5 +340,132 @@ class SessionCoordinatorTests {
 
             assertNull(sessionStore.getLastAuthenticatedAtMillis())
             assertNull(sessionStore.getLastVerifiedOnlineAtMillis())
+            assertEquals(1, signOutRepository.signOutCallCount)
+            // Only the SignedIn event scheduled a refresh; SignedOut must not schedule a second one.
+            assertEquals(1, scheduler.scheduleCallCount)
         }
+
+    @Test
+    fun `signing in schedules exactly one reference-data refresh`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val scheduler = FakeReferenceDataRefreshScheduler()
+            val coordinator =
+                buildCoordinator(referenceDataRefreshScheduler = scheduler, dispatcher = dispatcher)
+
+            coordinator.state.test {
+                assertEquals(RootPhase.SPLASH, awaitItem().phase)
+                assertEquals(RootPhase.SIGN_IN, awaitItem().phase)
+
+                coordinator.dispatch(RootEvent.SignedIn)
+                assertEquals(RootPhase.HOME, awaitItem().phase)
+            }
+
+            assertEquals(1, scheduler.scheduleCallCount)
+        }
+
+    @Test
+    fun `biometric re-entry does not schedule a reference-data refresh`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val sessionStore = InMemorySessionStore()
+            sessionStore.recordAuthenticatedNow(0L)
+            val biometricPreferenceStore = InMemoryBiometricPreferenceStore(initiallyEnabled = true)
+            val scheduler = FakeReferenceDataRefreshScheduler()
+            val coordinator =
+                buildCoordinator(
+                    sessionStore = sessionStore,
+                    biometricPreferenceStore = biometricPreferenceStore,
+                    reentryPolicy = BiometricReentryPolicy(reentryTimeoutMillis = 60_000L),
+                    referenceDataRefreshScheduler = scheduler,
+                    clock = { 120_000L },
+                    dispatcher = dispatcher,
+                )
+
+            coordinator.state.test {
+                assertEquals(RootPhase.SPLASH, awaitItem().phase)
+                assertEquals(RootPhase.APP_LOCK, awaitItem().phase)
+
+                coordinator.dispatch(RootEvent.BiometricUnlockRequested)
+                assertEquals(RootPhase.HOME, awaitItem().phase)
+            }
+
+            assertEquals(0, scheduler.scheduleCallCount)
+        }
+
+    @Test
+    fun `a scheduling failure on sign-in does not stop the phase transition`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val scheduler = FakeReferenceDataRefreshScheduler(throwOnSchedule = IllegalStateException("boom"))
+            val coordinator =
+                buildCoordinator(referenceDataRefreshScheduler = scheduler, dispatcher = dispatcher)
+
+            coordinator.state.test {
+                assertEquals(RootPhase.SPLASH, awaitItem().phase)
+                assertEquals(RootPhase.SIGN_IN, awaitItem().phase)
+
+                coordinator.dispatch(RootEvent.SignedIn)
+
+                // Sign-in still completes even though scheduling the refresh failed.
+                assertEquals(RootPhase.HOME, awaitItem().phase)
+            }
+
+            assertEquals(1, scheduler.scheduleCallCount)
+        }
+
+    @Test
+    fun `a failed native-auth sign-out still clears the app session and returns to SIGN_IN`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val sessionStore = InMemorySessionStore()
+            val signOutRepository = FakeSignOutRepository(signOutResult = false)
+            val coordinator =
+                buildCoordinator(
+                    sessionStore = sessionStore,
+                    signOutRepository = signOutRepository,
+                    dispatcher = dispatcher,
+                )
+
+            coordinator.state.test {
+                assertEquals(RootPhase.SPLASH, awaitItem().phase)
+                assertEquals(RootPhase.SIGN_IN, awaitItem().phase)
+
+                coordinator.dispatch(RootEvent.SignedIn)
+                assertEquals(RootPhase.HOME, awaitItem().phase)
+
+                coordinator.dispatch(RootEvent.SignedOut)
+                assertEquals(RootPhase.SIGN_IN, awaitItem().phase)
+            }
+
+            // User intent to sign out always wins locally, even though MSAL's own clear failed.
+            assertNull(sessionStore.getLastAuthenticatedAtMillis())
+            assertEquals(1, signOutRepository.signOutCallCount)
+        }
+}
+
+/** Tracks invocations so sign-out tests can assert MSAL's cached account is actually cleared. */
+private class FakeSignOutRepository(
+    private val signOutResult: Boolean = true,
+) : SignOutRepository {
+    var signOutCallCount: Int = 0
+        private set
+
+    override suspend fun signOut(): Boolean {
+        signOutCallCount++
+        return signOutResult
+    }
+}
+
+/** Tracks invocations, and can simulate a scheduling failure, without touching WorkManager. */
+private class FakeReferenceDataRefreshScheduler(
+    private val throwOnSchedule: Throwable? = null,
+) : ReferenceDataRefreshScheduler {
+    var scheduleCallCount: Int = 0
+        private set
+
+    override fun scheduleRefreshAfterSignIn() {
+        scheduleCallCount++
+        throwOnSchedule?.let { throw it }
+    }
 }
