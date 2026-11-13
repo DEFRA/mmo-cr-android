@@ -25,6 +25,10 @@ val localProperties =
     }
 val referenceDataServiceUrlOverride: String? = localProperties.getProperty("referenceData.serviceUrl")
 
+// Optional developer override of the catch-recording service root (ADR 0022), same gitignored
+// `local.properties` mechanism. Never applied to the `prod` flavor.
+val catchRecordingServiceUrlOverride: String? = localProperties.getProperty("catchRecording.serviceUrl")
+
 // Upload-key signing for the release build type (Play App Signing — ci-cd.instructions.md). CI supplies
 // UPLOAD_KEYSTORE_BASE64 + passwords as env vars; locally, set the local.properties `upload.*` keys instead.
 val uploadKeystoreBase64: String? = System.getenv("UPLOAD_KEYSTORE_BASE64")
@@ -106,6 +110,12 @@ android {
                 "REFERENCE_DATA_SERVICE_URL",
                 "\"${referenceDataServiceUrlOverride ?: "http://10.0.2.2:3002/"}\"",
             )
+            // Catch-recording service environment (ADR 0022) — service root, routes sit directly under it.
+            buildConfigField(
+                "String",
+                "CATCH_RECORDING_SERVICE_URL",
+                "\"${catchRecordingServiceUrlOverride ?: "http://10.0.2.2:3003/"}\"",
+            )
             // DEV's auth stub accepts any non-empty bearer token (ADR 0016) — see TokenProvider.
             buildConfigField("boolean", "USE_STUB_AUTH", "true")
             // No committed Entra credentials (ADR 0019) — local keeps the Stage-1 sign-in fake.
@@ -121,6 +131,14 @@ android {
                         ?: "https://mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud/reference-data-service/"
                 }\"",
             )
+            buildConfigField(
+                "String",
+                "CATCH_RECORDING_SERVICE_URL",
+                "\"${
+                    catchRecordingServiceUrlOverride
+                        ?: "https://mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud/catch-recording-service/"
+                }\"",
+            )
             buildConfigField("boolean", "USE_STUB_AUTH", "false")
             // Real Entra native authentication against the DEV tenant (ADR 0019).
             buildConfigField("boolean", "USE_FAKE_SIGN_IN", "false")
@@ -130,6 +148,7 @@ android {
             // Deliberately empty: core.network fails fast on first use rather than silently
             // pointing production at DEV. Never overridable via local.properties.
             buildConfigField("String", "REFERENCE_DATA_SERVICE_URL", "\"\"")
+            buildConfigField("String", "CATCH_RECORDING_SERVICE_URL", "\"\"")
             buildConfigField("boolean", "USE_STUB_AUTH", "false")
             buildConfigField("boolean", "USE_FAKE_SIGN_IN", "false")
         }

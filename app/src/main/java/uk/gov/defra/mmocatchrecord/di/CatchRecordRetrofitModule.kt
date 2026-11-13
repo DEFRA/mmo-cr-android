@@ -1,0 +1,55 @@
+package uk.gov.defra.mmocatchrecord.di
+
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
+import kotlinx.serialization.json.Json
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import retrofit2.Retrofit
+import retrofit2.converter.kotlinx.serialization.asConverterFactory
+import uk.gov.defra.mmocatchrecord.BuildConfig
+import uk.gov.defra.mmocatchrecord.core.network.CatchRecordingServiceConfig
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission.remote.CatchRecordApi
+import javax.inject.Singleton
+
+/**
+ * The catch-recording service's Retrofit instance (ADR 0022), built on the **shared** [OkHttpClient]
+ * from [NetworkModule] — no behaviour change yet; nothing injects [CatchRecordApi] until Phase 4.
+ */
+@Module
+@InstallIn(SingletonComponent::class)
+object CatchRecordRetrofitModule {
+    @Provides
+    @Singleton
+    @CatchRecordingServiceRoot
+    fun provideCatchRecordingServiceRootUrl(): String =
+        CatchRecordingServiceConfig.requireServiceRootUrl(BuildConfig.CATCH_RECORDING_SERVICE_URL)
+
+    @Provides
+    @Singleton
+    @CatchRecordJson
+    fun provideCatchRecordJson(): Json = Json { ignoreUnknownKeys = true }
+
+    @Provides
+    @Singleton
+    @CatchRecordingServiceRoot
+    fun provideCatchRecordingRetrofit(
+        okHttpClient: OkHttpClient,
+        @CatchRecordJson json: Json,
+        @CatchRecordingServiceRoot serviceRootUrl: String,
+    ): Retrofit =
+        Retrofit
+            .Builder()
+            .baseUrl(serviceRootUrl)
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+
+    @Provides
+    @Singleton
+    internal fun provideCatchRecordApi(
+        @CatchRecordingServiceRoot retrofit: Retrofit,
+    ): CatchRecordApi = retrofit.create(CatchRecordApi::class.java)
+}
