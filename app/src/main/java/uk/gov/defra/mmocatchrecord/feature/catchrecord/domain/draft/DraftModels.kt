@@ -190,4 +190,15 @@ data class CatchRecordDraft(
     val createdAtEpochMillis: Long? = null,
     val submittedAtEpochMillis: Long? = null,
     val syncedAtEpochMillis: Long? = null,
+    /**
+     * ADR 0022: resumable submission state against the real catch-recording service. `null` until the
+     * first `RealCatchRecordSubmissionRepository.submit` attempt persists it (Phase 4) — every stub/local
+     * draft keeps these `null` forever.
+     */
+    val serverCatchRecordId: String? = null,
+    val serverVersion: Int? = null,
+    val createIdempotencyKey: String? = null,
+    val submitIdempotencyKey: String? = null,
+    val submissionStep: String? = null,
+    val submissionFailureReason: String? = null,
 )

@@ -568,7 +568,7 @@ class RoomCatchRecordDraftRepositoryTests {
             val started = repository.startDraft("vessel-achilles").getOrThrow()
             assertNotNull(started.catchRecordReference)
             // 1_700_000_000_000L is 2023-11-14T22:13:20Z (GMT, so UK local time is identical).
-            assertEquals("B14974-14112023-221320", started.catchRecordReference)
+            assertEquals("GBR-B14974-141123-221320", started.catchRecordReference)
 
             // Round-trips unchanged through a save/reload.
             val reloaded = repository.getDraftById(started.id).getOrThrow()
@@ -580,7 +580,7 @@ class RoomCatchRecordDraftRepositoryTests {
         runTest {
             clockMillis = 1_700_000_000_000L
             val first = repository.startDraft("vessel-achilles").getOrThrow()
-            assertEquals("B14974-14112023-221320", first.catchRecordReference)
+            assertEquals("GBR-B14974-141123-221320", first.catchRecordReference)
 
             // Same clock tick as "first" (different vessel, different id) collides on reference.
             val second =
@@ -593,7 +593,7 @@ class RoomCatchRecordDraftRepositoryTests {
                         ),
                     ).getOrThrow()
 
-            assertEquals("B14974-14112023-221321", second.catchRecordReference)
+            assertEquals("GBR-B14974-141123-221321", second.catchRecordReference)
         }
 
     @Test

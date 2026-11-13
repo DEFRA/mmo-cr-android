@@ -233,6 +233,51 @@ class CatchRecordMigrationsJvmTests {
         db.close()
     }
 
+    @Test
+    fun `MIGRATION_11_12 adds the submission columns and rewrites only legacy-shaped references`() {
+        val db =
+            createDb(
+                11,
+                listOf(
+                    "CREATE TABLE catch_record_draft (id TEXT PRIMARY KEY NOT NULL, catchRecordReference TEXT)",
+                    "INSERT INTO catch_record_draft VALUES ('a', 'B14974-27072026-150815')",
+                    "INSERT INTO catch_record_draft VALUES ('b', 'GBR-B14974-270726-150815')",
+                    "INSERT INTO catch_record_draft VALUES ('c', NULL)",
+                    "INSERT INTO catch_record_draft VALUES ('d', 'B14974-1')",
+                ),
+            )
+
+        CatchRecordMigrations.MIGRATION_11_12.migrate(db)
+
+        val query =
+            db.query(
+                "SELECT id, catchRecordReference, serverCatchRecordId, serverVersion, createIdempotencyKey, " +
+                    "submitIdempotencyKey, submissionStep, submissionFailureReason FROM catch_record_draft ORDER BY id",
+            )
+        query.use { cursor ->
+            val references = mutableMapOf<String, String?>()
+            while (cursor.moveToNext()) {
+                val id = cursor.getString(cursor.getColumnIndexOrThrow("id"))
+                references[id] = cursor.getString(cursor.getColumnIndexOrThrow("catchRecordReference"))
+                for (column in listOf(
+                    "serverCatchRecordId",
+                    "serverVersion",
+                    "createIdempotencyKey",
+                    "submitIdempotencyKey",
+                    "submissionStep",
+                    "submissionFailureReason",
+                )) {
+                    assertTrue(cursor.isNull(cursor.getColumnIndexOrThrow(column)))
+                }
+            }
+            assertEquals("GBR-B14974-270726-150815", references["a"])
+            assertEquals("GBR-B14974-270726-150815", references["b"])
+            assertEquals(null, references["c"])
+            assertEquals("B14974-1", references["d"])
+        }
+        db.close()
+    }
+
     private fun activeVesselIndexNames(db: SupportSQLiteDatabase): List<String> =
         db
             .query(
@@ -306,7 +351,7 @@ class CatchRecordMigrationsJvmTests {
         val versions = CatchRecordMigrations.ALL.map { it.startVersion to it.endVersion }
 
         assertEquals(
-            listOf(1 to 2, 2 to 3, 3 to 4, 4 to 5, 5 to 6, 6 to 7, 7 to 8, 8 to 9, 9 to 10, 10 to 11),
+            listOf(1 to 2, 2 to 3, 3 to 4, 4 to 5, 5 to 6, 6 to 7, 7 to 8, 8 to 9, 9 to 10, 10 to 11, 11 to 12),
             versions,
         )
     }

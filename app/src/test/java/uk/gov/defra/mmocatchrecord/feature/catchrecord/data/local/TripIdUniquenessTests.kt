@@ -60,9 +60,9 @@ class TripIdUniquenessTests {
             val second = start("vessel-achilles")
             val third = start("vessel-hercules")
 
-            assertEquals("B14974-14112023-221320", first.catchRecordReference)
-            assertEquals("B14974-14112023-221321", second.catchRecordReference)
-            assertEquals("B14974-14112023-221322", third.catchRecordReference)
+            assertEquals("GBR-B14974-141123-221320", first.catchRecordReference)
+            assertEquals("GBR-B14974-141123-221321", second.catchRecordReference)
+            assertEquals("GBR-B14974-141123-221322", third.catchRecordReference)
             val reloaded = repository.getDraftById(second.id).getOrThrow()
             assertEquals(second.catchRecordReference, reloaded?.catchRecordReference)
         }
@@ -76,8 +76,8 @@ class TripIdUniquenessTests {
             clockMillis = Instant.parse("2026-10-25T01:30:00Z").toEpochMilli()
             val gmt = start("vessel-achilles")
 
-            assertEquals("B14974-25102026-013000", bst.catchRecordReference)
-            assertEquals("B14974-25102026-013001", gmt.catchRecordReference)
+            assertEquals("GBR-B14974-251026-013000", bst.catchRecordReference)
+            assertEquals("GBR-B14974-251026-013001", gmt.catchRecordReference)
         }
 
     /** ADR 0018: two same-vessel drafts created in the same second both persist, one second apart. */
@@ -87,8 +87,8 @@ class TripIdUniquenessTests {
             val first = start("vessel-achilles")
             val second = start("vessel-achilles")
 
-            assertEquals("B14974-14112023-221320", first.catchRecordReference)
-            assertEquals("B14974-14112023-221321", second.catchRecordReference)
+            assertEquals("GBR-B14974-141123-221320", first.catchRecordReference)
+            assertEquals("GBR-B14974-141123-221321", second.catchRecordReference)
             assertEquals(DraftStatus.Draft, repository.getDraftById(first.id).getOrThrow()?.status)
             assertEquals(DraftStatus.Draft, repository.getDraftById(second.id).getOrThrow()?.status)
         }

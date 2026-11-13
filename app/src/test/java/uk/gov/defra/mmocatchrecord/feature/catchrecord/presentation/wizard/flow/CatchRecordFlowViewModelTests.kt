@@ -526,8 +526,8 @@ class CatchRecordFlowViewModelTests {
             testScheduler.advanceUntilIdle()
 
             val persisted = repository.persistedDrafts.single()
-            assertEquals("PH101-20092026-112233", persisted.catchRecordReference)
-            assertEquals("PH101-20092026-112233", viewModel.state.value.catchRecordReference)
+            assertEquals("GBR-PH101-200926-112233", persisted.catchRecordReference)
+            assertEquals("GBR-PH101-200926-112233", viewModel.state.value.catchRecordReference)
         }
 
     @Test

@@ -61,7 +61,7 @@ class CatchRecordMigrationTest {
     }
 
     @Test
-    fun migrate1To11fullChainPreservesARowAcrossEveryIntermediateSchemaChange() {
+    fun migrate1To12fullChainPreservesARowAcrossEveryIntermediateSchemaChange() {
         val db = helper.createDatabase(databaseName, 1)
         db.seedV1DraftWithChildren("draft-v1", "vessel-legacy", 9_000L)
 
@@ -70,7 +70,9 @@ class CatchRecordMigrationTest {
         db
             .query(
                 "SELECT status, lateSubmissionWarningAcknowledged, catchRecordReference, createdAtEpochMillis, " +
-                    "submittedAtEpochMillis, syncedAtEpochMillis FROM catch_record_draft WHERE id = ?",
+                    "submittedAtEpochMillis, syncedAtEpochMillis, serverCatchRecordId, serverVersion, " +
+                    "createIdempotencyKey, submitIdempotencyKey, submissionStep, submissionFailureReason " +
+                    "FROM catch_record_draft WHERE id = ?",
                 arrayOf("draft-v1"),
             ).use { cursor ->
                 assertTrue(cursor.moveToFirst())
@@ -80,6 +82,12 @@ class CatchRecordMigrationTest {
                 assertEquals(9_000L, cursor.getLong(3))
                 assertTrue(cursor.isNull(4))
                 assertTrue(cursor.isNull(5))
+                assertTrue("new v12 submission columns must be null, never backfilled (ADR 0022)", cursor.isNull(6))
+                assertTrue(cursor.isNull(7))
+                assertTrue(cursor.isNull(8))
+                assertTrue(cursor.isNull(9))
+                assertTrue(cursor.isNull(10))
+                assertTrue(cursor.isNull(11))
             }
         db
             .query(
@@ -110,6 +118,58 @@ class CatchRecordMigrationTest {
                 "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'reference_data_metadata'",
             ).use { cursor -> assertTrue(cursor.moveToFirst()) }
         db.close()
+    }
+
+    /** ADR 0022: the legacy `{PREFIX}-DDMMYYYY-HHMMSS` reference is rewritten to `GBR-{PREFIX}-DDMMYY-HHMMSS`. */
+    @Test
+    fun migrate11To12rewritesLegacyReferencesAndAddsTheSubmissionColumns() {
+        val db = helper.createDatabase(databaseName, VERSION_11)
+        db.seedV11Draft("draft-legacy", "vessel-1", "B14974-27072026-150815")
+        db.seedV11Draft("draft-no-reference", "vessel-2", null)
+        db.seedV11Draft("draft-already-new", "vessel-3", "GBR-B14974-270726-150815")
+        db.seedV11Draft("draft-non-matching", "vessel-4", "B14974-1")
+
+        CatchRecordMigrations.MIGRATION_11_12.migrate(db)
+
+        assertReferenceRewrittenTo(db, "draft-legacy", "GBR-B14974-270726-150815")
+        assertReferenceRewrittenTo(db, "draft-already-new", "GBR-B14974-270726-150815")
+        assertReferenceRewrittenTo(db, "draft-non-matching", "B14974-1")
+        db.query("SELECT catchRecordReference FROM catch_record_draft WHERE id = 'draft-no-reference'").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertTrue(cursor.isNull(0))
+        }
+        db
+            .query(
+                "SELECT serverCatchRecordId, serverVersion, createIdempotencyKey, submitIdempotencyKey, " +
+                    "submissionStep, submissionFailureReason FROM catch_record_draft WHERE id = 'draft-legacy'",
+            ).use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                for (column in 0..5) assertTrue(cursor.isNull(column))
+            }
+        db.close()
+    }
+
+    @Test
+    fun migrate11To12producesASchemaRoomItselfValidates() {
+        helper.createDatabase(databaseName, VERSION_11).apply {
+            seedV11Draft("draft-validated", "vessel-1", "B14974-27072026-150815")
+            close()
+        }
+
+        val migrated =
+            helper.runMigrationsAndValidate(databaseName, VERSION_12, true, CatchRecordMigrations.MIGRATION_11_12)
+
+        assertReferenceRewrittenTo(migrated, "draft-validated", "GBR-B14974-270726-150815")
+        migrated.close()
+    }
+
+    private fun assertReferenceRewrittenTo(
+        db: SupportSQLiteDatabase,
+        id: String,
+        expected: String,
+    ) = db.query("SELECT catchRecordReference FROM catch_record_draft WHERE id = ?", arrayOf(id)).use { cursor ->
+        assertTrue(cursor.moveToFirst())
+        assertEquals(expected, cursor.getString(0))
     }
 
     @Test
@@ -195,6 +255,16 @@ class CatchRecordMigrationTest {
         "INSERT INTO catch_record_draft (id, vesselId, status, modifiedAtEpochMillis, createdAtEpochMillis, " +
             "lateSubmissionWarningAcknowledged) VALUES (?, ?, ?, 1000, 1000, 0)",
         arrayOf<Any>(id, vesselId, status),
+    )
+
+    private fun SupportSQLiteDatabase.seedV11Draft(
+        id: String,
+        vesselId: String,
+        catchRecordReference: String?,
+    ) = execSQL(
+        "INSERT INTO catch_record_draft (id, vesselId, status, modifiedAtEpochMillis, createdAtEpochMillis, " +
+            "lateSubmissionWarningAcknowledged, catchRecordReference) VALUES (?, ?, 'Draft', 1000, 1000, 0, ?)",
+        arrayOf<Any?>(id, vesselId, catchRecordReference),
     )
 
     private data class Seed(
@@ -314,6 +384,7 @@ class CatchRecordMigrationTest {
         const val VERSION_6 = 6
         const val VERSION_10 = 10
         const val VERSION_11 = 11
+        const val VERSION_12 = 12
         const val PARTIAL_UNIQUE_INDEX_SQL =
             "CREATE UNIQUE INDEX IF NOT EXISTS index_catch_record_draft_active_vessel " +
                 "ON catch_record_draft (vesselId) WHERE status IN ('Draft', 'ReadyToSubmit')"
