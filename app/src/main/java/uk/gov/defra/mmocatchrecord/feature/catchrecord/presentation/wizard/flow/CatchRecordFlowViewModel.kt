@@ -708,11 +708,12 @@ class CatchRecordFlowViewModel
             emitError(RetryAction.DispatchEvent(event), throwable, errorMapper)
         }
 
-        /** As [emitLoadError], but for a submission stage (see [RetryAction]) rather than a whole event. */
+        /** As [emitLoadError], but for a submission stage (see [RetryAction]) rather than a whole event.
+         *  [errorMapper] is required: every caller already has a specific mapper to pass (see [SafeErrorMapper]). */
         private fun emitSubmissionStageError(
             retryAction: RetryAction,
             throwable: Throwable,
-            errorMapper: (Throwable) -> SafeUserFacingError = SafeErrorMapper::map,
+            errorMapper: (Throwable) -> SafeUserFacingError,
         ) {
             emitError(retryAction, throwable, errorMapper)
         }

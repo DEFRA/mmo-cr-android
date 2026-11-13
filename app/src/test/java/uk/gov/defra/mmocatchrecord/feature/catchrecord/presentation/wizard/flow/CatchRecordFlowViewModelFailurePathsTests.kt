@@ -3,6 +3,7 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow
 
 import app.cash.turbine.test
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -669,5 +670,105 @@ class CatchRecordFlowViewModelFailurePathsTests {
                 while (state.status !is UiStatus.Content<*>) state = awaitItem()
                 assertEquals("draft-1", (state.status as UiStatus.Content<CatchRecordDraft>).value.id)
             }
+        }
+
+    // --- duplicate Retry while a submission stage is already in flight ----------------------------
+
+    /**
+     * Regression guard: a stale Retry for a *previous* draft's failed submission must not resume once a
+     * *different* draft's own Accept-and-submit is already in flight — otherwise the stale retry would
+     * silently resubmit the earlier draft (see [retrySubmissionStage]'s `isSubmitting` guard). This is the
+     * only way to observe that guard: the ordinary "tap Retry twice" case never reaches it, since
+     * `retryLastFailedEvent` clears `lastFailedAction` before the first retry even schedules its coroutine.
+     */
+    @Test
+    fun `a stale retry for an earlier draft is ignored while a different draft is submitting`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            var draftCounter = 0
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-${++draftCounter}" })
+            val draftA = repository.startDraft("vessel-achilles").getOrThrow()
+            repository.saveDraft(draftA.asSubmissionReady()).getOrThrow()
+            val draftB = repository.startDraft("vessel-hercules").getOrThrow()
+            repository.saveDraft(draftB.asSubmissionReady()).getOrThrow()
+            val syncScheduler = FakeCatchRecordSyncScheduler()
+            val viewModel =
+                buildViewModel(
+                    repository = repository,
+                    connectivityChecker = FakeNetworkConnectivityChecker(connected = false),
+                    syncScheduler = syncScheduler,
+                    dispatcher = dispatcher,
+                )
+
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft(draftA.id))
+            testScheduler.advanceUntilIdle()
+            viewModel.dispatch(CatchRecordFlowEvent.ResumeDraft)
+            testScheduler.advanceUntilIdle()
+            repository.failNextOperation = true
+            viewModel.dispatch(CatchRecordFlowEvent.AcceptDeclarationAndSubmit)
+            testScheduler.advanceUntilIdle()
+            assertTrue((viewModel.state.value.status as UiStatus.Error).isRetryable)
+
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft(draftB.id))
+            testScheduler.advanceUntilIdle()
+            viewModel.dispatch(CatchRecordFlowEvent.ResumeDraft)
+            testScheduler.advanceUntilIdle()
+
+            viewModel.dispatch(CatchRecordFlowEvent.AcceptDeclarationAndSubmit)
+            viewModel.dispatch(CatchRecordFlowEvent.Retry)
+            testScheduler.advanceUntilIdle()
+
+            assertEquals(WizardStep.SubmissionPendingSync, viewModel.state.value.currentStep)
+            assertEquals(listOf(draftB.id), syncScheduler.scheduledDraftIds)
+        }
+
+    // --- a cancellation during a submission stage is rethrown, never mapped to an error -----------
+
+    /** [CatchRecordFlowViewModel.runSubmissionStage] must rethrow a [CancellationException] rather than
+     *  mapping it to a user-facing error — mapping it would surface a confusing message for ordinary
+     *  structured-concurrency cancellation (e.g. the screen leaving composition). */
+    @Test
+    fun `a cancellation thrown mid-submission is rethrown and never surfaced as an error`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            val started = repository.startDraft("vessel-achilles").getOrThrow()
+            repository.saveDraft(started.asSubmissionReady()).getOrThrow()
+            val connectivityChecker = FakeNetworkConnectivityChecker(connected = true)
+            val viewModel =
+                buildViewModel(
+                    repository = repository,
+                    connectivityChecker = connectivityChecker,
+                    dispatcher = dispatcher,
+                )
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
+            testScheduler.advanceUntilIdle()
+            viewModel.dispatch(CatchRecordFlowEvent.ResumeDraft)
+            testScheduler.advanceUntilIdle()
+            connectivityChecker.throwOnNextIsConnected = CancellationException("Simulated cancellation")
+
+            viewModel.dispatch(CatchRecordFlowEvent.AcceptDeclarationAndSubmit)
+            testScheduler.advanceUntilIdle()
+
+            val state = viewModel.state.value
+            assertTrue(state.status is UiStatus.Loading)
+            assertTrue(state.isSubmitting)
+        }
+
+    // --- retryLastFailedEvent is a no-op when nothing has previously failed ------------------------
+
+    /** [CatchRecordFlowViewModel.retryLastFailedEvent]'s `?: return` guard: Retry before any failure
+     *  (e.g. a stray dispatch) must not throw or change state. */
+    @Test
+    fun `retry with no prior failure at all is a no-op`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository()
+            val viewModel = buildViewModel(repository = repository, dispatcher = dispatcher)
+
+            viewModel.dispatch(CatchRecordFlowEvent.Retry)
+            testScheduler.advanceUntilIdle()
+
+            assertEquals(UiStatus.Idle, viewModel.state.value.status)
         }
 }

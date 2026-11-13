@@ -4,6 +4,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
@@ -234,6 +236,40 @@ class CheckYourAnswersScreenTests {
         setContent(isOffline = false)
 
         composeTestRule.onNodeWithTag(CheckYourAnswersScreenTestTags.OFFLINE_NOTICE).assertDoesNotExist()
+    }
+
+    @Test
+    fun submitActionIsDisabledWhileSubmitting() {
+        composeTestRule.setContent {
+            MmoTheme {
+                CheckYourAnswersScreenContent(
+                    draft = draft(),
+                    vessels = listOf(vessel),
+                    ports = listOf(departurePort, returnPort),
+                    gearTypes = listOf(seineNet),
+                    species = listOf(cod),
+                    onChangeRow = {},
+                    onSubmit = {},
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    isSubmitting = true,
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithTag(CheckYourAnswersScreenTestTags.SUBMIT_ACTION)
+            .performScrollTo()
+            .assertIsNotEnabled()
+    }
+
+    @Test
+    fun submitActionIsEnabledWhenNotSubmitting() {
+        setContent()
+
+        composeTestRule
+            .onNodeWithTag(CheckYourAnswersScreenTestTags.SUBMIT_ACTION)
+            .performScrollTo()
+            .assertIsEnabled()
     }
 
     @Test
