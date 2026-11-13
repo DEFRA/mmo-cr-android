@@ -126,13 +126,13 @@ class CatchRecordMigrationTest {
         val db = helper.createDatabase(databaseName, VERSION_11)
         db.seedV11Draft("draft-legacy", "vessel-1", "B14974-27072026-150815")
         db.seedV11Draft("draft-no-reference", "vessel-2", null)
-        db.seedV11Draft("draft-already-new", "vessel-3", "GBR-B14974-270726-150815")
+        db.seedV11Draft("draft-already-new", "vessel-3", "GBR-C99999-010126-090000")
         db.seedV11Draft("draft-non-matching", "vessel-4", "B14974-1")
 
         CatchRecordMigrations.MIGRATION_11_12.migrate(db)
 
         assertReferenceRewrittenTo(db, "draft-legacy", "GBR-B14974-270726-150815")
-        assertReferenceRewrittenTo(db, "draft-already-new", "GBR-B14974-270726-150815")
+        assertReferenceRewrittenTo(db, "draft-already-new", "GBR-C99999-010126-090000")
         assertReferenceRewrittenTo(db, "draft-non-matching", "B14974-1")
         db.query("SELECT catchRecordReference FROM catch_record_draft WHERE id = 'draft-no-reference'").use { cursor ->
             assertTrue(cursor.moveToFirst())
