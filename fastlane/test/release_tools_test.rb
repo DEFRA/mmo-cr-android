@@ -48,7 +48,7 @@ class ReleaseToolsTest < Minitest::Test
 
   def test_base_must_be_the_config_free_prod_build_of_the_tag
     assert_nil Tools.expect_base!(inspected, version)
-    [{ "hasConfigAsset" => true }, { "packageName" => "mmo.catchrecordingdev.android" }, { "versionCode" => 10_019 },
+    [{ "hasConfigAsset" => true }, { "packageName" => "mmo.catchrecording.dev.android" }, { "versionCode" => 10_019 },
      { "versionName" => "1.0.0" }].each do |override|
       assert_raises(UserError) { Tools.expect_base!(inspected(override), version) }
     end

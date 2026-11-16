@@ -51,7 +51,7 @@ class CrReleaseTest < Minitest::Test
   end
 
   def test_environment_and_package_lookup
-    assert_equal "mmo.catchrecordingtest.android", CrRelease.package_for(:"perf-test")
+    assert_equal "mmo.catchrecording.test.android", CrRelease.package_for(:"perf-test")
     assert_equal "perf-test", CrRelease.environment!("perf-test")[:track]
     error = assert_raises(UserError) { CrRelease.environment!("production") }
     assert_match(/Unknown environment 'production'. Known: dev, test, perf-test, uat, prep-prod/, error.message)

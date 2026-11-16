@@ -23,9 +23,9 @@ closed tracks per backend. A spike on Google Play showed that this couples the s
 
 | Env key | App package | Managed Publishing | Play track | GitHub Environment (gate) | Backend |
 |---|---|---|---|---|---|
-| dev | `mmo.catchrecordingdev.android` | OFF | internal | `dev` (none) | Dev |
-| test | `mmo.catchrecordingtest.android` | OFF | internal | `test` | Test |
-| perf-test | `mmo.catchrecordingtest.android` | OFF | closed `perf-test` (publishes automatically after Google review) | `perf-test` | Perf-Test |
+| dev | `mmo.catchrecording.dev.android` | OFF | internal | `dev` (none) | Dev |
+| test | `mmo.catchrecording.test.android` | OFF | internal | `test` | Test |
+| perf-test | `mmo.catchrecording.test.android` | OFF | closed `perf-test` (publishes automatically after Google review) | `perf-test` | Perf-Test |
 | uat | `mmo.catchrecording.android` | ON | internal (never reviewed or held) | `uat` | Ext-Test |
 | prep-prod | `mmo.catchrecording.android` | ON | closed `prep-prod` | `prep-prod` | Prod |
 | production | `mmo.catchrecording.android` | ON | `production` | `production` | Prod |

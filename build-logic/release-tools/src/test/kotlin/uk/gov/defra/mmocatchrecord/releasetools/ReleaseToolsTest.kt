@@ -31,7 +31,7 @@ class ReleaseToolsTest {
     }
 
     private fun packageBase(
-        pkg: String = "mmo.catchrecordingdev.android",
+        pkg: String = "mmo.catchrecording.dev.android",
         code: Int = 10015,
     ) = Packager.packageBundle(base, out, pkg, code, config)
 
@@ -55,7 +55,7 @@ class ReleaseToolsTest {
         packageBase()
 
         val manifest = packagedManifest()
-        assertEquals("mmo.catchrecordingdev.android", ManifestEditor.packageName(manifest))
+        assertEquals("mmo.catchrecording.dev.android", ManifestEditor.packageName(manifest))
         assertEquals(10015, ManifestEditor.versionCode(manifest))
         val code = manifest.element.attributeList.first { it.resourceId == ManifestEditor.VERSION_CODE_RESOURCE_ID }
         assertEquals("10015", code.value)
@@ -67,8 +67,8 @@ class ReleaseToolsTest {
         packageBase()
 
         val values = attributes(packagedManifest()).associate { it.name + "/" + it.value to it }.keys
-        assertTrue(values.contains("name/mmo.catchrecordingdev.android.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"))
-        assertTrue(values.contains("authorities/mmo.catchrecordingdev.android.androidx-startup"))
+        assertTrue(values.contains("name/mmo.catchrecording.dev.android.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"))
+        assertTrue(values.contains("authorities/mmo.catchrecording.dev.android.androidx-startup"))
         assertTrue(values.contains("label/mmo.catchrecording.androidx.decoy"))
         assertTrue(values.contains("name/uk.gov.defra.mmocatchrecord.App"))
     }
@@ -78,10 +78,10 @@ class ReleaseToolsTest {
         packageBase()
 
         val authorities = attributes(packagedManifest()).filter { it.name == "authorities" }
-        assertTrue(authorities.any { it.value == "mmo.catchrecordingdev.android.one;other.thing;mmo.catchrecordingdev.android.two" })
+        assertTrue(authorities.any { it.value == "mmo.catchrecording.dev.android.one;other.thing;mmo.catchrecording.dev.android.two" })
         val permission = attributes(packagedManifest()).first { it.name == "name" && it.compiledItem.hasStr() }
         assertEquals(permission.value, permission.compiledItem.str.value)
-        assertTrue(permission.compiledItem.str.value.startsWith("mmo.catchrecordingdev.android."))
+        assertTrue(permission.compiledItem.str.value.startsWith("mmo.catchrecording.dev.android."))
     }
 
     @Test
@@ -132,18 +132,18 @@ class ReleaseToolsTest {
 
         val packaged = BundleIo.read(out)
         val table = ResourceTableEditor.parse(packaged.first { it.name == BundleLayout.RESOURCE_TABLE }.bytes)
-        assertEquals(listOf("mmo.catchrecordingdev.android"), table.packageList.map { it.packageName })
+        assertEquals(listOf("mmo.catchrecording.dev.android"), table.packageList.map { it.packageName })
 
         val stale = baseEntries().first { it.name == BundleLayout.RESOURCE_TABLE }
         writeZip(out, packaged.map { if (it.name == BundleLayout.RESOURCE_TABLE) stale else it })
-        assertTrue(failure { Verifier.verify(base, out, "mmo.catchrecordingdev.android", 10015, config, validate = {}) }.contains("differs from the base beyond the package rename"))
+        assertTrue(failure { Verifier.verify(base, out, "mmo.catchrecording.dev.android", 10015, config, validate = {}) }.contains("differs from the base beyond the package rename"))
     }
 
     @Test
     fun `verify accepts a faithful package`() {
         packageBase()
 
-        Verifier.verify(base, out, "mmo.catchrecordingdev.android", 10015, config, validate = {})
+        Verifier.verify(base, out, "mmo.catchrecording.dev.android", 10015, config, validate = {})
     }
 
     @Test
@@ -156,7 +156,7 @@ class ReleaseToolsTest {
         )
         writeZip(out, signed)
 
-        Verifier.verify(base, out, "mmo.catchrecordingdev.android", 10015, config, validate = {})
+        Verifier.verify(base, out, "mmo.catchrecording.dev.android", 10015, config, validate = {})
     }
 
     @Test
@@ -165,7 +165,7 @@ class ReleaseToolsTest {
         val tampered = BundleIo.read(out).map { if (it.name == "base/dex/classes.dex") it.withBytes(byteArrayOf(9)) else it }
         writeZip(out, tampered)
 
-        val message = failure { Verifier.verify(base, out, "mmo.catchrecordingdev.android", 10015, config, validate = {}) }
+        val message = failure { Verifier.verify(base, out, "mmo.catchrecording.dev.android", 10015, config, validate = {}) }
         assertEquals("entry differs from base: base/dex/classes.dex", message)
     }
 
@@ -176,13 +176,13 @@ class ReleaseToolsTest {
         writeZip(out, entries + BundleEntry("base/dex/classes2.dex", byteArrayOf(1), ZipEntry.DEFLATED, null))
         assertEquals(
             "unexpected entry in package: base/dex/classes2.dex",
-            failure { Verifier.verify(base, out, "mmo.catchrecordingdev.android", 10015, config, validate = {}) },
+            failure { Verifier.verify(base, out, "mmo.catchrecording.dev.android", 10015, config, validate = {}) },
         )
 
         writeZip(out, entries.filterNot { it.name == "BundleConfig.pb" })
         assertEquals(
             "entry missing from package: BundleConfig.pb",
-            failure { Verifier.verify(base, out, "mmo.catchrecordingdev.android", 10015, config, validate = {}) },
+            failure { Verifier.verify(base, out, "mmo.catchrecording.dev.android", 10015, config, validate = {}) },
         )
     }
 
@@ -190,8 +190,8 @@ class ReleaseToolsTest {
     fun `verify fails on a wrong package or versionCode`() {
         packageBase()
 
-        assertTrue(failure { Verifier.verify(base, out, "mmo.catchrecordingtest.android", 10015, config, validate = {}) }.contains("package name is"))
-        assertTrue(failure { Verifier.verify(base, out, "mmo.catchrecordingdev.android", 20015, config, validate = {}) }.contains("versionCode is 10015, expected 20015"))
+        assertTrue(failure { Verifier.verify(base, out, "mmo.catchrecording.test.android", 10015, config, validate = {}) }.contains("package name is"))
+        assertTrue(failure { Verifier.verify(base, out, "mmo.catchrecording.dev.android", 20015, config, validate = {}) }.contains("versionCode is 10015, expected 20015"))
     }
 
     @Test
@@ -205,18 +205,18 @@ class ReleaseToolsTest {
         ).build()
         writeZip(out, BundleIo.read(out).map { if (it.name == BundleLayout.MANIFEST) it.withBytes(tamperedManifest.toByteArray()) else it })
 
-        assertTrue(failure { Verifier.verify(base, out, "mmo.catchrecordingdev.android", 10015, config, validate = {}) }.contains("manifest differs"))
+        assertTrue(failure { Verifier.verify(base, out, "mmo.catchrecording.dev.android", 10015, config, validate = {}) }.contains("manifest differs"))
     }
 
     @Test
     fun `verify fails when the config differs or is missing`() {
         packageBase()
         config.toFile().writeText("""{"API_BASE_URL":"https://other.example/"}""")
-        assertTrue(failure { Verifier.verify(base, out, "mmo.catchrecordingdev.android", 10015, config, validate = {}) }.contains("differs from the validated config"))
+        assertTrue(failure { Verifier.verify(base, out, "mmo.catchrecording.dev.android", 10015, config, validate = {}) }.contains("differs from the validated config"))
 
         config.toFile().writeText(CONFIG_JSON)
         writeZip(out, BundleIo.read(out).filterNot { it.name == BundleLayout.CONFIG })
-        assertTrue(failure { Verifier.verify(base, out, "mmo.catchrecordingdev.android", 10015, config, validate = {}) }.contains("is missing"))
+        assertTrue(failure { Verifier.verify(base, out, "mmo.catchrecording.dev.android", 10015, config, validate = {}) }.contains("is missing"))
     }
 
     @Test
@@ -224,10 +224,10 @@ class ReleaseToolsTest {
         packageBase()
 
         val message = failure {
-            Verifier.verify(base, out, "mmo.catchrecordingdev.android", 10015, config, validate = { throw ReleaseToolsException("bundletool validate failed: x") })
+            Verifier.verify(base, out, "mmo.catchrecording.dev.android", 10015, config, validate = { throw ReleaseToolsException("bundletool validate failed: x") })
         }
         assertEquals("bundletool validate failed: x", message)
-        assertTrue(failure { Verifier.verify(base, out, "mmo.catchrecordingdev.android", 10015, config) }.startsWith("bundletool validate failed"))
+        assertTrue(failure { Verifier.verify(base, out, "mmo.catchrecording.dev.android", 10015, config) }.startsWith("bundletool validate failed"))
     }
 
     @Test
@@ -270,14 +270,14 @@ class ReleaseToolsTest {
         assertEquals(
             0,
             runCli(
-                arrayOf("package", "--base", base.toString(), "--out", out.toString(), "--package-name", "mmo.catchrecordingtest.android", "--version-code", "20015", "--config", config.toString()),
+                arrayOf("package", "--base", base.toString(), "--out", out.toString(), "--package-name", "mmo.catchrecording.test.android", "--version-code", "20015", "--config", config.toString()),
                 out = PrintStream(ok),
             ),
         )
         assertEquals(
             1,
             runCli(
-                arrayOf("verify", "--base", base.toString(), "--package", out.toString(), "--package-name", "mmo.catchrecordingtest.android", "--version-code", "20015", "--config", config.toString()),
+                arrayOf("verify", "--base", base.toString(), "--package", out.toString(), "--package-name", "mmo.catchrecording.test.android", "--version-code", "20015", "--config", config.toString()),
                 err = PrintStream(ByteArrayOutputStream()),
             ),
         )

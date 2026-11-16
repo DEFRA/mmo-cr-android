@@ -52,10 +52,10 @@ class AppConfigTest < Minitest::Test
       "CR_APP_CFG_API_BASE_URL" => "https://a.example", "CR_APP_CFG_USE_STUB_AUTH" => "false",
       "CR_APP_CFG_USE_FAKE_SIGN_IN" => "false", "CR_APP_CFG_MSAL_CLIENT_ID" => "client-1",
       "CR_APP_CFG_MSAL_AUTHORITY_URL" => "https://tenant.ciamlogin.com/tenant.onmicrosoft.com/",
-      "CR_APP_CFG_MSAL_REDIRECT_URI" => "msauth://mmo.catchrecordingdev.android/abc%3D"
+      "CR_APP_CFG_MSAL_REDIRECT_URI" => "msauth://mmo.catchrecording.dev.android/abc%3D"
     ))
     assert_equal "client-1", config.values["MSAL_CLIENT_ID"]
-    assert_equal "msauth://mmo.catchrecordingdev.android/abc%3D", config.values["MSAL_REDIRECT_URI"]
+    assert_equal "msauth://mmo.catchrecording.dev.android/abc%3D", config.values["MSAL_REDIRECT_URI"]
     error = assert_raises(FastlaneCore::Interface::FastlaneError) do
       AppConfig.from_env!('{"CR_APP_CFG_API_BASE_URL":"https://a.example","CR_APP_CFG_USE_STUB_AUTH":"true",' \
                           '"CR_APP_CFG_USE_FAKE_SIGN_IN":"false","CR_APP_CFG_MSAL_AUTHORITY_URL":"http://insecure"}')

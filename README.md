@@ -169,8 +169,8 @@ once, package per environment). Pipeline rules: [`ci-cd.instructions.md`](.githu
 
 | Environment | Play app (package) | Track | Managed Publishing | Backend | Code (N = 15) |
 |---|---|---|---|---|---|
-| `dev` | Dev (`mmo.catchrecordingdev.android`) | internal | off | Dev | 10015 |
-| `test` | Test (`mmo.catchrecordingtest.android`) | internal | off | Test | 20015 |
+| `dev` | Dev (`mmo.catchrecording.dev.android`) | internal | off | Dev | 10015 |
+| `test` | Test (`mmo.catchrecording.test.android`) | internal | off | Test | 20015 |
 | `perf-test` | Test | closed `perf-test` | off | Perf-Test | 10015 |
 | `uat` | Prod (`mmo.catchrecording.android`) | internal | on | Ext-Test | 20015 |
 | `prep-prod` | Prod | closed `prep-prod` | on | Prod | 10015 |

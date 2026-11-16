@@ -115,9 +115,9 @@ This is a **small team practising trunk-based development**. The model is delibe
 
 | Env | Package | Managed Publishing | Track |
 |---|---|---|---|
-| dev | `mmo.catchrecordingdev.android` | OFF | internal |
-| test | `mmo.catchrecordingtest.android` | OFF | internal |
-| perf-test | `mmo.catchrecordingtest.android` | OFF | closed `perf-test` |
+| dev | `mmo.catchrecording.dev.android` | OFF | internal |
+| test | `mmo.catchrecording.test.android` | OFF | internal |
+| perf-test | `mmo.catchrecording.test.android` | OFF | closed `perf-test` |
 | uat | `mmo.catchrecording.android` | ON | internal |
 | prep-prod | `mmo.catchrecording.android` | ON | closed `prep-prod` |
 | production | `mmo.catchrecording.android` | ON | `production` (promoted from `prep-prod`) |
