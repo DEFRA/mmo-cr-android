@@ -1,18 +1,29 @@
 name: Android Release
 
 on:
-  # Single entry point: Actions → Android Release → Run workflow, with "Use workflow from" set to a v* release tag.
+  # Run on a v* release tag (Use workflow from -> Tags). Each ticked app flows through its gated environments in order.
   workflow_dispatch:
     inputs:
-      target:
-        description: "build-only = signed AAB artifact; internal / dev = upload to that Play track"
+      dev:
+        description: "Release the Dev app (dev)"
+        type: boolean
+        default: true
+      test:
+        description: "Release the Test app (test, perf-test)"
+        type: boolean
+        default: true
+      prod:
+        description: "Release the Prod app (uat, prep-prod, production)"
+        type: boolean
+        default: true
+      distribution:
+        description: "manual = signed AABs as artifacts for Play Console; play = upload through the Play API"
         type: choice
         required: true
-        default: build-only
+        default: manual
         options:
-          - build-only
-          - internal
-          - dev
+          - manual
+          - play
 
 permissions:
   contents: read
@@ -21,20 +32,32 @@ permissions:
 concurrency:
   group: android-release-${{ github.ref }}
   cancel-in-progress: false
+
 jobs:
-  release:
-    name: Build, sign & release (${{inputs.target }})
+  compile:
+    name: Compile base bundle
     runs-on: ubuntu-24.04
     timeout-minutes: 45
-    environment: dev
-    permissions:
-      contents: read
+    # Every later job proves its downloaded base has this hash (kept for "Re-run failed jobs").
+    outputs:
+      base_sha256: ${{ steps.compile.outputs.base_sha256 }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Validate the release tag matches the code
         run: bash .github/workflows/scripts/validate-release-tag.sh
+
+      # Re-run all jobs: reuse this run's base so stages that already shipped keep the same binary.
+      - name: Reuse the base bundle from an earlier attempt
+        id: reuse
+        if: ${{ github.run_attempt > 1 }}
+        continue-on-error: true
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-base
+          path: build/release/base
+          digest-mismatch: error
 
       - name: Set up JDK 21 (Temurin)
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
@@ -54,28 +77,359 @@ jobs:
           ruby-version: "3.3"
           bundler-cache: true
 
-      - name: Build, sign & release (Fastlane)
+      - name: Compile unsigned base bundle and release tools (Fastlane)
+        id: compile
         env:
+          REUSE: ${{ steps.reuse.outcome == 'success' }}
+        run: bundle exec fastlane compile_release reuse:"$REUSE"
+
+      - name: Upload base bundle
+        if: ${{ steps.reuse.outcome != 'success' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-base
+          path: build/release/base
+          if-no-files-found: error
+          retention-days: 35
+
+  dev:
+    name: Release dev (Dev app, internal)
+    needs: [compile]
+    if: >-
+      ${{ !cancelled() && needs.compile.result == 'success' && inputs.dev && !contains(needs.*.result, 'failure') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Validate the release tag matches the code
+        run: bash .github/workflows/scripts/validate-release-tag.sh
+
+      - name: Set up JDK 21 (Temurin)
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Ruby and Fastlane
+        uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Download base bundle
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-base
+          path: build/release/base
+          digest-mismatch: error
+
+      - name: Package, sign, verify and release (Fastlane)
+        env:
+          ENV_KEY: dev
+          EXPECTED_BASE_SHA256: ${{ needs.compile.outputs.base_sha256 }}
+          DISTRIBUTION: ${{ inputs.distribution }}
           # Fastlane keeps only the CR_APP_CFG_* keys allow-listed in config/app-config.schema.json.
           CR_APP_CFG_VARS: ${{ toJSON(vars) }}
+          UPLOAD_CERT_SHA256: ${{ vars.UPLOAD_CERT_SHA256 }}
           UPLOAD_KEYSTORE_BASE64: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
           UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
           UPLOAD_KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
           UPLOAD_KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
           PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-          RELEASE_TARGET: ${{ inputs.target }}
-        run: bundle exec fastlane release target:"$RELEASE_TARGET"
+        run: bundle exec fastlane release_environment env:"$ENV_KEY" distribution:"$DISTRIBUTION"
 
-      # For the one-off manual first upload that enrols Play App Signing.
-      - name: Keep the signed AAB
-        if: ${{ inputs.target == 'build-only' }}
+      - name: Keep the signed AAB for manual upload
+        if: ${{ inputs.distribution == 'manual' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: signed-aab-${{ github.ref_name }}
-          path: build/release/mmo-cr-android.aab
+          name: aab-dev-${{ github.ref_name }}
+          path: build/release/out/dev.aab
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 7
+          overwrite: true
 
       - name: Clean up signing key
         if: ${{ always() }}
         run: bash .github/workflows/scripts/cleanup-signing-assets.sh
+
+  test:
+    name: Release test (Test app, internal)
+    needs: [compile, dev]
+    if: >-
+      ${{ !cancelled() && needs.compile.result == 'success' && inputs.test && !contains(needs.*.result, 'failure') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Validate the release tag matches the code
+        run: bash .github/workflows/scripts/validate-release-tag.sh
+
+      - name: Set up JDK 21 (Temurin)
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Ruby and Fastlane
+        uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Download base bundle
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-base
+          path: build/release/base
+          digest-mismatch: error
+
+      - name: Package, sign, verify and release (Fastlane)
+        env:
+          ENV_KEY: test
+          EXPECTED_BASE_SHA256: ${{ needs.compile.outputs.base_sha256 }}
+          DISTRIBUTION: ${{ inputs.distribution }}
+          # Fastlane keeps only the CR_APP_CFG_* keys allow-listed in config/app-config.schema.json.
+          CR_APP_CFG_VARS: ${{ toJSON(vars) }}
+          UPLOAD_CERT_SHA256: ${{ vars.UPLOAD_CERT_SHA256 }}
+          UPLOAD_KEYSTORE_BASE64: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
+          UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
+          UPLOAD_KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
+          UPLOAD_KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: bundle exec fastlane release_environment env:"$ENV_KEY" distribution:"$DISTRIBUTION"
+
+      - name: Keep the signed AAB for manual upload
+        if: ${{ inputs.distribution == 'manual' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: aab-test-${{ github.ref_name }}
+          path: build/release/out/test.aab
+          if-no-files-found: error
+          retention-days: 7
+          overwrite: true
+
+      - name: Clean up signing key
+        if: ${{ always() }}
+        run: bash .github/workflows/scripts/cleanup-signing-assets.sh
+
+  perf-test:
+    name: Release perf-test (Test app, perf-test track)
+    needs: [compile, dev, test]
+    if: >-
+      ${{ !cancelled() && needs.compile.result == 'success' && inputs.test && !contains(needs.*.result, 'failure') && needs.test.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: perf-test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Validate the release tag matches the code
+        run: bash .github/workflows/scripts/validate-release-tag.sh
+
+      - name: Set up JDK 21 (Temurin)
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Ruby and Fastlane
+        uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Download base bundle
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-base
+          path: build/release/base
+          digest-mismatch: error
+
+      - name: Package, sign, verify and release (Fastlane)
+        env:
+          ENV_KEY: perf-test
+          EXPECTED_BASE_SHA256: ${{ needs.compile.outputs.base_sha256 }}
+          DISTRIBUTION: ${{ inputs.distribution }}
+          # Fastlane keeps only the CR_APP_CFG_* keys allow-listed in config/app-config.schema.json.
+          CR_APP_CFG_VARS: ${{ toJSON(vars) }}
+          UPLOAD_CERT_SHA256: ${{ vars.UPLOAD_CERT_SHA256 }}
+          UPLOAD_KEYSTORE_BASE64: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
+          UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
+          UPLOAD_KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
+          UPLOAD_KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: bundle exec fastlane release_environment env:"$ENV_KEY" distribution:"$DISTRIBUTION"
+
+      - name: Keep the signed AAB for manual upload
+        if: ${{ inputs.distribution == 'manual' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: aab-perf-test-${{ github.ref_name }}
+          path: build/release/out/perf-test.aab
+          if-no-files-found: error
+          retention-days: 7
+          overwrite: true
+
+      - name: Clean up signing key
+        if: ${{ always() }}
+        run: bash .github/workflows/scripts/cleanup-signing-assets.sh
+
+  uat:
+    name: Release uat (Prod app, internal)
+    needs: [compile, dev, test, perf-test]
+    if: >-
+      ${{ !cancelled() && needs.compile.result == 'success' && inputs.prod && !contains(needs.*.result, 'failure') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: uat
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Validate the release tag matches the code
+        run: bash .github/workflows/scripts/validate-release-tag.sh
+
+      - name: Set up JDK 21 (Temurin)
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Ruby and Fastlane
+        uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Download base bundle
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-base
+          path: build/release/base
+          digest-mismatch: error
+
+      - name: Package, sign, verify and release (Fastlane)
+        env:
+          ENV_KEY: uat
+          EXPECTED_BASE_SHA256: ${{ needs.compile.outputs.base_sha256 }}
+          DISTRIBUTION: ${{ inputs.distribution }}
+          # Fastlane keeps only the CR_APP_CFG_* keys allow-listed in config/app-config.schema.json.
+          CR_APP_CFG_VARS: ${{ toJSON(vars) }}
+          UPLOAD_CERT_SHA256: ${{ vars.UPLOAD_CERT_SHA256 }}
+          UPLOAD_KEYSTORE_BASE64: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
+          UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
+          UPLOAD_KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
+          UPLOAD_KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: bundle exec fastlane release_environment env:"$ENV_KEY" distribution:"$DISTRIBUTION"
+
+      - name: Keep the signed AAB for manual upload
+        if: ${{ inputs.distribution == 'manual' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: aab-uat-${{ github.ref_name }}
+          path: build/release/out/uat.aab
+          if-no-files-found: error
+          retention-days: 7
+          overwrite: true
+
+      - name: Clean up signing key
+        if: ${{ always() }}
+        run: bash .github/workflows/scripts/cleanup-signing-assets.sh
+
+  prep-prod:
+    name: Release prep-prod (Prod app, prep-prod track)
+    needs: [compile, dev, test, perf-test, uat]
+    if: >-
+      ${{ !cancelled() && needs.compile.result == 'success' && inputs.prod && !contains(needs.*.result, 'failure') && needs.uat.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: prep-prod
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Validate the release tag matches the code
+        run: bash .github/workflows/scripts/validate-release-tag.sh
+
+      - name: Set up JDK 21 (Temurin)
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Ruby and Fastlane
+        uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Download base bundle
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-base
+          path: build/release/base
+          digest-mismatch: error
+
+      - name: Package, sign, verify and release (Fastlane)
+        env:
+          ENV_KEY: prep-prod
+          EXPECTED_BASE_SHA256: ${{ needs.compile.outputs.base_sha256 }}
+          DISTRIBUTION: ${{ inputs.distribution }}
+          # Fastlane keeps only the CR_APP_CFG_* keys allow-listed in config/app-config.schema.json.
+          CR_APP_CFG_VARS: ${{ toJSON(vars) }}
+          UPLOAD_CERT_SHA256: ${{ vars.UPLOAD_CERT_SHA256 }}
+          UPLOAD_KEYSTORE_BASE64: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
+          UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
+          UPLOAD_KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
+          UPLOAD_KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: bundle exec fastlane release_environment env:"$ENV_KEY" distribution:"$DISTRIBUTION"
+
+      - name: Keep the signed AAB for manual upload
+        if: ${{ inputs.distribution == 'manual' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: aab-prep-prod-${{ github.ref_name }}
+          path: build/release/out/prep-prod.aab
+          if-no-files-found: error
+          retention-days: 7
+          overwrite: true
+
+      - name: Clean up signing key
+        if: ${{ always() }}
+        run: bash .github/workflows/scripts/cleanup-signing-assets.sh
+
+  production:
+    name: Promote production (Prod app)
+    needs: [compile, dev, test, perf-test, uat, prep-prod]
+    if: >-
+      ${{ !cancelled() && needs.compile.result == 'success' && inputs.prod && !contains(needs.*.result, 'failure') && needs.prep-prod.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Validate the release tag matches the code
+        run: bash .github/workflows/scripts/validate-release-tag.sh
+
+      - name: Set up Ruby and Fastlane
+        uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Promote prep-prod to production (Fastlane)
+        env:
+          DISTRIBUTION: ${{ inputs.distribution }}
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: bundle exec fastlane promote_production distribution:"$DISTRIBUTION"

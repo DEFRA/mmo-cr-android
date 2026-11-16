@@ -1,29 +1,9 @@
+require_relative "lib/cr_release"
+
 default_platform(:android)
 
-GRADLE_FLAGS = "--console=plain".freeze
-
-platform :android do
-  desc "Static analysis: ktlint, detekt and Android Lint."
-  lane :lint do
-    # dev flavor: product flavors were added for reference-data environments (ADR 0016);
-    # there is no flavor-less "Debug" variant to run lint against any more.
-    gradle(tasks: ["ktlintCheck", "detekt", "lintDevDebug"], flags: "#{GRADLE_FLAGS} --continue")
-  end
-
-  desc "Compile the debug variant — the CI compile gate."
-  lane :build do
-    gradle(task: "assembleDevDebug", flags: GRADLE_FLAGS)
-  end
-
-  desc "Run the local unit tests with Kover coverage (used by CI)."
-  lane :test do
-    # koverXmlReportDebug aliases devDebug (see app/build.gradle.kts) so CI/Sonar's report
-    # path is unchanged; the unnamed koverXmlReport task would run every flavor's release tests too.
-    gradle(tasks: ["testDevDebugUnitTest", "koverXmlReportDebug"], flags: GRADLE_FLAGS)
-  end
-
-  desc "Run the instrumented Compose UI / accessibility tests on a connected device or emulator."
-  lane :instrumented_test do
-    gradle(task: "connectedDevDebugAndroidTest", flags: GRADLE_FLAGS)
-  end
-end
+# Lanes only; logic lives in lib/cr_release. Import paths are relative to this folder.
+import "lanes/ci.rb"
+import "lanes/signing.rb"
+import "lanes/packaging.rb"
+import "lanes/release.rb"

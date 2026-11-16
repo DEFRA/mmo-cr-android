@@ -1,0 +1,48 @@
+{
+  "assetName": "mmocr_app_config.json",
+  "variablePrefix": "CR_APP_CFG_",
+  "keys": {
+    "API_BASE_URL": {
+      "type": "url",
+      "required": true,
+      "log": true,
+      "tracking": false,
+      "description": "API gateway base URL for this stage, shared by all backend services; reference data is <base>/reference-data-service/."
+    },
+    "USE_STUB_AUTH": {
+      "type": "bool",
+      "required": true,
+      "log": true,
+      "tracking": false,
+      "description": "Send the DEV stub bearer token instead of real authentication."
+    },
+    "USE_FAKE_SIGN_IN": {
+      "type": "bool",
+      "required": true,
+      "log": true,
+      "tracking": false,
+      "description": "Use the Stage-1 fake sign-in instead of Entra (local stacks only; ADR 0019)."
+    },
+    "MSAL_CLIENT_ID": {
+      "type": "string",
+      "required": false,
+      "log": true,
+      "tracking": false,
+      "description": "Entra External ID public-client app registration ID for this stage (not a secret)."
+    },
+    "MSAL_AUTHORITY_URL": {
+      "type": "url",
+      "required": false,
+      "log": true,
+      "tracking": false,
+      "description": "Entra External ID (CIAM) authority URL for this stage's tenant."
+    },
+    "MSAL_REDIRECT_URI": {
+      "type": "string",
+      "required": false,
+      "log": true,
+      "tracking": false,
+      "description": "msauth:// redirect for the browser fallback; must match this app's package and signing key."
+    }
+  }
+}

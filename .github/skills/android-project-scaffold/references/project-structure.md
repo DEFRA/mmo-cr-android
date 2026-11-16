@@ -10,7 +10,7 @@ mmo-cr-android/
 │   └── libs.versions.toml                 # version catalog (single source of dependency versions)
 ├── gradle.properties
 ├── app/
-│   ├── build.gradle.kts                   # app module: flavors dev/test/prod, signing, Compose, Hilt
+│   ├── build.gradle.kts                   # app module: no flavors, unsigned release, Compose, Hilt
 │   ├── src/main/
 │   │   ├── AndroidManifest.xml
 │   │   ├── res/
@@ -55,8 +55,8 @@ mmo-cr-android/
   preferences.
 - **designsystem** components must be accessible by default (font scaling, `contentDescription`/roles,
   contrast, 48×48dp) and built on the Material 3 theme.
-- **Product flavors** (`dev`/`test`/`prod`) carry non-sensitive per-environment values (endpoints, display
-  name, `applicationIdSuffix`) via `BuildConfig`/resources. Secrets are injected at build time from CI,
-  never committed.
+- **No product flavors.** Non-sensitive per-environment values (e.g. the API base URL) live in the packaged
+  app config (`config/app-config.schema.json`, ADR 0024), injected per environment at packaging (ADR 0023).
+  The app holds no secrets.
 - **docs/adr/0001-native-android-exception.md** should capture the agreed exception to the DEFRA
   "don't build native apps" mobile standard.

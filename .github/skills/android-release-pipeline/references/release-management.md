@@ -3,13 +3,15 @@
 This reference describes the end-to-end release flow the pipeline implements for the MMO Catch Recording
 Android app. It is **Android-only** and assumes **trunk-based development with tag-driven releases** — there
 are **no release branches**. See [ci-cd.instructions.md](../../../instructions/ci-cd.instructions.md) for the
-governing standards.
+governing standards and ADRs 0022/0023 for the design.
 
 ## Roles (small team)
 - **Developer** — writes app code on short-lived feature branches, opens PRs into `main`.
-- **Internal QA** — smoke/exploratory validation on each app's internal testing track.
-- **UAT (business users)** — acceptance testing on the **Test** app's closed testing track.
-- **DevOps** — owns the pipeline, cuts release tags, approves the gated Environments, monitors production.
+- **Internal QA** — smoke/exploratory validation on the internal tracks.
+- **UAT / sanity testers** — acceptance on the Perf-Test and Prep-Prod closed tracks.
+- **Release manager** — starts releases, approves the gated Environments and clicks **Publish changes** in
+  Play Console for the Prod app.
+- **DevOps** — owns the pipeline and monitors production.
 
 ## The flow
 
@@ -22,39 +24,35 @@ governing standards.
 2. Integrate      merge to main (trunk, always releasable)
                     main CI: full tests + SonarCloud (main) + quality gate
 
-3. Cut a release  push tag  android-vX.Y.Z  on main
-                    versionName  = X.Y.Z (from tag)
-                    versionCode   = release GITHUB_RUN_NUMBER (no Play API query)
+3. Tag           release-tag job (android-ci.yml, main only) creates  v<VERSION_NAME>-BUILD_<N>
+                    N = VERSION_CODE in version.properties (1..9999); no Play API query
                     GIT_COMMIT_SHA = read-only BuildConfig metadata (traceability only)
 
-4. Dev            [env: dev — no gate]
-                    build the Dev app AAB (mmo.catchrecording.android.dev) from the tagged commit
-                    upload_to_play_store(track: internal) → Dev internal track
+4. Release        Android Release (workflow_dispatch on the tag; inputs dev / test / prod, distribution manual|play)
+                  [compile — no gate] one unsigned, config-free base bundle, repackaged per environment
 
-5. Test           [env: test — APPROVAL A] build the Test app AAB (mmo.catchrecording.android.test) ──▶
-                    upload_to_play_store(track: internal) → Test internal track  (smoke / exploratory sign-off)
-                  [env: test-closed — APPROVAL B] promote the SAME Test build → closed UAT track
-                    (track_promote_to: closed; no rebuild) → business UAT sign-off
+5. Dev / Test     [env: dev — no gate]   Dev app  · internal    (code 1·10000+N)
+                  [env: test — gate]     Test app · internal    (code 2·10000+N)
+                  [env: perf-test — gate] Test app · closed track perf-test (code 1·10000+N); publishes
+                    automatically after Google review (Managed Publishing off)
 
-6. Prod           [env: prod — APPROVAL C] build the Prod app AAB (mmo.catchrecording.android) ──▶
-                    upload_to_play_store(track: internal) → Prod internal track  (production-identity smoke)
-                  [env: prod-closed — APPROVAL D] promote the SAME Prod build → closed track (no rebuild)
+6. Prod           [env: uat — gate]      Prod app · internal    (code 2·10000+N; never reviewed or held)
+                  [env: prep-prod — gate] Prod app · closed track prep-prod (code 1·10000+N)
+                    → Google review → release manager clicks Publish changes → sanity testers
 
-7. Production     [env: prod-production — APPROVAL E]
-                    promote the SAME Prod build → production track → STAGED (percentage) ROLLOUT
+7. Production     [env: production — gate] after sanity sign-off: PROMOTE the prep-prod code to production
+                    (no upload) → Google review → release manager clicks Publish changes at the go-live time
 
-8. Monitor        Play Console vitals (ANRs, crashes) + crash reporting during the staged roll-out
-                    halt the staged rollout if regressions appear
+8. Monitor        Play Console vitals (ANRs, crashes) + crash reporting after go-live
 
-9. Hotfix         fix on main  →  new higher patch tag  android-vX.Y.(Z+1)
-                    (no hotfix/release branch — the trunk is always releasable)
+9. Hotfix         fix on main  →  next build number N  →  new tag  (no hotfix/release branch)
 ```
 
-> **Build-per-environment from one tested commit.** The three apps have distinct `applicationId`s, so a
-> single AAB cannot move between environments; one tag builds all three from the **same commit**.
-> Equivalence is evidenced by the same commit SHA, pinned toolchain and locked dependencies, plus the Prod
-> app's own internal (and, where required, closed) testing pass before production. Track promotion within a
-> Play app is a **no-rebuild** Google Play metadata action (`track_promote_to`).
+> **Compile once, package per environment.** One tag yields one compiled base; each environment job
+> repackages it (package name, versionCode, config asset), signs it and runs `release-tools verify`, so the
+> binary differs only in those entries. Non-internal Play commits use `ERROR_IF_IN_REVIEW` so a commit never
+> restarts an in-flight review. `manual` distribution leaves the signed AAB as a 7-day artifact for upload in
+> Play Console (always the case for each app's first upload).
 
 ## Why no release branches
 For a single team shipping a single live version, a release branch adds merge/maintenance overhead without
@@ -64,21 +62,21 @@ release while `main` moves on, or to support multiple live versions in parallel 
 future need is an ADR + governance discussion, not an ad hoc branch.
 
 ## Versioning rules
-- **`versionName`**: SemVer from the tag (`android-v1.4.0` → `1.4.0`). The single human-facing version.
-- **`versionCode`**: from the **release** `GITHUB_RUN_NUMBER`; **not** queried from the Play API. Must be
-  **unique and higher** than the previous upload (Google Play rejects a reused or lower `versionCode`);
-  never reused or hand-edited.
+- **`versionName`**: SemVer from `version.properties` (`VERSION_NAME`), also in the tag
+  `v<VERSION_NAME>-BUILD_<N>`. The single human-facing version.
+- **`N`** (`VERSION_CODE`): build number, raised by every merged PR, never reset, 1..9999. The uploaded
+  versionCode is `channel × 10 000 + N` (internal = 2, closed = 1). Never queried from the Play API, never
+  reused or hand-edited.
 - **Commit SHA**: embedded as a read-only `BuildConfig` field (e.g. `GIT_COMMIT_SHA`) for traceability only
   — it is never the version code.
 
 ## Approval & environments
-**Six** Environments — **`dev`** (ungated), **`test`** (A), **`test-closed`** (B), **`prod`** (C),
-**`prod-closed`** (D) and **`prod-production`** (E) — each gated (except `dev`) by a **manual reviewer
-approval** before its job runs (prevent self-approval where supported), and each scopes its release secrets
-to the Environment (exposed only after that stage's approval). A stage is only reachable once the preceding
-gate is approved. Restrict deployments to `main` and `android-v*` tags.
+**Six** Environments — `dev` (ungated), `test`, `perf-test`, `uat`, `prep-prod` and `production` — each gated
+(except `dev`) by **required reviewers** with self-review prevented, deploying only from `v*` tags. Each
+scopes its secrets to the Environment (exposed only after approval). The chain runs in order; `perf-test`,
+`prep-prod` and `production` also need `test`, `uat` and `prep-prod` to have succeeded.
 
 ## Traceability
-Every production build is traceable end to end: **tag → commit SHA → workflow run → versionName →
-versionCode → AAB checksums → Play Console build → tracks & sign-off → production version & rollout
-status**. Keep release notes tester-friendly for the testing tracks ("what to test", "known limitations").
+Every production build is traceable end to end: **tag → commit SHA → workflow run (step summary: package,
+versionCode, base and package SHA-256) → Play Console build → track & sign-off → production release**. Keep
+release notes tester-friendly for the testing tracks ("what to test", "known limitations").

@@ -8,8 +8,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import uk.gov.defra.mmocatchrecord.core.android.CurrentActivityProvider
+import uk.gov.defra.mmocatchrecord.core.config.AppConfiguration
 import uk.gov.defra.mmocatchrecord.feature.signin.data.FakeSignInRepository
 import uk.gov.defra.mmocatchrecord.feature.signin.data.MsalNativeAuthClient
 import uk.gov.defra.mmocatchrecord.feature.signin.data.MsalSignInRepository
@@ -26,7 +28,8 @@ class SignInModuleTests {
 
     @Test
     fun `provideNativeAuthClient wires up the MSAL-backed implementation`() {
-        val client = SignInModule.provideNativeAuthClient(context, mock<CurrentActivityProvider>())
+        val client =
+            SignInModule.provideNativeAuthClient(context, mock<AppConfiguration>(), mock<CurrentActivityProvider>())
 
         assertTrue(client is MsalNativeAuthClient)
     }
@@ -46,10 +49,21 @@ class SignInModuleTests {
     }
 
     @Test
-    fun `provideSignInRepository delegates to signInRepositoryFor`() {
-        val repository = SignInModule.provideSignInRepository(mock<NativeAuthClient>())
+    fun `provideSignInRepository uses the fake when the packaged config asks for it`() {
+        val appConfiguration = mock<AppConfiguration>()
+        whenever(appConfiguration.useFakeSignIn).thenReturn(true)
+
+        val repository = SignInModule.provideSignInRepository(appConfiguration, mock<NativeAuthClient>())
+
+        assertTrue(repository is FakeSignInRepository)
+    }
+
+    @Test
+    fun `provideSignInRepository defaults to real sign-in when config is unavailable`() {
+        val repository = SignInModule.provideSignInRepository(mock<AppConfiguration>(), mock<NativeAuthClient>())
 
         assertNotNull(repository)
+        assertTrue(repository is MsalSignInRepository)
     }
 
     @Test

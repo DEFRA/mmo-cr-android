@@ -38,6 +38,10 @@ retrofit = "3.0.0"
 # Pinned exactly (no dynamic range, unlike Microsoft's docs): >= 8.5.0 pulls in httpcore5 5.4.3,
 # the transitive fix for Apache HttpCore CVE-2026-54399 — not an MSAL CVE itself.
 msal = "8.6.0"
+# aapt2-proto must match the AGP version (it ships the AAB manifest/resource-table protos).
+aapt2Proto = "9.1.1-14792394"
+bundletool = "1.18.3"
+protobufJava = "3.25.5"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -93,6 +97,9 @@ retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = 
 retrofit-converter-kotlinx-serialization = { group = "com.squareup.retrofit2", name = "converter-kotlinx-serialization", version.ref = "retrofit" }
 map-data-core = { module = "uk.gov.defra.mmocatchrecord.mapdata:map-data-core" }
 msal = { group = "com.microsoft.identity.client", name = "msal", version.ref = "msal" }
+aapt2-proto = { module = "com.android.tools.build:aapt2-proto", version.ref = "aapt2Proto" }
+bundletool = { module = "com.android.tools.build:bundletool", version.ref = "bundletool" }
+protobuf-java = { module = "com.google.protobuf:protobuf-java", version.ref = "protobufJava" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

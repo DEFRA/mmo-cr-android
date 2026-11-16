@@ -6,8 +6,10 @@ import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
 import uk.gov.defra.mmocatchrecord.core.android.CurrentActivityProviderImpl
+import uk.gov.defra.mmocatchrecord.core.config.AppConfiguration
 import uk.gov.defra.mmocatchrecord.core.connectivity.ConnectivityObserver
 import uk.gov.defra.mmocatchrecord.core.logging.ReleaseTree
+import uk.gov.defra.mmocatchrecord.core.logging.StartupMetadataLogger
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.sync.WorkManagerReferenceDataSyncScheduler
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.sync.CatchRecordSyncSweep
 import uk.gov.defra.mmocatchrecord.feature.signin.data.NativeAuthClientWarmer
@@ -34,6 +36,9 @@ class MmoApplication :
     @Inject
     lateinit var catchRecordSyncSweep: CatchRecordSyncSweep
 
+    @Inject
+    lateinit var appConfiguration: AppConfiguration
+
     // Injected eagerly so connectivity is tracked from process start, before any screen subscribes.
     @Inject
     lateinit var connectivityObserver: ConnectivityObserver
@@ -56,6 +61,7 @@ class MmoApplication :
         Timber.plant(if (BuildConfig.DEBUG) Timber.DebugTree() else ReleaseTree())
         // Off-thread MSAL client warm-up (review fix 1.3) — never blocks or crashes startup.
         nativeAuthClientWarmer.warmUp()
+        StartupMetadataLogger.log(packageManager, packageName, BuildConfig.GIT_COMMIT_SHA, appConfiguration)
         // Manifest/ETag-driven reference-data cache refresh (ADR 0016): one now, one every ~12h after.
         referenceDataSyncScheduler.scheduleStartupRefresh()
         referenceDataSyncScheduler.schedulePeriodicRefresh()

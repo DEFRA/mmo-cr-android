@@ -2,6 +2,14 @@
 
 ## Status
 
+> **Amended 2026-11-13 by [ADR 0024](0024-packaged-app-configuration.md) and
+> [ADR 0023](0023-android-compile-once-package-per-environment.md):** product flavors are gone. Wherever
+> this ADR says `local`/`dev`/`prod` flavor, read *stage*: `USE_FAKE_SIGN_IN`, `MSAL_CLIENT_ID`,
+> `MSAL_AUTHORITY_URL` and optional `MSAL_REDIRECT_URI` are packaged-config keys set per GitHub Environment
+> (debug: `local.properties`). The app builds MSAL's config at runtime from them; nothing is in `res/raw`.
+> Each Play app (Dev, Test, Prod) has its own package and app-signing key, so each needs its own redirect
+> URI registered; the debug build's package is `mmo.catchrecording.android.debug`.
+
 Accepted — 2026-11-02. Supersedes the interim decisions in ADR 0016 Q2 (which moves to
 **resolved-in-principle**; resolved in fact only once the Phase 1 token spike passes).
 

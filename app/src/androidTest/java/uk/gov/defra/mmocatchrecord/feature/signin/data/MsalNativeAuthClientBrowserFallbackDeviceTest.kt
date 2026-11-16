@@ -14,7 +14,6 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import uk.gov.defra.mmocatchrecord.BuildConfig
-import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.core.android.CurrentActivityProvider
 import uk.gov.defra.mmocatchrecord.core.root.MainActivity
 import java.lang.ref.WeakReference
@@ -26,8 +25,9 @@ import java.lang.ref.WeakReference
 @RunWith(AndroidJUnit4::class)
 class MsalNativeAuthClientBrowserFallbackDeviceTest {
     @Before
-    fun requiresDevFlavourAndACustomTabsBrowser() {
-        assumeTrue("Needs the devDebug msal config with redirect_uri", BuildConfig.FLAVOR == "dev")
+    fun requiresADebugBuildAndACustomTabsBrowser() {
+        // The fixture's redirect_uri hash is for the debug signing key and the .debug package.
+        assumeTrue("Needs a debug build for the fixture's redirect_uri", BuildConfig.DEBUG)
         assumeTrue("Needs a browser capable of opening https: links on this device", aBrowserIsAvailable())
     }
 
@@ -41,7 +41,7 @@ class MsalNativeAuthClientBrowserFallbackDeviceTest {
             client =
                 MsalNativeAuthClient(
                     context = activity.applicationContext,
-                    configResId = R.raw.msal_native_auth_config,
+                    configJson = { devDebugConfigJson() },
                     currentActivityProvider = CurrentActivityProvider { WeakReference(activity).get() },
                 )
         }
@@ -69,6 +69,15 @@ class MsalNativeAuthClientBrowserFallbackDeviceTest {
         assertTrue("unexpected outcome: $outcome", outcome is NativeAuthOutcome.BrowserCancelled)
     }
 
+    private fun devDebugConfigJson(): String =
+        InstrumentationRegistry
+            .getInstrumentation()
+            .context
+            .assets
+            .open(DEV_DEBUG_CONFIG_ASSET)
+            .bufferedReader()
+            .use { it.readText() }
+
     private fun aBrowserIsAvailable(): Boolean {
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://example.com"))
         val packageManager = InstrumentationRegistry.getInstrumentation().targetContext.packageManager
@@ -78,5 +87,6 @@ class MsalNativeAuthClientBrowserFallbackDeviceTest {
     private companion object {
         const val API_SCOPE = "api://8bc065bf-046f-4d18-834a-753b325e5221/access_as_user"
         const val CUSTOM_TAB_OPEN_WAIT_MILLIS = 12_000L
+        const val DEV_DEBUG_CONFIG_ASSET = "msal_native_auth_config_dev_debug.json"
     }
 }

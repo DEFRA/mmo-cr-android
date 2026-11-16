@@ -13,7 +13,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.mockito.kotlin.mock
-import uk.gov.defra.mmocatchrecord.BuildConfig
+import org.mockito.kotlin.whenever
+import uk.gov.defra.mmocatchrecord.core.config.AppConfiguration
 import uk.gov.defra.mmocatchrecord.core.language.AppLanguageRepository
 import uk.gov.defra.mmocatchrecord.core.network.AcceptLanguageInterceptor
 import uk.gov.defra.mmocatchrecord.core.network.AuthInterceptor
@@ -103,14 +104,37 @@ class NetworkModuleTests {
     }
 
     @Test
-    fun `provideTokenProvider wires the token source this build flavor's USE_STUB_AUTH flag selects`() {
-        val provider = NetworkModule.provideTokenProvider(mock<NativeAuthClient>(), InMemorySessionStore())
+    fun `provideTokenProvider wires the stub when the packaged config asks for it`() {
+        val appConfiguration = mock<AppConfiguration>()
+        whenever(appConfiguration.useStubAuth).thenReturn(true)
 
-        if (BuildConfig.USE_STUB_AUTH) {
-            assertTrue(provider is StubTokenProvider)
-        } else {
-            assertTrue(provider is MsalTokenProvider)
-        }
+        val provider =
+            NetworkModule.provideTokenProvider(appConfiguration, mock<NativeAuthClient>(), InMemorySessionStore())
+
+        assertTrue(provider is StubTokenProvider)
+    }
+
+    @Test
+    fun `provideTokenProvider binds MSAL for real sign-in against a configured service`() {
+        val appConfiguration = mock<AppConfiguration>()
+        whenever(appConfiguration.useStubAuth).thenReturn(false)
+        whenever(appConfiguration.useFakeSignIn).thenReturn(false)
+        whenever(appConfiguration.referenceDataServiceRootUrlOrNull()).thenReturn("https://example.test/")
+
+        val provider =
+            NetworkModule.provideTokenProvider(appConfiguration, mock<NativeAuthClient>(), InMemorySessionStore())
+
+        assertTrue(provider is MsalTokenProvider)
+    }
+
+    @Test
+    fun `provideTokenProvider falls back to the missing provider when config is unavailable`() {
+        val appConfiguration = mock<AppConfiguration>()
+
+        val provider =
+            NetworkModule.provideTokenProvider(appConfiguration, mock<NativeAuthClient>(), InMemorySessionStore())
+
+        assertTrue(provider is MissingTokenProvider)
     }
 
     @Test

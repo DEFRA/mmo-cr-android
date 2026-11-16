@@ -1,0 +1,26 @@
+# Copy to local.properties (git-ignored) and fill in. Never commit local.properties.
+# crAppCfg.* keys become the debug build's packaged app config (ADR 0024); release builds never read this file.
+
+# Android SDK location; Android Studio normally writes this for you.
+sdk.dir=/path/to/Android/Sdk
+
+# --- Backend ---
+# API gateway base URL shared by all backend services (as iOS); reference data is <base>reference-data-service/.
+# Ask the backend team for the DEV value (needs the DEFRA OpenVPN).
+crAppCfg.API_BASE_URL=https://<api-gateway-host>/
+
+# --- Auth (two independent switches, ADR 0016 / 0019) ---
+# true: send the fixed "local-stub" bearer token on API calls (backends with the always-allow auth stub).
+crAppCfg.USE_STUB_AUTH=false
+# true: use the Stage-1 fake sign-in screen instead of Entra (offline or UI work).
+crAppCfg.USE_FAKE_SIGN_IN=false
+
+# --- Entra External ID (DEV tenant); ask the team for these values ---
+crAppCfg.MSAL_CLIENT_ID=<entra-app-client-id>
+crAppCfg.MSAL_AUTHORITY_URL=https://<tenant>.ciamlogin.com/<tenant>.onmicrosoft.com/
+# Optional browser fallback; must be registered in Entra for the .debug package and the debug signing key.
+crAppCfg.MSAL_REDIRECT_URI=msauth://mmo.catchrecording.android.debug/<url-encoded-signature-hash>
+
+# --- Offline / UI work without Entra: use these instead of the auth and Entra values above ---
+# crAppCfg.USE_STUB_AUTH=true
+# crAppCfg.USE_FAKE_SIGN_IN=true
