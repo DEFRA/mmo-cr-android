@@ -41,4 +41,10 @@ internal interface CatchRecordApi {
     suspend fun retrieve(
         @Path("id") id: String,
     ): Response<RetrieveCatchRecordResponseDto>
+
+    /** As [retrieve], but decodes only [CatchRecordRecoverySnapshotDto] — used by conflict recovery (S4). */
+    @GET("v1/catch-records/{id}")
+    suspend fun recover(
+        @Path("id") id: String,
+    ): Response<CatchRecordRecoverySnapshotDto>
 }

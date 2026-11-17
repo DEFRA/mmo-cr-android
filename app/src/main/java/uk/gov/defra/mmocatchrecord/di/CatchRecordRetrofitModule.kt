@@ -13,7 +13,7 @@ import uk.gov.defra.mmocatchrecord.core.config.AppConfiguration
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission.remote.CatchRecordApi
 import javax.inject.Singleton
 
-/** The catch-recording Retrofit, reusing the shared [OkHttpClient]; not wired in yet. See ADR 0026. */
+/** The catch-recording Retrofit, reusing the shared [OkHttpClient]. See ADR 0026. */
 @Module
 @InstallIn(SingletonComponent::class)
 object CatchRecordRetrofitModule {

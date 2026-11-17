@@ -145,6 +145,17 @@ internal data class SubmissionResponseDto(
     val artifacts: List<ArtifactMetadataDto>,
 )
 
+/** Minimal recovery-GET shape (S4): only what conflict recovery needs, so a partial DRAFT record whose
+ *  full canonical snapshot fields aren't all populated yet still decodes (`ignoreUnknownKeys` is on). */
+@Serializable
+internal data class CatchRecordRecoverySnapshotDto(
+    val id: String,
+    val catchRecordReference: String? = null,
+    val status: String,
+    val version: Int,
+    val hasUnsubmittedChanges: Boolean = false,
+)
+
 // Read-side (recovery GET, OQ-1) DTOs — the full Canonical Catch Record snapshot shape.
 
 @Serializable

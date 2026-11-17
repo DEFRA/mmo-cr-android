@@ -6,7 +6,7 @@ internal sealed class CatchRecordApiException(
     open val retryable: Boolean,
 ) : Exception(message)
 
-/** A non-2xx response; `retryable` is a Phase 2 status-based placeholder — see ADR 0026. */
+/** A non-2xx response; `retryable` is derived from its HTTP status — see ADR 0026. */
 internal class CatchRecordHttpException(
     val operation: String,
     val httpStatusCode: Int,

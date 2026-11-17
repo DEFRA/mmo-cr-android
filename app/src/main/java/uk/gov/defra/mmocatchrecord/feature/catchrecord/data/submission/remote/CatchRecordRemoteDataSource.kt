@@ -9,9 +9,11 @@ import java.io.IOException
 import javax.inject.Inject
 
 private const val HTTP_UNAUTHORIZED = 401
+private const val HTTP_REQUEST_TIMEOUT = 408
+private const val HTTP_TOO_MANY_REQUESTS = 429
 private const val HTTP_SERVER_ERROR_THRESHOLD = 500
 
-/** Turns [CatchRecordApi]'s raw [Response]s into typed DTOs/exceptions; not wired in yet (Phase 4). */
+/** Turns [CatchRecordApi]'s raw [Response]s into typed DTOs/exceptions (ADR 0026). */
 internal class CatchRecordRemoteDataSource
     @Inject
     constructor(
@@ -42,6 +44,8 @@ internal class CatchRecordRemoteDataSource
 
         suspend fun retrieve(id: String): RetrieveCatchRecordResponseDto = unwrap("retrieve", api.retrieve(id))
 
+        suspend fun recover(id: String): CatchRecordRecoverySnapshotDto = unwrap("recover", api.recover(id))
+
         private fun <T> unwrap(
             operation: String,
             response: Response<T>,
@@ -59,7 +63,10 @@ internal class CatchRecordRemoteDataSource
             if (httpStatusCode == HTTP_UNAUTHORIZED) {
                 return CatchRecordUnauthorizedException(operation, errorBody?.correlationId)
             }
-            val retryable = httpStatusCode >= HTTP_SERVER_ERROR_THRESHOLD
+            val retryable =
+                httpStatusCode >= HTTP_SERVER_ERROR_THRESHOLD ||
+                    httpStatusCode == HTTP_REQUEST_TIMEOUT ||
+                    httpStatusCode == HTTP_TOO_MANY_REQUESTS
             return CatchRecordHttpException(
                 operation,
                 httpStatusCode,
