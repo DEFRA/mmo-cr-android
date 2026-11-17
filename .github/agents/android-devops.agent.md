@@ -80,7 +80,7 @@ restate or fork it. Your primary standards reference is
 >
 > **Confirmed (release / identity / signing stack) — confirmed 2026-11-04 by the user (ADR 0022/0023/0024),
 > do not re-prompt:**
-> **Three Google Play apps** (`mmo.catchrecordingdev.android`, `mmo.catchrecordingtest.android`,
+> **Three Google Play apps** (`mmo.catchrecording.dev.android`, `mmo.catchrecording.test.android`,
 > `mmo.catchrecording.android`) and six environments `dev` / `test` / `perf-test` / `uat` / `prep-prod` /
 > `production`, with **Managed Publishing ON only in the Prod app**; no product flavors (debug suffix
 > `.debug`). **Compile once, package per environment** with the `release-tools` CLI (inspect / package /
@@ -173,7 +173,7 @@ Do not run a second, separate validation round — the plan is checked against t
   versionCode `channel × 10 000 + N` (no Play API query to choose it); `GIT_COMMIT_SHA` embedded as
   `BuildConfig` traceability metadata (never the version code).
 - **Configuration & identity (frozen)** — **compile once, package per environment** (no flavors); three Play
-  apps `mmo.catchrecordingdev.android` / `mmo.catchrecordingtest.android` / `mmo.catchrecording.android`;
+  apps `mmo.catchrecording.dev.android` / `mmo.catchrecording.test.android` / `mmo.catchrecording.android`;
   `CR_APP_CFG_*` Environment variables injected at packaging.
 - **Security setup** — the **CodeQL advanced-setup workflow** (`java-kotlin`) and the **Dependabot config**
   as their own separate files; confirming secret scanning + push protection are on; pinning Actions to full

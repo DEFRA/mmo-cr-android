@@ -33,7 +33,7 @@ working framework: plan → get approval → implement → validate.
    - **Configuration strategy (frozen): compile once, package per environment** (ADR 0023) — no flavors;
      one config-free base bundle repackaged per environment.
    - **Topology / identity / versioning (frozen, ADR 0022):** three Google Play apps
-     (`mmo.catchrecordingdev.android` / `mmo.catchrecordingtest.android` / `mmo.catchrecording.android`), six
+     (`mmo.catchrecording.dev.android` / `mmo.catchrecording.test.android` / `mmo.catchrecording.android`), six
      environments, Managed Publishing on the Prod app only; `VERSION_CODE` = build number N (≤ 9999) and
      uploaded code = `channel × 10 000 + N`.
    - **Signing strategy:** Play App Signing (Google holds the app signing key) + upload keys (non-prod key for
