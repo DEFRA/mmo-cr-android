@@ -60,6 +60,7 @@ android {
         }
     }
 
+    sourceSets {
         // Bundles the exported Room schema JSON into the test APK so MigrationTestHelper can read it.
         getByName("androidTest").assets.directories.add("$projectDir/schemas")
     }

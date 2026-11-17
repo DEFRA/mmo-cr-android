@@ -115,20 +115,21 @@ class AppConfiguration
             )
         }
 
-        private fun JsonObject.optionalString(key: String): String =
-            (this[key] as? JsonPrimitive)
-                ?.takeIf(JsonPrimitive::isString)
-                ?.content
-                ?.trim()
-                .orEmpty()
-
-        private fun JsonObject.booleanOrFalse(key: String): Boolean =
-            (this[key] as? JsonPrimitive)?.takeUnless(JsonPrimitive::isString)?.content == "true"
-
         private fun logUnavailableConfig() {
             Timber.w("Packaged app configuration is missing or malformed; runtime configuration is unavailable.")
         }
     }
+
+// Kept top-level (not class members) so AppConfiguration stays under detekt's TooManyFunctions threshold.
+private fun JsonObject.optionalString(key: String): String =
+    (this[key] as? JsonPrimitive)
+        ?.takeIf(JsonPrimitive::isString)
+        ?.content
+        ?.trim()
+        .orEmpty()
+
+private fun JsonObject.booleanOrFalse(key: String): Boolean =
+    (this[key] as? JsonPrimitive)?.takeUnless(JsonPrimitive::isString)?.content == "true"
 
 /** Builds MSAL's native-auth JSON; a missing client ID or authority yields the unprovisioned shape. */
 private fun msalConfigJson(
