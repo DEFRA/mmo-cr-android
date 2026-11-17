@@ -11,6 +11,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -301,6 +302,96 @@ class CatchRecordSyncWorkerTests {
         }
 
     @Test
+    fun `B1 a successful submission retains progress persisted during submit, not just status`() =
+        runTest {
+            val draft = pendingDraft()
+            val submissionRepository =
+                FakeCatchRecordSubmissionRepository(
+                    shouldSucceed = true,
+                    onSubmit = { current ->
+                        draftRepository
+                            .saveDraft(current.copy(serverCatchRecordId = "cr-1", submissionStep = "submitted"))
+                            .getOrThrow()
+                    },
+                )
+            val worker = buildWorker(submissionRepository, draftId = draft.id)
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.success(), result)
+            val updated = draftRepository.getDraftById(draft.id).getOrThrow()
+            assertEquals(DraftStatus.Submitted, updated?.status)
+            assertEquals("cr-1", updated?.serverCatchRecordId)
+            assertEquals("submitted", updated?.submissionStep)
+        }
+
+    /** Re-review finding #1: a reload *exception* during failure handling must retry, never fall back to
+     *  the stale pre-submit [draft] (which would wipe already-persisted progress on the next write). */
+    @Test
+    fun `B1 a reload exception while handling a failure requests a retry, not a stale-draft write`() =
+        runTest {
+            val draft = pendingDraft()
+            val forbidden =
+                CatchRecordHttpException(
+                    operation = "submit",
+                    httpStatusCode = HTTP_FORBIDDEN,
+                    serverCode = null,
+                    correlationId = null,
+                    retryable = false,
+                )
+            val submissionRepository = FakeCatchRecordSubmissionRepository(shouldSucceed = false, failure = forbidden)
+            val flakyRepository = FailReloadDraftRepository(draftRepository)
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            val inputData = Data.Builder().putString(CatchRecordSyncWorker.KEY_DRAFT_ID, draft.id).build()
+            val factory =
+                object : WorkerFactory() {
+                    override fun createWorker(
+                        appContext: Context,
+                        workerClassName: String,
+                        workerParameters: WorkerParameters,
+                    ): ListenableWorker =
+                        CatchRecordSyncWorker(appContext, workerParameters, flakyRepository, submissionRepository)
+                }
+            val worker =
+                TestListenableWorkerBuilder<CatchRecordSyncWorker>(context, inputData = inputData)
+                    .setWorkerFactory(factory)
+                    .build()
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.retry(), result)
+            val updated = draftRepository.getDraftById(draft.id).getOrThrow()
+            assertEquals(DraftStatus.PendingSync, updated?.status)
+        }
+
+    /** Re-review finding #1: a reload that finds the row gone must fail terminally — nothing to update. */
+    @Test
+    fun `B1 a reload returning no row while handling a failure fails without a stale-draft write`() =
+        runTest {
+            val draft = pendingDraft()
+            val forbidden =
+                CatchRecordHttpException(
+                    operation = "submit",
+                    httpStatusCode = HTTP_FORBIDDEN,
+                    serverCode = null,
+                    correlationId = null,
+                    retryable = false,
+                )
+            val submissionRepository =
+                FakeCatchRecordSubmissionRepository(
+                    shouldSucceed = false,
+                    failure = forbidden,
+                    onSubmit = { current -> draftRepository.deleteDraft(current.id).getOrThrow().let { current } },
+                )
+            val worker = buildWorker(submissionRepository, draftId = draft.id)
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.failure(), result)
+            assertNull(draftRepository.getDraftById(draft.id).getOrThrow())
+        }
+
+    @Test
     fun `B1 a terminal failure persists the latest reloaded draft, not a stale in-memory snapshot`() =
         runTest {
             val draft = pendingDraft()
@@ -347,4 +438,21 @@ private class FailOnStatusDraftRepository(
         } else {
             delegate.saveDraft(draft)
         }
+}
+
+/** B1 test support: the worker's own initial lookup succeeds, but every reload after that (i.e. the
+ *  failure-handling reload under test) fails, so a stale-fallback regression would be caught. */
+private class FailReloadDraftRepository(
+    private val delegate: FakeCatchRecordDraftRepository,
+) : CatchRecordDraftRepository by delegate {
+    private var callCount = 0
+
+    override suspend fun getDraftById(draftId: String): Result<CatchRecordDraft?> {
+        callCount++
+        return if (callCount > 1) {
+            Result.failure(java.io.IOException("Simulated reload failure"))
+        } else {
+            delegate.getDraftById(draftId)
+        }
+    }
 }

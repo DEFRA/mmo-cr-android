@@ -65,15 +65,25 @@ class CatchRecordSyncWorker
                 onFailure = { Result.retry() },
             )
 
-        /** 401 gets one same-attempt retry before giving up (ADR 0026); [draft] is reloaded first
-         *  because the repository may have persisted progress even when the result is a failure. */
+        /** 401 gets one same-attempt retry before giving up (ADR 0026); [draft] is reloaded first since
+         *  a failed/empty reload must never fall back to the stale pre-submit [draft] (B1 re-review). */
         private suspend fun handleFailure(
             draft: CatchRecordDraft,
             error: Throwable,
             isTokenRetry: Boolean = false,
+        ): Result =
+            draftRepository.getDraftById(draft.id).fold(
+                onSuccess = { it?.let { latest -> resolveFailure(latest, error, isTokenRetry) } ?: Result.failure() },
+                onFailure = { Result.retry() },
+            )
+
+        /** The classification/terminal-reason logic, once [draft.id]'s latest persisted row is known. */
+        private suspend fun resolveFailure(
+            latest: CatchRecordDraft,
+            error: Throwable,
+            isTokenRetry: Boolean,
         ): Result {
             val classification = SafeErrorMapper.classify(error)
-            val latest = latestOrFallback(draft)
             if (classification == CatchRecordErrorClassification.NeedsAuthentication && !isTokenRetry) {
                 return submissionRepository.submit(latest).fold(
                     onSuccess = { markSubmitted(it) },
@@ -93,10 +103,6 @@ class CatchRecordSyncWorker
                 }
             return failTerminally(latest, reason)
         }
-
-        /** The persisted row, falling back to [draft] only if the reload itself fails (B1). */
-        private suspend fun latestOrFallback(draft: CatchRecordDraft): CatchRecordDraft =
-            draftRepository.getDraftById(draft.id).getOrNull() ?: draft
 
         /** S6: if persisting the terminal state itself fails, retry the whole work rather than losing the
          *  failure reason to a dropped write — `Result.failure()` here would never be revisited. */
