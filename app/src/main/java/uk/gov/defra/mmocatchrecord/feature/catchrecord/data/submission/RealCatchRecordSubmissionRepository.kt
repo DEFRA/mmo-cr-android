@@ -99,7 +99,7 @@ internal class RealCatchRecordSubmissionRepository
         override suspend fun submit(draft: CatchRecordDraft): Result<CatchRecordDraft> =
             locksByDraftId.getOrPut(draft.id) { Mutex() }.withLock {
                 runCatching {
-                    val latest = draftRepository.getDraftById(draft.id).getOrThrow() ?: draft
+                    val latest = draftRepository.getDraftById(draft.id).getOrThrow() ?: error("Draft no longer exists")
                     var current = ensureConformingReference(latest)
                     current = ensureCreated(current)
                     current = ensureReplaced(current)
@@ -159,6 +159,8 @@ internal class RealCatchRecordSubmissionRepository
             }
         }
 
+        /** Mirrors [ensureReplaced]/[ensureSubmitted]'s own recovery: a recovered SUBMITTED/COMPLETE or
+         *  non-DRAFT snapshot must not be overwritten with a stale `created` step (re-review finding #2). */
         private suspend fun recoverAfterCreateConflict(
             draft: CatchRecordDraft,
             reference: String,
@@ -170,15 +172,16 @@ internal class RealCatchRecordSubmissionRepository
                     .firstOrNull { it.catchRecordReference == reference }
                     ?.id
                     ?: error("Idempotency conflict for '$reference' but no matching record found")
-            val current = remoteDataSource.recover(id)
-            return draftRepository
-                .saveDraft(
-                    draft.copy(
-                        serverCatchRecordId = current.id,
-                        serverVersion = current.version,
-                        submissionStep = STEP_CREATED,
-                    ),
-                ).getOrThrow()
+            val server = remoteDataSource.recover(id)
+            val withId = draft.copy(serverCatchRecordId = id)
+            return when {
+                isDone(server) -> markSubmitted(draftRepository, withId, server)
+                server.status != SERVER_STATUS_DRAFT -> nonDraftConflict(id, server)
+                else ->
+                    draftRepository
+                        .saveDraft(withId.copy(serverVersion = server.version, submissionStep = STEP_CREATED))
+                        .getOrThrow()
+            }
         }
 
         /** At most one version-refresh retry (B2): a second conflict after refreshing is terminal, not looped. */

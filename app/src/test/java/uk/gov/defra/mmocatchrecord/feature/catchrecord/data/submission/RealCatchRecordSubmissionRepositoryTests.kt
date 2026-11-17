@@ -1,12 +1,16 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission
 
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.doSuspendableAnswer
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
@@ -337,14 +341,104 @@ class RealCatchRecordSubmissionRepositoryTests {
         runTest {
             seed(fixtureDraft(status = "replaced", serverCatchRecordId = "cr-1", serverVersion = 2))
             val conflict = CatchRecordHttpException("submit", 409, "IDEMPOTENCY_CONFLICT", null, retryable = false)
-            whenever(remote.submit(any(), any(), any())).thenAnswer { throw conflict }
+            val keysAtCallTime = mutableListOf<String>()
+            whenever(remote.submit(any(), any(), any())).thenAnswer { invocation ->
+                val key = invocation.getArgument<String>(2)
+                // Each key must already be persisted before the call that uses it (lost-response replay).
+                assertEquals(key, draftRepository.persistedDrafts.single().submitIdempotencyKey)
+                keysAtCallTime += key
+                throw conflict
+            }
             whenever(remote.recover("cr-1")).thenReturn(recoverResponse(version = 2, status = "DRAFT"))
 
             val result = repository().submit(draftRepository.persistedDrafts.single())
 
             assertFalse(result.isSuccess)
-            verify(remote, times(2)).submit(any(), any(), any())
-            verify(remote, times(1)).recover("cr-1")
+            assertEquals(2, keysAtCallTime.size)
+            assertNotEquals(keysAtCallTime[0], keysAtCallTime[1])
+        }
+
+    @Test
+    fun `B1 a transient IOException on submit is retried with the same idempotency key and If-Match`() =
+        runTest {
+            seed(fixtureDraft(status = "replaced", serverCatchRecordId = "cr-1", serverVersion = 2))
+            whenever(remote.submit(any(), any(), any())).thenAnswer { throw java.io.IOException("offline") }
+            val sharedRepository = repository()
+
+            val first = sharedRepository.submit(draftRepository.persistedDrafts.single())
+
+            assertFalse(first.isSuccess)
+            val keyAfterFirst = draftRepository.persistedDrafts.single().submitIdempotencyKey
+            requireNotNull(keyAfterFirst)
+
+            whenever(remote.submit(any(), any(), any())).thenReturn(submissionResponse())
+            val second = sharedRepository.submit(draftRepository.persistedDrafts.single())
+
+            assertTrue(second.isSuccess)
+            verify(remote, times(2)).submit(eq("cr-1"), eq("2"), eq(keyAfterFirst))
+        }
+
+    @Test
+    fun `B2 a submit conflict recovered as a newer DRAFT version refreshes version and key before succeeding`() =
+        runTest {
+            seed(fixtureDraft(status = "replaced", serverCatchRecordId = "cr-1", serverVersion = 2))
+            val conflict = CatchRecordHttpException("submit", 409, "VERSION_CONFLICT", null, retryable = false)
+            whenever(remote.recover("cr-1")).thenReturn(recoverResponse(version = 5, status = "DRAFT"))
+            val keysAtCallTime = mutableListOf<String>()
+            whenever(remote.submit(eq("cr-1"), any(), any())).thenAnswer { invocation ->
+                keysAtCallTime += invocation.getArgument<String>(2)
+                if (invocation.getArgument<String>(1) == "2") throw conflict else submissionResponse()
+            }
+
+            val result = repository().submit(draftRepository.persistedDrafts.single())
+
+            assertTrue(result.isSuccess)
+            val saved = result.getOrThrow()
+            assertEquals("submitted", saved.submissionStep)
+            assertEquals(5, saved.serverVersion)
+            assertNotEquals(keysAtCallTime[0], saved.submitIdempotencyKey)
+        }
+
+    @Test
+    fun `B2 a create conflict recovered as SUBMITTED server-side ends submitted without further writes`() =
+        runTest {
+            seed(fixtureDraft())
+            val conflict = CatchRecordHttpException("createDraft", 409, "IDEMPOTENCY_CONFLICT", null, retryable = false)
+            whenever(remote.createDraft(any(), any())).thenAnswer { throw conflict }
+            whenever(remote.list(limit = 100)).thenReturn(
+                CatchRecordListResponseDto(
+                    items =
+                        listOf(
+                            CatchRecordListingItemDto(
+                                id = "cr-1",
+                                catchRecordReference = REFERENCE,
+                                status = "SUBMITTED",
+                                displayStatus = "Submitted",
+                                version = 3,
+                                vessel = CatchRecordListingVesselDto(),
+                                trip = CatchRecordListingTripDto(),
+                                createdAt = "2026-07-27T15:00:00Z",
+                                updatedAt = "2026-07-27T15:00:00Z",
+                                submittedAt = "2026-07-27T15:05:00Z",
+                                completedAt = null,
+                                progress = CatchRecordListingProgressDto(),
+                            ),
+                        ),
+                    limit = 100,
+                    count = 1,
+                ),
+            )
+            whenever(remote.recover("cr-1"))
+                .thenReturn(recoverResponse(version = 3, status = "SUBMITTED", hasUnsubmittedChanges = false))
+
+            val result = repository().submit(draftRepository.persistedDrafts.single())
+
+            assertTrue(result.isSuccess)
+            val saved = result.getOrThrow()
+            assertEquals("submitted", saved.submissionStep)
+            assertEquals("cr-1", saved.serverCatchRecordId)
+            verify(remote, never()).replace(any(), any(), any())
+            verify(remote, never()).submit(any(), any(), any())
         }
 
     @Test
@@ -415,17 +509,27 @@ class RealCatchRecordSubmissionRepositoryTests {
     fun `B1 two concurrent submit calls for the same draft do not double-create`() =
         runTest {
             seed(fixtureDraft())
-            whenever(remote.createDraft(any(), any())).thenReturn(standardSaveResponse(version = 1))
+            val secondCallStarted = CompletableDeferred<Unit>()
+            whenever(remote.createDraft(any(), any())).doSuspendableAnswer {
+                secondCallStarted.await()
+                standardSaveResponse(version = 1)
+            }
             whenever(remote.replace(any(), any(), any())).thenReturn(standardSaveResponse(version = 2))
             whenever(remote.submit(any(), any(), any())).thenReturn(submissionResponse())
             val sharedRepository = repository()
             val draft = draftRepository.persistedDrafts.single()
 
-            val first = sharedRepository.submit(draft)
-            val second = sharedRepository.submit(draft)
+            // `first` blocks inside createDraft (holding the per-draft mutex) until `second` has actually
+            // started and is contending for that same mutex, proving this is a real race, not two serial calls.
+            val first = async { sharedRepository.submit(draft) }
+            val second =
+                async {
+                    secondCallStarted.complete(Unit)
+                    sharedRepository.submit(draft)
+                }
 
-            assertTrue(first.isSuccess)
-            assertTrue(second.isSuccess)
+            assertTrue(first.await().isSuccess)
+            assertTrue(second.await().isSuccess)
             verify(remote, times(1)).createDraft(any(), any())
         }
 
