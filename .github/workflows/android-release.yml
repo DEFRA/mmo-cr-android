@@ -17,10 +17,10 @@ on:
         type: boolean
         default: true
       distribution:
-        description: "manual = signed AABs as artifacts for Play Console; play = upload through the Play API"
+        description: "play = upload through the Play API; manual = signed AABs as artifacts for Play Console"
         type: choice
         required: true
-        default: manual
+        default: play
         options:
           - manual
           - play
