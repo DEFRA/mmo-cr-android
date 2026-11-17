@@ -19,6 +19,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SubmissionFailureReason
 
 /**
  * JVM/Robolectric port of the androidTest `SubmissionScreensTest` — see that file's doc comments for the
@@ -322,5 +323,43 @@ class SubmissionScreensTests {
         }
 
         composeTestRule.onNodeWithTag(SubmissionFailedScreenTestTags.BANNER).assertIsDisplayed()
+    }
+
+    @Test
+    fun `S7 a NeedsSignIn failure reason shows sign-in-specific body copy`() {
+        composeTestRule.setContent {
+            MmoTheme {
+                SubmissionFailedScreenContent(
+                    draft = draft().copy(submissionFailureReason = SubmissionFailureReason.NeedsSignIn.name),
+                    onRetry = {},
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithText("You have been signed out. Sign in again to send your catch record.")
+            .performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun `S7 an unrecognised failure reason falls back to the generic body copy`() {
+        composeTestRule.setContent {
+            MmoTheme {
+                SubmissionFailedScreenContent(
+                    draft = draft().copy(submissionFailureReason = "SomeFutureReasonNotYetKnown"),
+                    onRetry = {},
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithText(
+                "We could not send your catch record to the relevant fishing authority. " +
+                    "Try again, or check your connection and come back later.",
+            ).performScrollTo()
+            .assertIsDisplayed()
     }
 }

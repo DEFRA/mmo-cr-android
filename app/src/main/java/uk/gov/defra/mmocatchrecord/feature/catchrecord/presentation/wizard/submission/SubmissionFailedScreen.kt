@@ -28,6 +28,7 @@ import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SubmissionFailureReason
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordFlowEvent
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordFlowViewModel
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.CatchRecordWizardScaffold
@@ -87,6 +88,20 @@ fun SubmissionFailedScreen(
     }
 }
 
+/** Reason-specific body copy for the "Could not send" screen — falls back to the generic message for an
+ *  unrecognised or absent (older-persisted) reason string, never blocking "Try again" (ADR 0026). */
+@Composable
+private fun submissionFailedBody(reasonName: String?): String =
+    when (reasonName) {
+        SubmissionFailureReason.NeedsSignIn.name -> stringResource(R.string.submission_failed_body_needs_sign_in)
+        SubmissionFailureReason.NotAuthorisedForVessel.name ->
+            stringResource(R.string.submission_failed_body_not_authorised)
+        SubmissionFailureReason.Rejected.name, SubmissionFailureReason.DataProblem.name ->
+            stringResource(R.string.submission_failed_body_rejected)
+        SubmissionFailureReason.TooLarge.name -> stringResource(R.string.submission_failed_body_too_large)
+        else -> stringResource(R.string.submission_failed_body)
+    }
+
 @Composable
 fun SubmissionFailedScreenContent(
     draft: CatchRecordDraft,
@@ -115,7 +130,9 @@ fun SubmissionFailedScreenContent(
             text = stringResource(R.string.submission_failed_body_title),
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
         )
-        Text(text = stringResource(R.string.submission_failed_body), style = MaterialTheme.typography.bodyLarge)
+        Text(text = submissionFailedBody(draft.submissionFailureReason), style = MaterialTheme.typography.bodyLarge)
+        // Sign-in is not wired as a distinct action here (NeedsSignIn still uses "Try again"): routing to
+        // SignInRoute cleanly needs RootEvent.SignedOut via SessionCoordinator (MSAL), which is out of scope.
         PrimaryActionButton(
             text = stringResource(R.string.submission_failed_retry_action),
             onClick = onRetry,

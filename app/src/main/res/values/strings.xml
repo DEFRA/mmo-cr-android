@@ -284,6 +284,10 @@
     <string name="submission_failed_body_title">Your catch record is still saved on this device</string>
     <string name="submission_failed_body">We could not send your catch record to the relevant fishing authority. Try again, or check your connection and come back later.</string>
     <string name="submission_failed_retry_action">Try again</string>
+    <string name="submission_failed_body_needs_sign_in">You have been signed out. Sign in again to send your catch record.</string>
+    <string name="submission_failed_body_not_authorised">You do not have permission to submit a catch record for this vessel. Contact your administrator for help.</string>
+    <string name="submission_failed_body_rejected">There is a problem with the information in your catch record. Check your answers, then try again.</string>
+    <string name="submission_failed_body_too_large">Your catch record is too large to send. Contact support for help.</string>
     <string name="wizard_error_retry_action">Try again</string>
     <string name="unsaved_changes_dialog_title">You have unsaved changes</string>
     <string name="unsaved_changes_dialog_body">If you leave this page, the information you have entered will not be saved.</string>
