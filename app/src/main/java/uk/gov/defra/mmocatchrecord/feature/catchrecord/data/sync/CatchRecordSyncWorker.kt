@@ -65,9 +65,8 @@ class CatchRecordSyncWorker
                 onFailure = { Result.retry() },
             )
 
-        /** 401: one same-attempt retry (the token provider silently refreshes) before giving up — ADR 0026.
-         *  [draft] is reloaded first (B1): [submissionRepository] may have already persisted progress
-         *  (e.g. a create/replace idempotency key) even though the overall [Result] here is a failure. */
+        /** 401 gets one same-attempt retry before giving up (ADR 0026); [draft] is reloaded first
+         *  because the repository may have persisted progress even when the result is a failure. */
         private suspend fun handleFailure(
             draft: CatchRecordDraft,
             error: Throwable,
