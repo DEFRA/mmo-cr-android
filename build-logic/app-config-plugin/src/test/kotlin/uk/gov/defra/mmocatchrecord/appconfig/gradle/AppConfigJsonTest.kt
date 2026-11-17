@@ -34,6 +34,24 @@ class AppConfigJsonTest {
     }
 
     @Test
+    fun `keys unused by an enabled flag are written empty and not reported`() {
+        val flagged =
+            """
+            {"keys": {
+              "USE_FAKE_SIGN_IN": {"type": "bool", "required": true, "description": "Fake"},
+              "MSAL_CLIENT_ID": {"type": "string", "required": false, "description": "Id", "unusedWhen": "USE_FAKE_SIGN_IN"}
+            }}
+            """.trimIndent()
+
+        val off = AppConfigJson.fromLocalValues(flagged, mapOf("USE_FAKE_SIGN_IN" to "false"))
+        val on = AppConfigJson.fromLocalValues(flagged, mapOf("USE_FAKE_SIGN_IN" to "true", "MSAL_CLIENT_ID" to "x"))
+
+        assertEquals(listOf("MSAL_CLIENT_ID"), off.missingKeys)
+        assertEquals("""{"USE_FAKE_SIGN_IN":true,"MSAL_CLIENT_ID":""}""", on.json)
+        assertEquals(emptyList<String>(), on.missingKeys)
+    }
+
+    @Test
     fun `schema without keys is rejected`() {
         assertThrows(IllegalStateException::class.java) { AppConfigJson.fromLocalValues("{}", emptyMap()) }
     }

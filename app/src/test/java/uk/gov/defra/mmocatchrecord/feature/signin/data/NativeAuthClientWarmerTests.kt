@@ -18,7 +18,7 @@ class NativeAuthClientWarmerTests {
     fun `fake sign-in never warms the MSAL client`() {
         val client = FakeNativeAuthClient()
 
-        warmerFor(client, """{"USE_STUB_AUTH":true,"USE_FAKE_SIGN_IN":true}""").warmUp()
+        warmerFor(client, """{"API_BASE_URL":"$BASE","USE_STUB_AUTH":true,"USE_FAKE_SIGN_IN":true}""").warmUp()
 
         assertEquals(0, client.warmUpCallCount)
     }
@@ -27,7 +27,7 @@ class NativeAuthClientWarmerTests {
     fun `real sign-in warms the MSAL client`() {
         val client = FakeNativeAuthClient()
 
-        warmerFor(client, """{"USE_STUB_AUTH":true,"USE_FAKE_SIGN_IN":false}""").warmUp()
+        warmerFor(client, """{"API_BASE_URL":"$BASE","USE_STUB_AUTH":true,"USE_FAKE_SIGN_IN":false}""").warmUp()
 
         assertEquals(1, client.warmUpCallCount)
     }
@@ -41,5 +41,9 @@ class NativeAuthClientWarmerTests {
         val context = mock<Context>()
         whenever(context.assets).thenReturn(assets)
         return NativeAuthClientWarmer(client, AppConfiguration(context), TestScope(UnconfinedTestDispatcher()))
+    }
+
+    private companion object {
+        const val BASE = "https://example.test/"
     }
 }
