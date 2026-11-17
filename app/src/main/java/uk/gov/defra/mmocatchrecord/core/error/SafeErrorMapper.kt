@@ -1,5 +1,6 @@
 package uk.gov.defra.mmocatchrecord.core.error
 
+import android.database.SQLException
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.DraftMappingException
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.remote.ReferenceDataApiException
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission.remote.CatchRecordApiException
@@ -92,6 +93,8 @@ object SafeErrorMapper {
                 }
             // Network/IO-shaped failures default to transient/retryable (see ADR 0011 for the full rationale).
             is IOException -> CatchRecordErrorClassification.Transient
+            // A local Room/disk failure on the submission path (S2) — retrying the save can succeed.
+            is SQLException -> CatchRecordErrorClassification.Transient
             else -> CatchRecordErrorClassification.Terminal
         }
 }
