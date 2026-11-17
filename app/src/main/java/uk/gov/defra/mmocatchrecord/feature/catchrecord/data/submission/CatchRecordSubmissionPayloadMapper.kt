@@ -24,6 +24,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Species
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.SpeciesWeightPrecision
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.StatisticalSubRectangle
+import java.util.Locale
 
 /** Maps a [CatchRecordDraft] + its resolved reference data to the wire payloads (ADR 0026); unresolvable
  * lookups throw a terminal [SubmissionMappingException] — see [SEND_ASSOCIATION_ID] for OQ-7. */
@@ -99,7 +100,7 @@ internal object CatchRecordSubmissionPayloadMapper {
         label: String,
     ): String {
         val value = date ?: throw SubmissionMappingException("Draft has no $label date")
-        return "%04d-%02d-%02d".format(value.year, value.month, value.day)
+        return "%04d-%02d-%02d".format(Locale.ROOT, value.year, value.month, value.day)
     }
 
     private fun toGearAssociation(

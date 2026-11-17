@@ -24,6 +24,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Species
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.SpeciesWeightPrecision
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.StatisticalSubRectangle
+import java.util.Locale
 
 private const val EXPECTED_REPLACE_JSON =
     """{"vessel":{"id":"vessel-1"},""" +
@@ -211,5 +212,19 @@ class CatchRecordSubmissionPayloadMapperTests {
         val payload = CatchRecordSubmissionPayloadMapper.toCreatePayload(fixtureDraft())
 
         assertEquals("vessel-1", payload.vesselId)
+    }
+
+    @Test
+    fun `S8 dates always format with ASCII digits regardless of the device default locale`() {
+        val originalDefault = Locale.getDefault()
+        try {
+            Locale.setDefault(Locale.forLanguageTag("ar-SA"))
+
+            val payload = replace()
+
+            assertEquals("2026-07-27", payload.trip.dateStarted)
+        } finally {
+            Locale.setDefault(originalDefault)
+        }
     }
 }
