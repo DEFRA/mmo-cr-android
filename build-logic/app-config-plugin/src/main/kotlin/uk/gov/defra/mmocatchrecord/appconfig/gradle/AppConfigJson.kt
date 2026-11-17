@@ -29,8 +29,10 @@ object AppConfigJson {
         val config =
             buildJsonObject {
                 keys.forEach { (key, spec) ->
-                    val raw = values[key]?.trim().orEmpty()
-                    if (raw.isEmpty()) missing += key
+                    val unusedWhen = spec.jsonObject["unusedWhen"]?.jsonPrimitive?.content
+                    val unused = unusedWhen != null && values[unusedWhen]?.trim() == "true"
+                    val raw = if (unused) "" else values[key]?.trim().orEmpty()
+                    if (raw.isEmpty() && !unused) missing += key
                     when (spec.jsonObject["type"]?.jsonPrimitive?.content) {
                         "bool" -> put(key, raw == "true")
                         else -> put(key, raw)

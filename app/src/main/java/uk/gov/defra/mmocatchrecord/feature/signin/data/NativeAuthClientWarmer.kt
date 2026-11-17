@@ -2,6 +2,7 @@ package uk.gov.defra.mmocatchrecord.feature.signin.data
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import uk.gov.defra.mmocatchrecord.core.config.AppConfiguration
 import uk.gov.defra.mmocatchrecord.core.di.ApplicationScope
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -15,9 +16,12 @@ class NativeAuthClientWarmer
     @Inject
     internal constructor(
         private val nativeAuthClient: NativeAuthClient,
+        private val appConfiguration: AppConfiguration,
         @ApplicationScope private val applicationScope: CoroutineScope,
     ) {
+        // Fake sign-in never uses MSAL, so its config (MSAL_* keys) is not needed or read.
         fun warmUp() {
+            if (appConfiguration.useFakeSignIn == true) return
             applicationScope.launch { nativeAuthClient.warmUp() }
         }
     }
