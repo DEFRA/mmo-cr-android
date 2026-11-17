@@ -37,7 +37,7 @@ jobs:
   compile:
     name: Compile base bundle
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 60
     # Every later job proves its downloaded base has this hash (kept for "Re-run failed jobs").
     outputs:
       base_sha256: ${{ steps.compile.outputs.base_sha256 }}
