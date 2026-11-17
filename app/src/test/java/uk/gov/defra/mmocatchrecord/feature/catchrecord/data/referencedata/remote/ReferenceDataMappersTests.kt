@@ -13,10 +13,10 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map.M
 /** DTO → domain mapping, including the measurement code→key translation table (ADR 0016). */
 class ReferenceDataMappersTests {
     @Test
-    fun `vessel maps displayName to domain name`() {
+    fun `vessel maps plain name to domain name, not the PLN-suffixed displayName`() {
         val dto = VesselMobileDto(id = "v1", name = "ACHILLES", displayName = "ACHILLES PH101")
 
-        assertEquals("ACHILLES PH101", dto.toDomain().name)
+        assertEquals("ACHILLES", dto.toDomain().name)
         assertEquals("v1", dto.toDomain().id)
     }
 

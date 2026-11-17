@@ -1,14 +1,24 @@
 package uk.gov.defra.mmocatchrecord.feature.signin.presentation
 
+import androidx.annotation.StringRes
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.core.architecture.ViewState
 import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInSession
 
-/** Immutable UI state for [SignInViewModel]. */
+/** Unresolved error copy: resolved in composition so the in-app language toggle re-resolves it (ADR 0012). */
+data class SignInError(
+    @param:StringRes val messageRes: Int,
+    val isRetryable: Boolean,
+)
+
+/** Immutable UI state for [SignInViewModel]. A non-null [error] always pairs with [UiStatus.Idle]. */
 data class SignInViewState(
     val username: String = "",
     val password: String = "",
     val status: UiStatus<SignInSession> = UiStatus.Idle,
+    val error: SignInError? = null,
+    // True only while the browser web-fallback leg (ADR 0019 Phase 2.1c) is being launched.
+    val isRedirectingToBrowser: Boolean = false,
 ) : ViewState
 
 /** UI-originated events for the sign-in screen. */
@@ -22,4 +32,7 @@ sealed interface SignInEvent {
     ) : SignInEvent
 
     data object SubmitRequested : SignInEvent
+
+    /** The UI confirms the browser hand-off notice has been composed (WCAG 2.2 SC 4.1.3). */
+    data object BrowserNoticeShown : SignInEvent
 }

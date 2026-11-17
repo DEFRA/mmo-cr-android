@@ -125,13 +125,42 @@ class ReferenceDataDtoParsingTests {
                 "etag":"61dd8fed9ed7cc2a4a96a97da8a1174c","url":"/api/v1/reference-data/vessels",
                 "format":"json","itemCount":30},
                 {"dataset":"map-land","collectionId":"col-9","schemaVersion":"1.0","version":"v1",
-                "etag":"abc","url":"/api/v1/reference-data/map/land","format":"geojson","itemCount":5}]}
+                "etag":"abc","url":"/api/v1/reference-data/map/land","format":"geojson",
+                "featureCount":5,"crs":"EPSG:4326"}]}
                 """.trimIndent(),
             )
 
         assertEquals(2, manifest.datasets.size)
         val recognised = manifest.datasets.filter { it.dataset in setOf("vessels", "ports", "species", "gears") }
         assertEquals(1, recognised.size)
+    }
+
+    @Test
+    fun `mixed manifest with json and geojson datasets parses all entries`() {
+        val manifest =
+            json.decodeFromString<ManifestDto>(
+                """
+                {"manifestId":"m-1","version":"2026.08.20.1","datasets":[
+                {"dataset":"vessels","collectionId":"col-1","schemaVersion":"1.0","version":"v1",
+                "etag":"e1","url":"/api/v1/reference-data/vessels","format":"json","itemCount":30,
+                "sizeBytes":1024,"lastModified":"2026-08-20T09:15:00Z"},
+                {"dataset":"map-statistical-areas","collectionId":"1d7dd249-3732-4d57-b8cc-7b487c76e916",
+                "schemaVersion":"1.0","version":"2026.08.20.1","etag":"sha256-e5581c",
+                "url":"/api/v1/reference-data/map/statistical-areas","format":"geojson",
+                "crs":"EPSG:4326","featureCount":3465,"sizeBytes":2100000,
+                "lastModified":"2026-08-20T09:15:00Z"}]}
+                """.trimIndent(),
+            )
+
+        assertEquals(2, manifest.datasets.size)
+        val jsonEntry = manifest.datasets.single { it.dataset == "vessels" }
+        assertEquals(30, jsonEntry.itemCount)
+        assertNull(jsonEntry.featureCount)
+        assertNull(jsonEntry.crs)
+        val geojsonEntry = manifest.datasets.single { it.dataset == "map-statistical-areas" }
+        assertNull(geojsonEntry.itemCount)
+        assertEquals(3465, geojsonEntry.featureCount)
+        assertEquals("EPSG:4326", geojsonEntry.crs)
     }
 
     @Test

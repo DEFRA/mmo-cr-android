@@ -12,10 +12,11 @@ private const val UNIT_COUNT = "count"
 private const val UNIT_METRES = "m"
 private const val UNIT_MILLIMETRES = "mm"
 
+/** Uses the plain vessel [name], not [VesselMobileDto.displayName] (which appends the PLN, e.g. "ACHILLES PH101"). */
 internal fun VesselMobileDto.toDomain(): Vessel =
     Vessel(
         id = id,
-        name = displayName,
+        name = name,
         lengthOverallMetres = lengthOverallMetres,
         pln = pln,
     )

@@ -28,7 +28,6 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.referencedata.sync.W
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.ReferenceDataRepository
 import uk.gov.defra.mmocatchrecord.feature.home.data.RoomHomeRepository
-import uk.gov.defra.mmocatchrecord.feature.signin.data.FakeSignInRepository
 
 /**
  * [RepositoryModule] is a plain Hilt `@Module object` — its `@Provides` functions are ordinary functions
@@ -54,11 +53,6 @@ class RepositoryModuleTests {
 
         assertNotNull(repository)
         assertTrue(repository is RoomHomeRepository)
-    }
-
-    @Test
-    fun `provideSignInRepository wires up the Stage-1 fake`() {
-        assertTrue(RepositoryModule.provideSignInRepository() is FakeSignInRepository)
     }
 
     @Test

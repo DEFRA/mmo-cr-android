@@ -26,11 +26,10 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.sync.WorkManagerCatc
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordSyncScheduler
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.map.MapDataRepository
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.ReferenceDataRefreshScheduler
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.ReferenceDataRepository
 import uk.gov.defra.mmocatchrecord.feature.home.data.RoomHomeRepository
 import uk.gov.defra.mmocatchrecord.feature.home.domain.HomeRepository
-import uk.gov.defra.mmocatchrecord.feature.signin.data.FakeSignInRepository
-import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInRepository
 import javax.inject.Singleton
 
 /**
@@ -39,10 +38,6 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object RepositoryModule {
-    @Provides
-    @Singleton
-    fun provideSignInRepository(): SignInRepository = FakeSignInRepository()
-
     @Provides
     @Singleton
     fun provideHomeRepository(
@@ -97,6 +92,14 @@ object RepositoryModule {
     fun provideCatchRecordSyncScheduler(
         @ApplicationContext context: Context,
     ): CatchRecordSyncScheduler = WorkManagerCatchRecordSyncScheduler(context)
+
+    /** Reuses the same binding pattern as [provideCatchRecordSyncScheduler]; WorkManager itself is a
+     * process-wide singleton via [androidx.work.WorkManager.getInstance], so a second instance is harmless. */
+    @Provides
+    @Singleton
+    fun provideReferenceDataRefreshScheduler(
+        @ApplicationContext context: Context,
+    ): ReferenceDataRefreshScheduler = WorkManagerReferenceDataSyncScheduler(context)
 
     @Provides
     @Singleton

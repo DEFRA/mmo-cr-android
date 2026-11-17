@@ -1,4 +1,3 @@
-import java.util.Base64
 import java.util.Properties
 
 plugins {
@@ -12,45 +11,13 @@ plugins {
     alias(libs.plugins.ktlint)
     alias(libs.plugins.detekt)
     id("uk.gov.defra.mmocatchrecord.mapdata.generator")
+    id("uk.gov.defra.mmocatchrecord.appconfig")
 }
 
-// Optional developer override of the reference-data service root (ADR 0016), read from a gitignored
-// `local.properties` key so it is never committed. Never applied to the `prod` flavor.
-val localProperties =
+val appVersion =
     Properties().apply {
-        val file = rootProject.file("local.properties")
-        if (file.exists()) {
-            file.inputStream().use { stream -> load(stream) }
-        }
+        rootProject.file("version.properties").inputStream().use { stream -> load(stream) }
     }
-val referenceDataServiceUrlOverride: String? = localProperties.getProperty("referenceData.serviceUrl")
-
-// Upload-key signing for the release build type (Play App Signing — ci-cd.instructions.md). CI supplies
-// UPLOAD_KEYSTORE_BASE64 + passwords as env vars; locally, set the local.properties `upload.*` keys instead.
-val uploadKeystoreBase64: String? = System.getenv("UPLOAD_KEYSTORE_BASE64")
-val uploadKeystorePassword: String? =
-    System.getenv("UPLOAD_KEYSTORE_PASSWORD") ?: localProperties.getProperty("upload.keystore.password")
-val uploadKeyAlias: String? = System.getenv("UPLOAD_KEY_ALIAS") ?: localProperties.getProperty("upload.key.alias")
-val uploadKeyPassword: String? =
-    System.getenv("UPLOAD_KEY_PASSWORD") ?: localProperties.getProperty("upload.key.password")
-val uploadKeystoreFile: File? =
-    when {
-        uploadKeystoreBase64 != null ->
-            layout.buildDirectory.file("upload-keystore.jks").get().asFile.apply {
-                parentFile.mkdirs()
-                writeBytes(Base64.getDecoder().decode(uploadKeystoreBase64))
-            }
-        localProperties.getProperty("upload.keystore.path") != null ->
-            file(localProperties.getProperty("upload.keystore.path")!!)
-        else -> null
-    }
-// PKCS12 (.p12/.pfx) keystores need an explicit storeType; JKS auto-detects.
-val uploadKeystoreType: String? =
-    uploadKeystoreFile
-        ?.extension
-        ?.lowercase()
-        ?.takeIf { it == "p12" || it == "pfx" }
-        ?.let { "PKCS12" }
 
 android {
     namespace = "uk.gov.defra.mmocatchrecord"
@@ -63,70 +30,33 @@ android {
         minSdk = 26
         //noinspection OldTargetApi,EditedTargetSdkVersion
         targetSdk = 36
-        versionCode = 17
-        versionName = "2.0.0"
+        // The base build number N; each Play upload repackages it as channel x 10000 + N (ADR 0022).
+        versionCode = appVersion.getProperty("VERSION_CODE").toInt()
+        versionName = appVersion.getProperty("VERSION_NAME")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-    }
 
-    // Unsigned if no keystore is configured (e.g. a dev machine without upload-key access); CI and
-    // release-signing developers always provide the keys resolved above.
-    signingConfigs {
-        if (uploadKeystoreFile != null) {
-            create("upload") {
-                storeFile = uploadKeystoreFile
-                storeType = uploadKeystoreType
-                storePassword = uploadKeystorePassword
-                keyAlias = uploadKeyAlias
-                keyPassword = uploadKeyPassword
-            }
-        }
+        // Traceability only; the release lane passes the tagged commit, local builds say "local".
+        buildConfigField(
+            "String",
+            "GIT_COMMIT_SHA",
+            "\"${providers.gradleProperty("crGitSha").getOrElse("local")}\"",
+        )
     }
 
     buildTypes {
+        debug {
+            // Lets a local debug build sit beside the Play-installed app on one device.
+            applicationIdSuffix = ".debug"
+        }
+        // Built unsigned and config-free; each environment is repackaged and signed by Fastlane (ADR 0023).
         release {
-            signingConfigs.findByName("upload")?.let { signingConfig = it }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-        }
-    }
-
-    // Reference-data service environment (ADR 0016). `REFERENCE_DATA_SERVICE_URL` is the service
-    // *root* (no `api/v1/...` suffix) — see core.network for how the API base/health URLs derive from it.
-    flavorDimensions += "environment"
-    productFlavors {
-        create("local") {
-            dimension = "environment"
-            buildConfigField(
-                "String",
-                "REFERENCE_DATA_SERVICE_URL",
-                "\"${referenceDataServiceUrlOverride ?: "http://10.0.2.2:3002/"}\"",
-            )
-            // DEV's auth stub accepts any non-empty bearer token (ADR 0016) — see TokenProvider.
-            buildConfigField("boolean", "USE_STUB_AUTH", "true")
-        }
-        create("dev") {
-            dimension = "environment"
-            buildConfigField(
-                "String",
-                "REFERENCE_DATA_SERVICE_URL",
-                "\"${
-                    referenceDataServiceUrlOverride
-                        ?: "https://mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud/reference-data-service/"
-                }\"",
-            )
-            buildConfigField("boolean", "USE_STUB_AUTH", "true")
-        }
-        create("prod") {
-            dimension = "environment"
-            // Deliberately empty: core.network fails fast on first use rather than silently
-            // pointing production at DEV. Never overridable via local.properties.
-            buildConfigField("String", "REFERENCE_DATA_SERVICE_URL", "\"\"")
-            buildConfigField("boolean", "USE_STUB_AUTH", "false")
         }
     }
 
@@ -166,14 +96,9 @@ room {
     schemaDirectory("$projectDir/schemas")
 }
 
-// "debug" alias keeps CI/Sonar's reportDebug.xml path; JaCoCo skips Compose synthetic branches.
+// JaCoCo engine filters Compose-compiler synthetic branches ($changed/$default/skipping) that tests cannot reach.
 kover {
     useJacoco(libs.versions.jacoco.get())
-    currentProject {
-        createVariant("debug") {
-            add("devDebug")
-        }
-    }
 }
 
 detekt {
@@ -203,7 +128,6 @@ dependencies {
     implementation(libs.androidx.sqlite)
 
     implementation(libs.androidx.biometric)
-    implementation(libs.androidx.security.crypto)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)
@@ -225,8 +149,10 @@ dependencies {
     // Structured, redacted logging (see ADR 0011 / security instructions "no PII/secrets in logs").
     implementation(libs.timber)
 
-    // App-wide language preference persistence (DataStore Preferences — see ADR 0012).
+    // App-wide language preference persistence (DataStore Preferences — see ADR 0012) and the typed
+    // DataStore used by the encrypted core/security SessionStore (ADR 0019).
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.datastore)
 
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
@@ -237,6 +163,12 @@ dependencies {
     implementation(libs.okhttp.logging.interceptor)
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.kotlinx.serialization)
+
+    // MSAL native authentication (ADR 0019). display-mask (Surface Duo, via common:25.0.0) is
+    // excluded as unused and non-mirrored off Microsoft's Azure Artifacts feed — see ADR 0022.
+    implementation(libs.msal) {
+        exclude(group = "com.microsoft.device.display", module = "display-mask")
+    }
 
     testImplementation(libs.junit)
     testImplementation(libs.mockito.core)
@@ -259,6 +191,7 @@ dependencies {
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     // Needed for the CatchRecordMigrationTest instrumented migration test (CRAR-152 Phase C).

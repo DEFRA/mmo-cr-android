@@ -23,7 +23,7 @@ object MapRectangleSearch {
         }
 
         return allRectangles
-            .filter { it.code.contains(normalizedQuery, ignoreCase = true) }
+            .filter { it.code.startsWith(normalizedQuery, ignoreCase = true) }
             .sortedBy { it.code }
     }
 }

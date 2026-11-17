@@ -1,33 +1,42 @@
 package uk.gov.defra.mmocatchrecord.core.security
 
 /**
- * Abstraction over the current authenticated session's timing metadata, used to decide app-lock
- * re-entry (see [BiometricReentryPolicy]).
- *
- * **Real implementation contract (Stage 2+):** session tokens/identifiers themselves must be stored via
- * **Android Keystore-backed encryption (Tink)** at rest, exposed through **Jetpack DataStore**, never
- * through `EncryptedSharedPreferences` (deprecated/discouraged for new code) and never in plain
- * `SharedPreferences`. This interface only exposes timing metadata (not the token/session content) so it
- * is safe to keep simple for Stage-1 in-memory fakes; the real implementation must ensure no PII, token
- * value, or session identifier is ever written to logs.
+ * Timing metadata for the current session. Holds **no** token, token fragment or account identifier, so
+ * nothing here can identify a user; implementations must never write any of it to a log (ADR 0019).
  */
 interface SessionStore {
-    /** Epoch-millis timestamp of the last successful authentication, or null if never authenticated. */
+    /** Epoch millis of the last successful authentication *or* app-lock re-entry, or null if never. */
     suspend fun getLastAuthenticatedAtMillis(): Long?
 
-    /** Records a new successful authentication timestamp. */
+    /** Records app-lock re-entry; a local biometric unlock may refresh this. See [BiometricReentryPolicy]. */
     suspend fun recordAuthenticatedNow(nowMillis: Long)
+
+    /** Epoch millis of the last authentication that actually reached the identity provider, or null. */
+    suspend fun getLastVerifiedOnlineAtMillis(): Long?
+
+    /**
+     * Records a successful **online** authentication/token acquisition. The offline authorisation grace
+     * period is evaluated against this alone, so a local unlock can never extend it (ADR 0019 Q4).
+     */
+    suspend fun recordVerifiedOnlineNow(nowMillis: Long)
+
+    /** Records both timestamps in one write, so process death cannot leave sign-in half-recorded. */
+    suspend fun recordSignedInNow(nowMillis: Long)
 
     /** Clears session state (e.g. on sign-out). */
     suspend fun clear()
 }
 
-/** In-memory [SessionStore] fake for tests and Stage-1 wiring — not persisted across process death. */
+/** In-memory [SessionStore] fake for tests and previews — not persisted across process death. */
 class InMemorySessionStore(
     initialLastAuthenticatedAtMillis: Long? = null,
+    initialLastVerifiedOnlineAtMillis: Long? = null,
 ) : SessionStore {
     @Volatile
     private var lastAuthenticatedAtMillis: Long? = initialLastAuthenticatedAtMillis
+
+    @Volatile
+    private var lastVerifiedOnlineAtMillis: Long? = initialLastVerifiedOnlineAtMillis
 
     override suspend fun getLastAuthenticatedAtMillis(): Long? = lastAuthenticatedAtMillis
 
@@ -35,7 +44,19 @@ class InMemorySessionStore(
         lastAuthenticatedAtMillis = nowMillis
     }
 
+    override suspend fun getLastVerifiedOnlineAtMillis(): Long? = lastVerifiedOnlineAtMillis
+
+    override suspend fun recordVerifiedOnlineNow(nowMillis: Long) {
+        lastVerifiedOnlineAtMillis = nowMillis
+    }
+
+    override suspend fun recordSignedInNow(nowMillis: Long) {
+        lastAuthenticatedAtMillis = nowMillis
+        lastVerifiedOnlineAtMillis = nowMillis
+    }
+
     override suspend fun clear() {
         lastAuthenticatedAtMillis = null
+        lastVerifiedOnlineAtMillis = null
     }
 }

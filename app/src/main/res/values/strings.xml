@@ -74,6 +74,14 @@
     <string name="password">Password</string>
     <string name="having_trouble_signing_in">Having trouble signing in?</string>
     <string name="forgotten_your_password">Forgotten your password?</string>
+    <string name="signin_error_prefix">Error:</string>
+    <string name="signin_error_invalid_credentials">Your email address or password is incorrect. Check them and try again.</string>
+    <string name="signin_error_network">We could not reach the sign-in service. Check your connection and try again.</string>
+    <string name="signin_error_generic">Something went wrong. Try signing in again.</string>
+    <string name="signin_error_verification_not_supported">This account needs a verification step the app does not support yet. Contact support for help signing in.</string>
+    <string name="signin_redirecting_to_browser">Taking you to a secure sign-in page</string>
+    <string name="signin_language_switch_to_welsh">Switch to Welsh</string>
+    <string name="signin_language_switch_to_english">Switch to English</string>
     <string name="create_an_account">Create an account</string>
     <string name="vessel_owner_label">Vessel owner:</string>
     <string name="vessel_owner_text">You will receive an email invitation to register when your vessel is added to the system.</string>
@@ -195,9 +203,9 @@
     <string name="species_checklist_error_required">Select at least one species</string>
     <string name="remove_species_title">Remove a species caught with %1$s</string>
     <string name="remove_species_title_fallback">Remove a species</string>
-    <string name="remove_species_instruction">Select all that apply.</string>
+    <string name="remove_species_instruction">Select the species you want to remove, then delete them.</string>
     <string name="remove_species_error_required">Select the species you want to remove</string>
-    <string name="delete_action">Continue</string>
+    <string name="delete_action">Delete</string>
     <string name="species_weight_error_required_above_min">Enter the weight above minimum size retained</string>
     <string name="species_weight_error_required_kept_onboard">Enter the weight above minimum size kept onboard or in keep pots in kilograms</string>
     <string name="species_weight_error_below_minimum">Weight for %1$s must be more than 0kg</string>

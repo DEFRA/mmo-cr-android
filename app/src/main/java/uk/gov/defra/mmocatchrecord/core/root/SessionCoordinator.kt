@@ -1,8 +1,10 @@
 package uk.gov.defra.mmocatchrecord.core.root
 
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import timber.log.Timber
 import uk.gov.defra.mmocatchrecord.core.architecture.BaseViewModel
 import uk.gov.defra.mmocatchrecord.core.architecture.ViewState
 import uk.gov.defra.mmocatchrecord.core.security.BiometricPreferenceStore
@@ -10,6 +12,8 @@ import uk.gov.defra.mmocatchrecord.core.security.BiometricReentryPolicy
 import uk.gov.defra.mmocatchrecord.core.security.BiometricRepository
 import uk.gov.defra.mmocatchrecord.core.security.ReentryDecision
 import uk.gov.defra.mmocatchrecord.core.security.SessionStore
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.ReferenceDataRefreshScheduler
+import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignOutRepository
 import javax.inject.Inject
 
 /** Root navigation state — currently just the derived [RootPhase]. */
@@ -23,9 +27,8 @@ sealed interface RootEvent {
     data object SignedIn : RootEvent
 
     /**
-     * The user tapped "Unlock" on the app-lock screen. This does **not** unlock the app by itself —
-     * [SessionCoordinator] must run [BiometricRepository.authenticate] and only record a new
-     * authentication (and therefore leave [RootPhase.APP_LOCK]) if that call succeeds.
+     * The user tapped "Unlock" on the app-lock screen. [SessionCoordinator] must run
+     * [BiometricRepository.authenticate] and only record a new authentication if that call succeeds.
      */
     data object BiometricUnlockRequested : RootEvent
 
@@ -45,12 +48,15 @@ sealed interface RootEvent {
  */
 @HiltViewModel
 class SessionCoordinator
+    @Suppress("LongParameterList")
     @Inject
     constructor(
         private val sessionStore: SessionStore,
         private val biometricPreferenceStore: BiometricPreferenceStore,
         private val reentryPolicy: BiometricReentryPolicy,
         private val biometricRepository: BiometricRepository,
+        private val signOutRepository: SignOutRepository = SignOutRepository { true },
+        private val referenceDataRefreshScheduler: ReferenceDataRefreshScheduler = ReferenceDataRefreshScheduler {},
         private val clock: () -> Long = System::currentTimeMillis,
         dispatcher: CoroutineDispatcher = Dispatchers.Default,
     ) : BaseViewModel<RootUiState, RootEvent>(
@@ -65,16 +71,20 @@ class SessionCoordinator
             when (event) {
                 RootEvent.SignedIn ->
                     launchInViewModelScope {
-                        sessionStore.recordAuthenticatedNow(clock())
+                        // Sign-in is the only event that reaches the identity provider, so it alone may
+                        // refresh the online-verification timestamp the offline grace period is judged on.
+                        sessionStore.recordSignedInNow(clock())
+                        scheduleReferenceDataRefreshSafely()
                         refreshPhaseNow()
                     }
 
                 RootEvent.BiometricUnlockRequested ->
                     launchInViewModelScope {
-                        // Only treat the app as re-entered if the biometric prompt actually succeeds.
-                        // A cancelled/failed attempt must leave the state (and therefore RootPhase.APP_LOCK)
-                        // unchanged — never optimistically unlock on user intent alone.
+                        // A cancelled or failed prompt must leave RootPhase.APP_LOCK unchanged: never
+                        // optimistically unlock on user intent alone.
                         if (biometricRepository.authenticate().isSuccess) {
+                            // Deliberately does NOT touch lastVerifiedOnlineAtMillis: a local gesture must
+                            // never renew a remote authorisation decision (ADR 0019).
                             sessionStore.recordAuthenticatedNow(clock())
                         }
                         refreshPhaseNow()
@@ -82,6 +92,11 @@ class SessionCoordinator
 
                 RootEvent.SignedOut ->
                     launchInViewModelScope {
+                        // User intent to sign out always wins locally — a failed MSAL clear is logged,
+                        // never allowed to fail open (review fix 2.2).
+                        if (!signOutRepository.signOut()) {
+                            Timber.w("SessionCoordinator: native-auth sign-out failed; clearing app session anyway")
+                        }
                         sessionStore.clear()
                         updateState { it.copy(phase = RootPhase.SIGN_IN) }
                     }
@@ -93,6 +108,18 @@ class SessionCoordinator
 
         private fun refreshPhase() {
             launchInViewModelScope { refreshPhaseNow() }
+        }
+
+        // Deliberately broad: a scheduling failure must never fail a sign-in that otherwise succeeded.
+        @Suppress("TooGenericExceptionCaught")
+        private fun scheduleReferenceDataRefreshSafely() {
+            try {
+                referenceDataRefreshScheduler.scheduleRefreshAfterSignIn()
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (error: Exception) {
+                Timber.w("SessionCoordinator: could not schedule reference-data refresh (%s)", error::class.simpleName)
+            }
         }
 
         private suspend fun refreshPhaseNow() {

@@ -27,9 +27,11 @@ insecure.
 ## Data at rest
 
 - Store secrets/tokens/keys using the **Android Keystore** system (hardware-backed where available), and
-  encrypt stored blobs with a vetted library such as **Tink**. Never in plain `SharedPreferences`,
-  resources or source. (Note: `EncryptedSharedPreferences` / Jetpack Security Crypto is deprecated — prefer
-  Keystore-backed keys with Tink and DataStore.)
+  encrypt stored blobs with a Keystore-backed AEAD key. Never in plain `SharedPreferences`, resources or
+  source. (Note: `EncryptedSharedPreferences` / Jetpack Security Crypto is deprecated and must not be used.
+  In this app, use `core/security/KeystoreAesGcmCipher` — a non-auth-bound AES-GCM Keystore key — behind a
+  DataStore `Serializer`, per [ADR 0006](../../docs/adr/0006-catch-record-draft-persistence-and-encryption.md).
+  Tink is **not** a dependency of this project; do not introduce it.)
 - Protect sensitive local/offline data: rely on the app sandbox (internal storage, never external for
   sensitive data) and encrypt the local store (e.g. SQLCipher for Room) where feasible. Minimise data
   retained on device.

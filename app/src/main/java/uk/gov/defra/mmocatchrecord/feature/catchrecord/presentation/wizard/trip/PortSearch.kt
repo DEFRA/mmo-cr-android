@@ -2,7 +2,7 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip
 
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
 
-/** Pure autocomplete filtering rules shared by the port search field and its unit tests. */
+/** Pure autocomplete filtering rules (case-insensitive starts-with) shared by the port search field. */
 object PortSearch {
     const val MIN_QUERY_LENGTH = 2
 
@@ -16,7 +16,7 @@ object PortSearch {
         }
 
         return allPorts
-            .filter { it.name.contains(normalizedQuery, ignoreCase = true) }
+            .filter { it.name.startsWith(normalizedQuery, ignoreCase = true) }
             .sortedBy { it.name }
     }
 }

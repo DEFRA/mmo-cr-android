@@ -90,7 +90,8 @@ offer. Keep the review focused and proportional to the change.
   [credential exposure](https://defra.github.io/software-development-standards/processes/credential_exposure/).
 - **All traffic uses HTTPS/TLS;** cleartext is disabled via network security config
   (`cleartextTrafficPermitted="false"`) with **no** blanket exception.
-- Secrets/tokens/keys are stored via the **Android Keystore** (Tink where blobs are encrypted) — never in
+- Secrets/tokens/keys are stored via the **Android Keystore** (`core/security/KeystoreAesGcmCipher` where
+  blobs are encrypted; never Tink or `androidx.security-crypto`) — never in
   plain `SharedPreferences`, resources or source. Sensitive local data uses an encrypted store; data is
   minimised.
 - Input is validated/sanitised at boundaries; Room uses parameterised queries; remote and on-device data is

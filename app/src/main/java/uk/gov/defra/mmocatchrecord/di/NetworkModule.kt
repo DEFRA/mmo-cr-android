@@ -8,19 +8,20 @@ import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import uk.gov.defra.mmocatchrecord.BuildConfig
+import uk.gov.defra.mmocatchrecord.core.config.AppConfiguration
 import uk.gov.defra.mmocatchrecord.core.language.AppLanguageRepository
 import uk.gov.defra.mmocatchrecord.core.network.AcceptLanguageInterceptor
 import uk.gov.defra.mmocatchrecord.core.network.AuthInterceptor
 import uk.gov.defra.mmocatchrecord.core.network.MissingTokenProvider
 import uk.gov.defra.mmocatchrecord.core.network.StubTokenProvider
 import uk.gov.defra.mmocatchrecord.core.network.TokenProvider
+import uk.gov.defra.mmocatchrecord.core.security.SessionStore
+import uk.gov.defra.mmocatchrecord.feature.signin.data.MsalTokenProvider
+import uk.gov.defra.mmocatchrecord.feature.signin.data.NativeAuthClient
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
-/**
- * Networking foundation (ADR 0015/0016): JSON, the per-flavor [TokenProvider] and the authenticated/
- * localised [OkHttpClient]. See [ReferenceDataRetrofitModule] for the Retrofit/`HealthApi` layer.
- */
+/** Provides JSON, packaged-config token auth, and the authenticated/localised [OkHttpClient]. */
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
@@ -32,13 +33,35 @@ object NetworkModule {
     @Singleton
     fun provideJson(): Json = Json { ignoreUnknownKeys = true }
 
-    /** Visible for testing both branches without compiling three build variants. */
-    internal fun tokenProviderFor(useStubAuth: Boolean): TokenProvider =
-        if (useStubAuth) StubTokenProvider() else MissingTokenProvider()
+    /** Selects the token source from the packaged config; visible for testing every combination. */
+    internal fun tokenProviderFor(
+        useStubAuth: Boolean,
+        useFakeSignIn: Boolean,
+        referenceDataServiceUrl: String,
+        nativeAuthClient: NativeAuthClient,
+        sessionStore: SessionStore,
+    ): TokenProvider =
+        when {
+            useStubAuth -> StubTokenProvider()
+            // A missing service URL is the fail-fast placeholder (ADR 0016): never bind MSAL to it.
+            !useFakeSignIn && referenceDataServiceUrl.isNotBlank() -> MsalTokenProvider(nativeAuthClient, sessionStore)
+            else -> MissingTokenProvider()
+        }
 
     @Provides
     @Singleton
-    fun provideTokenProvider(): TokenProvider = tokenProviderFor(BuildConfig.USE_STUB_AUTH)
+    internal fun provideTokenProvider(
+        appConfiguration: AppConfiguration,
+        nativeAuthClient: NativeAuthClient,
+        sessionStore: SessionStore,
+    ): TokenProvider =
+        tokenProviderFor(
+            useStubAuth = appConfiguration.useStubAuth ?: false,
+            useFakeSignIn = appConfiguration.useFakeSignIn ?: false,
+            referenceDataServiceUrl = appConfiguration.referenceDataServiceRootUrlOrNull().orEmpty(),
+            nativeAuthClient = nativeAuthClient,
+            sessionStore = sessionStore,
+        )
 
     @Provides
     @Singleton

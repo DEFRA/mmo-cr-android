@@ -31,3 +31,5 @@ dependencyResolutionManagement {
 rootProject.name = "build-logic"
 include(":map-data-core")
 include(":map-data-plugin")
+include(":app-config-plugin")
+include(":release-tools")

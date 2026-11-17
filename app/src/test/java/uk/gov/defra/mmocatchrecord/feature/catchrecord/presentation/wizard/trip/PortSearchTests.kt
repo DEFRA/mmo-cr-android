@@ -26,4 +26,21 @@ class PortSearchTests {
     fun `non matching query returns empty suggestions`() {
         assertTrue(PortSearch.filterSuggestions("zz", ports).isEmpty())
     }
+
+    @Test
+    fun `matches only ports whose name starts with the query, not ones merely containing it`() {
+        val pooPorts =
+            listOf("Blackpool", "Hartlepool", "Liverpool", "Poole", "Poolewe", "Ullapool")
+                .map { Port("port-${it.lowercase()}", it, "AREA") }
+
+        val results = PortSearch.filterSuggestions("Poo", pooPorts)
+
+        assertEquals(listOf("Poole", "Poolewe"), results.map { it.name })
+    }
+
+    @Test
+    fun `query is trimmed before starts-with matching`() {
+        val results = PortSearch.filterSuggestions("  dov  ", ports)
+        assertEquals(listOf("Dover"), results.map { it.name })
+    }
 }

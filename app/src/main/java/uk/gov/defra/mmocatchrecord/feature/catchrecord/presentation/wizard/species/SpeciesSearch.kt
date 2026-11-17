@@ -4,11 +4,8 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Spec
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearTypeSearch
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip.PortSearch
 
-/**
- * Pure autocomplete filtering rules for the gear-species search field, mirroring [PortSearch]/
- * [GearTypeSearch] exactly (same min-2-character gate, same "contains, case-insensitive, sorted by name"
- * rule) so the species-search screen behaves identically to the already-shipped port/gear-search screens.
- */
+/** Gear-species autocomplete rules: min 2 chars, case-insensitive match at the start of any word (so "cod"
+ * finds "Atlantic cod"), sorted by name. Unlike [PortSearch]/[GearTypeSearch], not whole-name starts-with. */
 object SpeciesSearch {
     const val MIN_QUERY_LENGTH = PortSearch.MIN_QUERY_LENGTH
 
@@ -22,7 +19,16 @@ object SpeciesSearch {
         }
 
         return allSpecies
-            .filter { it.name.contains(normalizedQuery, ignoreCase = true) }
+            .filter { matchesAtWordStart(it.name, normalizedQuery) }
             .sortedBy { it.name }
     }
+
+    private fun matchesAtWordStart(
+        name: String,
+        query: String,
+    ): Boolean =
+        name.indices.any { index ->
+            val isWordStart = index == 0 || !name[index - 1].isLetterOrDigit()
+            isWordStart && name.regionMatches(index, query, 0, query.length, ignoreCase = true)
+        }
 }

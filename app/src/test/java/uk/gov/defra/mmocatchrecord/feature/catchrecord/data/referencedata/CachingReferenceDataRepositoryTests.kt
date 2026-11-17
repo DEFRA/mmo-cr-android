@@ -148,7 +148,7 @@ class CachingReferenceDataRepositoryTests {
 
             val result = repository().getVessels()
 
-            assertEquals(listOf(Vessel("v1", "ACHILLES PH101")), result.getOrThrow())
+            assertEquals(listOf(Vessel("v1", "ACHILLES")), result.getOrThrow())
             assertEquals(1, dao.getVessels().size)
             assertEquals("\"sha256-a=\"", dao.getMetadata(DATASET_VESSELS)?.responseETag)
         }

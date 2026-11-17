@@ -10,7 +10,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 
-/** JVM/Robolectric tests for [SplashScreen], the `testDevDebugUnitTest`-reachable [RootPhase.SPLASH] destination. */
+/** JVM/Robolectric tests for [SplashScreen], the `testDebugUnitTest`-reachable [RootPhase.SPLASH] destination. */
 @RunWith(RobolectricTestRunner::class)
 class SplashScreenTests {
     @get:Rule

@@ -110,8 +110,8 @@ internal data class GearsEnvelopeDto(
 ) : ReferenceDataEnvelopeMetadata
 
 /**
- * One entry in [ManifestDto.datasets]. `map-land`/`map-statistical-areas` entries (and any future unknown
- * dataset name) parse the same shape — callers simply ignore any `dataset` they do not recognise.
+ * One entry in [ManifestDto.datasets]. `format: "json"` entries carry `itemCount`; `format: "geojson"`
+ * entries (e.g. `map-land`) carry `featureCount`/`crs` instead and have no `itemCount`.
  */
 @Serializable
 internal data class ManifestDatasetDto(
@@ -122,7 +122,9 @@ internal data class ManifestDatasetDto(
     val etag: String,
     val url: String,
     val format: String,
-    val itemCount: Int,
+    val itemCount: Int? = null,
+    val featureCount: Int? = null,
+    val crs: String? = null,
     val sizeBytes: Long? = null,
     val lastModified: String? = null,
 )

@@ -7,7 +7,7 @@ description: >-
   working framework; it does not plan work or run a plan-approval gate itself.
 name: Android Developer
 tools: ['read', 'edit', 'search', 'execute', 'web', 'todo', 'agent', 'apply_patch', 'create_file', 'insert_edit_into_file', 'fetch_webpage', 'file_search', 'grep_search', 'get_errors', 'list_dir', 'get_terminal_output', 'read_file', 'replace_string_in_file', 'run_subagent', 'run_in_terminal', 'validate_cves']
-model: Claude Sonnet 5 (copilot)
+model: Claude Sonnet 5.5 (copilot)
 argument-hint: Describe the Android feature, fix or refactor you want.
 agents:
   - Android Planner
@@ -46,13 +46,29 @@ work, or delegate to the **Android Planner** for **Complex** work — then obtai
 > runtime fallback parser — no map SDK, no tiles, no API key, no network** — confirmed by explicit user
 > direction (see [ADR-0013](../../docs/adr/0013-offline-fisheries-map-rendering.md)). Networking confirmed
 > 2026-10-09 by developer via orchestrator: Retrofit 3.0.0 + OkHttp 5.5.0 (BOM) + converter-kotlinx-serialization;
-> product flavors local/dev/prod (ADR 0015/0016). Stack: Kotlin +
+> no product flavors — the backend comes from the packaged app config (ADR 0024). Stack: Kotlin +
 > Jetpack Compose, Material 3 light-only GOV.UK theme, MVVM + Clean Architecture, Hilt (DI, §5 default —
 > reverts the earlier Koin deviation, see ADR 0005), Navigation Compose, Room (now real entities for the
 > catch-record draft aggregate, SQLCipher-encrypted — see ADR-0006), androidx.biometric (Stage-1
 > interfaces/fakes only), JUnit4 + Mockito + mockito-kotlin + coroutines-test + Turbine + Robolectric +
 > Compose UI Test + Espresso, Kover coverage, system-font fallback (GDS Transport not licensed for
-> non-gov.uk products).
+> non-gov.uk products). **MSAL confirmed on 2026-11-11 by developer via orchestrator** (§5.1 gate run
+> fresh, as MSAL is a new dependency on a security surface not covered by the above):
+> **`com.microsoft.identity.client:msal:8.6.0`, pinned exactly** (no dynamic ranges) for Microsoft Entra
+> External ID (CIAM) **native authentication**; the transitive
+> `com.microsoft.device.display:display-mask:0.3.0` (via `com.microsoft.identity:common:25.0.0`) is
+> **excluded**, as it is published only to Microsoft's Duo-SDK-Feed Azure Artifacts repo and not mirrored
+> to Maven Central (supply-chain rationale, not added as a third-party Maven repository) — proven safe on
+> a real device during the spike; the **`>= 8.5.0` floor is because MSAL 8.5.0 upgraded Apache HttpCore to
+> 5.4.3 to address CVE-2026-54399** (an Apache HttpCore CVE remediated transitively by MSAL, **not** an
+> MSAL vulnerability — MSAL Android itself has zero published GitHub security advisories); only **Native
+> Auth V1 GA** types are permitted, the `*V2` / `NativeAuthErrorV2` classes present in the AAR are private
+> preview and are **banned** (code-review checklist: no import of any `…ErrorV2` type). The app's use of
+> **native authentication** (credentials collected in-app) over Microsoft's recommended browser-delegated
+> flow is a recorded deviation (ADR 0019 Q10, escalated to DEFRA Delivery Architecture alongside Q11 on the
+> *Defra Identity* naming mismatch and EU/EMEA data-residency) — see
+> [ADR-0019](../../docs/adr/0019-entra-external-id-authentication.md), which lands with the Entra auth
+> foundations slice and is not yet present on `main`.
 
 **You own the tech-stack confirmation gate for the app stack (copilot-instructions §5.1).** Before you make
 **any** app code change — including the first scaffold, and even if the user did not raise the tech stack —
@@ -167,7 +183,7 @@ standards precedence in [copilot-instructions.md](../copilot-instructions.md):
 - [ ] App **DesignSystem** components, Material Design 3 and GOV.UK content/design patterns are used correctly
 - [ ] Offline-first behaviour is verified — the feature degrades gracefully offline and syncs on reconnect
 - [ ] README, ADRs or docs are updated if setup, prerequisites, endpoints or architecture changed
-- [ ] Build configuration / Gradle flavor keys are documented in Gradle and the project README
+- [ ] New app-config keys are declared in `config/app-config.schema.json` and documented in the project README
 - [ ] Commit messages follow the DEFRA [pull request standard](https://defra.github.io/software-development-standards/processes/pull_requests/)
       (capitalised, imperative-mood, ≤50-char subject, no trailing full stop, body explains what/why) and
       link the originating story/issue; a conventional `feat:`/`fix:`/`test:`/`refactor:`/`chore:`/`docs:`

@@ -15,6 +15,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.gov.defra.mmocatchrecord.R
@@ -155,7 +158,10 @@ fun RemoveSpeciesScreenContent(
                 text = stringResource(R.string.remove_species_error_required),
                 color = MmoColors.ErrorRed,
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.testTag(RemoveSpeciesScreenTestTags.ERROR_MESSAGE),
+                modifier =
+                    Modifier
+                        .testTag(RemoveSpeciesScreenTestTags.ERROR_MESSAGE)
+                        .semantics { liveRegion = LiveRegionMode.Polite },
             )
         }
         GdsCheckboxGroup(

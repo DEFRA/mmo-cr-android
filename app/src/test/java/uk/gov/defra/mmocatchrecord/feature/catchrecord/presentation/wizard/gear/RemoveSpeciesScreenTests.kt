@@ -1,8 +1,14 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear
 
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -92,6 +98,27 @@ class RemoveSpeciesScreenTests {
     }
 
     @Test
+    fun displaysTheRemoveInstructionFromTheDesign() {
+        val gearUse = gearUseWithAddedSpecies(listOf(cod.id))
+        composeTestRule.setContent {
+            MmoTheme {
+                RemoveSpeciesScreenContent(
+                    draft = draftWith(gearUse),
+                    gearUse = gearUse,
+                    speciesList = speciesList,
+                    onDelete = {},
+                    onCancel = {},
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithText("Select the species you want to remove, then delete them.")
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithTag(RemoveSpeciesScreenTestTags.DELETE_ACTION).assertTextEquals("Delete")
+    }
+
+    @Test
     fun deletingWithNothingCheckedShowsAnErrorAndDoesNotDelete() {
         var deleted: CatchRecordDraft? = null
         val gearUse = gearUseWithAddedSpecies(listOf(cod.id))
@@ -110,6 +137,9 @@ class RemoveSpeciesScreenTests {
         composeTestRule.onNodeWithTag(RemoveSpeciesScreenTestTags.DELETE_ACTION).performClick()
 
         composeTestRule.onNodeWithTag(RemoveSpeciesScreenTestTags.ERROR_MESSAGE).assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(RemoveSpeciesScreenTestTags.ERROR_MESSAGE)
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
         assertNull(deleted)
     }
 
