@@ -564,22 +564,25 @@ class CatchRecordFlowViewModel
             isTokenRetry: Boolean = false,
         ) {
             submissionRepository.submit(draft).fold(
-                onSuccess = { completeSubmission(draft) },
+                onSuccess = { completeSubmission(it) },
                 onFailure = { handleOnlineSubmitFailure(draft, it, isTokenRetry) },
             )
         }
 
+        /** B1: reloads [draft] before acting — [submissionRepository] may have already persisted resumable
+         *  progress (server id/version, idempotency keys, step) even though this attempt still failed. */
         private suspend fun handleOnlineSubmitFailure(
             draft: CatchRecordDraft,
             error: Throwable,
             isTokenRetry: Boolean,
         ) {
             val classification = SafeErrorMapper.classify(error)
+            val latest = draftRepository.getDraftById(draft.id).getOrNull() ?: draft
             when {
                 classification == CatchRecordErrorClassification.NeedsAuthentication && !isTokenRetry ->
-                    attemptOnlineSubmit(draft, isTokenRetry = true)
-                classification == CatchRecordErrorClassification.Transient -> enqueuePendingSync(draft)
-                else -> failSubmission(draft, submissionFailureReasonFor(error))
+                    attemptOnlineSubmit(latest, isTokenRetry = true)
+                classification == CatchRecordErrorClassification.Transient -> enqueuePendingSync(latest)
+                else -> failSubmission(latest, submissionFailureReasonFor(error))
             }
         }
 
@@ -608,7 +611,11 @@ class CatchRecordFlowViewModel
          *  so a double tap on "Try again" cannot queue it twice (mirrors [acceptDeclarationAndSubmit]). */
         private fun retryFailedSubmission() {
             val draft = currentDraftOrNull() ?: return
-            retrySubmissionStage(draft, ::enqueuePendingSync)
+            if (draft.status != DraftStatus.SubmissionFailed) {
+                Timber.d("Ignored Retry failed submission dispatch; draft is not in SubmissionFailed state.")
+                return
+            }
+            retrySubmissionStage(draft.copy(submissionFailureReason = null), ::enqueuePendingSync)
         }
 
         /** Re-attempts only the stage that previously failed (see [RetryAction]), never the whole event;

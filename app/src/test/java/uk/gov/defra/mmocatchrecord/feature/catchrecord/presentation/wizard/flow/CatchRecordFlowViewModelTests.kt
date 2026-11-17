@@ -1228,6 +1228,58 @@ class CatchRecordFlowViewModelTests {
             assertEquals(listOf(started.id), syncScheduler.scheduledDraftIds)
         }
 
+    /** B1: the repository persists partial progress (create succeeded) before the overall submit() call
+     *  still fails transiently — the PendingSync row must retain that progress, not a stale snapshot. */
+    @Test
+    fun `B1 a transient failure after partial progress keeps the server id, idempotency key and step`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            val started = repository.startDraft("vessel-achilles").getOrThrow()
+            repository.saveDraft(started.asSubmissionReady()).getOrThrow()
+            val submissionRepository =
+                FakeCatchRecordSubmissionRepository(
+                    shouldSucceed = false,
+                    failure = java.io.IOException("offline"),
+                    onSubmit = { current ->
+                        repository
+                            .saveDraft(
+                                current.copy(
+                                    serverCatchRecordId = "cr-1",
+                                    createIdempotencyKey = "create-key-1",
+                                    submissionStep = "created",
+                                ),
+                            ).getOrThrow()
+                    },
+                )
+            val connectivityChecker = FakeNetworkConnectivityChecker(connected = true)
+            val syncScheduler = FakeCatchRecordSyncScheduler()
+            val viewModel =
+                buildViewModel(
+                    repository = repository,
+                    submissionRepository = submissionRepository,
+                    connectivityChecker = connectivityChecker,
+                    syncScheduler = syncScheduler,
+                    dispatcher = dispatcher,
+                )
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
+            testScheduler.advanceUntilIdle()
+            viewModel.dispatch(CatchRecordFlowEvent.ResumeDraft)
+            testScheduler.advanceUntilIdle()
+
+            viewModel.state.test {
+                awaitItem()
+                viewModel.dispatch(CatchRecordFlowEvent.AcceptDeclarationAndSubmit)
+                assertEquals(UiStatus.Loading, awaitItem().status)
+                val submitted = awaitItem()
+                val draft = (submitted.status as UiStatus.Content<CatchRecordDraft>).value
+                assertEquals("cr-1", draft.serverCatchRecordId)
+                assertEquals("create-key-1", draft.createIdempotencyKey)
+                assertEquals("created", draft.submissionStep)
+                assertEquals(DraftStatus.PendingSync, draft.status)
+            }
+        }
+
     @Test
     fun `accepting the declaration while online but a terminal failure sets could-not-send, not pending sync`() =
         runTest {
@@ -1260,6 +1312,75 @@ class CatchRecordFlowViewModelTests {
                 val draft = (submitted.status as UiStatus.Content<CatchRecordDraft>).value
                 assertEquals(DraftStatus.SubmissionFailed, draft.status)
             }
+            assertTrue(syncScheduler.scheduledDraftIds.isEmpty())
+        }
+
+    /** N3: "Try again" must clear the stale reason so the next failure (if any) is not misreported. */
+    @Test
+    fun `N3 retrying a failed submission clears the previous failure reason and re-queues`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            val started = repository.startDraft("vessel-achilles").getOrThrow()
+            repository.saveDraft(started.asSubmissionReady()).getOrThrow()
+            val submissionRepository = FakeCatchRecordSubmissionRepository(shouldSucceed = false)
+            val connectivityChecker = FakeNetworkConnectivityChecker(connected = true)
+            val syncScheduler = FakeCatchRecordSyncScheduler()
+            val viewModel =
+                buildViewModel(
+                    repository = repository,
+                    submissionRepository = submissionRepository,
+                    connectivityChecker = connectivityChecker,
+                    syncScheduler = syncScheduler,
+                    dispatcher = dispatcher,
+                )
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
+            testScheduler.advanceUntilIdle()
+            viewModel.dispatch(CatchRecordFlowEvent.ResumeDraft)
+            testScheduler.advanceUntilIdle()
+            viewModel.dispatch(CatchRecordFlowEvent.AcceptDeclarationAndSubmit)
+            testScheduler.advanceUntilIdle()
+
+            viewModel.state.test {
+                awaitItem()
+                viewModel.dispatch(CatchRecordFlowEvent.RetryFailedSubmission)
+                assertEquals(UiStatus.Loading, awaitItem().status)
+                val retried = awaitItem()
+                assertEquals(WizardStep.SubmissionPendingSync, retried.currentStep)
+                val draft = (retried.status as UiStatus.Content<CatchRecordDraft>).value
+                assertEquals(DraftStatus.PendingSync, draft.status)
+                assertNull(draft.submissionFailureReason)
+            }
+        }
+
+    /** N3: a "Try again" dispatch while the draft is not SubmissionFailed must be a no-op. */
+    @Test
+    fun `N3 retrying a failed submission is ignored when the draft is not in SubmissionFailed state`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            val started = repository.startDraft("vessel-achilles").getOrThrow()
+            repository.saveDraft(started.asSubmissionReady()).getOrThrow()
+            val submissionRepository = FakeCatchRecordSubmissionRepository(shouldSucceed = true)
+            val connectivityChecker = FakeNetworkConnectivityChecker(connected = true)
+            val syncScheduler = FakeCatchRecordSyncScheduler()
+            val viewModel =
+                buildViewModel(
+                    repository = repository,
+                    submissionRepository = submissionRepository,
+                    connectivityChecker = connectivityChecker,
+                    syncScheduler = syncScheduler,
+                    dispatcher = dispatcher,
+                )
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
+            testScheduler.advanceUntilIdle()
+            viewModel.dispatch(CatchRecordFlowEvent.ResumeDraft)
+            testScheduler.advanceUntilIdle()
+
+            viewModel.dispatch(CatchRecordFlowEvent.RetryFailedSubmission)
+            testScheduler.advanceUntilIdle()
+
+            assertTrue(submissionRepository.submittedDrafts.isEmpty())
             assertTrue(syncScheduler.scheduledDraftIds.isEmpty())
         }
 
