@@ -46,9 +46,26 @@ import javax.inject.Inject
 private const val SUBMISSION_VALIDATION_MESSAGE =
     "Your catch record is incomplete. Go back and complete every step before submitting."
 
-/** Nav-graph-scoped ViewModel shared by every catch-record wizard screen. */
+/** What [CatchRecordFlowEvent.Retry] re-attempts: the whole event, or (submission only) just the
+ *  stage that failed — see `acceptDeclarationAndSubmit`. Not part of [CatchRecordFlowViewState]. */
+private sealed interface RetryAction {
+    data class DispatchEvent(
+        val event: CatchRecordFlowEvent,
+    ) : RetryAction
+
+    data class ResumeCompleteSubmission(
+        val draft: CatchRecordDraft,
+    ) : RetryAction
+
+    data class ResumeEnqueuePendingSync(
+        val draft: CatchRecordDraft,
+    ) : RetryAction
+}
+
+/** Nav-graph-scoped ViewModel shared by every catch-record wizard screen — its size scales with the
+ *  number of wizard steps/events the flow has, not with any one function's complexity (see file header). */
 @HiltViewModel
-@Suppress("TooManyFunctions", "LongParameterList")
+@Suppress("TooManyFunctions", "LongParameterList", "LargeClass")
 class CatchRecordFlowViewModel
     @Inject
     constructor(
@@ -64,22 +81,6 @@ class CatchRecordFlowViewModel
             initialState = CatchRecordFlowViewState(),
             defaultDispatcher = defaultDispatcher,
         ) {
-        /** What [CatchRecordFlowEvent.Retry] re-attempts: the whole event, or (submission only) just the
-         *  stage that failed — see [acceptDeclarationAndSubmit]. Not part of [CatchRecordFlowViewState]. */
-        private sealed interface RetryAction {
-            data class DispatchEvent(
-                val event: CatchRecordFlowEvent,
-            ) : RetryAction
-
-            data class ResumeCompleteSubmission(
-                val draft: CatchRecordDraft,
-            ) : RetryAction
-
-            data class ResumeEnqueuePendingSync(
-                val draft: CatchRecordDraft,
-            ) : RetryAction
-        }
-
         private var lastFailedAction: RetryAction? = null
 
         /** Delegates to [BaseViewModel.updateState], then snapshots any resulting [UiStatus.Content] draft
@@ -577,7 +578,19 @@ class CatchRecordFlowViewModel
             isTokenRetry: Boolean,
         ) {
             val classification = SafeErrorMapper.classify(error)
-            val latest = draftRepository.getDraftById(draft.id).getOrNull() ?: draft
+            val retryAction = RetryAction.DispatchEvent(CatchRecordFlowEvent.AcceptDeclarationAndSubmit)
+            // A failed/empty reload must never fall back to the stale pre-submit [draft] (B1 re-review).
+            val latest =
+                draftRepository.getDraftById(draft.id).fold(
+                    onSuccess = { it ?: return },
+                    onFailure = {
+                        return emitSubmissionStageError(
+                            retryAction,
+                            it,
+                            SafeErrorMapper::mapSubmitLocalSave,
+                        )
+                    },
+                )
             when {
                 classification == CatchRecordErrorClassification.NeedsAuthentication && !isTokenRetry ->
                     attemptOnlineSubmit(latest, isTokenRetry = true)

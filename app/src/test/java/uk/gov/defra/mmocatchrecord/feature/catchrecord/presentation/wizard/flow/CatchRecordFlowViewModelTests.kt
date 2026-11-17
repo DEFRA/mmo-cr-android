@@ -1280,6 +1280,84 @@ class CatchRecordFlowViewModelTests {
             }
         }
 
+    /** B1 (re-review finding #4): a successful online submit's reloaded row must retain progress the
+     *  repository already persisted (server id/step), not just flip status to Submitted. */
+    @Test
+    fun `B1 a successful online submission retains the server id and step persisted during submit`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            val started = repository.startDraft("vessel-achilles").getOrThrow()
+            repository.saveDraft(started.asSubmissionReady()).getOrThrow()
+            val submissionRepository =
+                FakeCatchRecordSubmissionRepository(
+                    shouldSucceed = true,
+                    onSubmit = { current ->
+                        repository
+                            .saveDraft(current.copy(serverCatchRecordId = "cr-1", submissionStep = "submitted"))
+                            .getOrThrow()
+                    },
+                )
+            val viewModel =
+                buildViewModel(
+                    repository = repository,
+                    submissionRepository = submissionRepository,
+                    connectivityChecker = FakeNetworkConnectivityChecker(connected = true),
+                    dispatcher = dispatcher,
+                )
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
+            testScheduler.advanceUntilIdle()
+            viewModel.dispatch(CatchRecordFlowEvent.ResumeDraft)
+            testScheduler.advanceUntilIdle()
+
+            viewModel.dispatch(CatchRecordFlowEvent.AcceptDeclarationAndSubmit)
+            testScheduler.advanceUntilIdle()
+
+            val content = viewModel.state.value.status as UiStatus.Content<CatchRecordDraft>
+            assertEquals(DraftStatus.Submitted, content.value.status)
+            assertEquals("cr-1", content.value.serverCatchRecordId)
+            assertEquals("submitted", content.value.submissionStep)
+        }
+
+    /** B1 (re-review finding #4): a terminal submission failure must persist the progress already
+     *  written server-side, not discard it in favour of the stale pre-submit snapshot. */
+    @Test
+    fun `B1 a terminal submission failure retains the server id persisted before it failed`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+            val started = repository.startDraft("vessel-achilles").getOrThrow()
+            repository.saveDraft(started.asSubmissionReady()).getOrThrow()
+            val submissionRepository =
+                FakeCatchRecordSubmissionRepository(
+                    shouldSucceed = false,
+                    onSubmit = { current ->
+                        repository
+                            .saveDraft(current.copy(serverCatchRecordId = "cr-1", submissionStep = "created"))
+                            .getOrThrow()
+                    },
+                )
+            val viewModel =
+                buildViewModel(
+                    repository = repository,
+                    submissionRepository = submissionRepository,
+                    connectivityChecker = FakeNetworkConnectivityChecker(connected = true),
+                    dispatcher = dispatcher,
+                )
+            viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
+            testScheduler.advanceUntilIdle()
+            viewModel.dispatch(CatchRecordFlowEvent.ResumeDraft)
+            testScheduler.advanceUntilIdle()
+
+            viewModel.dispatch(CatchRecordFlowEvent.AcceptDeclarationAndSubmit)
+            testScheduler.advanceUntilIdle()
+
+            val content = viewModel.state.value.status as UiStatus.Content<CatchRecordDraft>
+            assertEquals(DraftStatus.SubmissionFailed, content.value.status)
+            assertEquals("cr-1", content.value.serverCatchRecordId)
+            assertEquals("created", content.value.submissionStep)
+        }
+
     @Test
     fun `accepting the declaration while online but a terminal failure sets could-not-send, not pending sync`() =
         runTest {
