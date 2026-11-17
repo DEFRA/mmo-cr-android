@@ -255,7 +255,8 @@ fun StatusTag(
             RecordStatusTag.ReadyToSubmit -> Color(0xFFE1EDF7) to MmoColors.GovBlueHover
             RecordStatusTag.AwaitingSync -> Color(0xFFFFF5CC) to Color(0xFF6F5200)
             RecordStatusTag.Submitted -> Color(0xFFDFEFE5) to Color(0xFF005A30)
-            RecordStatusTag.CouldNotSend -> Color(0xFFF6D7D2) to MmoColors.ErrorRed
+            // GOV.UK red tag (WCAG 2.2 AA, 13sp): #2A0B06 on #F4D7D2 is ~13.5:1, not the ~3.6:1 pairing.
+            RecordStatusTag.CouldNotSend -> Color(0xFFF4D7D2) to Color(0xFF2A0B06)
         }
 
     Surface(
