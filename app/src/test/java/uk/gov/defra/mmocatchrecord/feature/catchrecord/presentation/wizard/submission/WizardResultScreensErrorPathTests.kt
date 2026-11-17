@@ -88,7 +88,7 @@ class WizardResultScreensErrorPathTests {
     }
 
     private class FakeSubmissionRepository : CatchRecordSubmissionRepository {
-        override suspend fun submit(draft: CatchRecordDraft): Result<Unit> = Result.success(Unit)
+        override suspend fun submit(draft: CatchRecordDraft): Result<CatchRecordDraft> = Result.success(draft)
     }
 
     private class FakeConnectivityChecker : NetworkConnectivityChecker {

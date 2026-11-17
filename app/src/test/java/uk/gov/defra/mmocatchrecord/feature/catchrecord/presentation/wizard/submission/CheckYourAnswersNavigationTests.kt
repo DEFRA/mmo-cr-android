@@ -105,9 +105,9 @@ class CheckYourAnswersNavigationTests {
         var submitCallCount = 0
             private set
 
-        override suspend fun submit(draft: CatchRecordDraft): Result<Unit> {
+        override suspend fun submit(draft: CatchRecordDraft): Result<CatchRecordDraft> {
             submitCallCount++
-            return if (succeeds) Result.success(Unit) else Result.failure(java.io.IOException("Simulated offline"))
+            return if (succeeds) Result.success(draft) else Result.failure(java.io.IOException("Simulated offline"))
         }
     }
 

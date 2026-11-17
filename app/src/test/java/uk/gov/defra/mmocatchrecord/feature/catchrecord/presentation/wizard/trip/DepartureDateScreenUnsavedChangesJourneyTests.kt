@@ -89,7 +89,7 @@ class DepartureDateScreenUnsavedChangesJourneyTests {
     }
 
     private class NoopSubmissionRepository : CatchRecordSubmissionRepository {
-        override suspend fun submit(draft: CatchRecordDraft): Result<Unit> =
+        override suspend fun submit(draft: CatchRecordDraft): Result<CatchRecordDraft> =
             Result.failure(UnsupportedOperationException("Not exercised by this test"))
     }
 
