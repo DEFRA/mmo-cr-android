@@ -47,14 +47,14 @@ class WizardDateInputValidatorTests {
     }
 
     @Test
-    fun `departure date before 24 July 2025 is rejected`() {
-        val result = WizardDateInputValidator.validate(date = DmyDate(23, 7, 2025), today = today)
+    fun `departure date more than 365 days ago is rejected`() {
+        val result = WizardDateInputValidator.validate(date = DmyDate(15, 10, 2025), today = today)
         assertEquals(DateInputError.DepartureBeforeEarliest, result.error)
     }
 
     @Test
-    fun `departure date of exactly 24 July 2025 passes`() {
-        val result = WizardDateInputValidator.validate(date = DmyDate(24, 7, 2025), today = today)
+    fun `departure date of exactly 365 days ago passes`() {
+        val result = WizardDateInputValidator.validate(date = DmyDate(16, 10, 2025), today = today)
         assertTrue(result.isValid)
     }
 
@@ -103,5 +103,29 @@ class WizardDateInputValidatorTests {
     fun `year range widens to include a saved date outside the window`() {
         assertEquals(2022..2026, pickerYearRange(LocalDate.of(2026, 10, 16), DmyDate(1, 1, 2022)))
         assertEquals(2025..2029, pickerYearRange(LocalDate.of(2026, 10, 16), DmyDate(1, 1, 2029)))
+    }
+
+    @Test
+    fun `trip of exactly 30 days passes`() {
+        val result =
+            WizardDateInputValidator.validate(
+                date = DmyDate(10, 10, 2026),
+                today = today,
+                departureDate = DmyDate(10, 9, 2026),
+                isReturnDate = true,
+            )
+        assertTrue(result.isValid)
+    }
+
+    @Test
+    fun `trip longer than 30 days is rejected`() {
+        val result =
+            WizardDateInputValidator.validate(
+                date = DmyDate(11, 10, 2026),
+                today = today,
+                departureDate = DmyDate(10, 9, 2026),
+                isReturnDate = true,
+            )
+        assertEquals(DateInputError.TripTooLong, result.error)
     }
 }

@@ -115,9 +115,10 @@
     <string name="date_year_label">Blwyddyn</string>
     <string name="error_summary_title">Mae problem</string>
     <string name="date_error_invalid_date">Rhowch ddyddiad go iawn</string>
-    <string name="date_error_departure_before_earliest">Rhaid i’r dyddiad y gwnaethoch adael ar gyfer eich taith fod ar neu ar ôl 24 Gorffennaf 2025</string>
+    <string name="date_error_departure_before_earliest">Rhaid i’r dyddiad y gwnaethoch adael ar gyfer eich taith fod heb fod yn fwy na 365 diwrnod yn ôl</string>
     <string name="date_error_departure_in_future">Rhaid i’r dyddiad y gwnaethoch adael ar gyfer eich taith fod heddiw neu yn y gorffennol</string>
     <string name="date_error_return_in_future">Rhaid i’r dyddiad y gwnaethoch ddychwelyd o’ch taith fod heddiw neu yn y gorffennol</string>
+    <string name="date_error_trip_too_long">Ni all eich taith fod yn hirach na 30 diwrnod</string>
     <string name="date_error_return_before_departure">Rhaid i’r dyddiad y gwnaethoch ddychwelyd o’ch taith fod yr un peth neu ar ôl y dyddiad y gwnaethoch adael</string>
     <string name="departure_port_title">Rhowch y porthladd neu’r porthladd agosaf y gwnaethoch adael ohono</string>
     <string name="second_entry_departure_port_title">Dewiswch y porthladd y gwnaethoch adael ohono</string>
