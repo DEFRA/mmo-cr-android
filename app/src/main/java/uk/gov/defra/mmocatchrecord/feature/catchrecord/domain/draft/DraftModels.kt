@@ -36,7 +36,7 @@ enum class SubmissionFailureReason {
     /** A 403 — the signed-in user is not linked to this vessel server-side. */
     NotAuthorisedForVessel,
 
-    /** A 422/400, or the `runAttemptCount` cap was reached — retrying cannot fix this. */
+    /** A 422/400 — retrying with the same data cannot fix this. */
     Rejected,
 
     /** A 413 — the payload exceeded the server's size limit. */
@@ -44,6 +44,9 @@ enum class SubmissionFailureReason {
 
     /** A 404 on replace/submit, an unresolved version conflict, or a mapping failure. */
     DataProblem,
+
+    /** The offline retry cap (`CatchRecordSyncWorker.MAX_ATTEMPTS`) was reached on a still-transient error. */
+    RetryLimitReached,
 }
 
 /** How the user selected a port: typed/searched for the first time, or picked from their favourites. */
@@ -211,7 +214,7 @@ data class CatchRecordDraft(
     val createdAtEpochMillis: Long? = null,
     val submittedAtEpochMillis: Long? = null,
     val syncedAtEpochMillis: Long? = null,
-    /** ADR 0026: resumable submission state; `null` until Phase 4's real repository persists it. */
+    /** ADR 0026: resumable submission state, persisted by the real submission repository/sync worker. */
     val serverCatchRecordId: String? = null,
     val serverVersion: Int? = null,
     val createIdempotencyKey: String? = null,

@@ -17,6 +17,7 @@ import org.robolectric.RobolectricTestRunner
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission.remote.CatchRecordHttpException
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission.remote.CatchRecordUnauthorizedException
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftValidation
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DmyDate
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
@@ -240,7 +241,7 @@ class CatchRecordSyncWorkerTests {
             assertEquals(ListenableWorker.Result.failure(), result)
             val updated = draftRepository.getDraftById(draft.id).getOrThrow()
             assertEquals(DraftStatus.SubmissionFailed, updated?.status)
-            assertEquals(SubmissionFailureReason.Rejected.name, updated?.submissionFailureReason)
+            assertEquals(SubmissionFailureReason.RetryLimitReached.name, updated?.submissionFailureReason)
         }
 
     @Test
@@ -263,7 +264,87 @@ class CatchRecordSyncWorkerTests {
             assertEquals(DraftStatus.SubmissionFailed, updated?.status)
             assertEquals(SubmissionFailureReason.NeedsSignIn.name, updated?.submissionFailureReason)
         }
+
+    @Test
+    fun `S6 a saveDraft failure while persisting the terminal state requests a retry, not a dropped failure`() =
+        runTest {
+            val draft = pendingDraft()
+            val flakyRepository = FailOnStatusDraftRepository(draftRepository, DraftStatus.SubmissionFailed)
+            val forbidden =
+                CatchRecordHttpException(
+                    operation = "submit",
+                    httpStatusCode = HTTP_FORBIDDEN,
+                    serverCode = null,
+                    correlationId = null,
+                    retryable = false,
+                )
+            val submissionRepository = FakeCatchRecordSubmissionRepository(shouldSucceed = false, failure = forbidden)
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            val inputData = Data.Builder().putString(CatchRecordSyncWorker.KEY_DRAFT_ID, draft.id).build()
+            val factory =
+                object : WorkerFactory() {
+                    override fun createWorker(
+                        appContext: Context,
+                        workerClassName: String,
+                        workerParameters: WorkerParameters,
+                    ): ListenableWorker =
+                        CatchRecordSyncWorker(appContext, workerParameters, flakyRepository, submissionRepository)
+                }
+            val worker =
+                TestListenableWorkerBuilder<CatchRecordSyncWorker>(context, inputData = inputData)
+                    .setWorkerFactory(factory)
+                    .build()
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.retry(), result)
+        }
+
+    @Test
+    fun `B1 a terminal failure persists the latest reloaded draft, not a stale in-memory snapshot`() =
+        runTest {
+            val draft = pendingDraft()
+            val forbidden =
+                CatchRecordHttpException(
+                    operation = "submit",
+                    httpStatusCode = HTTP_FORBIDDEN,
+                    serverCode = null,
+                    correlationId = null,
+                    retryable = false,
+                )
+            // Simulates RealCatchRecordSubmissionRepository persisting progress before an overall failure
+            // (ADR 0026) — the worker must base its terminal write on this row, not the stale instance.
+            val submissionRepository =
+                FakeCatchRecordSubmissionRepository(
+                    shouldSucceed = false,
+                    failure = forbidden,
+                    onSubmit = { current ->
+                        draftRepository.saveDraft(current.copy(serverCatchRecordId = "cr-progressed")).getOrThrow()
+                    },
+                )
+            val worker = buildWorker(submissionRepository, draftId = draft.id)
+
+            val result = worker.doWork()
+
+            assertEquals(ListenableWorker.Result.failure(), result)
+            val updated = draftRepository.getDraftById(draft.id).getOrThrow()
+            assertEquals("cr-progressed", updated?.serverCatchRecordId)
+            assertEquals(DraftStatus.SubmissionFailed, updated?.status)
+        }
 }
 
 private const val HTTP_FORBIDDEN = 403
 private const val MAX_ATTEMPTS_CAP = CatchRecordSyncWorker.MAX_ATTEMPTS
+
+/** S6 test support: fails only the [saveDraft] call that would persist [failOnStatus], else delegates. */
+private class FailOnStatusDraftRepository(
+    private val delegate: FakeCatchRecordDraftRepository,
+    private val failOnStatus: DraftStatus,
+) : CatchRecordDraftRepository by delegate {
+    override suspend fun saveDraft(draft: CatchRecordDraft): Result<CatchRecordDraft> =
+        if (draft.status == failOnStatus) {
+            Result.failure(java.io.IOException("Simulated disk failure"))
+        } else {
+            delegate.saveDraft(draft)
+        }
+}

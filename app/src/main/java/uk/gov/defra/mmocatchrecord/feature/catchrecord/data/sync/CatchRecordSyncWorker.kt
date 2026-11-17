@@ -54,7 +54,7 @@ class CatchRecordSyncWorker
             }
 
             return submissionRepository.submit(draft).fold(
-                onSuccess = { markSubmitted(draft) },
+                onSuccess = { markSubmitted(it) },
                 onFailure = { handleFailure(draft, it) },
             )
         }
@@ -65,17 +65,20 @@ class CatchRecordSyncWorker
                 onFailure = { Result.retry() },
             )
 
-        /** 401: one same-attempt retry (the token provider silently refreshes) before giving up — ADR 0026. */
+        /** 401: one same-attempt retry (the token provider silently refreshes) before giving up — ADR 0026.
+         *  [draft] is reloaded first (B1): [submissionRepository] may have already persisted progress
+         *  (e.g. a create/replace idempotency key) even though the overall [Result] here is a failure. */
         private suspend fun handleFailure(
             draft: CatchRecordDraft,
             error: Throwable,
             isTokenRetry: Boolean = false,
         ): Result {
             val classification = SafeErrorMapper.classify(error)
+            val latest = latestOrFallback(draft)
             if (classification == CatchRecordErrorClassification.NeedsAuthentication && !isTokenRetry) {
-                return submissionRepository.submit(draft).fold(
-                    onSuccess = { markSubmitted(draft) },
-                    onFailure = { handleFailure(draft, it, isTokenRetry = true) },
+                return submissionRepository.submit(latest).fold(
+                    onSuccess = { markSubmitted(it) },
+                    onFailure = { handleFailure(latest, it, isTokenRetry = true) },
                 )
             }
             if (classification == CatchRecordErrorClassification.Transient && runAttemptCount < MAX_ATTEMPTS) {
@@ -83,22 +86,32 @@ class CatchRecordSyncWorker
             }
             val reason =
                 if (classification == CatchRecordErrorClassification.Transient) {
-                    SubmissionFailureReason.Rejected
+                    // S7: the retry cap, not the server, stopped this — a distinct reason from a genuine
+                    // server rejection so the failed screen's copy doesn't blame the data.
+                    SubmissionFailureReason.RetryLimitReached
                 } else {
                     submissionFailureReasonFor(error)
                 }
-            return failTerminally(draft, reason)
+            return failTerminally(latest, reason)
         }
 
+        /** The persisted row, falling back to [draft] only if the reload itself fails (B1). */
+        private suspend fun latestOrFallback(draft: CatchRecordDraft): CatchRecordDraft =
+            draftRepository.getDraftById(draft.id).getOrNull() ?: draft
+
+        /** S6: if persisting the terminal state itself fails, retry the whole work rather than losing the
+         *  failure reason to a dropped write — `Result.failure()` here would never be revisited. */
         private suspend fun failTerminally(
             draft: CatchRecordDraft,
             reason: SubmissionFailureReason,
         ): Result {
             Timber.e("Draft %s submission terminal (%s); not retrying", draft.id, reason)
-            draftRepository.saveDraft(
-                draft.copy(status = DraftStatus.SubmissionFailed, submissionFailureReason = reason.name),
-            )
-            return Result.failure()
+            return draftRepository
+                .saveDraft(draft.copy(status = DraftStatus.SubmissionFailed, submissionFailureReason = reason.name))
+                .fold(
+                    onSuccess = { Result.failure() },
+                    onFailure = { Result.retry() },
+                )
         }
 
         companion object {
