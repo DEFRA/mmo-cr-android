@@ -2,9 +2,9 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission
 
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import timber.log.Timber
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.CatchRecordReferenceGenerator
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission.remote.CatchRecordHttpException
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission.remote.CatchRecordRecoverySnapshotDto
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission.remote.CatchRecordRemoteDataSource
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftRepository
@@ -19,11 +19,66 @@ import javax.inject.Singleton
 
 private const val HTTP_CONFLICT = 409
 private const val HTTP_PRECONDITION_FAILED = 412
+private const val HTTP_NOT_FOUND = 404
+private const val SERVER_STATUS_DRAFT = "DRAFT"
 private const val SERVER_STATUS_SUBMITTED = "SUBMITTED"
+private const val SERVER_STATUS_COMPLETE = "COMPLETE"
 private const val STEP_CREATED = "created"
 private const val STEP_REPLACED = "replaced"
 private const val STEP_SUBMITTED = "submitted"
 private const val MAX_REFERENCE_ATTEMPTS = 20
+private const val LIST_RECOVERY_LIMIT = 100
+
+/** "Done" per ADR 0026 §6: submitted/complete server-side *and* no unsubmitted local changes pending. */
+private fun isDone(server: CatchRecordRecoverySnapshotDto): Boolean =
+    (server.status == SERVER_STATUS_SUBMITTED || server.status == SERVER_STATUS_COMPLETE) &&
+        !server.hasUnsubmittedChanges
+
+private suspend fun markSubmitted(
+    draftRepository: CatchRecordDraftRepository,
+    draft: CatchRecordDraft,
+    server: CatchRecordRecoverySnapshotDto,
+): CatchRecordDraft =
+    draftRepository
+        .saveDraft(draft.copy(serverVersion = server.version, submissionStep = STEP_SUBMITTED))
+        .getOrThrow()
+
+/** A SUBMITTED/COMPLETE record with unsubmitted changes cannot be amended by this flow (B2) — a
+ *  PUT there would silently amend a regulatory submission, so this is terminal, not a retry. */
+private fun nonDraftConflict(
+    id: String,
+    server: CatchRecordRecoverySnapshotDto,
+): Nothing {
+    error("Cannot write catch record '$id': server status is '${server.status}' with unsubmitted changes")
+}
+
+/** S5: a 404 on replace/submit means the server-side record is gone — clear every resumable field so
+ *  the next attempt restarts cleanly from create, rather than retrying against a dead id forever. */
+private suspend fun resetAfterNotFound(
+    draftRepository: CatchRecordDraftRepository,
+    draft: CatchRecordDraft,
+) {
+    draftRepository.saveDraft(
+        draft.copy(
+            serverCatchRecordId = null,
+            serverVersion = null,
+            submissionStep = null,
+            createIdempotencyKey = null,
+            submitIdempotencyKey = null,
+        ),
+    )
+}
+
+private suspend fun toReplacePayload(
+    referenceDataRepository: ReferenceDataRepository,
+    draft: CatchRecordDraft,
+) = CatchRecordSubmissionPayloadMapper.toReplacePayload(
+    draft,
+    ports = referenceDataRepository.getPorts().getOrThrow(),
+    gearTypes = referenceDataRepository.getGearTypes().getOrThrow(),
+    species = referenceDataRepository.getSpecies().getOrThrow(),
+    statisticalSubRectangles = referenceDataRepository.getStatisticalSubRectangles().getOrThrow(),
+)
 
 /** Resumable create → replace → submit sequence; per-draft [Mutex] guards against double-submit. See ADR 0026. */
 @Singleton
@@ -39,10 +94,13 @@ internal class RealCatchRecordSubmissionRepository
     ) : CatchRecordSubmissionRepository {
         private val locksByDraftId = ConcurrentHashMap<String, Mutex>()
 
-        override suspend fun submit(draft: CatchRecordDraft): Result<Unit> =
+        /** Reloads the latest persisted row first (B1): a concurrent caller, or a previous partial attempt,
+         *  may already have advanced [CatchRecordDraft.submissionStep] past what [draft] still carries. */
+        override suspend fun submit(draft: CatchRecordDraft): Result<CatchRecordDraft> =
             locksByDraftId.getOrPut(draft.id) { Mutex() }.withLock {
                 runCatching {
-                    var current = ensureConformingReference(draft)
+                    val latest = draftRepository.getDraftById(draft.id).getOrThrow() ?: draft
+                    var current = ensureConformingReference(latest)
                     current = ensureCreated(current)
                     current = ensureReplaced(current)
                     ensureSubmitted(current)
@@ -107,12 +165,12 @@ internal class RealCatchRecordSubmissionRepository
         ): CatchRecordDraft {
             val id =
                 remoteDataSource
-                    .list()
+                    .list(limit = LIST_RECOVERY_LIMIT)
                     .items
                     .firstOrNull { it.catchRecordReference == reference }
                     ?.id
                     ?: error("Idempotency conflict for '$reference' but no matching record found")
-            val current = remoteDataSource.retrieve(id)
+            val current = remoteDataSource.recover(id)
             return draftRepository
                 .saveDraft(
                     draft.copy(
@@ -123,63 +181,78 @@ internal class RealCatchRecordSubmissionRepository
                 ).getOrThrow()
         }
 
+        /** At most one version-refresh retry (B2): a second conflict after refreshing is terminal, not looped. */
         private suspend fun ensureReplaced(draft: CatchRecordDraft): CatchRecordDraft {
             if (draft.submissionStep == STEP_REPLACED || draft.submissionStep == STEP_SUBMITTED) return draft
             val id = requireNotNull(draft.serverCatchRecordId) { "Draft has no server catch record id" }
-            val version = requireNotNull(draft.serverVersion) { "Draft has no server version" }
-            return try {
-                val payload = toReplacePayload(draft)
-                val response = remoteDataSource.replace(id, version.toString(), payload)
-                draftRepository
-                    .saveDraft(draft.copy(serverVersion = response.version, submissionStep = STEP_REPLACED))
-                    .getOrThrow()
-            } catch (conflict: CatchRecordHttpException) {
-                if (!conflict.isConflict) throw conflict
-                val current = remoteDataSource.retrieve(id)
-                ensureReplaced(draftRepository.saveDraft(draft.copy(serverVersion = current.version)).getOrThrow())
+            var current = draft
+            var refreshed = false
+            while (true) {
+                val version = requireNotNull(current.serverVersion) { "Draft has no server version" }
+                try {
+                    val payload = toReplacePayload(referenceDataRepository, current)
+                    val response = remoteDataSource.replace(id, version.toString(), payload)
+                    return draftRepository
+                        .saveDraft(current.copy(serverVersion = response.version, submissionStep = STEP_REPLACED))
+                        .getOrThrow()
+                } catch (httpError: CatchRecordHttpException) {
+                    if (httpError.httpStatusCode == HTTP_NOT_FOUND) {
+                        resetAfterNotFound(draftRepository, current)
+                        throw httpError
+                    }
+                    if (!httpError.isConflict) throw httpError
+                    if (refreshed) error("Unresolved replace conflict for catch record '$id' after one refresh")
+                    refreshed = true
+                    val server = remoteDataSource.recover(id)
+                    current =
+                        when {
+                            isDone(server) -> return markSubmitted(draftRepository, current, server)
+                            server.status != SERVER_STATUS_DRAFT -> nonDraftConflict(id, server)
+                            else ->
+                                draftRepository.saveDraft(current.copy(serverVersion = server.version)).getOrThrow()
+                        }
+                }
             }
         }
 
-        private suspend fun toReplacePayload(draft: CatchRecordDraft) =
-            CatchRecordSubmissionPayloadMapper.toReplacePayload(
-                draft,
-                ports = referenceDataRepository.getPorts().getOrThrow(),
-                gearTypes = referenceDataRepository.getGearTypes().getOrThrow(),
-                species = referenceDataRepository.getSpecies().getOrThrow(),
-                statisticalSubRectangles = referenceDataRepository.getStatisticalSubRectangles().getOrThrow(),
-            )
-
-        private suspend fun ensureSubmitted(draft: CatchRecordDraft) {
-            if (draft.submissionStep == STEP_SUBMITTED) return
+        /** As [ensureReplaced]: at most one version-refresh retry, and a stale key is rotated (B2) rather
+         *  than replayed, since reusing it against a new `If-Match` otherwise loops on IDEMPOTENCY_CONFLICT. */
+        private suspend fun ensureSubmitted(draft: CatchRecordDraft): CatchRecordDraft {
+            if (draft.submissionStep == STEP_SUBMITTED) return draft
             val id = requireNotNull(draft.serverCatchRecordId) { "Draft has no server catch record id" }
-            val version = requireNotNull(draft.serverVersion) { "Draft has no server version" }
-            val idempotencyKey = draft.submitIdempotencyKey ?: idFactory()
-            val withKey = draftRepository.saveDraft(draft.copy(submitIdempotencyKey = idempotencyKey)).getOrThrow()
-            val alreadyHandled =
+            var current = draft
+            var refreshed = false
+            while (true) {
+                val version = requireNotNull(current.serverVersion) { "Draft has no server version" }
+                val idempotencyKey = current.submitIdempotencyKey ?: idFactory()
+                val withKey =
+                    draftRepository.saveDraft(current.copy(submitIdempotencyKey = idempotencyKey)).getOrThrow()
                 try {
                     remoteDataSource.submit(id, version.toString(), idempotencyKey)
-                    false
-                } catch (conflict: CatchRecordHttpException) {
-                    if (!conflict.isConflict) throw conflict
-                    resolveSubmitConflict(id, withKey)
+                    return draftRepository.saveDraft(withKey.copy(submissionStep = STEP_SUBMITTED)).getOrThrow()
+                } catch (httpError: CatchRecordHttpException) {
+                    if (httpError.httpStatusCode == HTTP_NOT_FOUND) {
+                        resetAfterNotFound(draftRepository, withKey)
+                        throw httpError
+                    }
+                    if (!httpError.isConflict) throw httpError
+                    if (refreshed) error("Unresolved submit conflict for catch record '$id' after one refresh")
+                    refreshed = true
+                    val server = remoteDataSource.recover(id)
+                    current =
+                        when {
+                            isDone(server) -> return markSubmitted(draftRepository, withKey, server)
+                            server.status != SERVER_STATUS_DRAFT -> nonDraftConflict(id, server)
+                            // A stale key replayed against a new `If-Match` is itself a conflict (B2) — null
+                            // it so the next attempt mints and persists a fresh one.
+                            else ->
+                                draftRepository
+                                    .saveDraft(
+                                        withKey.copy(serverVersion = server.version, submitIdempotencyKey = null),
+                                    ).getOrThrow()
+                        }
                 }
-            if (!alreadyHandled) draftRepository.saveDraft(withKey.copy(submissionStep = STEP_SUBMITTED)).getOrThrow()
-        }
-
-        /** `true` once the submitted step is already persisted, either here or via its own recursive retry. */
-        private suspend fun resolveSubmitConflict(
-            id: String,
-            draft: CatchRecordDraft,
-        ): Boolean {
-            val current = remoteDataSource.retrieve(id)
-            if (current.status == SERVER_STATUS_SUBMITTED) {
-                Timber.i("Submission for draft %s already completed server-side; treating as success", draft.id)
-                draftRepository.saveDraft(draft.copy(submissionStep = STEP_SUBMITTED)).getOrThrow()
-                return true
             }
-            val refreshed = draftRepository.saveDraft(draft.copy(serverVersion = current.version)).getOrThrow()
-            ensureSubmitted(refreshed)
-            return true
         }
 
         private val CatchRecordHttpException.isConflict: Boolean

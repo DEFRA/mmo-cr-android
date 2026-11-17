@@ -211,5 +211,10 @@ concurrently, while the view model's `isSubmitting` flag stops a UI double-tap q
 the first save recomposes. `acceptDeclarationAndSubmit`/`attemptOnlineSubmit`/`handleOnlineSubmitFailure`/
 `failSubmission` (this ADR's classification → `SubmissionFailed` terminal path) now run inside `main`'s
 `runSubmissionStage` wrapper, and the "Could not send" screen's "Try again" (`retryFailedSubmission`) reuses
-`main`'s `retrySubmissionStage` guard so a double tap on *that* button cannot re-queue a draft twice either.
+## Amendment — code-review fixes: reload-before-save, bounded conflict retries (2026-11-24)
 
+`submit()` now returns `Result<CatchRecordDraft>`, the freshly-reloaded persisted row, and every caller
+(view model, worker, 401 retry) saves status changes against that row, not a stale snapshot. Conflict
+recovery in `ensureReplaced`/`ensureSubmitted` is now bounded to one version-refresh retry (rotating the
+submit idempotency key on retry, never PUTing onto a non-`DRAFT` record), and a 404 resets the resumable
+fields so "Try again" restarts cleanly from create.
