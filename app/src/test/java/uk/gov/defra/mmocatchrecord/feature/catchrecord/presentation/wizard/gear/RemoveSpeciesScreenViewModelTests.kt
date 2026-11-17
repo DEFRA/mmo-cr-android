@@ -209,7 +209,7 @@ class RemoveSpeciesScreenViewModelTests {
             composeTestRule.onNodeWithTag(RemoveSpeciesScreenTestTags.DELETE_ACTION).assertDoesNotExist()
         }
 
-    /** Renders the screen's `@Preview` composable to cover it under the `testDevDebugUnitTest` gate,
+    /** Renders the screen's `@Preview` composable to cover it under the `testDebugUnitTest` gate,
      * mirroring the "preview renders without crashing" convention used across this codebase. */
     @Test
     fun previewRendersWithoutCrashing() {

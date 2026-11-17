@@ -40,10 +40,10 @@ import androidx.room.RoomDatabase
  *
  * v10 -> v11 (ADR 0018): drops the v6 partial unique index so a vessel may hold many independent drafts.
  *
- * v11 -> v12 (ADR 0022): six nullable resumable-submission columns on [DraftEntity], plus a legacy
+ * v11 -> v12 (ADR 0026): six nullable resumable-submission columns on [DraftEntity], plus a legacy
  * `catchRecordReference` rewrite to the server format — see [CatchRecordMigrations.MIGRATION_11_12].
  *
- * v12 -> v13 (ADR 0022 OQ-3): a nullable `apiMeasurementId` cache column carries the live gear-measurement
+ * v12 -> v13 (ADR 0026 OQ-3): a nullable `apiMeasurementId` cache column carries the live gear-measurement
  * id through to `characteristicId` — see [ReferenceDataGearMeasurementEntity].
  *
  * Every version bump above has a real [androidx.room.migration.Migration] registered in

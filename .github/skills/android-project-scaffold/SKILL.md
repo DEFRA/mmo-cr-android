@@ -1,6 +1,6 @@
 ---
 name: android-project-scaffold
-description: "Scaffold or extend the MMO Catch Recording Android app structure: Jetpack Compose app skeleton, feature packages, Core layers (networking, offline persistence/sync, design system), Gradle setup, product flavors/config, ADRs and README. Use when creating the initial project, adding a new feature module, or establishing conventions."
+description: "Scaffold or extend the MMO Catch Recording Android app structure: Jetpack Compose app skeleton, feature packages, Core layers (networking, offline persistence/sync, design system), Gradle setup, packaged app config, ADRs and README. Use when creating the initial project, adding a new feature module, or establishing conventions."
 argument-hint: "e.g. 'scaffold the initial app' or 'add a Catch Recording feature module'"
 user-invocable: false
 ---
@@ -26,7 +26,8 @@ new feature module that matches existing conventions.
    - Architecture pattern (recommend **MVVM + unidirectional data flow** with **Hilt** DI).
    - Persistence choice for offline (recommend **Room** + **WorkManager** for the sync queue, **DataStore**
      for preferences).
-   - `applicationId` scheme and environments (`dev`/`test`/`prod` via product flavors).
+   - `applicationId` scheme and environments (no product flavors: compile once, package per environment —
+     ADR 0022/0023/0024).
    Record decisions as ADRs in `docs/adr/`.
 
 ## Procedure
@@ -35,8 +36,9 @@ new feature module that matches existing conventions.
    versions. Add the Compose BOM, Hilt, Room, WorkManager, Retrofit, Coroutines, and test libraries.
 3. Add the Application class (`@HiltAndroidApp`) and a single Activity host with a Compose `setContent`
    entry + Navigation-Compose graph.
-4. Add **product flavors** (`dev`/`test`/`prod`) with `applicationIdSuffix`, `BuildConfig`/resource values
-   and endpoints per environment; inject secrets at build time from CI (never commit them). Add a
+4. Do **not** add product flavors. Per-environment values come from the packaged app config: declare a
+   key in `config/app-config.schema.json` and read it through `AppConfiguration` (ADR 0024); the release
+   pipeline injects it per environment (ADR 0023). Never put secrets in the app. Add a
    `network_security_config.xml` that disables cleartext.
 5. Stub the Core layers: `network` (Retrofit API + DTOs + error mapping), `persistence` (Room + `SyncWorker`
    + offline mutation queue + migrations), `model`, `designsystem` (accessible reusable components, Material

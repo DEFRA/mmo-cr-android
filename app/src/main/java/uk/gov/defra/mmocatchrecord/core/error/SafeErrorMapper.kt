@@ -17,7 +17,7 @@ enum class CatchRecordErrorClassification {
     /** A terminal failure (data corruption, programming error, unexpected state) — retrying will not help. */
     Terminal,
 
-    /** A 401: one silent token refresh is attempted before this is surfaced (ADR 0022, Phase 5). */
+    /** A 401: one silent token refresh is attempted before this is surfaced (ADR 0026, Phase 5). */
     NeedsAuthentication,
 }
 
@@ -37,6 +37,8 @@ object SafeErrorMapper {
     private const val MISSING_REGISTRATION_MESSAGE =
         "You cannot start a catch record for this vessel because its registration details are missing. " +
             "Contact the MMO."
+    private const val SUBMIT_LOCAL_SAVE_TRANSIENT_MESSAGE =
+        "We could not save your catch record on this device. Try again."
 
     fun map(throwable: Throwable): SafeUserFacingError {
         if (throwable is MissingVesselRegistrationException) {
@@ -45,6 +47,22 @@ object SafeErrorMapper {
         return when (classify(throwable)) {
             CatchRecordErrorClassification.Transient -> SafeUserFacingError(TRANSIENT_MESSAGE, isRetryable = true)
             CatchRecordErrorClassification.Terminal -> SafeUserFacingError(TERMINAL_MESSAGE, isRetryable = false)
+            CatchRecordErrorClassification.NeedsAuthentication ->
+                SafeUserFacingError(TERMINAL_MESSAGE, isRetryable = false)
+        }
+    }
+
+    /** As [map], but for the accept-and-submit local-save path only, whose retryable message is
+     *  submit-specific ("...on this device...") — the terminal message is shared and unchanged. */
+    fun mapSubmitLocalSave(throwable: Throwable): SafeUserFacingError {
+        if (throwable is MissingVesselRegistrationException) {
+            return SafeUserFacingError(MISSING_REGISTRATION_MESSAGE, isRetryable = false)
+        }
+        return when (classify(throwable)) {
+            CatchRecordErrorClassification.Transient ->
+                SafeUserFacingError(SUBMIT_LOCAL_SAVE_TRANSIENT_MESSAGE, isRetryable = true)
+            CatchRecordErrorClassification.Terminal -> SafeUserFacingError(TERMINAL_MESSAGE, isRetryable = false)
+            // Save-path saveDraft never surfaces this directly; kept for exhaustiveness.
             CatchRecordErrorClassification.NeedsAuthentication ->
                 SafeUserFacingError(TERMINAL_MESSAGE, isRetryable = false)
         }

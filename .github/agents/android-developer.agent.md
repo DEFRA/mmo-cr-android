@@ -7,7 +7,7 @@ description: >-
   working framework; it does not plan work or run a plan-approval gate itself.
 name: Android Developer
 tools: ['read', 'edit', 'search', 'execute', 'web', 'todo', 'agent', 'apply_patch', 'create_file', 'insert_edit_into_file', 'fetch_webpage', 'file_search', 'grep_search', 'get_errors', 'list_dir', 'get_terminal_output', 'read_file', 'replace_string_in_file', 'run_subagent', 'run_in_terminal', 'validate_cves']
-model: Claude Sonnet 5 (copilot)
+model: Claude Sonnet 5.5 (copilot)
 argument-hint: Describe the Android feature, fix or refactor you want.
 agents:
   - Android Planner
@@ -46,7 +46,7 @@ work, or delegate to the **Android Planner** for **Complex** work — then obtai
 > runtime fallback parser — no map SDK, no tiles, no API key, no network** — confirmed by explicit user
 > direction (see [ADR-0013](../../docs/adr/0013-offline-fisheries-map-rendering.md)). Networking confirmed
 > 2026-10-09 by developer via orchestrator: Retrofit 3.0.0 + OkHttp 5.5.0 (BOM) + converter-kotlinx-serialization;
-> product flavors local/dev/prod (ADR 0015/0016). Stack: Kotlin +
+> no product flavors — the backend comes from the packaged app config (ADR 0024). Stack: Kotlin +
 > Jetpack Compose, Material 3 light-only GOV.UK theme, MVVM + Clean Architecture, Hilt (DI, §5 default —
 > reverts the earlier Koin deviation, see ADR 0005), Navigation Compose, Room (now real entities for the
 > catch-record draft aggregate, SQLCipher-encrypted — see ADR-0006), androidx.biometric (Stage-1
@@ -183,7 +183,7 @@ standards precedence in [copilot-instructions.md](../copilot-instructions.md):
 - [ ] App **DesignSystem** components, Material Design 3 and GOV.UK content/design patterns are used correctly
 - [ ] Offline-first behaviour is verified — the feature degrades gracefully offline and syncs on reconnect
 - [ ] README, ADRs or docs are updated if setup, prerequisites, endpoints or architecture changed
-- [ ] Build configuration / Gradle flavor keys are documented in Gradle and the project README
+- [ ] New app-config keys are declared in `config/app-config.schema.json` and documented in the project README
 - [ ] Commit messages follow the DEFRA [pull request standard](https://defra.github.io/software-development-standards/processes/pull_requests/)
       (capitalised, imperative-mood, ≤50-char subject, no trailing full stop, body explains what/why) and
       link the originating story/issue; a conventional `feat:`/`fix:`/`test:`/`refactor:`/`chore:`/`docs:`

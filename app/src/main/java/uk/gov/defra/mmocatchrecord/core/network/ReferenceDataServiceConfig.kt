@@ -1,26 +1,41 @@
 package uk.gov.defra.mmocatchrecord.core.network
 
-/**
- * Thrown when a build flavor has no reference-data service root configured (currently only `prod`,
- * deliberately — ADR 0016) and something attempts to use it, rather than silently pointing at DEV.
- */
+import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+
+/** Missing or invalid packaged API base URL; no backend fallback is permitted. */
 class MissingReferenceDataServiceUrlException :
     IllegalStateException(
-        "REFERENCE_DATA_SERVICE_URL is empty for this build flavor; reference-data networking is unavailable.",
+        "API_BASE_URL is missing or invalid; reference-data networking is unavailable.",
     )
 
-/**
- * Derives the reference-data API base URL from the configured service root (ADR 0016): `/health` lives
- * at the service root, while every other documented route sits under `api/v1/reference-data/`.
- */
+/** Builds reference-data URLs as API_BASE_URL + `reference-data-service/` + endpoint (same base as iOS). */
 object ReferenceDataServiceConfig {
+    private const val SERVICE_PATH = "reference-data-service/"
     private const val API_PATH = "api/v1/reference-data/"
 
-    /** @throws MissingReferenceDataServiceUrlException if [configuredUrl] is blank. */
-    fun requireServiceRootUrl(configuredUrl: String): String {
-        if (configuredUrl.isBlank()) throw MissingReferenceDataServiceUrlException()
-        return if (configuredUrl.endsWith("/")) configuredUrl else "$configuredUrl/"
+    /** The validated API base URL with a trailing slash; @throws MissingReferenceDataServiceUrlException. */
+    fun requireApiBaseUrl(configuredUrl: String): String {
+        val trimmedUrl = configuredUrl.trim()
+        val parsedUrl = trimmedUrl.toHttpUrlOrNull()
+        if (!isValidServiceRootUrl(trimmedUrl, parsedUrl)) {
+            throw MissingReferenceDataServiceUrlException()
+        }
+        return if (trimmedUrl.endsWith("/")) trimmedUrl else "$trimmedUrl/"
     }
 
-    fun apiBaseUrl(serviceRootUrl: String): String = serviceRootUrl + API_PATH
+    fun serviceRootUrl(apiBaseUrl: String): String = apiBaseUrl + SERVICE_PATH
+
+    fun referenceDataApiUrl(serviceRootUrl: String): String = serviceRootUrl + API_PATH
+
+    private fun isValidServiceRootUrl(
+        configuredUrl: String,
+        parsedUrl: HttpUrl?,
+    ): Boolean {
+        if (configuredUrl.isBlank() || parsedUrl == null) return false
+        return parsedUrl.isHttps && !parsedUrl.hasCredentialsOrParameters()
+    }
+
+    private fun HttpUrl.hasCredentialsOrParameters(): Boolean =
+        username.isNotEmpty() || password.isNotEmpty() || query != null || fragment != null
 }

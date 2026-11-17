@@ -25,7 +25,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Spec
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.SpeciesWeightPrecision
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.StatisticalSubRectangle
 
-/** Maps a [CatchRecordDraft] + its resolved reference data to the wire payloads (ADR 0022); unresolvable
+/** Maps a [CatchRecordDraft] + its resolved reference data to the wire payloads (ADR 0026); unresolvable
  * lookups throw a terminal [SubmissionMappingException] — see [SEND_ASSOCIATION_ID] for OQ-7. */
 internal object CatchRecordSubmissionPayloadMapper {
     private const val SEND_ASSOCIATION_ID = false

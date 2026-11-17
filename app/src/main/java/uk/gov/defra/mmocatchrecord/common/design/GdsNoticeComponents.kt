@@ -31,7 +31,7 @@ enum class GdsResultBannerVariant {
     /** Blue header, text-only — the record was recorded and is queued for background sync. */
     PendingSync,
 
-    /** Red header, text-only — the online submission failed terminally; see "Try again" (ADR 0022). */
+    /** Red header, text-only — the online submission failed terminally; see "Try again" (ADR 0026). */
     Failed,
 }
 

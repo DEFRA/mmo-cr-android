@@ -1,6 +1,6 @@
 ---
 name: android-release-pipeline
-description: "Build or extend the MMO Catch Recording Android CI/CD pipeline: GitHub Actions PR-validation and tag-triggered release workflows, Fastlane lanes (build/version/Play tracks), SonarCloud, GitHub Environments with manual approval gates, Play App Signing + upload key, versioning, and the separate CodeQL advanced-setup workflow + Dependabot config. Use when creating or changing any pipeline, workflow, Fastlane, signing, versioning or release-management artefact. Android-only (never iOS)."
+description: "Build or extend the MMO Catch Recording Android CI/CD pipeline: GitHub Actions PR-validation and manually dispatched release workflows, Fastlane lanes (compile once, package/sign/verify per environment, Play upload and promotion), SonarCloud, GitHub Environments with reviewer gates, Play App Signing + upload keys, versioning, and the separate CodeQL advanced-setup workflow + Dependabot config. Use when creating or changing any pipeline, workflow, Fastlane, signing, versioning or release-management artefact. Android-only (never iOS)."
 argument-hint: "e.g. 'scaffold the PR CI + release pipeline' or 'add closed-track UAT testing'"
 user-invocable: false
 ---
@@ -26,16 +26,19 @@ working framework: plan → get approval → implement → validate.
    decisions as ADRs, then flip that agent file's status to `✅ Confirmed …`. Do not build the pipeline until
    this gate is passed.
 1. **Read** the repo: existing `.github/workflows/`, any `fastlane/`, `Gemfile`, `build.gradle.kts`,
-   `gradle/libs.versions.toml`, product flavors and `applicationId`, and existing ADRs under `docs/adr/`.
+   `gradle/libs.versions.toml`, `version.properties`, `build-logic/release-tools`, `fastlane/lanes` and
+   `fastlane/lib/cr_release`, and existing ADRs under `docs/adr/`.
 2. **Confirm the frozen model** and record/keep the ADRs (create any that are missing **before**
    finalising the pipeline):
-   - **Configuration strategy (frozen): build-time Option B** — three separate apps, each compiled as its
-     own product flavor; promote the **commit**, not a single binary.
-   - **applicationId / versioning (frozen):** three identities — `mmo.catchrecording.android.dev` /
-     `mmo.catchrecording.android.test` / `mmo.catchrecording.android` — as three Google Play apps;
-     `versionName` from the tag, `versionCode` from the release run number, per-app namespaces.
-   - **Signing strategy:** Play App Signing (Google holds the app signing key) + a per-app **upload key**
-     (base64 keystore decoded into a temporary keystore in CI).
+   - **Configuration strategy (frozen): compile once, package per environment** (ADR 0023) — no flavors;
+     one config-free base bundle repackaged per environment.
+   - **Topology / identity / versioning (frozen, ADR 0022):** three Google Play apps
+     (`mmo.catchrecording.dev.android` / `mmo.catchrecording.test.android` / `mmo.catchrecording.android`), six
+     environments, Managed Publishing on the Prod app only; `VERSION_CODE` = build number N (≤ 9999) and
+     uploaded code = `channel × 10 000 + N`.
+   - **Signing strategy:** Play App Signing (Google holds the app signing key) + upload keys (non-prod key for
+     Dev/Test apps, Prod key for the Prod app), decoded into a temporary keystore in CI. One Play service
+     account for all apps is accepted deviation DA-1.
 3. **Plan and get approval** before creating files (Standard/Complex work).
 
 ## Target repository layout
@@ -46,23 +49,26 @@ Single-app Android repo (app sources under `app/src/main`, tests under `app/src/
 .github/
   workflows/
     android-ci.yml      # PR + main: ktlint/detekt/lint, build, test+coverage (Kover), SonarCloud
-    android-release.yml # tag / dispatch: one run, six gated per-environment jobs (Fastlane)
+    android-release.yml # workflow_dispatch on a v* tag: compile, then six gated environment jobs (Fastlane)
     codeql.yml          # SEPARATE CodeQL advanced-setup SAST workflow (java-kotlin)
   dependabot.yml        # SEPARATE Dependabot config (github-actions, gradle, bundler)
+build-logic/release-tools/  # JVM CLI: inspect / package / verify (compile-once repackaging)
 fastlane/
   Appfile
-  Fastfile
+  Fastfile              # imports lanes/*.rb; logic in lib/cr_release/*.rb
+  release-notes/production/en-GB.txt  # optional cy.txt, <= 500 chars each
 Gemfile                 # pins fastlane (+ plugins) via Bundler
 Gemfile.lock
+version.properties      # VERSION_NAME + VERSION_CODE (build number N)
 sonar-project.properties
-docs/adr/               # signing + release-model ADRs
+docs/adr/               # signing + release-model ADRs (0022, 0023)
 ```
 
 ## Procedure
 
 ### 1. Pin the toolchain (Bundler + Gradle)
 Create a `Gemfile` pinning `fastlane` (and any plugins). Commit `Gemfile.lock`. CI installs with
-`bundle install` and runs lanes via `bundle exec fastlane …`. Pin the JDK (Temurin 17), the Android SDK and
+`bundle install` and runs lanes via `bundle exec fastlane …`. Pin the JDK (Temurin 21), the Android SDK and
 build-tools, and use the Gradle wrapper.
 
 ### 2. PR CI workflow — `.github/workflows/android-ci.yml`
@@ -80,53 +86,49 @@ run the scan in `android-ci.yml`. The SonarCloud quality gate is the coverage/qu
 it as a required check on `main`.
 
 ### 4. Release workflow — `.github/workflows/android-release.yml`
-- Triggers: `push` tags matching `android-v*`, plus `workflow_dispatch` (with a marketing-version input).
-- **One workflow run, six sequential gated jobs.** A GitHub Environment approval gates the **start of a
-  job**, so each distinct manual approval is its own job/environment. Every build job builds from the
-  **same tagged commit**; the promotion jobs never rebuild.
-  - `dev-build-internal` → `environment: dev` (no gate) → build **Dev** AAB → Dev **internal** track.
-  - `test-build-internal` → `environment: test` (Approval A) → build **Test** AAB → Test **internal** track.
-  - `test-promote-closed` → `environment: test-closed` (Approval B) → promote the **same** Test build → **closed** UAT track (no rebuild).
-  - `prod-build-internal` → `environment: prod` (Approval C) → build **Prod** AAB → Prod **internal** track.
-  - `prod-promote-closed` → `environment: prod-closed` (Approval D) → promote the **same** Prod build → **closed** track (no rebuild).
-  - `prod-promote-production` → `environment: prod-production` (Approval E) → promote the **same** Prod build → **production** track (staged rollout).
-- Derive `versionName` from the tag and `versionCode` from the **release** `GITHUB_RUN_NUMBER` (do **not**
-  query the Play API). Embed the short Git SHA + tag as a read-only `BuildConfig` field (e.g.
-  `GIT_COMMIT_SHA`) for traceability — not as the version code.
-- Never cancel an in-flight release (`concurrency` with `cancel-in-progress: false`).
-- **Build-per-environment from one tested commit.** The three apps have distinct `applicationId`s, so a
-  single AAB cannot move between environments; equivalence is evidenced by the same commit SHA, pinned
-  toolchain and locked dependencies. Track promotion within a Play app is a no-rebuild Google Play metadata
-  action (`track_promote_to`).
+- Trigger: `workflow_dispatch` on a `v*` tag with boolean inputs `dev`, `test`, `prod` (default true) and
+  `distribution` (`manual` | `play`, default `manual`). `permissions: contents: read`; `concurrency` with
+  `cancel-in-progress: false`.
+- Jobs: `compile` (no Environment) → `dev` → `test` → `perf-test` → `uat` → `prep-prod` → `production`.
+  Each Environment job runs only if `compile` succeeded, its input is true and the previous job succeeded or
+  was skipped; `perf-test` needs `test` = success, `prep-prod` needs `uat` = success, `production` needs
+  `prep-prod` = success. There is **no go-live job** (Publish changes is a manual Play Console click).
+  - `compile`: validate the tag, `bundle exec fastlane compile_release` (one unsigned, config-free
+    `bundleRelease` + the `release-tools` CLI), upload the `release-base` artifact (35 days).
+  - Environment jobs: download `release-base`, `bundle exec fastlane release_environment env:… distribution:…`
+    (repackage → sign → check `UPLOAD_CERT_SHA256` → `release-tools verify` → upload, or keep the AAB as a
+    7-day artifact in `manual` mode), then `cleanup-signing-assets.sh` with `if: always()`.
+  - `production`: `bundle exec fastlane promote_production distribution:…` — promotes the versionCode already
+    on `prep-prod`; never uploads.
+- Version from `version.properties`: N = `VERSION_CODE` (≤ 9999), uploaded code = `channel × 10 000 + N`,
+  tag `v<VERSION_NAME>-BUILD_<N>` created by `android-ci.yml` on `main` only. Do **not** query the Play API to
+  choose a version. `GIT_COMMIT_SHA` is traceability only.
+- Pass inputs and secrets through `env:`, never interpolate them into `run:`. Write tag, commit, package,
+  versionCode and SHA-256s to `$GITHUB_STEP_SUMMARY`.
 
 ### 5. Fastlane
-- **`Appfile`** — `json_key_file`/`package_name` per Play app (no secrets committed).
-- **`Fastfile`** lanes:
-  - `test` — run unit/UI tests (`gradle` action) (used by CI).
-  - A parametrised private `build_and_upload` — decode the **upload keystore** into a temporary keystore,
-    `gradle(task: "bundle", flavor + Release, xcargs equivalent via `-P` version props)` to build the AAB
-    for the environment's flavor, then `upload_to_play_store(track: "internal", aab: <path>,
-    json_key_data: ...)` to that app's **internal** track.
-  - Per-environment release lanes (`release_dev` / `release_test` / `release_prod`) call `build_and_upload`
-    with the matching flavor/`applicationId`/service account.
-  - `promote_closed` — **no rebuild**: `upload_to_play_store(track: "internal", track_promote_to: "closed",
-    version_code: <code>)` for that app.
-  - `promote_production` — promote the **Prod** app's build to `production` with a **staged rollout**
-    (`rollout: "0.1"`). Uploading to a track and promoting to production are separate actions.
-- **Signing:** Play App Signing holds the app signing key; CI holds only the **upload key**. Decode a
-  base64 keystore into a temporary keystore, reference it via a Gradle signing config, and delete it at job
-  end. Never commit signing assets; authenticate to Play with a **service-account JSON key**
-  (`json_key_data`), never an interactive login.
+- **Lanes** (`fastlane/lanes/*.rb`, logic in `fastlane/lib/cr_release/`): `lint`, `build`, `test`,
+  `instrumented_test` (CI); `compile_release`; `release_environment env:<dev|test|perf-test|uat|prep-prod>
+  distribution:<manual|play>`; `promote_production distribution:<manual|play>`; private
+  `package_environment` and `sign_bundle`.
+- **Play access** is `CrRelease::PlayPublisher` over the Google Play Developer API (`supply` cannot set
+  `changesInReviewBehavior`): `version_codes`, `upload`, `promote`. Non-internal commits use
+  `ERROR_IF_IN_REVIEW`; the edit is always deleted on failure; re-runs are idempotent.
+- **Signing:** Play App Signing holds the app signing key; CI holds only the **upload key** (non-prod key for
+  dev/test/perf-test, Prod key for uat/prep-prod). Decode the base64 keystore into a 0600 temporary file,
+  sign with `jarsigner` (passwords via `-storepass:env`), check the certificate against
+  `UPLOAD_CERT_SHA256`, delete the keystore at job end. Never commit signing assets.
 
 ### 6. GitHub Environments & secrets
-- Create **six** Environments — **`dev`** (ungated), **`test`** (A), **`test-closed`** (B), **`prod`**
-  (C), **`prod-closed`** (D) and **`prod-production`** (E) — each gated (except `dev`) by **required
-  reviewer(s)** (prevent self-approval where supported) and restrict deployments to `main` + `android-v*`
-  tags.
-- Scope release secrets to each Environment (not the repo), exposing only what that stage needs:
-  `PLAY_SERVICE_ACCOUNT_JSON`, `UPLOAD_KEYSTORE_BASE64`, `UPLOAD_KEYSTORE_PASSWORD`, `UPLOAD_KEY_ALIAS`,
-  `UPLOAD_KEY_PASSWORD`; plus `SONAR_TOKEN` (keep SonarCloud credentials separate from signing/release
-  credentials).
+- Create **six** Environments — `dev` (ungated), `test`, `perf-test`, `uat`, `prep-prod`, `production` —
+  each gated (except `dev`) by **required reviewers** with self-review prevented, deployments allowed only
+  from `v*` tags.
+- Packaging Environments (`dev`, `test`, `perf-test`, `uat`, `prep-prod`): secrets `UPLOAD_KEYSTORE_BASE64`,
+  `UPLOAD_KEYSTORE_PASSWORD`, `UPLOAD_KEY_ALIAS`, `UPLOAD_KEY_PASSWORD`, `PLAY_SERVICE_ACCOUNT_JSON`;
+  variables `CR_APP_CFG_API_BASE_URL`, `CR_APP_CFG_USE_STUB_AUTH`, `CR_APP_CFG_USE_FAKE_SIGN_IN`,
+  `CR_APP_CFG_MSAL_*` (Entra, ADR 0019), `UPLOAD_CERT_SHA256`. `production` needs
+  only `PLAY_SERVICE_ACCOUNT_JSON`. The Prod upload key must not be in `dev`. `SONAR_TOKEN` stays a
+  repository secret, separate from release credentials.
 - Never echo secrets; rely on masking; keep `set -x` away from secret-bearing steps.
 
 ### 7. CodeQL — separate advanced-setup workflow `.github/workflows/codeql.yml`
@@ -152,13 +154,12 @@ leaks, follow the DEFRA
 process.
 
 ### 10. ADRs & README
-Record the release ADRs under `docs/adr/`: **build-time configuration & environment promotion** (Option B),
-the **three-application applicationId & environment model** (`dev`/`test`/`prod` as separate Play apps), the
-**signing strategy** (Play App Signing + upload keys), the **build-per-environment promotion &
-commit-equivalence** policy, the **single-workflow six-environment release topology** (per-stage +
-per-track-promotion gates), and the **release model** (trunk-based, tag-driven, no release branches). Add
-ADRs for cloud real-device testing (UK data residency) only if adopted. Update the README with the release
-process, required secrets, environments and how to cut a release.
+Record the release ADRs under `docs/adr/`: the **three-app release topology** (ADR 0022: three Play apps,
+six environments, Managed Publishing on the Prod app only, versioning, DA-1), **compile once, package per
+environment** (ADR 0023), the **packaged app configuration** (ADR 0024) and the **signing strategy** (Play
+App Signing + upload keys). Add ADRs for cloud real-device testing (UK data residency) only if adopted.
+Update the README *Release* section with the process, required secrets/variables, environments and the
+manual Play Console runbook.
 
 ## Standards to honour
 - [ci-cd instructions](../../instructions/ci-cd.instructions.md) (tooling, branching, versioning,
@@ -170,7 +171,8 @@ process, required secrets, environments and how to cut a release.
 ## Validate
 - `actionlint` (if available) passes; workflows are least-privilege and pin Action/tool versions.
 - `bundle exec fastlane lanes` lists the lanes; the `test` lane runs green.
-- A dry build succeeds (`./gradlew bundleProdRelease`) and a `supply --validate_only`/draft upload works
-  **without** a real production rollout.
+- A local dry run works without Play: `compile_release`, then `release_environment` with
+  `distribution:manual`, then check the package, versionCode and config asset of the output AAB.
+  Never perform a real Play upload or production promotion to test the pipeline.
 - Secrets resolve from the correct Environment and never appear in logs.
 - No release branch introduced; no iOS tooling added.

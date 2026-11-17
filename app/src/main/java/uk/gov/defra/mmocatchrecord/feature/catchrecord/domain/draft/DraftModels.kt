@@ -19,7 +19,7 @@ enum class DraftStatus {
     Submitted,
     Discarded,
 
-    /** Terminal submission failure — "Could not send" with "Try again" re-queuing to [PendingSync] (ADR 0022). */
+    /** Terminal submission failure — "Could not send" with "Try again" re-queuing to [PendingSync] (ADR 0026). */
     SubmissionFailed,
     ;
 
@@ -28,7 +28,7 @@ enum class DraftStatus {
         get() = this == Draft || this == ReadyToSubmit
 }
 
-/** Why a [DraftStatus.SubmissionFailed] draft stopped retrying — see ADR 0022 §6 for the full mapping. */
+/** Why a [DraftStatus.SubmissionFailed] draft stopped retrying — see ADR 0026 §6 for the full mapping. */
 enum class SubmissionFailureReason {
     /** A 401 persisted even after one silent token refresh — the user must sign in again. */
     NeedsSignIn,
@@ -211,7 +211,7 @@ data class CatchRecordDraft(
     val createdAtEpochMillis: Long? = null,
     val submittedAtEpochMillis: Long? = null,
     val syncedAtEpochMillis: Long? = null,
-    /** ADR 0022: resumable submission state; `null` until Phase 4's real repository persists it. */
+    /** ADR 0026: resumable submission state; `null` until Phase 4's real repository persists it. */
     val serverCatchRecordId: String? = null,
     val serverVersion: Int? = null,
     val createIdempotencyKey: String? = null,

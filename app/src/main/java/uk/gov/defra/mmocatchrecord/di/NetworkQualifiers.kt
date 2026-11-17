@@ -12,7 +12,7 @@ annotation class ReferenceDataServiceRoot
 @Retention(AnnotationRetention.BINARY)
 annotation class ReferenceDataApiBase
 
-/** The catch-recording service root URL/Retrofit (ADR 0022) — every route sits directly under it. */
+/** The catch-recording service root URL/Retrofit (ADR 0026) — every route sits directly under it. */
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class CatchRecordingServiceRoot

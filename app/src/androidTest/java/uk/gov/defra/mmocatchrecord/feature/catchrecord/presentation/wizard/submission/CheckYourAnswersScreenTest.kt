@@ -4,6 +4,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
@@ -102,6 +104,7 @@ class CheckYourAnswersScreenTest {
         onChangeRow: (CheckYourAnswersRow) -> Unit = {},
         onSubmit: () -> Unit = {},
         isOffline: Boolean = false,
+        isSubmitting: Boolean = false,
     ) {
         composeTestRule.setContent {
             MmoTheme {
@@ -120,6 +123,7 @@ class CheckYourAnswersScreenTest {
                     // performScrollTo(), exactly as a real device would let the user scroll to see it.
                     modifier = Modifier.verticalScroll(rememberScrollState()),
                     isOffline = isOffline,
+                    isSubmitting = isSubmitting,
                 )
             }
         }
@@ -238,5 +242,25 @@ class CheckYourAnswersScreenTest {
         setContent(isOffline = false)
 
         composeTestRule.onNodeWithTag(CheckYourAnswersScreenTestTags.OFFLINE_NOTICE).assertDoesNotExist()
+    }
+
+    @Test
+    fun submitActionIsDisabledWhileSubmitting() {
+        setContent(isSubmitting = true)
+
+        composeTestRule
+            .onNodeWithTag(CheckYourAnswersScreenTestTags.SUBMIT_ACTION)
+            .performScrollTo()
+            .assertIsNotEnabled()
+    }
+
+    @Test
+    fun submitActionIsEnabledWhenNotSubmitting() {
+        setContent(isSubmitting = false)
+
+        composeTestRule
+            .onNodeWithTag(CheckYourAnswersScreenTestTags.SUBMIT_ACTION)
+            .performScrollTo()
+            .assertIsEnabled()
     }
 }

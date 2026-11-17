@@ -52,6 +52,11 @@ data class CatchRecordFlowViewState(
     val isDraftDeleted: Boolean = false,
     /** True once EnterFlow has resolved, so the entry screen never routes on the default initial state. */
     val isFlowEntered: Boolean = false,
+    /** True while "Accept and submit trip details" is in flight, guarding against a double-tap re-submit. */
+    val isSubmitting: Boolean = false,
+    /** Mirror of the latest [UiStatus.Content] draft, set atomically alongside [status] so
+     *  [CatchRecordFlowViewModel]'s retry can restore it even after [status] has flipped to [UiStatus.Error]. */
+    val lastKnownDraft: CatchRecordDraft? = null,
 ) : ViewState
 
 /**
@@ -149,7 +154,7 @@ sealed interface CatchRecordFlowEvent {
      */
     data object Retry : CatchRecordFlowEvent
 
-    /** "Try again" on the "Could not send" screen: re-queues a failed submission for background sync (ADR 0022). */
+    /** "Try again" on the "Could not send" screen: re-queues a failed submission for background sync (ADR 0026). */
     data object RetryFailedSubmission : CatchRecordFlowEvent
 
     /**

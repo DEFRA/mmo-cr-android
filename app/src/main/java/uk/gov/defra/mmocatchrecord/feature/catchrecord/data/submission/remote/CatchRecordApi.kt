@@ -9,7 +9,7 @@ import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
 
-/** Catch-record submission endpoints (ADR 0022); the two `GET`s exist only for recovery (OQ-1). */
+/** Catch-record submission endpoints (ADR 0026); the two `GET`s exist only for recovery (OQ-1). */
 internal interface CatchRecordApi {
     @POST("v1/catch-records")
     suspend fun createDraft(

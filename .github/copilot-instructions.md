@@ -151,8 +151,10 @@ only when the user asks for one. At the end of implementation, if no review has 
   **Kover** coverage; **ktlint + detekt + Android Lint**.
 - **CI/CD:** Proposed GitHub Actions + Fastlane + Google Play tracks — see the
   [Android DevOps agent](.github/agents/android-devops.agent.md).
-- **Identity/signing (DevOps):** Proposed `applicationId` `mmo.catchrecording.android` (+ `.dev`/`.test`
-  flavors), Play App Signing + upload key, release tag prefix `android-v*`.
+- **Identity/signing (DevOps):** Confirmed 2026-11-04 (ADR 0022/0023): three Play apps
+  (`mmo.catchrecording.dev.android`, `mmo.catchrecording.test.android`, `mmo.catchrecording.android`), no
+  flavors, compile once and package per environment, Play App Signing + upload keys, release tag
+  `v<VERSION_NAME>-BUILD_<N>`.
 
 ### 5.1 Tech-stack confirmation gate (mandatory before any code implementation)
 

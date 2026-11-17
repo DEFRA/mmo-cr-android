@@ -51,7 +51,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 private const val REFERENCE = "GBR-PH101-270726-150815"
 private const val LEGACY_REFERENCE = "PH101-27072026-150815"
 
-/** [RealCatchRecordSubmissionRepository]'s resumable create/replace/submit sequence (ADR 0022, Phase 4). */
+/** [RealCatchRecordSubmissionRepository]'s resumable create/replace/submit sequence (ADR 0026, Phase 4). */
 class RealCatchRecordSubmissionRepositoryTests {
     private val draftRepository = FakeCatchRecordDraftRepository()
     private val referenceDataRepository =

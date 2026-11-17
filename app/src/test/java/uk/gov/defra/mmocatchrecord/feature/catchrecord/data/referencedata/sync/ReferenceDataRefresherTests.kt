@@ -254,7 +254,7 @@ class ReferenceDataRefresherTests {
     @Test
     fun `missing metadata forces an unconditional gears refetch that populates apiMeasurementId`() =
         runTest {
-            // Simulates MIGRATION_12_13's forced invalidation of stale gears metadata (ADR 0022).
+            // Simulates MIGRATION_12_13's forced invalidation of stale gears metadata (ADR 0026).
             serverRule.server.enqueue(MockResponse(code = 200, body = manifestBody(datasetEntry("gears", "g2", "ge2"))))
             repeat(VesselLengthBands.cacheableVariants.size) {
                 serverRule.server.enqueue(MockResponse(code = 200, body = gearsBody()))

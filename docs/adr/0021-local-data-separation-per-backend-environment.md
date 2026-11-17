@@ -2,7 +2,9 @@
 
 ## Status
 
-Proposed
+Accepted (2026-11-13): **process control, no code change**, decided in
+[ADR 0022](0022-android-three-app-release-topology.md) (*Switching tracks on one device*). A technical
+guard is deferred.
 
 ## Context
 
@@ -17,7 +19,19 @@ raised by the release-engineering lead while building the Play release pipeline.
 
 ## Decision
 
-To be investigated and decided. Candidate options:
+**Option 2: treat multi-track installs on one device as unsupported and enforce it as process.** Since
+this was raised, the release design changed: there are now three Play apps (Dev, Test, Prod; ADR 0022)
+and no product flavors (ADR 0024). Two apps still serve two backends each under one package: the Prod
+app (`uat` on Ext-Test; `prep-prod`/`production` on Prod) and the Test app (`test`; `perf-test`).
+
+- Switching a device between tracks with different backends **must uninstall the app first**, which
+  removes all its data.
+- Each tester is on **one track per app**. This is what stops Play silently offering the higher-versionCode
+  internal build as an in-place update.
+
+A technical guard (record the backend id, refuse to show or submit data made for another backend) was
+considered and deferred. Revisit if the process is broken in practice or an audit asks for a technical
+control. The options originally listed were:
 
 - Scope local storage (Room database file name/location, and any cached reference data) per backend
   environment, so switching tracks/backends does not reuse another environment's data.
@@ -28,6 +42,5 @@ To be investigated and decided. Candidate options:
 
 ## Consequences
 
-Unresolved until the above investigation completes and a decision is approved; any code change here
-alters persistence architecture and requires updating ADR 0006 and the usual plan-approval gate
-before implementation.
+No persistence change, so ADR 0006 is unchanged. The rule is in ADR 0022, the README release section and
+the release setup guide. Residual risk if it is broken: one backend's drafts reaching another backend.

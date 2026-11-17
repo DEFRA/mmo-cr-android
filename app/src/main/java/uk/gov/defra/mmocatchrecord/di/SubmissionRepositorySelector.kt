@@ -4,7 +4,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission.RealCatch
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission.StubCatchRecordSubmissionRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordSubmissionRepository
 
-/** `local` has no backend and uses the stub; `dev`/`prod` use the real HTTP repository (ADR 0022). */
+/** Selects the stub when `USE_STUB_AUTH` is set (no backend, e.g. local), else the real HTTP repository (ADR 0026). */
 internal fun submissionRepositoryFor(
     useStubSubmission: Boolean,
     real: RealCatchRecordSubmissionRepository,

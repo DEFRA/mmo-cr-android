@@ -9,20 +9,19 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
-import uk.gov.defra.mmocatchrecord.BuildConfig
-import uk.gov.defra.mmocatchrecord.core.network.CatchRecordingServiceConfig
+import uk.gov.defra.mmocatchrecord.core.config.AppConfiguration
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission.remote.CatchRecordApi
 import javax.inject.Singleton
 
-/** The catch-recording Retrofit, reusing the shared [OkHttpClient]; not wired in yet. See ADR 0022. */
+/** The catch-recording Retrofit, reusing the shared [OkHttpClient]; not wired in yet. See ADR 0026. */
 @Module
 @InstallIn(SingletonComponent::class)
 object CatchRecordRetrofitModule {
     @Provides
     @Singleton
     @CatchRecordingServiceRoot
-    fun provideCatchRecordingServiceRootUrl(): String =
-        CatchRecordingServiceConfig.requireServiceRootUrl(BuildConfig.CATCH_RECORDING_SERVICE_URL)
+    fun provideCatchRecordingServiceRootUrl(appConfiguration: AppConfiguration): String =
+        appConfiguration.requireCatchRecordingServiceRootUrl()
 
     @Provides
     @Singleton

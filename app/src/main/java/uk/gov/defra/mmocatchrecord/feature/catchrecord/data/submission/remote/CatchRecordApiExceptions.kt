@@ -6,7 +6,7 @@ internal sealed class CatchRecordApiException(
     open val retryable: Boolean,
 ) : Exception(message)
 
-/** A non-2xx response; `retryable` is a Phase 2 status-based placeholder — see ADR 0022. */
+/** A non-2xx response; `retryable` is a Phase 2 status-based placeholder — see ADR 0026. */
 internal class CatchRecordHttpException(
     val operation: String,
     val httpStatusCode: Int,
@@ -19,7 +19,7 @@ internal class CatchRecordHttpException(
         retryable,
     )
 
-/** A missing/invalid/expired bearer token (401) — terminal for the current request (ADR 0022). */
+/** A missing/invalid/expired bearer token (401) — terminal for the current request (ADR 0026). */
 internal class CatchRecordUnauthorizedException(
     val operation: String,
     val correlationId: String?,

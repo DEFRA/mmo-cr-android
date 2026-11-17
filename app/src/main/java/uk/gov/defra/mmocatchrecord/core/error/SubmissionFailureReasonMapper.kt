@@ -10,7 +10,7 @@ private const val HTTP_PAYLOAD_TOO_LARGE = 413
 private const val HTTP_BAD_REQUEST = 400
 private const val HTTP_UNPROCESSABLE = 422
 
-/** Terminal-only: maps a throwable to the §6 [SubmissionFailureReason] it persists. See ADR 0022. */
+/** Terminal-only: maps a throwable to the §6 [SubmissionFailureReason] it persists. See ADR 0026. */
 fun submissionFailureReasonFor(throwable: Throwable): SubmissionFailureReason =
     when (throwable) {
         is CatchRecordUnauthorizedException -> SubmissionFailureReason.NeedsSignIn

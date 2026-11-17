@@ -300,7 +300,7 @@ class CatchRecordMigrationsJvmTests {
         db.close()
     }
 
-    /** ADR 0022: an existing install's stale gears metadata must be dropped, forcing an unconditional refetch. */
+    /** ADR 0026: an existing install's stale gears metadata must be dropped, forcing an unconditional refetch. */
     @Test
     fun `MIGRATION_12_13 invalidates cached gears metadata but leaves other datasets alone`() {
         val db =

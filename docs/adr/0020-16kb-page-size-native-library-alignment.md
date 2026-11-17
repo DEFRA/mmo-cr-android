@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted (2026-11-12). Verified compliant; no change needed.
 
 ## Context
 
@@ -17,7 +17,16 @@ pipeline.
 
 ## Decision
 
-To be investigated and decided. Candidate verification/remediation steps:
+**No change needed: every native library in the release build is already 16 KB-aligned.** Verified
+2026-11-12 on the compiled release base bundle (`v2.0.0-BUILD_19`): a universal APK built with bundletool
+passes `zipalign -c -P 16 -v 4`, and every `PT_LOAD` segment of all 12 libraries has alignment 16384:
+
+| ABI | Libraries |
+|---|---|
+| `arm64-v8a`, `armeabi-v7a`, `x86`, `x86_64` | `libsqlcipher.so`, `libdatastore_shared_counter.so`, `libandroidx.graphics.path.so` |
+
+Re-run the same check whenever a dependency that ships native code is added or upgraded (for example
+SQLCipher, or a new MSAL transitive). The candidate steps below were the investigation plan:
 
 - Verify the bundled SQLCipher native libraries' page-size alignment (Android Studio APK Analyzer,
   `zipalign`/ELF program header inspection, or Play Console's pre-launch report) against Zetetic's
@@ -29,5 +38,5 @@ To be investigated and decided. Candidate verification/remediation steps:
 
 ## Consequences
 
-Unresolved until the above investigation completes; tracked as a backlog item owned by the Android
-developer, with release-pipeline verification owned by DevOps.
+Resolved: Play uploads are not blocked by 16 KB alignment for the current dependency set. Adding or
+upgrading native-code dependencies needs the check above before release (DevOps verifies in the pipeline).

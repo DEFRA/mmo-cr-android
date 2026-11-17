@@ -58,7 +58,7 @@ private const val LIST_RESPONSE_BODY =
         """"updatedAt":"2026-07-27T15:00:00Z","submittedAt":null,"completedAt":null,""" +
         """"progress":{"allGearsComplete":false}}],"limit":20,"count":1}"""
 
-/** [CatchRecordRemoteDataSource] against a real [mockwebserver3.MockWebServer] round trip (ADR 0022). */
+/** [CatchRecordRemoteDataSource] against a real [mockwebserver3.MockWebServer] round trip (ADR 0026). */
 class CatchRecordRemoteDataSourceTests {
     @JvmField
     @Rule

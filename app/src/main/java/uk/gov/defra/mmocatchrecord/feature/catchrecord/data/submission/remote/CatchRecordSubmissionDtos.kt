@@ -3,7 +3,7 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission.remote
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 
-// Shared ref/snapshot shapes (write and read-side both carry snapshots per ADR 0022's backend answers).
+// Shared ref/snapshot shapes (write and read-side both carry snapshots per ADR 0026's backend answers).
 
 @Serializable
 internal data class CreateDraftCatchRecordPayloadDto(
@@ -62,7 +62,7 @@ internal data class CharacteristicDto(
     val unitSnapshot: String? = null,
 )
 
-/** Unset weights are omitted, not sent as explicit `null` (ADR 0022) — every weight field defaults `null`. */
+/** Unset weights are omitted, not sent as explicit `null` (ADR 0026) — every weight field defaults `null`. */
 @Serializable
 internal data class SpeciesWeightEntryDto(
     val id: String,
@@ -80,7 +80,7 @@ internal data class GearAssociationDto(
     val statisticalArea: StatisticalAreaDto,
     val characteristics: List<CharacteristicDto>,
     val speciesCaught: List<SpeciesWeightEntryDto>,
-    /** OQ-7: omitted by default (server generates it); flip to `GearUse.id` if a 422 names it (ADR 0022). */
+    /** OQ-7: omitted by default (server generates it); flip to `GearUse.id` if a 422 names it (ADR 0026). */
     val associationId: String? = null,
 )
 
@@ -129,7 +129,7 @@ internal data class StandardSaveResponseDto(
     val progress: ProgressDto,
 )
 
-/** Flattens the OpenAPI `allOf` of `StandardSaveResponse` + submission fields (ADR 0022). */
+/** Flattens the OpenAPI `allOf` of `StandardSaveResponse` + submission fields (ADR 0026). */
 @Serializable
 internal data class SubmissionResponseDto(
     val id: String,
@@ -174,7 +174,7 @@ internal data class GearAssociationSnapshotDto(
     val speciesCaught: List<SpeciesWeightEntryDto>,
 )
 
-/** Flattens the OpenAPI `allOf` of `CatchRecord` + the derived retrieval-only fields (ADR 0022). */
+/** Flattens the OpenAPI `allOf` of `CatchRecord` + the derived retrieval-only fields (ADR 0026). */
 @Serializable
 internal data class RetrieveCatchRecordResponseDto(
     val schemaVersion: Int,
@@ -248,7 +248,7 @@ internal data class CatchRecordListResponseDto(
 )
 
 // Error DTOs — a flat `{statusCode, code, message, correlationId?, details?}` shape, unlike the
-// reference-data service's nested `{"error": {...}}` envelope (ADR 0022).
+// reference-data service's nested `{"error": {...}}` envelope (ADR 0026).
 
 @Serializable
 internal data class ErrorDetailDto(

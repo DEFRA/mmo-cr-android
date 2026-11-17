@@ -25,7 +25,7 @@ private const val STEP_REPLACED = "replaced"
 private const val STEP_SUBMITTED = "submitted"
 private const val MAX_REFERENCE_ATTEMPTS = 20
 
-/** Resumable create → replace → submit sequence; per-draft [Mutex] guards against double-submit. See ADR 0022. */
+/** Resumable create → replace → submit sequence; per-draft [Mutex] guards against double-submit. See ADR 0026. */
 @Singleton
 internal class RealCatchRecordSubmissionRepository
     @Inject
@@ -49,7 +49,7 @@ internal class RealCatchRecordSubmissionRepository
                 }.onFailure(::scheduleRefreshIfStaleGearData)
             }
 
-        /** A blank `apiMeasurementId` means the cached gears dataset is stale, not permanently wrong (ADR 0022). */
+        /** A blank `apiMeasurementId` means the cached gears dataset is stale, not permanently wrong (ADR 0026). */
         private fun scheduleRefreshIfStaleGearData(error: Throwable) {
             if (error is UnresolvedGearMeasurementException) {
                 referenceDataRefreshScheduler.scheduleRefreshAfterSignIn()

@@ -42,7 +42,7 @@ object SubmissionFailedScreenTestTags {
     const val ERROR_MESSAGE = "submission_failed_error_message"
 }
 
-/** ADR 0022: terminal online-submission failure — "Could not send"; "Try again" re-queues for sync. */
+/** ADR 0026: terminal online-submission failure — "Could not send"; "Try again" re-queues for sync. */
 @Suppress("FunctionNaming")
 @Composable
 fun SubmissionFailedScreen(

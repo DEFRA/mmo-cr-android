@@ -6,9 +6,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import uk.gov.defra.mmocatchrecord.BuildConfig
-import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.core.android.CurrentActivityProvider
+import uk.gov.defra.mmocatchrecord.core.config.AppConfiguration
 import uk.gov.defra.mmocatchrecord.feature.signin.data.FakeSignInRepository
 import uk.gov.defra.mmocatchrecord.feature.signin.data.MsalNativeAuthClient
 import uk.gov.defra.mmocatchrecord.feature.signin.data.MsalSignInRepository
@@ -20,8 +19,8 @@ import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignOutRepository
 import javax.inject.Singleton
 
 /**
- * Hilt module for the sign-in feature (ADR 0019 Phase 2.1b/c). `local` keeps the Stage-1
- * [FakeSignInRepository]; `dev`/`prod` bind the real MSAL-backed [MsalSignInRepository].
+ * Hilt module for the sign-in feature (ADR 0019). The packaged config's `USE_FAKE_SIGN_IN` picks the Stage-1
+ * [FakeSignInRepository] or the real MSAL-backed [MsalSignInRepository] (ADR 0024).
  */
 @Module
 @InstallIn(SingletonComponent::class)
@@ -30,8 +29,10 @@ object SignInModule {
     @Singleton
     internal fun provideNativeAuthClient(
         @ApplicationContext context: Context,
+        appConfiguration: AppConfiguration,
         currentActivityProvider: CurrentActivityProvider,
-    ): NativeAuthClient = MsalNativeAuthClient(context, R.raw.msal_native_auth_config, currentActivityProvider)
+    ): NativeAuthClient =
+        MsalNativeAuthClient(context, appConfiguration::msalNativeAuthConfigJson, currentActivityProvider)
 
     /** Visible for testing both branches without compiling three build variants. */
     internal fun signInRepositoryFor(
@@ -41,8 +42,10 @@ object SignInModule {
 
     @Provides
     @Singleton
-    internal fun provideSignInRepository(nativeAuthClient: NativeAuthClient): SignInRepository =
-        signInRepositoryFor(BuildConfig.USE_FAKE_SIGN_IN, nativeAuthClient)
+    internal fun provideSignInRepository(
+        appConfiguration: AppConfiguration,
+        nativeAuthClient: NativeAuthClient,
+    ): SignInRepository = signInRepositoryFor(appConfiguration.useFakeSignIn ?: false, nativeAuthClient)
 
     /** Reuses the same [SignInRepository] singleton so its [SignInStageObserver.stage] is meaningful. */
     @Provides

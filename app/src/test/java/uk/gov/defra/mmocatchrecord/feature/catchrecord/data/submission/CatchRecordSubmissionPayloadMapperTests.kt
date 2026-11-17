@@ -41,7 +41,7 @@ private const val EXPECTED_REPLACE_JSON =
         """"speciesNotLanded":[{"id":"species-1","faoCodeSnapshot":"MAC","nameSnapshot":"Atlantic mackerel",""" +
         """"weightAboveMinimumKg":2.5,"weightPrecision":"oneDecimalPlace"}]}"""
 
-/** Mapper reproduces the backend example shape from an equivalent fixture draft (ADR 0022, Phase 3). */
+/** Mapper reproduces the backend example shape from an equivalent fixture draft (ADR 0026, Phase 3). */
 class CatchRecordSubmissionPayloadMapperTests {
     private val json = Json { ignoreUnknownKeys = true }
 

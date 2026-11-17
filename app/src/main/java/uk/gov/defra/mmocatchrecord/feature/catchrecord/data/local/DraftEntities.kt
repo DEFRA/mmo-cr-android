@@ -54,7 +54,7 @@ data class DraftEntity(
     val createdAtEpochMillis: Long? = null,
     val submittedAtEpochMillis: Long? = null,
     val syncedAtEpochMillis: Long? = null,
-    /** ADR 0022 (v11 -> v12): resumable submission state, all nullable/appended (append-only schema). */
+    /** ADR 0026 (v11 -> v12): resumable submission state, all nullable/appended (append-only schema). */
     val serverCatchRecordId: String? = null,
     val serverVersion: Int? = null,
     val createIdempotencyKey: String? = null,

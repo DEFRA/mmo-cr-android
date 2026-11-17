@@ -22,6 +22,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import uk.gov.defra.mmocatchrecord.core.android.CurrentActivityProvider
+import java.io.File
 import java.io.IOException
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.resume
@@ -34,7 +35,7 @@ import kotlin.coroutines.resumeWithException
 @Suppress("TooGenericExceptionCaught", "TooManyFunctions")
 internal class MsalNativeAuthClient(
     private val context: Context,
-    private val configResId: Int,
+    private val configJson: () -> String,
     private val currentActivityProvider: CurrentActivityProvider,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
@@ -47,19 +48,17 @@ internal class MsalNativeAuthClient(
     private suspend fun client(): INativeAuthPublicClientApplication =
         cachedClient ?: initMutex.withLock {
             cachedClient ?: run {
-                MsalNativeAuthConfig.requireProvisioned(readConfigJson())
+                val json = configJson()
+                MsalNativeAuthConfig.requireProvisioned(json)
                 PublicClientApplication
-                    .createNativeAuthPublicClientApplication(context, configResId)
+                    .createNativeAuthPublicClientApplication(context, writeConfigFile(json))
                     .also { cachedClient = it }
             }
         }
 
-    /** The config is a small bundled raw resource; read once per init attempt, not cached. */
-    private fun readConfigJson(): String =
-        context.resources
-            .openRawResource(configResId)
-            .bufferedReader()
-            .use { it.readText() }
+    // MSAL only reads config from a raw resource or a file; the stage's values come from the packaged config.
+    private fun writeConfigFile(json: String): File =
+        File(context.noBackupFilesDir, CONFIG_FILE_NAME).apply { writeText(json) }
 
     override suspend fun signIn(
         username: String,
@@ -241,6 +240,7 @@ internal class MsalNativeAuthClient(
         const val SAFE_SIGN_IN_ERROR = "unclassified native-auth sign-in error"
         const val INTERACTIVE_SIGN_IN_THREW = "native-auth client threw during interactive sign-in"
         const val NO_FOREGROUND_ACTIVITY = "no foreground activity for the interactive browser leg"
-        const val MSAL_CONFIG_NOT_PROVISIONED = "MSAL config has no client_id/authorities for this build flavor"
+        const val MSAL_CONFIG_NOT_PROVISIONED = "MSAL config has no client_id/authorities for this stage"
+        const val CONFIG_FILE_NAME = "msal_native_auth_config.json"
     }
 }

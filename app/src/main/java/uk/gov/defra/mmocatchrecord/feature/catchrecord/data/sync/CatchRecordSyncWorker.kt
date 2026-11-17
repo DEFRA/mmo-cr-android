@@ -65,7 +65,7 @@ class CatchRecordSyncWorker
                 onFailure = { Result.retry() },
             )
 
-        /** 401: one same-attempt retry (the token provider silently refreshes) before giving up — ADR 0022. */
+        /** 401: one same-attempt retry (the token provider silently refreshes) before giving up — ADR 0026. */
         private suspend fun handleFailure(
             draft: CatchRecordDraft,
             error: Throwable,

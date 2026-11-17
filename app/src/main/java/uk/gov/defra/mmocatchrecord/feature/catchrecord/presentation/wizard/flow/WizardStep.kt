@@ -121,7 +121,7 @@ sealed interface WizardStep {
     /** Phase 8, screen 4: submitted while offline (or the online attempt failed) — queued for background sync. */
     data object SubmissionPendingSync : WizardStep
 
-    /** Terminal submission failure — "Could not send" with "Try again" (ADR 0022). */
+    /** Terminal submission failure — "Could not send" with "Try again" (ADR 0026). */
     data object SubmissionFailed : WizardStep
 }
 

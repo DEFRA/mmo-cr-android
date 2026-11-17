@@ -1,1 +1,2 @@
+# Play API credentials come from Environment-scoped secrets at runtime, never from this file.
 package_name("mmo.catchrecording.android")

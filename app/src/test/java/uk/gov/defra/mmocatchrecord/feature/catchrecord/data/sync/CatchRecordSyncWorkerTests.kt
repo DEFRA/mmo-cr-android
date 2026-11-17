@@ -257,7 +257,7 @@ class CatchRecordSyncWorkerTests {
             val result = worker.doWork()
 
             assertEquals(ListenableWorker.Result.failure(), result)
-            // Two submit() attempts: the original call plus the one silent-refresh retry (ADR 0022).
+            // Two submit() attempts: the original call plus the one silent-refresh retry (ADR 0026).
             assertEquals(2, submissionRepository.submittedDrafts.size)
             val updated = draftRepository.getDraftById(draft.id).getOrThrow()
             assertEquals(DraftStatus.SubmissionFailed, updated?.status)

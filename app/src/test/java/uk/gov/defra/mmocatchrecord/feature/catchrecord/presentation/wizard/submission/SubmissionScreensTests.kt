@@ -267,7 +267,7 @@ class SubmissionScreensTests {
         assertTrue(submitted)
     }
 
-    // --- ADR 0022: terminal submission failure ------------------------------------------------
+    // --- ADR 0026: terminal submission failure ------------------------------------------------
 
     @Test
     fun submissionFailedScreenShowsBannerReferenceBodyAndRetryAction() {

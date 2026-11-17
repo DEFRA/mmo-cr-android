@@ -82,7 +82,7 @@ class CatchRecordMigrationTest {
                 assertEquals(9_000L, cursor.getLong(3))
                 assertTrue(cursor.isNull(4))
                 assertTrue(cursor.isNull(5))
-                assertTrue("new v12 submission columns must be null, never backfilled (ADR 0022)", cursor.isNull(6))
+                assertTrue("new v12 submission columns must be null, never backfilled (ADR 0026)", cursor.isNull(6))
                 assertTrue(cursor.isNull(7))
                 assertTrue(cursor.isNull(8))
                 assertTrue(cursor.isNull(9))
@@ -120,7 +120,7 @@ class CatchRecordMigrationTest {
         db.close()
     }
 
-    /** ADR 0022: the legacy `{PREFIX}-DDMMYYYY-HHMMSS` reference is rewritten to `GBR-{PREFIX}-DDMMYY-HHMMSS`. */
+    /** ADR 0026: the legacy `{PREFIX}-DDMMYYYY-HHMMSS` reference is rewritten to `GBR-{PREFIX}-DDMMYY-HHMMSS`. */
     @Test
     fun migrate11To12rewritesLegacyReferencesAndAddsTheSubmissionColumns() {
         val db = helper.createDatabase(databaseName, VERSION_11)
@@ -163,7 +163,7 @@ class CatchRecordMigrationTest {
         migrated.close()
     }
 
-    /** ADR 0022: a stale cached `gears:*` metadata row must be dropped so the next sync is unconditional. */
+    /** ADR 0026: a stale cached `gears:*` metadata row must be dropped so the next sync is unconditional. */
     @Test
     fun migrate12To13invalidatesCachedGearsMetadataButLeavesOtherDatasetsAlone() {
         val db = helper.createDatabase(databaseName, VERSION_12)

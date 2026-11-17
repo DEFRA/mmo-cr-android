@@ -8,6 +8,7 @@ import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import uk.gov.defra.mmocatchrecord.BuildConfig
+import uk.gov.defra.mmocatchrecord.core.config.AppConfiguration
 import uk.gov.defra.mmocatchrecord.core.language.AppLanguageRepository
 import uk.gov.defra.mmocatchrecord.core.network.AcceptLanguageInterceptor
 import uk.gov.defra.mmocatchrecord.core.network.AuthInterceptor
@@ -20,10 +21,7 @@ import uk.gov.defra.mmocatchrecord.feature.signin.data.NativeAuthClient
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
-/**
- * Networking foundation (ADR 0015/0016): JSON, the per-flavor [TokenProvider] and the authenticated/
- * localised [OkHttpClient]. See [ReferenceDataRetrofitModule] for the Retrofit/`HealthApi` layer.
- */
+/** Provides JSON, packaged-config token auth, and the authenticated/localised [OkHttpClient]. */
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
@@ -35,7 +33,7 @@ object NetworkModule {
     @Singleton
     fun provideJson(): Json = Json { ignoreUnknownKeys = true }
 
-    /** Visible for testing all three flavors without compiling three build variants (ADR 0019 2.1d). */
+    /** Selects the token source from the packaged config; visible for testing every combination. */
     internal fun tokenProviderFor(
         useStubAuth: Boolean,
         useFakeSignIn: Boolean,
@@ -45,7 +43,7 @@ object NetworkModule {
     ): TokenProvider =
         when {
             useStubAuth -> StubTokenProvider()
-            // prod's empty URL (ADR 0016) is the fail-fast placeholder: never bind MSAL to it.
+            // A missing service URL is the fail-fast placeholder (ADR 0016): never bind MSAL to it.
             !useFakeSignIn && referenceDataServiceUrl.isNotBlank() -> MsalTokenProvider(nativeAuthClient, sessionStore)
             else -> MissingTokenProvider()
         }
@@ -53,13 +51,14 @@ object NetworkModule {
     @Provides
     @Singleton
     internal fun provideTokenProvider(
+        appConfiguration: AppConfiguration,
         nativeAuthClient: NativeAuthClient,
         sessionStore: SessionStore,
     ): TokenProvider =
         tokenProviderFor(
-            useStubAuth = BuildConfig.USE_STUB_AUTH,
-            useFakeSignIn = BuildConfig.USE_FAKE_SIGN_IN,
-            referenceDataServiceUrl = BuildConfig.REFERENCE_DATA_SERVICE_URL,
+            useStubAuth = appConfiguration.useStubAuth ?: false,
+            useFakeSignIn = appConfiguration.useFakeSignIn ?: false,
+            referenceDataServiceUrl = appConfiguration.referenceDataServiceRootUrlOrNull().orEmpty(),
             nativeAuthClient = nativeAuthClient,
             sessionStore = sessionStore,
         )
@@ -94,7 +93,7 @@ object NetworkModule {
                 HttpLoggingInterceptor().apply {
                     level = HttpLoggingInterceptor.Level.BASIC
                     redactHeader("Authorization")
-                    // Catch-record submission headers (ADR 0022) — never logged even at BASIC level.
+                    // Catch-record submission headers (ADR 0026) — never logged even at BASIC level.
                     redactHeader("Idempotency-Key")
                     redactHeader("If-Match")
                     redactHeader("ETag")
