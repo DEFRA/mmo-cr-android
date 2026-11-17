@@ -153,7 +153,7 @@ internal data class CatchRecordRecoverySnapshotDto(
     val catchRecordReference: String? = null,
     val status: String,
     val version: Int,
-    val hasUnsubmittedChanges: Boolean = false,
+    val hasUnsubmittedChanges: Boolean,
 )
 
 // Read-side (recovery GET, OQ-1) DTOs — the full Canonical Catch Record snapshot shape.
