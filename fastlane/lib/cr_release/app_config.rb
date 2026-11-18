@@ -8,19 +8,20 @@ module CrRelease
     PREFIX = "CR_APP_CFG_".freeze
     SCHEMA_PATH = File.join(ROOT, "config", "app-config.schema.json").freeze
     TYPES = %w[url string bool].freeze
-    SPEC_FIELDS = %w[type required log tracking description].freeze
+    SPEC_FIELDS = %w[type required log tracking description unusedWhen].freeze
     KEY_PATTERN = /\A[A-Z][A-Z0-9_]*\z/
     SECRET_WORDS = %w[SECRET PASSWORD TOKEN PRIVATE CREDENTIAL].freeze
     MAX_URL_LENGTH = 2048
     MAX_STRING_LENGTH = 512
 
     class Config
-      attr_reader :values, :unknown
+      attr_reader :values, :unknown, :unused
 
-      def initialize(schema, values, unknown)
+      def initialize(schema, values, unknown, unused = {})
         @schema = schema
         @values = values
         @unknown = unknown
+        @unused = unused
       end
 
       def loggable
@@ -38,6 +39,7 @@ module CrRelease
     def from_env!(vars_json)
       config = resolve(load_schema, vars_json)
       config.unknown.each { |name| FastlaneCore::UI.important("Ignoring #{name}: not declared in config/app-config.schema.json") }
+      config.unused.each { |name, flag| FastlaneCore::UI.message("Not packaging #{name}: #{flag} is true") }
       config.loggable.each { |key, value| FastlaneCore::UI.message("App config #{key}: #{value}") }
       config
     rescue Error => e
@@ -55,6 +57,7 @@ module CrRelease
       raise Error, "App config schema must have a \"keys\" object" unless keys.is_a?(Hash)
 
       errors = keys.flat_map { |name, spec| spec_errors(name, spec) }
+      errors += keys.filter_map { |name, spec| unused_when_error(name, spec, keys) }
       raise Error, "Invalid app config schema: #{errors.join('; ')}" unless errors.empty?
 
       keys
@@ -78,6 +81,15 @@ module CrRelease
       errors
     end
 
+    def unused_when_error(name, spec, keys)
+      flag = spec.is_a?(Hash) ? spec["unusedWhen"] : nil
+      return nil if flag.nil?
+      return "#{name}: unusedWhen must name a bool key" unless keys.dig(flag, "type") == "bool"
+      return "#{name}: a required key cannot be unusedWhen" if spec["required"]
+
+      nil
+    end
+
     # vars_json is toJSON(vars): every variable visible to the job. Error messages never include values.
     def resolve(schema, vars_json)
       vars = JSON.parse(vars_json.to_s.strip.empty? ? "{}" : vars_json)
@@ -86,8 +98,14 @@ module CrRelease
       candidates = vars.select { |name, _| name.start_with?(PREFIX) }.transform_keys { |name| name.delete_prefix(PREFIX) }
       values = {}
       errors = []
+      unused = {}
       schema.each do |key, spec|
         raw = candidates[key].to_s.strip
+        flag = spec["unusedWhen"]
+        if flag && candidates[flag].to_s.strip == "true"
+          unused[PREFIX + key] = PREFIX + flag unless raw.empty?
+          next
+        end
         if raw.empty?
           errors << "#{PREFIX}#{key} is required; set it as a variable on this GitHub Environment" if spec["required"]
           next
@@ -101,7 +119,7 @@ module CrRelease
       end
       raise Error, errors.join("; ") unless errors.empty?
 
-      Config.new(schema, values, (candidates.keys - schema.keys).sort.map { |key| PREFIX + key })
+      Config.new(schema, values, (candidates.keys - schema.keys).sort.map { |key| PREFIX + key }, unused)
     rescue JSON::ParserError
       raise Error, "CR_APP_CFG_VARS is not valid JSON"
     end

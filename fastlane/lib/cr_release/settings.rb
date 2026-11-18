@@ -16,8 +16,8 @@ module CrRelease
   VERSION_WIDTH = 10_000
 
   APPS = {
-    dev: { package: "mmo.catchrecordingdev.android", managed_publishing: false },
-    test: { package: "mmo.catchrecordingtest.android", managed_publishing: false },
+    dev: { package: "mmo.catchrecording.dev.android", managed_publishing: false },
+    test: { package: "mmo.catchrecording.test.android", managed_publishing: false },
     prod: { package: "mmo.catchrecording.android", managed_publishing: true }
   }.freeze
 

@@ -28,21 +28,24 @@
       "required": false,
       "log": true,
       "tracking": false,
-      "description": "Entra External ID public-client app registration ID for this stage (not a secret)."
+      "description": "Entra External ID public-client app registration ID for this stage (not a secret).",
+      "unusedWhen": "USE_FAKE_SIGN_IN"
     },
     "MSAL_AUTHORITY_URL": {
       "type": "url",
       "required": false,
       "log": true,
       "tracking": false,
-      "description": "Entra External ID (CIAM) authority URL for this stage's tenant."
+      "description": "Entra External ID (CIAM) authority URL for this stage's tenant.",
+      "unusedWhen": "USE_FAKE_SIGN_IN"
     },
     "MSAL_REDIRECT_URI": {
       "type": "string",
       "required": false,
       "log": true,
       "tracking": false,
-      "description": "msauth:// redirect for the browser fallback; must match this app's package and signing key."
+      "description": "msauth:// redirect for the browser fallback; must match this app's package and signing key.",
+      "unusedWhen": "USE_FAKE_SIGN_IN"
     }
   }
 }

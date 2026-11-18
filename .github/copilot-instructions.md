@@ -152,7 +152,7 @@ only when the user asks for one. At the end of implementation, if no review has 
 - **CI/CD:** Proposed GitHub Actions + Fastlane + Google Play tracks — see the
   [Android DevOps agent](.github/agents/android-devops.agent.md).
 - **Identity/signing (DevOps):** Confirmed 2026-11-04 (ADR 0022/0023): three Play apps
-  (`mmo.catchrecordingdev.android`, `mmo.catchrecordingtest.android`, `mmo.catchrecording.android`), no
+  (`mmo.catchrecording.dev.android`, `mmo.catchrecording.test.android`, `mmo.catchrecording.android`), no
   flavors, compile once and package per environment, Play App Signing + upload keys, release tag
   `v<VERSION_NAME>-BUILD_<N>`.
 
