@@ -23,7 +23,7 @@ turbine = "1.2.1"
 kover = "0.9.11"
 jacoco = "0.8.15"
 ktlint = "14.2.0"
-detekt = "1.23.8"
+detekt = "2.0.0-alpha.6"
 sqlcipher = "4.19.1"
 androidxSqlite = "2.7.1"
 # Pinned below latest: 4.17 breaks Robolectric FileDescriptor shadows, failing ~450 JVM tests.
@@ -110,4 +110,4 @@ androidx-room = { id = "androidx.room", version.ref = "room" }
 hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
-detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+detekt = { id = "dev.detekt", version.ref = "detekt" }

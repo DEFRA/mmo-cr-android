@@ -59,11 +59,11 @@ jobs:
           path: build/release/base
           digest-mismatch: error
 
-      - name: Set up JDK 21 (Temurin)
+      - name: Set up JDK 25 (Temurin)
         uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: "25"
 
       # No cache: a release is built only from the tagged sources and locked dependencies.
       - name: Set up Gradle
@@ -107,11 +107,11 @@ jobs:
       - name: Validate the release tag matches the code
         run: bash .github/workflows/scripts/validate-release-tag.sh
 
-      - name: Set up JDK 21 (Temurin)
+      - name: Set up JDK 25 (Temurin)
         uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: "25"
 
       - name: Set up Ruby and Fastlane
         uses: ruby/setup-ruby@20eb24b0d509e2b9ed9b6d42ddfeb992915e0564 # v1.341.0
@@ -170,11 +170,11 @@ jobs:
       - name: Validate the release tag matches the code
         run: bash .github/workflows/scripts/validate-release-tag.sh
 
-      - name: Set up JDK 21 (Temurin)
+      - name: Set up JDK 25 (Temurin)
         uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: "25"
 
       - name: Set up Ruby and Fastlane
         uses: ruby/setup-ruby@20eb24b0d509e2b9ed9b6d42ddfeb992915e0564 # v1.341.0
@@ -233,11 +233,11 @@ jobs:
       - name: Validate the release tag matches the code
         run: bash .github/workflows/scripts/validate-release-tag.sh
 
-      - name: Set up JDK 21 (Temurin)
+      - name: Set up JDK 25 (Temurin)
         uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: "25"
 
       - name: Set up Ruby and Fastlane
         uses: ruby/setup-ruby@20eb24b0d509e2b9ed9b6d42ddfeb992915e0564 # v1.341.0
@@ -296,11 +296,11 @@ jobs:
       - name: Validate the release tag matches the code
         run: bash .github/workflows/scripts/validate-release-tag.sh
 
-      - name: Set up JDK 21 (Temurin)
+      - name: Set up JDK 25 (Temurin)
         uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: "25"
 
       - name: Set up Ruby and Fastlane
         uses: ruby/setup-ruby@20eb24b0d509e2b9ed9b6d42ddfeb992915e0564 # v1.341.0
@@ -359,11 +359,11 @@ jobs:
       - name: Validate the release tag matches the code
         run: bash .github/workflows/scripts/validate-release-tag.sh
 
-      - name: Set up JDK 21 (Temurin)
+      - name: Set up JDK 25 (Temurin)
         uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: "25"
 
       - name: Set up Ruby and Fastlane
         uses: ruby/setup-ruby@20eb24b0d509e2b9ed9b6d42ddfeb992915e0564 # v1.341.0
