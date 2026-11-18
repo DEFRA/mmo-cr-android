@@ -33,7 +33,7 @@ hiltWork = "1.4.0"
 kotlinxSerialization = "1.11.0"
 timber = "5.0.1"
 datastore = "1.2.1"
-okhttp = "5.5.0"
+okhttp = "5.5.1"
 retrofit = "3.0.0"
 # Pinned exactly (no dynamic range, unlike Microsoft's docs): >= 8.5.0 pulls in httpcore5 5.4.3,
 # the transitive fix for Apache HttpCore CVE-2026-54399 — not an MSAL CVE itself.
