@@ -303,6 +303,10 @@
     <string name="submission_failed_body_title">Mae eich cofnod dalfa wedi\'i gadw o hyd ar y ddyfais hon</string>
     <string name="submission_failed_body">Ni allem anfon eich cofnod dalfa at yr awdurdod pysgota perthnasol. Rhowch gynnig arall, neu wiriwch eich cysylltiad a dewch yn ôl yn nes ymlaen.</string>
     <string name="submission_failed_retry_action">Rhowch gynnig arall arni</string>
+    <string name="submission_failed_body_needs_sign_in">Rydych wedi cael eich allgofnodi. Mewngofnodwch eto i anfon eich cofnod dalfa.</string>
+    <string name="submission_failed_body_not_authorised">Nid oes gennych ganiatâd i gyflwyno cofnod dalfa ar gyfer y llestr hwn. Cysylltwch â\'ch gweinyddwr am help.</string>
+    <string name="submission_failed_body_rejected">Mae problem gyda\'r wybodaeth yn eich cofnod dalfa. Gwiriwch eich atebion, yna rhowch gynnig arall arni.</string>
+    <string name="submission_failed_body_too_large">Mae eich cofnod dalfa yn rhy fawr i\'w anfon. Cysylltwch â\'r tîm cymorth am help.</string>
     <string name="wizard_error_retry_action">Rhowch gynnig arall arni</string>
     <string name="unsaved_changes_dialog_title">Mae gennych newidiadau heb eu cadw</string>
     <string name="unsaved_changes_dialog_body">Os byddwch yn gadael y dudalen hon, ni fydd y wybodaeth rydych wedi\'i nodi yn cael ei chadw.</string>
