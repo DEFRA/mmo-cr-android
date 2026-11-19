@@ -64,7 +64,7 @@ restate or fork it. Your primary standards reference is
 > the user via the Android Orchestrator; bump the pin manually before image retirement); **Fastlane +
 > Bundler** (`Gemfile`/`Gemfile.lock`,
 > Ruby 3.3) as the single entry point for every Gradle invocation, with `lint` / `build` / `test` /
-> `instrumented_test` lanes; **Temurin JDK 21** (matching `jvmToolchain(21)` and
+> `instrumented_test` lanes; **Temurin JDK 25** (matching `jvmToolchain(25)`, [ADR-0026](../../docs/adr/0026-jdk-25-toolchain.md); and
 > `gradle/gradle-daemon-jvm.properties`); Kover for coverage (`koverXmlReportDebug`); emulator-based
 > instrumented tests via `reactivecircus/android-emulator-runner`; **every third-party Action pinned to a
 > full 40-char commit SHA** with a trailing `# vX.Y.Z` comment, kept current by Dependabot
