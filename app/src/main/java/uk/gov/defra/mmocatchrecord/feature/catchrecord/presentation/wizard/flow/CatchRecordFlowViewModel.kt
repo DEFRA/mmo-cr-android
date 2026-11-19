@@ -14,8 +14,10 @@ import timber.log.Timber
 import uk.gov.defra.mmocatchrecord.core.architecture.BaseViewModel
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.core.connectivity.NetworkConnectivityChecker
+import uk.gov.defra.mmocatchrecord.core.error.CatchRecordErrorClassification
 import uk.gov.defra.mmocatchrecord.core.error.SafeErrorMapper
 import uk.gov.defra.mmocatchrecord.core.error.SafeUserFacingError
+import uk.gov.defra.mmocatchrecord.core.error.submissionFailureReasonFor
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.CatchRecordReferenceGenerator
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftFactory
@@ -30,6 +32,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftSubmiss
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MissingVesselRegistrationException
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SubmissionFailureReason
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Port
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.ReferenceDataRepository
@@ -43,9 +46,26 @@ import javax.inject.Inject
 private const val SUBMISSION_VALIDATION_MESSAGE =
     "Your catch record is incomplete. Go back and complete every step before submitting."
 
-/** Nav-graph-scoped ViewModel shared by every catch-record wizard screen. */
+/** What [CatchRecordFlowEvent.Retry] re-attempts: the whole event, or (submission only) just the
+ *  stage that failed — see `acceptDeclarationAndSubmit`. Not part of [CatchRecordFlowViewState]. */
+private sealed interface RetryAction {
+    data class DispatchEvent(
+        val event: CatchRecordFlowEvent,
+    ) : RetryAction
+
+    data class ResumeCompleteSubmission(
+        val draft: CatchRecordDraft,
+    ) : RetryAction
+
+    data class ResumeEnqueuePendingSync(
+        val draft: CatchRecordDraft,
+    ) : RetryAction
+}
+
+/** Nav-graph-scoped ViewModel shared by every catch-record wizard screen — its size scales with the
+ *  number of wizard steps/events the flow has, not with any one function's complexity (see file header). */
 @HiltViewModel
-@Suppress("TooManyFunctions", "LongParameterList")
+@Suppress("TooManyFunctions", "LongParameterList", "LargeClass")
 class CatchRecordFlowViewModel
     @Inject
     constructor(
@@ -61,22 +81,6 @@ class CatchRecordFlowViewModel
             initialState = CatchRecordFlowViewState(),
             defaultDispatcher = defaultDispatcher,
         ) {
-        /** What [CatchRecordFlowEvent.Retry] re-attempts: the whole event, or (submission only) just the
-         *  stage that failed — see [acceptDeclarationAndSubmit]. Not part of [CatchRecordFlowViewState]. */
-        private sealed interface RetryAction {
-            data class DispatchEvent(
-                val event: CatchRecordFlowEvent,
-            ) : RetryAction
-
-            data class ResumeCompleteSubmission(
-                val draft: CatchRecordDraft,
-            ) : RetryAction
-
-            data class ResumeEnqueuePendingSync(
-                val draft: CatchRecordDraft,
-            ) : RetryAction
-        }
-
         private var lastFailedAction: RetryAction? = null
 
         /** Delegates to [BaseViewModel.updateState], then snapshots any resulting [UiStatus.Content] draft
@@ -106,6 +110,7 @@ class CatchRecordFlowViewModel
                 CatchRecordFlowEvent.MarkReadyToSubmit -> markReadyToSubmit()
                 CatchRecordFlowEvent.AcceptDeclarationAndSubmit -> acceptDeclarationAndSubmit()
                 CatchRecordFlowEvent.Retry -> retryLastFailedEvent()
+                CatchRecordFlowEvent.RetryFailedSubmission -> retryFailedSubmission()
                 is CatchRecordFlowEvent.EditGearMeasurements -> editGearMeasurements(event)
                 is CatchRecordFlowEvent.EditGearStatRectangle -> editGearStatRectangle(event)
                 is CatchRecordFlowEvent.SpeciesAddedToGearUse -> speciesAddedToGearUse(event)
@@ -546,15 +551,90 @@ class CatchRecordFlowViewModel
             launchInViewModelScope {
                 runSubmissionStage(RetryAction.DispatchEvent(CatchRecordFlowEvent.AcceptDeclarationAndSubmit)) {
                     if (connectivityChecker.isConnected()) {
-                        submissionRepository.submit(draft).fold(
-                            onSuccess = { completeSubmission(draft) },
-                            onFailure = { enqueuePendingSync(draft) },
-                        )
+                        attemptOnlineSubmit(draft)
                     } else {
                         enqueuePendingSync(draft)
                     }
                 }
             }
+        }
+
+        /** [isTokenRetry] bounds the 401 path to a single same-attempt retry — see ADR 0026 §6. */
+        private suspend fun attemptOnlineSubmit(
+            draft: CatchRecordDraft,
+            isTokenRetry: Boolean = false,
+        ) {
+            submissionRepository.submit(draft).fold(
+                onSuccess = { completeSubmission(it) },
+                onFailure = { handleOnlineSubmitFailure(draft, it, isTokenRetry) },
+            )
+        }
+
+        /** B1: reloads [draft] before acting — [submissionRepository] may have already persisted resumable
+         *  progress (server id/version, idempotency keys, step) even though this attempt still failed. */
+        private suspend fun handleOnlineSubmitFailure(
+            draft: CatchRecordDraft,
+            error: Throwable,
+            isTokenRetry: Boolean,
+        ) {
+            val classification = SafeErrorMapper.classify(error)
+            val retryAction = RetryAction.DispatchEvent(CatchRecordFlowEvent.AcceptDeclarationAndSubmit)
+            // A failed/empty reload must never fall back to the stale pre-submit [draft] (B1 re-review).
+            val latest =
+                draftRepository.getDraftById(draft.id).fold(
+                    onSuccess = {
+                        it ?: return emitSubmissionStageError(
+                            retryAction,
+                            IllegalStateException("Draft no longer exists"),
+                            SafeErrorMapper::map,
+                        )
+                    },
+                    onFailure = {
+                        return emitSubmissionStageError(
+                            retryAction,
+                            it,
+                            SafeErrorMapper::mapSubmitLocalSave,
+                        )
+                    },
+                )
+            when {
+                classification == CatchRecordErrorClassification.NeedsAuthentication && !isTokenRetry ->
+                    attemptOnlineSubmit(latest, isTokenRetry = true)
+                classification == CatchRecordErrorClassification.Transient -> enqueuePendingSync(latest)
+                else -> failSubmission(latest, submissionFailureReasonFor(error))
+            }
+        }
+
+        /** Terminal: no [RetryAction] stage wraps this — "Try again" re-enters via [retryFailedSubmission]. */
+        private suspend fun failSubmission(
+            draft: CatchRecordDraft,
+            reason: SubmissionFailureReason,
+        ) {
+            draftRepository
+                .saveDraft(draft.copy(status = DraftStatus.SubmissionFailed, submissionFailureReason = reason.name))
+                .fold(
+                    onSuccess = { saved ->
+                        setState {
+                            it.copy(
+                                status = UiStatus.Content(saved),
+                                currentStep = WizardStep.SubmissionFailed,
+                                isSubmitting = false,
+                            )
+                        }
+                    },
+                    onFailure = { emitLoadError(CatchRecordFlowEvent.AcceptDeclarationAndSubmit, it) },
+                )
+        }
+
+        /** "Try again": re-queues a [DraftStatus.SubmissionFailed] draft, guarded by [retrySubmissionStage]
+         *  so a double tap on "Try again" cannot queue it twice (mirrors [acceptDeclarationAndSubmit]). */
+        private fun retryFailedSubmission() {
+            val draft = currentDraftOrNull() ?: return
+            if (draft.status != DraftStatus.SubmissionFailed) {
+                Timber.d("Ignored Retry failed submission dispatch; draft is not in SubmissionFailed state.")
+                return
+            }
+            retrySubmissionStage(draft.copy(submissionFailureReason = null), ::enqueuePendingSync)
         }
 
         /** Re-attempts only the stage that previously failed (see [RetryAction]), never the whole event;

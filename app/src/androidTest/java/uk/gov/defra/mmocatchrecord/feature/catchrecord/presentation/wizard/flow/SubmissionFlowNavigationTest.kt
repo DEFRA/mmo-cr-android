@@ -103,9 +103,9 @@ class SubmissionFlowNavigationTest {
         var submitCallCount = 0
             private set
 
-        override suspend fun submit(draft: CatchRecordDraft): Result<Unit> {
+        override suspend fun submit(draft: CatchRecordDraft): Result<CatchRecordDraft> {
             submitCallCount++
-            return if (succeeds) Result.success(Unit) else Result.failure(IllegalStateException("Simulated failure"))
+            return if (succeeds) Result.success(draft) else Result.failure(java.io.IOException("Simulated offline"))
         }
     }
 
@@ -165,7 +165,7 @@ class SubmissionFlowNavigationTest {
             notLandedStraightAway = false,
             status = DraftStatus.Draft,
             modifiedAtEpochMillis = 0L,
-            catchRecordReference = "B14974-27072026-150815",
+            catchRecordReference = "GBR-B14974-270726-150815",
             lateSubmissionWarningAcknowledged = true,
         )
 
@@ -277,7 +277,7 @@ class SubmissionFlowNavigationTest {
 
         // Real navigation to the real screen, not just a state change.
         composeTestRule.onNodeWithTag(SubmissionSuccessScreenTestTags.SCREEN).assertIsDisplayed()
-        composeTestRule.onNodeWithText("Your catch record reference B14974-27072026-150815").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Your catch record reference GBR-B14974-270726-150815").assertIsDisplayed()
 
         // Real submission call chain reached (not skipped) and the draft's persisted status flipped.
         assertEquals(1, submissionRepository.submitCallCount)
@@ -315,7 +315,7 @@ class SubmissionFlowNavigationTest {
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithTag(SubmissionPendingSyncScreenTestTags.SCREEN).assertIsDisplayed()
-        composeTestRule.onNodeWithText("Your catch record reference B14974-27072026-150815").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Your catch record reference GBR-B14974-270726-150815").assertIsDisplayed()
 
         // Offline path never attempts the network submission call.
         assertEquals(0, submissionRepository.submitCallCount)

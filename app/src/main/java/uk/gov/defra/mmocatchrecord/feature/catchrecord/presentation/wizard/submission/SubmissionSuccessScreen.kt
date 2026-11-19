@@ -160,7 +160,7 @@ fun SubmissionSuccessScreenPreview() {
                         id = "draft-1",
                         vesselId = "vessel-1",
                         modifiedAtEpochMillis = 0L,
-                        catchRecordReference = "B14974-27072026-150815",
+                        catchRecordReference = "GBR-B14974-270726-150815",
                     ),
                 ),
             onRetry = {},

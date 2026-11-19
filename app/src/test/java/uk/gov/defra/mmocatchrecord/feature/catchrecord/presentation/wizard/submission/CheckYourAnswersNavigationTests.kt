@@ -105,9 +105,9 @@ class CheckYourAnswersNavigationTests {
         var submitCallCount = 0
             private set
 
-        override suspend fun submit(draft: CatchRecordDraft): Result<Unit> {
+        override suspend fun submit(draft: CatchRecordDraft): Result<CatchRecordDraft> {
             submitCallCount++
-            return if (succeeds) Result.success(Unit) else Result.failure(IllegalStateException("Simulated failure"))
+            return if (succeeds) Result.success(draft) else Result.failure(java.io.IOException("Simulated offline"))
         }
     }
 
@@ -158,7 +158,7 @@ class CheckYourAnswersNavigationTests {
             notLandedStraightAway = false,
             status = DraftStatus.Draft,
             modifiedAtEpochMillis = 0L,
-            catchRecordReference = "B14974-27072026-150815",
+            catchRecordReference = "GBR-B14974-270726-150815",
             lateSubmissionWarningAcknowledged = true,
         )
 
@@ -252,8 +252,9 @@ class CheckYourAnswersNavigationTests {
 
     private inline fun <reified T : Any> assertRouteClearedFromBackStack(navController: NavHostController) {
         val stillOnBackStack = runCatching { navController.getBackStackEntry<T>() }.isSuccess
+        val routeName = T::class.simpleName
         assertTrue(
-            "Expected route '${T::class.simpleName}' to have been cleared from the back stack by applySubmissionResultNavOptions",
+            "Expected route '$routeName' to have been cleared from the back stack by applySubmissionResultNavOptions",
             !stillOnBackStack,
         )
     }
@@ -285,7 +286,7 @@ class CheckYourAnswersNavigationTests {
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithTag(SubmissionSuccessScreenTestTags.SCREEN).assertIsDisplayed()
-        composeTestRule.onNodeWithText("Your catch record reference B14974-27072026-150815").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Your catch record reference GBR-B14974-270726-150815").assertIsDisplayed()
 
         assertEquals(1, submissionRepository.submitCallCount)
         assertEquals(DraftStatus.Submitted, draftRepository.statusOf(seedDraft.id))
@@ -321,7 +322,7 @@ class CheckYourAnswersNavigationTests {
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithTag(SubmissionPendingSyncScreenTestTags.SCREEN).assertIsDisplayed()
-        composeTestRule.onNodeWithText("Your catch record reference B14974-27072026-150815").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Your catch record reference GBR-B14974-270726-150815").assertIsDisplayed()
 
         assertEquals(0, submissionRepository.submitCallCount)
         assertEquals(DraftStatus.PendingSync, draftRepository.statusOf(seedDraft.id))

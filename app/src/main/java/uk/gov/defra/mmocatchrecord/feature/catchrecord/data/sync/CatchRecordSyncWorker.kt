@@ -7,11 +7,16 @@ import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import timber.log.Timber
+import uk.gov.defra.mmocatchrecord.core.error.CatchRecordErrorClassification
+import uk.gov.defra.mmocatchrecord.core.error.SafeErrorMapper
+import uk.gov.defra.mmocatchrecord.core.error.submissionFailureReasonFor
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftValidation
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordSubmissionRepository
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftSubmissionValidation
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SubmissionFailureReason
 
 /**
  * Background retry of a queued (`PendingSync`) catch-record submission once connectivity returns — see
@@ -48,22 +53,76 @@ class CatchRecordSyncWorker
                 return Result.failure()
             }
 
-            return submissionRepository
-                .submit(draft)
+            return submissionRepository.submit(draft).fold(
+                onSuccess = { markSubmitted(it) },
+                onFailure = { handleFailure(draft, it) },
+            )
+        }
+
+        private suspend fun markSubmitted(draft: CatchRecordDraft): Result =
+            draftRepository.saveDraft(draft.copy(status = DraftStatus.Submitted)).fold(
+                onSuccess = { Result.success() },
+                onFailure = { Result.retry() },
+            )
+
+        /** 401 gets one same-attempt retry before giving up (ADR 0026); [draft] is reloaded first since
+         *  a failed/empty reload must never fall back to the stale pre-submit [draft] (B1 re-review). */
+        private suspend fun handleFailure(
+            draft: CatchRecordDraft,
+            error: Throwable,
+            isTokenRetry: Boolean = false,
+        ): Result =
+            draftRepository.getDraftById(draft.id).fold(
+                onSuccess = { it?.let { latest -> resolveFailure(latest, error, isTokenRetry) } ?: Result.failure() },
+                onFailure = { Result.retry() },
+            )
+
+        /** The classification/terminal-reason logic, once [draft.id]'s latest persisted row is known. */
+        private suspend fun resolveFailure(
+            latest: CatchRecordDraft,
+            error: Throwable,
+            isTokenRetry: Boolean,
+        ): Result {
+            val classification = SafeErrorMapper.classify(error)
+            if (classification == CatchRecordErrorClassification.NeedsAuthentication && !isTokenRetry) {
+                return submissionRepository.submit(latest).fold(
+                    onSuccess = { markSubmitted(it) },
+                    onFailure = { handleFailure(latest, it, isTokenRetry = true) },
+                )
+            }
+            if (classification == CatchRecordErrorClassification.Transient && runAttemptCount < MAX_ATTEMPTS) {
+                return Result.retry()
+            }
+            val reason =
+                if (classification == CatchRecordErrorClassification.Transient) {
+                    // S7: the retry cap, not the server, stopped this — a distinct reason from a genuine
+                    // server rejection so the failed screen's copy doesn't blame the data.
+                    SubmissionFailureReason.RetryLimitReached
+                } else {
+                    submissionFailureReasonFor(error)
+                }
+            return failTerminally(latest, reason)
+        }
+
+        /** S6: if persisting the terminal state itself fails, retry the whole work rather than losing the
+         *  failure reason to a dropped write — `Result.failure()` here would never be revisited. */
+        private suspend fun failTerminally(
+            draft: CatchRecordDraft,
+            reason: SubmissionFailureReason,
+        ): Result {
+            Timber.e("Draft %s submission terminal (%s); not retrying", draft.id, reason)
+            return draftRepository
+                .saveDraft(draft.copy(status = DraftStatus.SubmissionFailed, submissionFailureReason = reason.name))
                 .fold(
-                    onSuccess = {
-                        draftRepository
-                            .saveDraft(draft.copy(status = DraftStatus.Submitted))
-                            .fold(
-                                onSuccess = { Result.success() },
-                                onFailure = { Result.retry() },
-                            )
-                    },
+                    onSuccess = { Result.failure() },
                     onFailure = { Result.retry() },
                 )
         }
 
         companion object {
             const val KEY_DRAFT_ID = "draftId"
+
+            /** ADR 0009 amendment: caps indefinite exponential retry of a never-resolving transient failure. */
+            const val MAX_ATTEMPTS = 8
         }
     }

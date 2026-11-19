@@ -80,6 +80,8 @@ data class ReferenceDataGearMeasurementEntity(
     val type: String,
     val unit: String?,
     val orderIndex: Int,
+    /** ADR 0026 (v12 -> v13) OQ-3: the live API's own measurement id, for `characteristicId`. */
+    val apiMeasurementId: String? = null,
 )
 
 /**

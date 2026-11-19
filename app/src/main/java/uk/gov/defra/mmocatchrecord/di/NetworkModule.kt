@@ -93,6 +93,10 @@ object NetworkModule {
                 HttpLoggingInterceptor().apply {
                     level = HttpLoggingInterceptor.Level.BASIC
                     redactHeader("Authorization")
+                    // Catch-record submission headers (ADR 0026) — never logged even at BASIC level.
+                    redactHeader("Idempotency-Key")
+                    redactHeader("If-Match")
+                    redactHeader("ETag")
                 },
             )
         }

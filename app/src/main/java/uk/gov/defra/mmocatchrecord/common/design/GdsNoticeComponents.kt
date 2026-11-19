@@ -30,6 +30,9 @@ enum class GdsResultBannerVariant {
 
     /** Blue header, text-only — the record was recorded and is queued for background sync. */
     PendingSync,
+
+    /** Red header, text-only — the online submission failed terminally; see "Try again" (ADR 0026). */
+    Failed,
 }
 
 /**
@@ -50,7 +53,12 @@ fun GdsResultBanner(
     modifier: Modifier = Modifier,
     content: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
-    val headerColor = if (variant == GdsResultBannerVariant.Success) MmoColors.SuccessGreen else MmoColors.GovBlue
+    val headerColor =
+        when (variant) {
+            GdsResultBannerVariant.Success -> MmoColors.SuccessGreen
+            GdsResultBannerVariant.PendingSync -> MmoColors.GovBlue
+            GdsResultBannerVariant.Failed -> MmoColors.ErrorRed
+        }
     Column(
         modifier =
             modifier

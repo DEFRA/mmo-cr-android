@@ -3,6 +3,7 @@ package uk.gov.defra.mmocatchrecord.common.design
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
@@ -18,6 +19,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.GraphicsMode
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.pow
 
 // Pixel assertions need native graphics; legacy Robolectric capture is fully transparent.
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -196,5 +200,43 @@ class CommonComponentsTests {
         }
 
         composeTestRule.onNodeWithTag("royal_crest_footer").assertIsDisplayed()
+    }
+
+    @Test
+    fun `B3 every StatusTag colour pairing meets the 4 point 5 to 1 minimum contrast ratio`() {
+        RecordStatusTag.entries.forEach { status ->
+            val (background, text) = statusTagColors(status)
+            assertTrue(status.name, contrastRatio(text, background) >= MIN_CONTRAST)
+        }
+    }
+
+    private fun statusTagColors(status: RecordStatusTag): Pair<Color, Color> =
+        when (status) {
+            RecordStatusTag.Draft -> MmoColors.Background to MmoColors.Text
+            RecordStatusTag.ReadyToSubmit -> Color(0xFFE1EDF7) to MmoColors.GovBlueHover
+            RecordStatusTag.AwaitingSync -> Color(0xFFFFF5CC) to Color(0xFF6F5200)
+            RecordStatusTag.Submitted -> Color(0xFFDFEFE5) to Color(0xFF005A30)
+            RecordStatusTag.CouldNotSend -> Color(0xFFF4D7D2) to Color(0xFF2A0B06)
+        }
+
+    private fun contrastRatio(
+        foreground: Color,
+        background: Color,
+    ): Double {
+        val first = relativeLuminance(foreground)
+        val second = relativeLuminance(background)
+        return (max(first, second) + 0.05) / (min(first, second) + 0.05)
+    }
+
+    private fun relativeLuminance(color: Color): Double {
+        fun channel(value: Float): Double {
+            val v = value.toDouble()
+            return if (v <= 0.03928) v / 12.92 else ((v + 0.055) / 1.055).pow(2.4)
+        }
+        return 0.2126 * channel(color.red) + 0.7152 * channel(color.green) + 0.0722 * channel(color.blue)
+    }
+
+    private companion object {
+        const val MIN_CONTRAST = 4.5
     }
 }

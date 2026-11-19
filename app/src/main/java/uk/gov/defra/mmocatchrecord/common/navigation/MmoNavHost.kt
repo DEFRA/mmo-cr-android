@@ -37,6 +37,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.RemoveSpeciesRoute
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.ReturnDateRoute
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.ReturnPortRoute
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.SubmissionFailedRoute
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.SubmissionPendingSyncRoute
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.SubmissionSuccessRoute
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.flow.TripTodayRoute
@@ -56,6 +57,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.landi
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.map.MapScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.submission.CheckYourAnswersScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.submission.LateSubmissionWarningScreen
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.submission.SubmissionFailedScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.submission.SubmissionPendingSyncScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.submission.SubmissionSuccessScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip.DepartureDateScreen
@@ -303,6 +305,15 @@ fun MmoNavHost(
                         navController.navigate(HomeRoute()) {
                             popUpTo<CatchRecordGraphRoute> { inclusive = true }
                         }
+                    },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable<SubmissionFailedRoute> { backStackEntry ->
+                SubmissionFailedScreen(
+                    viewModel = catchRecordFlowViewModel(navController, backStackEntry),
+                    onNavigate = { step ->
+                        navController.navigate(routeFor(step)) { applySubmissionResultNavOptions(step) }
                     },
                     onBack = { navController.popBackStack() },
                 )

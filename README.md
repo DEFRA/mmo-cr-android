@@ -143,6 +143,7 @@ split per feature package, per
 | [0023](docs/adr/0023-android-compile-once-package-per-environment.md) | Android: compile once, package per environment |
 | [0024](docs/adr/0024-packaged-app-configuration.md) | Packaged app configuration (replaces build flavors) |
 | [0025](docs/adr/0025-android-release-poc.md) | Android release pipeline — POC (superseded by 0022/0023) |
+| [0026](docs/adr/0026-catch-record-submission-api-integration.md) | Catch record submission API integration |
 | [0000](docs/adr/0000-ios-adr-references-TBC.md) | iOS ADR references — TBC |
 
 ## CI

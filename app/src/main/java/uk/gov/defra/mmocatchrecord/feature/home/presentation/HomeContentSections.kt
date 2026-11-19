@@ -491,6 +491,10 @@ private fun CatchStatusesAccordion() {
             stringResource(R.string.status_awaiting_sync_desc),
         )
         StatusHelpRow(stringResource(R.string.status_submitted_title), stringResource(R.string.status_submitted_desc))
+        StatusHelpRow(
+            stringResource(R.string.status_could_not_send_title),
+            stringResource(R.string.status_could_not_send_desc),
+        )
         Text(
             stringResource(R.string.status_check_tab),
             style = MaterialTheme.typography.bodyMedium,

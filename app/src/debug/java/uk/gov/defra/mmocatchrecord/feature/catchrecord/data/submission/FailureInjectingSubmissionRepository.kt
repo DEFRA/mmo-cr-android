@@ -9,7 +9,7 @@ class FailureInjectingSubmissionRepository(
     private val delegate: CatchRecordSubmissionRepository,
     private val toggle: DebugSubmissionFailureToggle,
 ) : CatchRecordSubmissionRepository {
-    override suspend fun submit(draft: CatchRecordDraft): Result<Unit> =
+    override suspend fun submit(draft: CatchRecordDraft): Result<CatchRecordDraft> =
         if (toggle.enabled.value) {
             Result.failure(IllegalStateException("Debug-forced submission failure"))
         } else {

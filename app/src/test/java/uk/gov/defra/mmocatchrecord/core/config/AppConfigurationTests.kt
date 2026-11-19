@@ -35,6 +35,11 @@ class AppConfigurationTests {
             "https://example.test/reference-data-service/",
             configuration.requireReferenceDataServiceRootUrl(),
         )
+        // Catch-recording hangs off the same shared base URL (ADR 0026) — mirrors reference data.
+        assertEquals(
+            "https://example.test/catch-recording-service/",
+            configuration.requireCatchRecordingServiceRootUrl(),
+        )
         assertEquals("example.test", configuration.apiHostForStartupLog())
         assertTrue(configuration.useStubAuth == true)
         configuration.useStubAuth
@@ -48,6 +53,9 @@ class AppConfigurationTests {
         assertNull(configuration.apiHostForStartupLog())
         assertThrows(MissingReferenceDataServiceUrlException::class.java) {
             configuration.requireReferenceDataServiceRootUrl()
+        }
+        assertThrows(MissingReferenceDataServiceUrlException::class.java) {
+            configuration.requireCatchRecordingServiceRootUrl()
         }
     }
 

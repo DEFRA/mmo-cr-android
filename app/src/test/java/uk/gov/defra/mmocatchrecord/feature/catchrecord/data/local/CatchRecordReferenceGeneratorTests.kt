@@ -14,23 +14,23 @@ class CatchRecordReferenceGeneratorTests {
     private fun utcMillis(utc: String): Long = Instant.parse(utc).toEpochMilli()
 
     @Test
-    fun `generates RSS_NUMBER-DDMMYYYY-HHMMSS`() {
+    fun `generates GBR-PLN-ddMMyy-HHmmss`() {
         val millis = epochMillis(LocalDateTime.of(2026, 9, 20, 11, 22, 33))
 
-        assertEquals("B14974-20092026-112233", CatchRecordReferenceGenerator.generate("B14974", millis))
+        assertEquals("GBR-B14974-200926-112233", CatchRecordReferenceGenerator.generate("B14974", millis))
     }
 
     @Test
     fun `zero-pads single-digit date and time parts`() {
         val millis = epochMillis(LocalDateTime.of(2026, 1, 2, 3, 4, 5))
 
-        assertEquals("B14974-02012026-030405", CatchRecordReferenceGenerator.generate("B14974", millis))
+        assertEquals("GBR-B14974-020126-030405", CatchRecordReferenceGenerator.generate("B14974", millis))
     }
 
     @Test
     fun `uses UK summer time (BST) so a late UTC evening rolls into the next UK day`() {
         assertEquals(
-            "B14974-01082026-003000",
+            "GBR-B14974-010826-003000",
             CatchRecordReferenceGenerator.generate("B14974", utcMillis("2026-07-31T23:30:00Z")),
         )
     }
@@ -38,7 +38,7 @@ class CatchRecordReferenceGeneratorTests {
     @Test
     fun `uses GMT in winter, matching UTC`() {
         assertEquals(
-            "B14974-15012026-233000",
+            "GBR-B14974-150126-233000",
             CatchRecordReferenceGenerator.generate("B14974", utcMillis("2026-01-15T23:30:00Z")),
         )
     }
@@ -47,7 +47,7 @@ class CatchRecordReferenceGeneratorTests {
     fun `normalises the registration number to upper-case alphanumerics`() {
         val millis = epochMillis(LocalDateTime.of(2026, 9, 20, 11, 22, 33))
 
-        assertEquals("B14974-20092026-112233", CatchRecordReferenceGenerator.generate(" b-14 974 ", millis))
+        assertEquals("GBR-B14974-200926-112233", CatchRecordReferenceGenerator.generate(" b-14 974 ", millis))
     }
 
     @Test
@@ -70,19 +70,30 @@ class CatchRecordReferenceGeneratorTests {
         val secondPass = CatchRecordReferenceGenerator.generate("PH101", utcMillis("2026-10-25T01:30:00Z"))
 
         // Why the DAO must enforce uniqueness rather than relying on the clock.
-        assertEquals("PH101-25102026-013000", firstPass)
+        assertEquals("GBR-PH101-251026-013000", firstPass)
         assertEquals(firstPass, secondPass)
     }
 
     @Test
     fun `nextAfter moves the reference on one second, rolling over minutes, days and years`() {
-        assertEquals("PH101-20092026-112234", CatchRecordReferenceGenerator.nextAfter("PH101-20092026-112233"))
-        assertEquals("PH101-01012027-000000", CatchRecordReferenceGenerator.nextAfter("PH101-31122026-235959"))
+        assertEquals(
+            "GBR-PH101-200926-112234",
+            CatchRecordReferenceGenerator.nextAfter("GBR-PH101-200926-112233"),
+        )
+        assertEquals(
+            "GBR-PH101-010127-000000",
+            CatchRecordReferenceGenerator.nextAfter("GBR-PH101-311226-235959"),
+        )
     }
 
     @Test
     fun `nextAfter rejects anything that is not a Trip ID`() {
-        listOf("A1234520260727150815", "PH101-32132026-112233", "ph101-20092026-112233").forEach { reference ->
+        listOf(
+            "A1234520260727150815",
+            "GBR-PH101-321326-112233",
+            "gbr-ph101-200926-112233",
+            "PH101-20092026-112233",
+        ).forEach { reference ->
             assertThrows(IllegalArgumentException::class.java) { CatchRecordReferenceGenerator.nextAfter(reference) }
         }
     }

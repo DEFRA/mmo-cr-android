@@ -12,5 +12,5 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordS
  * (queue + WorkManager retry) already covers by construction.
  */
 class StubCatchRecordSubmissionRepository : CatchRecordSubmissionRepository {
-    override suspend fun submit(draft: CatchRecordDraft): Result<Unit> = Result.success(Unit)
+    override suspend fun submit(draft: CatchRecordDraft): Result<CatchRecordDraft> = Result.success(draft)
 }

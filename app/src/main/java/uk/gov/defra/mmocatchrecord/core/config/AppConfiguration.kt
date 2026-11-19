@@ -16,6 +16,7 @@ import kotlinx.serialization.json.putJsonObject
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import timber.log.Timber
 import uk.gov.defra.mmocatchrecord.BuildConfig
+import uk.gov.defra.mmocatchrecord.core.network.CatchRecordingServiceConfig
 import uk.gov.defra.mmocatchrecord.core.network.ReferenceDataServiceConfig
 import java.io.IOException
 import javax.inject.Inject
@@ -57,6 +58,10 @@ class AppConfiguration
 
         fun referenceDataServiceRootUrlOrNull(): String? =
             runCatching { requireReferenceDataServiceRootUrl() }.getOrNull()
+
+        /** Catch-recording hangs off the same shared base URL (ADR 0026) — mirrors reference data. */
+        fun requireCatchRecordingServiceRootUrl(): String =
+            CatchRecordingServiceConfig.serviceRootUrl(requireApiBaseUrl())
 
         /** MSAL native-auth config for this stage; unprovisioned values fail fast in MsalNativeAuthConfig. */
         fun msalNativeAuthConfigJson(): String = msalConfigJson(config, BuildConfig.DEBUG)
@@ -110,20 +115,21 @@ class AppConfiguration
             )
         }
 
-        private fun JsonObject.optionalString(key: String): String =
-            (this[key] as? JsonPrimitive)
-                ?.takeIf(JsonPrimitive::isString)
-                ?.content
-                ?.trim()
-                .orEmpty()
-
-        private fun JsonObject.booleanOrFalse(key: String): Boolean =
-            (this[key] as? JsonPrimitive)?.takeUnless(JsonPrimitive::isString)?.content == "true"
-
         private fun logUnavailableConfig() {
             Timber.w("Packaged app configuration is missing or malformed; runtime configuration is unavailable.")
         }
     }
+
+// Kept top-level (not class members) so AppConfiguration stays under detekt's TooManyFunctions threshold.
+private fun JsonObject.optionalString(key: String): String =
+    (this[key] as? JsonPrimitive)
+        ?.takeIf(JsonPrimitive::isString)
+        ?.content
+        ?.trim()
+        .orEmpty()
+
+private fun JsonObject.booleanOrFalse(key: String): Boolean =
+    (this[key] as? JsonPrimitive)?.takeUnless(JsonPrimitive::isString)?.content == "true"
 
 /** Builds MSAL's native-auth JSON; a missing client ID or authority yields the unprovisioned shape. */
 private fun msalConfigJson(

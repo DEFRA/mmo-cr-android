@@ -39,6 +39,7 @@
     <string name="status_draft">Drafft</string>
     <string name="status_ready_to_submit">Wedi\'i diwygio</string>
     <string name="status_awaiting_sync">Heb ei anfon</string>
+    <string name="status_could_not_send">Methu anfon</string>
     <string name="help_with_catch_recording">Cymorth gyda chofnodi dalfeydd</string>
     <string name="catch_record_statuses">Statysau cofnodion dalfa</string>
     <string name="status_draft_title">Drafft:</string>
@@ -49,6 +50,8 @@
     <string name="status_awaiting_sync_desc">Ceisiwyd cyflwyno ond heb ei anfon.</string>
     <string name="status_submitted_title">Wedi cyflwyno:</string>
     <string name="status_submitted_desc">Cyflwynwyd yn llwyddiannus.</string>
+    <string name="status_could_not_send_title">Methu anfon:</string>
+    <string name="status_could_not_send_desc">Methodd y cyflwyniad. Rhowch gynnig arall arni o\'r cofnod.</string>
     <string name="status_check_tab">Gwiriwch y tab Sut i gofnodi dalfa i wneud yn siŵr eich bod yn cofnodi eich dalfeydd ar yr amser cywir.</string>
     <string name="offline_banner_label">All-lein</string>
     <string name="offline_banner_message">Gallwch barhau i gofnodi eich dalfa. Bydd eich cofnod yn cael ei gadw a\'i anfon pan fyddwch ar-lein eto.</string>
@@ -297,6 +300,14 @@
     <string name="submission_pending_sync_check_records">Gwiriwch eich cofnodion dalfa</string>
     <string name="submission_pending_sync_check_records_suffix">i wneud yn siŵr bod y statws yn newid i Wedi\'i Gyflwyno. Chi sy\'n gyfrifol am wneud yn siŵr ein bod yn ei dderbyn.</string>
     <string name="submission_pending_sync_warning">Rhaid i chi gofnodi eich dalfa o fewn 24 awr i lanio.</string>
+    <string name="submission_failed_banner_title">Methwyd anfon eich cofnod dalfa</string>
+    <string name="submission_failed_body_title">Mae eich cofnod dalfa wedi\'i gadw o hyd ar y ddyfais hon</string>
+    <string name="submission_failed_body">Ni allem anfon eich cofnod dalfa at yr awdurdod pysgota perthnasol. Rhowch gynnig arall, neu wiriwch eich cysylltiad a dewch yn ôl yn nes ymlaen.</string>
+    <string name="submission_failed_retry_action">Rhowch gynnig arall arni</string>
+    <string name="submission_failed_body_needs_sign_in">Rydych wedi cael eich allgofnodi. Mewngofnodwch eto i anfon eich cofnod dalfa.</string>
+    <string name="submission_failed_body_not_authorised">Nid oes gennych ganiatâd i gyflwyno cofnod dalfa ar gyfer y llestr hwn. Cysylltwch â\'ch gweinyddwr am help.</string>
+    <string name="submission_failed_body_rejected">Mae problem gyda\'r wybodaeth yn eich cofnod dalfa. Gwiriwch eich atebion, yna rhowch gynnig arall arni.</string>
+    <string name="submission_failed_body_too_large">Mae eich cofnod dalfa yn rhy fawr i\'w anfon. Cysylltwch â\'r tîm cymorth am help.</string>
     <string name="wizard_error_retry_action">Rhowch gynnig arall arni</string>
     <string name="unsaved_changes_dialog_title">Mae gennych newidiadau heb eu cadw</string>
     <string name="unsaved_changes_dialog_body">Os byddwch yn gadael y dudalen hon, ni fydd y wybodaeth rydych wedi\'i nodi yn cael ei chadw.</string>

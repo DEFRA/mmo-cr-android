@@ -499,8 +499,22 @@ class HomeScreenRobolectricTests {
     fun `two drafts for the same vessel render as distinct, independently resumable rows`() {
         val sameVesselDrafts =
             listOf(
-                CatchRecordSummary("draft-a", "B14974-14112023-221320", "v1", null, RecordStatusTag.Draft, "ACHILLES"),
-                CatchRecordSummary("draft-b", "B14974-14112023-221321", "v1", null, RecordStatusTag.Draft, "ACHILLES"),
+                CatchRecordSummary(
+                    "draft-a",
+                    "GBR-B14974-141123-221320",
+                    "v1",
+                    null,
+                    RecordStatusTag.Draft,
+                    "ACHILLES",
+                ),
+                CatchRecordSummary(
+                    "draft-b",
+                    "GBR-B14974-141123-221321",
+                    "v1",
+                    null,
+                    RecordStatusTag.Draft,
+                    "ACHILLES",
+                ),
             )
         val clicked = mutableListOf<String>()
         composeTestRule.setContent {
@@ -514,7 +528,7 @@ class HomeScreenRobolectricTests {
         composeTestRule.onNodeWithTag(CatchRecordsListSectionTestTags.row("draft-a")).assertIsDisplayed()
         composeTestRule.onNodeWithTag(CatchRecordsListSectionTestTags.row("draft-b")).assertIsDisplayed()
 
-        composeTestRule.onNodeWithContentDescription(accessibleLabel("B14974-14112023-221321")).performClick()
+        composeTestRule.onNodeWithContentDescription(accessibleLabel("GBR-B14974-141123-221321")).performClick()
         assertEquals(listOf("draft-b"), clicked)
     }
 

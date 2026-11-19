@@ -18,11 +18,35 @@ enum class DraftStatus {
     PendingSync,
     Submitted,
     Discarded,
+
+    /** Terminal submission failure — "Could not send" with "Try again" re-queuing to [PendingSync] (ADR 0026). */
+    SubmissionFailed,
     ;
 
     /** Whether this status counts as the vessel's single "active" (in-progress) draft. */
     val isActive: Boolean
         get() = this == Draft || this == ReadyToSubmit
+}
+
+/** Why a [DraftStatus.SubmissionFailed] draft stopped retrying — see ADR 0026 §6 for the full mapping. */
+enum class SubmissionFailureReason {
+    /** A 401 persisted even after one silent token refresh — the user must sign in again. */
+    NeedsSignIn,
+
+    /** A 403 — the signed-in user is not linked to this vessel server-side. */
+    NotAuthorisedForVessel,
+
+    /** A 422/400 — retrying with the same data cannot fix this. */
+    Rejected,
+
+    /** A 413 — the payload exceeded the server's size limit. */
+    TooLarge,
+
+    /** A 404 on replace/submit, an unresolved version conflict, or a mapping failure. */
+    DataProblem,
+
+    /** The offline retry cap (`CatchRecordSyncWorker.MAX_ATTEMPTS`) was reached on a still-transient error. */
+    RetryLimitReached,
 }
 
 /** How the user selected a port: typed/searched for the first time, or picked from their favourites. */
@@ -190,4 +214,11 @@ data class CatchRecordDraft(
     val createdAtEpochMillis: Long? = null,
     val submittedAtEpochMillis: Long? = null,
     val syncedAtEpochMillis: Long? = null,
+    /** ADR 0026: resumable submission state, persisted by the real submission repository/sync worker. */
+    val serverCatchRecordId: String? = null,
+    val serverVersion: Int? = null,
+    val createIdempotencyKey: String? = null,
+    val submitIdempotencyKey: String? = null,
+    val submissionStep: String? = null,
+    val submissionFailureReason: String? = null,
 )

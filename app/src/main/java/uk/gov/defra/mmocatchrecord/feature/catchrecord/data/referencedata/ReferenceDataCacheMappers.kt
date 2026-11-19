@@ -22,13 +22,19 @@ internal fun ReferenceDataVesselEntity.toDomain(): Vessel =
     )
 
 internal fun ReferenceDataPortEntity.toDomain(): Port =
-    Port(id = id, name = displayName, statisticalAreaId = statisticalAreaId)
+    Port(id = id, name = displayName, statisticalAreaId = statisticalAreaId, code = code)
 
 /** Quota/precision stay the existing domain defaults — cache storage mirrors the API's own scope (ADR 0016). */
 internal fun ReferenceDataSpeciesEntity.toDomain(): Species = Species(id = id, name = displayName, faoCode = faoCode)
 
 internal fun ReferenceDataGearMeasurementEntity.toDomain(): GearMeasurementField =
-    GearMeasurementField(key = key, label = label, type = GearMeasurementFieldType.valueOf(type), unit = unit)
+    GearMeasurementField(
+        key = key,
+        label = label,
+        type = GearMeasurementFieldType.valueOf(type),
+        unit = unit,
+        id = apiMeasurementId.orEmpty(),
+    )
 
 /** Groups a band's flat measurement rows by gear before building each [GearType]; both lists are pre-sorted. */
 internal fun List<ReferenceDataGearEntity>.toDomainGearTypes(
@@ -39,5 +45,6 @@ internal fun List<ReferenceDataGearEntity>.toDomainGearTypes(
             id = gear.id,
             name = gear.name,
             measurementFields = measurementsByGearId[gear.id].orEmpty().map { it.toDomain() },
+            code = gear.code,
         )
     }

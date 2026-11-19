@@ -242,6 +242,45 @@ object CatchRecordMigrations {
             }
         }
 
+    /** v11 -> v12 (ADR 0026): resumable-submission columns on [DraftEntity], plus a legacy reference rewrite. */
+    val MIGRATION_11_12 =
+        object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE catch_record_draft ADD COLUMN serverCatchRecordId TEXT")
+                db.execSQL("ALTER TABLE catch_record_draft ADD COLUMN serverVersion INTEGER")
+                db.execSQL("ALTER TABLE catch_record_draft ADD COLUMN createIdempotencyKey TEXT")
+                db.execSQL("ALTER TABLE catch_record_draft ADD COLUMN submitIdempotencyKey TEXT")
+                db.execSQL("ALTER TABLE catch_record_draft ADD COLUMN submissionStep TEXT")
+                db.execSQL("ALTER TABLE catch_record_draft ADD COLUMN submissionFailureReason TEXT")
+                rewriteLegacyReferences(db)
+            }
+
+            /** `{PREFIX}-DDMMYYYY-HHMMSS` -> `GBR-{PREFIX}-DDMMYY-HHMMSS`; rationale/safety in ADR 0026. */
+            private fun rewriteLegacyReferences(db: SupportSQLiteDatabase) {
+                // substr positions count back from the end of the fixed 16-char `-DDMMYYYY-HHMMSS` suffix.
+                db.execSQL(
+                    "UPDATE catch_record_draft SET catchRecordReference = " +
+                        "'GBR-' || substr(catchRecordReference, 1, length(catchRecordReference) - 16) || '-' || " +
+                        "substr(catchRecordReference, length(catchRecordReference) - 14, 2) || " +
+                        "substr(catchRecordReference, length(catchRecordReference) - 12, 2) || " +
+                        "substr(catchRecordReference, length(catchRecordReference) - 8, 2) || '-' || " +
+                        "substr(catchRecordReference, length(catchRecordReference) - 5, 6) " +
+                        "WHERE catchRecordReference GLOB " +
+                        "'*-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]'",
+                )
+            }
+        }
+
+    /** v12 -> v13 (ADR 0026 OQ-3): new `apiMeasurementId` column, backfilled by a forced gears re-fetch. */
+    val MIGRATION_12_13 =
+        object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE reference_data_gear_measurement ADD COLUMN apiMeasurementId TEXT")
+                // Drop cached gears metadata so the next sync is an unconditional GET, not a 304 — see ADR 0026.
+                db.execSQL("DELETE FROM reference_data_metadata WHERE datasetKey LIKE 'gears:%'")
+            }
+        }
+
     val ALL =
         arrayOf(
             MIGRATION_1_2,
@@ -254,5 +293,7 @@ object CatchRecordMigrations {
             MIGRATION_8_9,
             MIGRATION_9_10,
             MIGRATION_10_11,
+            MIGRATION_11_12,
+            MIGRATION_12_13,
         )
 }

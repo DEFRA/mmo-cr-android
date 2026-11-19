@@ -3,6 +3,9 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.subm
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.test.assertIsDisplayed
@@ -19,6 +22,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SubmissionFailureReason
 
 /**
  * JVM/Robolectric port of the androidTest `SubmissionScreensTest` — see that file's doc comments for the
@@ -33,7 +37,7 @@ class SubmissionScreensTests {
     @get:Rule
     val composeTestRule = createComposeRule()
 
-    private fun draft(reference: String = "B14974-27072026-150815") =
+    private fun draft(reference: String = "GBR-B14974-270726-150815") =
         CatchRecordDraft(
             id = "draft-1",
             vesselId = "vessel-1",
@@ -57,7 +61,7 @@ class SubmissionScreensTests {
 
         composeTestRule.onNodeWithTag(SubmissionSuccessScreenTestTags.BANNER).assertIsDisplayed()
         composeTestRule.onNodeWithText("Your catch record has been submitted").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Your catch record reference B14974-27072026-150815").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Your catch record reference GBR-B14974-270726-150815").assertIsDisplayed()
         composeTestRule
             .onNodeWithText(
                 "Your catch record has been received by the relevant fishing authority",
@@ -143,7 +147,7 @@ class SubmissionScreensTests {
 
         composeTestRule.onNodeWithTag(SubmissionPendingSyncScreenTestTags.BANNER).assertIsDisplayed()
         composeTestRule.onNodeWithText("Your catch record has been recorded").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Your catch record reference B14974-27072026-150815").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Your catch record reference GBR-B14974-270726-150815").assertIsDisplayed()
         composeTestRule
             .onNodeWithText(
                 "Your catch record has been saved and will be sent automatically when you next have a " +
@@ -265,5 +269,146 @@ class SubmissionScreensTests {
 
         assertTrue(checkedTripEndDate)
         assertTrue(submitted)
+    }
+
+    // --- ADR 0026: terminal submission failure ------------------------------------------------
+
+    @Test
+    fun submissionFailedScreenShowsBannerReferenceBodyAndRetryAction() {
+        composeTestRule.setContent {
+            MmoTheme {
+                SubmissionFailedScreenContent(
+                    draft = draft(),
+                    onRetry = {},
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag(SubmissionFailedScreenTestTags.BANNER).assertIsDisplayed()
+        composeTestRule.onNodeWithText("Could not send your catch record").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Your catch record reference GBR-B14974-270726-150815").assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText("Your catch record is still saved on this device")
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(SubmissionFailedScreenTestTags.RETRY_ACTION)
+            .performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun tappingTryAgainOnSubmissionFailedScreenInvokesCallback() {
+        var tapped = false
+        composeTestRule.setContent {
+            MmoTheme {
+                SubmissionFailedScreenContent(
+                    draft = draft(),
+                    onRetry = { tapped = true },
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithTag(SubmissionFailedScreenTestTags.RETRY_ACTION)
+            .performScrollTo()
+            .performClick()
+
+        assertTrue(tapped)
+    }
+
+    @Test
+    fun submissionFailedScreenContentPreviewRendersWithoutError() {
+        composeTestRule.setContent {
+            SubmissionFailedScreenContentPreview()
+        }
+
+        composeTestRule.onNodeWithTag(SubmissionFailedScreenTestTags.BANNER).assertIsDisplayed()
+    }
+
+    @Test
+    fun `S7 a NeedsSignIn failure reason shows sign-in-specific body copy`() {
+        composeTestRule.setContent {
+            MmoTheme {
+                SubmissionFailedScreenContent(
+                    draft = draft().copy(submissionFailureReason = SubmissionFailureReason.NeedsSignIn.name),
+                    onRetry = {},
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithText("You have been signed out. Sign in again to send your catch record.")
+            .performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun `S7 an unrecognised failure reason falls back to the generic body copy`() {
+        composeTestRule.setContent {
+            MmoTheme {
+                SubmissionFailedScreenContent(
+                    draft = draft().copy(submissionFailureReason = "SomeFutureReasonNotYetKnown"),
+                    onRetry = {},
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithText(
+                "We could not send your catch record to the relevant fishing authority. " +
+                    "Try again, or check your connection and come back later.",
+            ).performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun `S7 each terminal failure reason shows its specific body copy`() {
+        val expected =
+            mapOf(
+                SubmissionFailureReason.NotAuthorisedForVessel to
+                    "You do not have permission to submit a catch record for this vessel. " +
+                    "Contact your administrator for help.",
+                SubmissionFailureReason.Rejected to
+                    "There is a problem with the information in your catch record. Check your answers, then try again.",
+                SubmissionFailureReason.DataProblem to
+                    "There is a problem with the information in your catch record. Check your answers, then try again.",
+                SubmissionFailureReason.TooLarge to "Your catch record is too large to send. Contact support for help.",
+            )
+        var reason by mutableStateOf(SubmissionFailureReason.NotAuthorisedForVessel)
+        composeTestRule.setContent {
+            MmoTheme {
+                SubmissionFailedScreenContent(
+                    draft = draft().copy(submissionFailureReason = reason.name),
+                    onRetry = {},
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                )
+            }
+        }
+
+        expected.forEach { (failureReason, copy) ->
+            reason = failureReason
+            composeTestRule.waitForIdle()
+            composeTestRule.onNodeWithText(copy).performScrollTo().assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun `S7 a draft without a reference still shows the failed banner`() {
+        composeTestRule.setContent {
+            MmoTheme {
+                SubmissionFailedScreenContent(
+                    draft = draft().copy(catchRecordReference = null),
+                    onRetry = {},
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag(SubmissionFailedScreenTestTags.BANNER).assertIsDisplayed()
+        composeTestRule.onNodeWithText("GBR-B14974-270726-150815", substring = true).assertDoesNotExist()
     }
 }

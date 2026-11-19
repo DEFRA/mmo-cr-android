@@ -76,6 +76,12 @@ private object DraftToEntityMapper {
             createdAtEpochMillis = draft.createdAtEpochMillis,
             submittedAtEpochMillis = draft.submittedAtEpochMillis,
             syncedAtEpochMillis = draft.syncedAtEpochMillis,
+            serverCatchRecordId = draft.serverCatchRecordId,
+            serverVersion = draft.serverVersion,
+            createIdempotencyKey = draft.createIdempotencyKey,
+            submitIdempotencyKey = draft.submitIdempotencyKey,
+            submissionStep = draft.submissionStep,
+            submissionFailureReason = draft.submissionFailureReason,
         )
 
     private fun toGearUseEntity(
@@ -170,6 +176,12 @@ private object EntityToDraftMapper {
             createdAtEpochMillis = draft.createdAtEpochMillis,
             submittedAtEpochMillis = draft.submittedAtEpochMillis,
             syncedAtEpochMillis = draft.syncedAtEpochMillis,
+            serverCatchRecordId = draft.serverCatchRecordId,
+            serverVersion = draft.serverVersion,
+            createIdempotencyKey = draft.createIdempotencyKey,
+            submitIdempotencyKey = draft.submitIdempotencyKey,
+            submissionStep = draft.submissionStep,
+            submissionFailureReason = draft.submissionFailureReason,
         )
     }
 

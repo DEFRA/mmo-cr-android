@@ -45,6 +45,7 @@ internal fun PortMobileDto.toDomain(): Port =
         id = id,
         name = displayName,
         statisticalAreaId = PortStatisticalAreaLookup.statisticalAreaId(code),
+        code = code,
     )
 
 /** Quota/precision are not yet part of the API contract (ADR 0016 interim default, Q6) — domain defaults. */
@@ -76,6 +77,7 @@ internal fun GearMeasurementDto.toDomain(): GearMeasurementField =
         label = label,
         type = gearMeasurementTypeFor(unit),
         unit = gearMeasurementUnitFor(unit),
+        id = id,
     )
 
 /**
@@ -85,5 +87,5 @@ internal fun GearMeasurementDto.toDomain(): GearMeasurementField =
 internal fun GearMobileDto.toDomain(measurementsById: Map<String, GearMeasurementDto>): GearType {
     val orderedIds = requiredMeasurementIds + variableMeasurementIds
     val fields = orderedIds.mapNotNull { measurementsById[it]?.toDomain() }
-    return GearType(id = id, name = name, measurementFields = fields)
+    return GearType(id = id, name = name, measurementFields = fields, code = code)
 }
