@@ -158,6 +158,32 @@ class CatchRecordRemoteDataSourceTests {
         }
 
     @Test
+    fun `recover decodes the minimal recovery snapshot`() =
+        runBlocking {
+            serverRule.server.enqueue(MockResponse(code = 200, body = RETRIEVE_RESPONSE_BODY))
+
+            val result = remoteDataSource().recover("cr-1")
+
+            assertEquals("cr-1", result.id)
+            assertEquals(1, result.version)
+            assertTrue(result.hasUnsubmittedChanges)
+        }
+
+    @Test
+    fun `list with no arguments sends no query parameters`() =
+        runBlocking {
+            serverRule.server.enqueue(MockResponse(code = 200, body = LIST_RESPONSE_BODY))
+
+            remoteDataSource().list()
+
+            assertNull(
+                serverRule.server
+                    .takeRequest()
+                    .url.query,
+            )
+        }
+
+    @Test
     fun `a 401 is classified as unauthorized, not a generic http exception`() {
         enqueueError(401, "UNAUTHORIZED", correlationId = null)
 

@@ -18,6 +18,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission.remote.CatchRecordUnauthorizedException
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraftFactory
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DmyDate
@@ -27,6 +28,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementV
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelection
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectionMode
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SubmissionFailureReason
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearMeasurementFieldKeys
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.GearType
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.ReferenceDataRepository
@@ -1461,6 +1463,83 @@ class CatchRecordFlowViewModelTests {
             assertTrue(submissionRepository.submittedDrafts.isEmpty())
             assertTrue(syncScheduler.scheduledDraftIds.isEmpty())
         }
+
+    @Test
+    fun `a 401 is retried once in the same attempt and then fails as needs sign in`() =
+        runTest {
+            val unauthorized = CatchRecordUnauthorizedException("submit", correlationId = null)
+            val (repository, submissionRepository, viewModel) =
+                submitOnlineWith(FakeCatchRecordSubmissionRepository(shouldSucceed = false, failure = unauthorized))
+
+            assertEquals(2, submissionRepository.submittedDrafts.size)
+            assertEquals(WizardStep.SubmissionFailed, viewModel.state.value.currentStep)
+            assertEquals(
+                SubmissionFailureReason.NeedsSignIn.name,
+                repository.persistedDrafts.single().submissionFailureReason,
+            )
+        }
+
+    @Test
+    fun `a draft deleted mid-submission surfaces an error instead of an endless spinner`() =
+        runTest {
+            lateinit var repository: FakeCatchRecordDraftRepository
+            val submissionRepository =
+                FakeCatchRecordSubmissionRepository(
+                    shouldSucceed = false,
+                    onSubmit = { current ->
+                        repository.deleteDraft(current.id).getOrThrow()
+                        current
+                    },
+                )
+            val (repo, _, viewModel) = submitOnlineWith(submissionRepository) { repository = it }
+
+            assertTrue(repo.persistedDrafts.isEmpty())
+            assertTrue(viewModel.state.value.status is UiStatus.Error)
+            assertFalse(viewModel.state.value.isSubmitting)
+        }
+
+    @Test
+    fun `a failed reload after a submission failure surfaces a retryable error`() =
+        runTest {
+            lateinit var repository: FakeCatchRecordDraftRepository
+            val submissionRepository =
+                FakeCatchRecordSubmissionRepository(
+                    shouldSucceed = false,
+                    onSubmit = { current ->
+                        repository.failNextOperation = true
+                        current
+                    },
+                )
+            val (_, _, viewModel) = submitOnlineWith(submissionRepository) { repository = it }
+
+            val status = viewModel.state.value.status as UiStatus.Error
+            assertTrue(status.isRetryable)
+            assertFalse(viewModel.state.value.isSubmitting)
+        }
+
+    private suspend fun TestScope.submitOnlineWith(
+        submissionRepository: FakeCatchRecordSubmissionRepository,
+        onRepository: (FakeCatchRecordDraftRepository) -> Unit = {},
+    ): Triple<FakeCatchRecordDraftRepository, FakeCatchRecordSubmissionRepository, CatchRecordFlowViewModel> {
+        val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
+        onRepository(repository)
+        val started = repository.startDraft("vessel-achilles").getOrThrow()
+        repository.saveDraft(started.asSubmissionReady()).getOrThrow()
+        val viewModel =
+            buildViewModel(
+                repository = repository,
+                submissionRepository = submissionRepository,
+                connectivityChecker = FakeNetworkConnectivityChecker(connected = true),
+                dispatcher = StandardTestDispatcher(testScheduler),
+            )
+        viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft("draft-1"))
+        testScheduler.advanceUntilIdle()
+        viewModel.dispatch(CatchRecordFlowEvent.ResumeDraft)
+        testScheduler.advanceUntilIdle()
+        viewModel.dispatch(CatchRecordFlowEvent.AcceptDeclarationAndSubmit)
+        testScheduler.advanceUntilIdle()
+        return Triple(repository, submissionRepository, viewModel)
+    }
 
     @Test
     fun `accepting the declaration while offline never attempts a submission and enqueues pending sync`() =

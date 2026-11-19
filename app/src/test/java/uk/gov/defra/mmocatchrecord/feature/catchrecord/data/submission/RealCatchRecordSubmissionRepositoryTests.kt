@@ -1,5 +1,8 @@
+@file:Suppress("detekt.LargeClass")
+
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runTest
@@ -10,6 +13,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.doSuspendableAnswer
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
@@ -35,6 +39,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordD
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MeasurementValue
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.MissingVesselRegistrationException
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelection
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.PortSelectionMode
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.SpeciesWeightEntry
@@ -605,4 +610,172 @@ class RealCatchRecordSubmissionRepositoryTests {
             assertTrue(result.exceptionOrNull() is UnresolvedGearMeasurementException)
             verify(scheduler).scheduleRefreshAfterSignIn()
         }
+
+    @Test
+    fun `a draft that no longer exists fails without any network call`() =
+        runTest {
+            val result = repository().submit(fixtureDraft())
+
+            assertTrue(result.isFailure)
+            verifyNoInteractions(remote)
+        }
+
+    @Test
+    fun `a cancellation mid-submission is rethrown, never returned as a failure`() =
+        runTest {
+            seed(fixtureDraft())
+            whenever(remote.createDraft(any(), any())).thenAnswer { throw CancellationException("stopped") }
+
+            val thrown = runCatching { repository().submit(draftRepository.persistedDrafts.single()) }
+
+            assertTrue(thrown.exceptionOrNull() is CancellationException)
+        }
+
+    @Test
+    fun `a legacy reference with an unknown vessel fails as a missing registration`() =
+        runTest {
+            seed(fixtureDraft(reference = LEGACY_REFERENCE).copy(vesselId = "vessel-unknown"))
+
+            val result = repository().submit(draftRepository.persistedDrafts.single())
+
+            assertTrue(result.exceptionOrNull() is MissingVesselRegistrationException)
+        }
+
+    @Test
+    fun `a legacy reference on a vessel with no usable PLN fails as a missing registration`() =
+        runTest {
+            val blankPln =
+                FakeReferenceDataRepository(vessels = listOf(Vessel(id = "vessel-1", name = "Boat", pln = "--")))
+            seed(fixtureDraft(reference = LEGACY_REFERENCE))
+            val repository = RealCatchRecordSubmissionRepository(remote, draftRepository, blankPln, idFactory) { 0L }
+
+            val result = repository.submit(draftRepository.persistedDrafts.single())
+
+            assertTrue(result.exceptionOrNull() is MissingVesselRegistrationException)
+        }
+
+    @Test
+    fun `a non-conflict create failure is rethrown and reuses the persisted create key`() =
+        runTest {
+            seed(fixtureDraft().copy(createIdempotencyKey = "existing-key"))
+            val serverError = CatchRecordHttpException("createDraft", 500, null, null, retryable = true)
+            whenever(remote.createDraft(any(), any())).thenAnswer { throw serverError }
+
+            val result = repository().submit(draftRepository.persistedDrafts.single())
+
+            assertEquals(serverError, result.exceptionOrNull())
+            verify(remote).createDraft(any(), eq("existing-key"))
+            verify(remote, never()).list(anyOrNull(), anyOrNull())
+        }
+
+    @Test
+    fun `a create conflict with no matching listed record fails terminally`() =
+        runTest {
+            seed(fixtureDraft())
+            val conflict = CatchRecordHttpException("createDraft", 409, "IDEMPOTENCY_CONFLICT", null, retryable = false)
+            whenever(remote.createDraft(any(), any())).thenAnswer { throw conflict }
+            whenever(remote.list(limit = 100)).thenReturn(CatchRecordListResponseDto(emptyList(), 100, 0))
+
+            val result = repository().submit(draftRepository.persistedDrafts.single())
+
+            assertTrue(result.exceptionOrNull() is IllegalStateException)
+            verify(remote, never()).recover(any())
+        }
+
+    @Test
+    fun `a create conflict recovered as a non-draft record with unsubmitted changes fails terminally`() =
+        runTest {
+            seed(fixtureDraft())
+            val conflict = CatchRecordHttpException("createDraft", 409, "IDEMPOTENCY_CONFLICT", null, retryable = false)
+            whenever(remote.createDraft(any(), any())).thenAnswer { throw conflict }
+            whenever(remote.list(limit = 100)).thenReturn(CatchRecordListResponseDto(listOf(listingItem()), 100, 1))
+            whenever(remote.recover("cr-1")).thenReturn(recoverResponse(status = "SUBMITTED"))
+
+            val result = repository().submit(draftRepository.persistedDrafts.single())
+
+            assertTrue(result.exceptionOrNull() is IllegalStateException)
+            verify(remote, never()).replace(any(), any(), any())
+        }
+
+    @Test
+    fun `a 412 on replace is treated as a version conflict and refreshed`() =
+        runTest {
+            seed(fixtureDraft(status = "created", serverCatchRecordId = "cr-1", serverVersion = 1))
+            val stale = CatchRecordHttpException("replace", 412, "PRECONDITION_FAILED", null, retryable = false)
+            whenever(remote.replace(eq("cr-1"), any(), any())).thenAnswer { invocation ->
+                if (invocation.getArgument<String>(1) == "1") throw stale else standardSaveResponse(version = 4)
+            }
+            whenever(remote.recover("cr-1")).thenReturn(recoverResponse(version = 3))
+            whenever(remote.submit(any(), any(), any())).thenReturn(submissionResponse())
+
+            val result = repository().submit(draftRepository.persistedDrafts.single())
+
+            assertTrue(result.isSuccess)
+            verify(remote).replace(eq("cr-1"), eq("3"), any())
+        }
+
+    @Test
+    fun `a replace conflict recovered as done server-side ends submitted`() =
+        runTest {
+            seed(fixtureDraft(status = "created", serverCatchRecordId = "cr-1", serverVersion = 1))
+            val conflict = CatchRecordHttpException("replace", 409, "VERSION_CONFLICT", null, retryable = false)
+            whenever(remote.replace(any(), any(), any())).thenAnswer { throw conflict }
+            whenever(remote.recover("cr-1"))
+                .thenReturn(recoverResponse(status = "SUBMITTED", hasUnsubmittedChanges = false))
+
+            val result = repository().submit(draftRepository.persistedDrafts.single())
+
+            assertEquals("submitted", result.getOrThrow().submissionStep)
+            verify(remote, never()).submit(any(), any(), any())
+        }
+
+    @Test
+    fun `non-conflict replace and submit failures are rethrown without recovery`() =
+        runTest {
+            seed(fixtureDraft(status = "created", serverCatchRecordId = "cr-1", serverVersion = 1))
+            val forbidden = CatchRecordHttpException("replace", 403, "FORBIDDEN", null, retryable = false)
+            whenever(remote.replace(any(), any(), any())).thenAnswer { throw forbidden }
+
+            val replaceResult = repository().submit(draftRepository.persistedDrafts.single())
+
+            assertEquals(forbidden, replaceResult.exceptionOrNull())
+            val tooLarge = CatchRecordHttpException("submit", 413, "TOO_LARGE", null, retryable = false)
+            draftRepository.saveDraft(draftRepository.persistedDrafts.single().copy(submissionStep = "replaced"))
+            whenever(remote.submit(any(), any(), any())).thenAnswer { throw tooLarge }
+
+            val submitResult = repository().submit(draftRepository.persistedDrafts.single())
+
+            assertEquals(tooLarge, submitResult.exceptionOrNull())
+            verify(remote, never()).recover(any())
+        }
+
+    @Test
+    fun `a submit conflict recovered as a non-draft record with unsubmitted changes fails terminally`() =
+        runTest {
+            seed(fixtureDraft(status = "replaced", serverCatchRecordId = "cr-1", serverVersion = 2))
+            val conflict = CatchRecordHttpException("submit", 409, "VERSION_CONFLICT", null, retryable = false)
+            whenever(remote.submit(any(), any(), any())).thenAnswer { throw conflict }
+            whenever(remote.recover("cr-1")).thenReturn(recoverResponse(status = "COMPLETE"))
+
+            val result = repository().submit(draftRepository.persistedDrafts.single())
+
+            assertTrue(result.exceptionOrNull() is IllegalStateException)
+            verify(remote, times(1)).submit(any(), any(), any())
+        }
+
+    private fun listingItem() =
+        CatchRecordListingItemDto(
+            id = "cr-1",
+            catchRecordReference = REFERENCE,
+            status = "SUBMITTED",
+            displayStatus = "Submitted",
+            version = 3,
+            vessel = CatchRecordListingVesselDto(),
+            trip = CatchRecordListingTripDto(),
+            createdAt = "2026-07-27T15:00:00Z",
+            updatedAt = "2026-07-27T15:00:00Z",
+            submittedAt = null,
+            completedAt = null,
+            progress = CatchRecordListingProgressDto(),
+        )
 }

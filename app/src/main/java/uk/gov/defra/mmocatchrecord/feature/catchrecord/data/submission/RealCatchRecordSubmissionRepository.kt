@@ -1,5 +1,6 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.data.submission
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.data.local.CatchRecordReferenceGenerator
@@ -28,6 +29,12 @@ private const val STEP_REPLACED = "replaced"
 private const val STEP_SUBMITTED = "submitted"
 private const val MAX_REFERENCE_ATTEMPTS = 20
 private const val LIST_RECOVERY_LIMIT = 100
+
+/** A replace/submit conflict outcome: the refreshed draft to retry with, or the final one when [isDone]. */
+private class WriteRecovery(
+    val draft: CatchRecordDraft,
+    val isDone: Boolean,
+)
 
 /** "Done" per ADR 0026 §6: submitted/complete server-side *and* no unsubmitted local changes pending. */
 private fun isDone(server: CatchRecordRecoverySnapshotDto): Boolean =
@@ -104,7 +111,10 @@ internal class RealCatchRecordSubmissionRepository
                     current = ensureCreated(current)
                     current = ensureReplaced(current)
                     ensureSubmitted(current)
-                }.onFailure(::scheduleRefreshIfStaleGearData)
+                }.onFailure { error ->
+                    if (error is CancellationException) throw error
+                    scheduleRefreshIfStaleGearData(error)
+                }
             }
 
         /** A blank `apiMeasurementId` means the cached gears dataset is stale, not permanently wrong (ADR 0026). */
@@ -199,21 +209,13 @@ internal class RealCatchRecordSubmissionRepository
                         .saveDraft(current.copy(serverVersion = response.version, submissionStep = STEP_REPLACED))
                         .getOrThrow()
                 } catch (httpError: CatchRecordHttpException) {
-                    if (httpError.httpStatusCode == HTTP_NOT_FOUND) {
-                        resetAfterNotFound(draftRepository, current)
-                        throw httpError
-                    }
-                    if (!httpError.isConflict) throw httpError
-                    if (refreshed) error("Unresolved replace conflict for catch record '$id' after one refresh")
-                    refreshed = true
-                    val server = remoteDataSource.recover(id)
-                    current =
-                        when {
-                            isDone(server) -> return markSubmitted(draftRepository, current, server)
-                            server.status != SERVER_STATUS_DRAFT -> nonDraftConflict(id, server)
-                            else ->
-                                draftRepository.saveDraft(current.copy(serverVersion = server.version)).getOrThrow()
+                    val recovery =
+                        recoverFromWriteFailure(httpError, "replace", id, current, refreshed) { stale, version ->
+                            stale.copy(serverVersion = version)
                         }
+                    if (recovery.isDone) return recovery.draft
+                    current = recovery.draft
+                    refreshed = true
                 }
             }
         }
@@ -234,27 +236,38 @@ internal class RealCatchRecordSubmissionRepository
                     remoteDataSource.submit(id, version.toString(), idempotencyKey)
                     return draftRepository.saveDraft(withKey.copy(submissionStep = STEP_SUBMITTED)).getOrThrow()
                 } catch (httpError: CatchRecordHttpException) {
-                    if (httpError.httpStatusCode == HTTP_NOT_FOUND) {
-                        resetAfterNotFound(draftRepository, withKey)
-                        throw httpError
-                    }
-                    if (!httpError.isConflict) throw httpError
-                    if (refreshed) error("Unresolved submit conflict for catch record '$id' after one refresh")
-                    refreshed = true
-                    val server = remoteDataSource.recover(id)
-                    current =
-                        when {
-                            isDone(server) -> return markSubmitted(draftRepository, withKey, server)
-                            server.status != SERVER_STATUS_DRAFT -> nonDraftConflict(id, server)
-                            // A stale key replayed against a new `If-Match` is itself a conflict (B2) — null
-                            // it so the next attempt mints and persists a fresh one.
-                            else ->
-                                draftRepository
-                                    .saveDraft(
-                                        withKey.copy(serverVersion = server.version, submitIdempotencyKey = null),
-                                    ).getOrThrow()
+                    val recovery =
+                        recoverFromWriteFailure(httpError, "submit", id, withKey, refreshed) { stale, serverVersion ->
+                            stale.copy(serverVersion = serverVersion, submitIdempotencyKey = null)
                         }
+                    if (recovery.isDone) return recovery.draft
+                    current = recovery.draft
+                    refreshed = true
                 }
+            }
+        }
+
+        /** Shared replace/submit failure handling: a 404 resets for a clean restart, and a first conflict
+         *  refreshes the version via [refreshed] (or settles a server-side done record); else rethrows. */
+        private suspend fun recoverFromWriteFailure(
+            httpError: CatchRecordHttpException,
+            operation: String,
+            id: String,
+            draft: CatchRecordDraft,
+            alreadyRefreshed: Boolean,
+            refreshed: (CatchRecordDraft, Int) -> CatchRecordDraft,
+        ): WriteRecovery {
+            if (httpError.httpStatusCode == HTTP_NOT_FOUND) {
+                resetAfterNotFound(draftRepository, draft)
+                throw httpError
+            }
+            if (!httpError.isConflict) throw httpError
+            if (alreadyRefreshed) error("Unresolved $operation conflict for catch record '$id' after one refresh")
+            val server = remoteDataSource.recover(id)
+            return when {
+                isDone(server) -> WriteRecovery(markSubmitted(draftRepository, draft, server), isDone = true)
+                server.status != SERVER_STATUS_DRAFT -> nonDraftConflict(id, server)
+                else -> WriteRecovery(draftRepository.saveDraft(refreshed(draft, server.version)).getOrThrow(), false)
             }
         }
 

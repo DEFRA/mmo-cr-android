@@ -582,7 +582,13 @@ class CatchRecordFlowViewModel
             // A failed/empty reload must never fall back to the stale pre-submit [draft] (B1 re-review).
             val latest =
                 draftRepository.getDraftById(draft.id).fold(
-                    onSuccess = { it ?: return },
+                    onSuccess = {
+                        it ?: return emitSubmissionStageError(
+                            retryAction,
+                            IllegalStateException("Draft no longer exists"),
+                            SafeErrorMapper::map,
+                        )
+                    },
                     onFailure = {
                         return emitSubmissionStageError(
                             retryAction,
