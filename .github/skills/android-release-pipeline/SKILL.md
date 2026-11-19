@@ -68,7 +68,7 @@ docs/adr/               # signing + release-model ADRs (0022, 0023)
 
 ### 1. Pin the toolchain (Bundler + Gradle)
 Create a `Gemfile` pinning `fastlane` (and any plugins). Commit `Gemfile.lock`. CI installs with
-`bundle install` and runs lanes via `bundle exec fastlane …`. Pin the JDK (Temurin 21), the Android SDK and
+`bundle install` and runs lanes via `bundle exec fastlane …`. Pin the JDK (Temurin 25), the Android SDK and
 build-tools, and use the Gradle wrapper.
 
 ### 2. PR CI workflow — `.github/workflows/android-ci.yml`
