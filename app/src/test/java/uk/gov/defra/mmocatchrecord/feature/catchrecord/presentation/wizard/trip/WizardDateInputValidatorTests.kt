@@ -40,6 +40,18 @@ class WizardDateInputValidatorTests {
     }
 
     @Test
+    fun `return date without a departure date skips the departure checks`() {
+        val result =
+            WizardDateInputValidator.validate(
+                date = DmyDate(11, 9, 2025),
+                today = today,
+                departureDate = null,
+                isReturnDate = true,
+            )
+        assertTrue(result.isValid)
+    }
+
+    @Test
     fun `valid date passes`() {
         val result = WizardDateInputValidator.validate(date = DmyDate(11, 9, 2026), today = today)
         assertTrue(result.isValid)

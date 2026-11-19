@@ -30,6 +30,7 @@ class WizardDateStepContentValidationTests {
     private val today = LocalDate.of(2026, 10, 16)
     private val returnBeforeDepartureMessage =
         "Date you returned from your trip must be the same as or after the date you left"
+    private val tripTooLongMessage = "Your trip must not be longer than 30 days"
 
     private fun setDepartureContent(
         initialDate: DmyDate? = null,
@@ -115,6 +116,19 @@ class WizardDateStepContentValidationTests {
         composeTestRule.onNodeWithTag(returnTags.summary).assertIsDisplayed()
         composeTestRule.onAllNodesWithText(returnBeforeDepartureMessage).onFirst().performClick()
         composeTestRule.onNodeWithTag(returnTags.monthWheel).assertIsFocused()
+        assertNull(submitted)
+    }
+
+    @Test
+    fun aReturnDateMoreThanThirtyDaysAfterDepartureShowsTheTripTooLongError() {
+        var submitted: DmyDate? = null
+        setReturnContent(onSubmit = { submitted = it })
+
+        composeTestRule.spinTo(returnTags, DmyDate(12, 10, 2026))
+        composeTestRule.onNodeWithTag(returnTags.saveAction).performClick()
+
+        composeTestRule.onNodeWithTag(returnTags.summary).assertIsDisplayed()
+        composeTestRule.onAllNodesWithText(tripTooLongMessage).onFirst().assertIsDisplayed()
         assertNull(submitted)
     }
 
