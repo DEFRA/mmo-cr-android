@@ -105,7 +105,7 @@ class SubmissionFlowNavigationTest {
 
         override suspend fun submit(draft: CatchRecordDraft): Result<CatchRecordDraft> {
             submitCallCount++
-            return if (succeeds) Result.success(draft) else Result.failure(IllegalStateException("Simulated failure"))
+            return if (succeeds) Result.success(draft) else Result.failure(java.io.IOException("Simulated offline"))
         }
     }
 
