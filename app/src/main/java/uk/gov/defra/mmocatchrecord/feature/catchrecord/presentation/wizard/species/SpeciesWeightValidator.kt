@@ -21,7 +21,10 @@ enum class SpeciesWeightFieldError {
     /** Left blank while mandatory for this field/species combination. */
     Required,
 
-    /** Parsed value is not `> 0` (or wasn't parseable at all — defensive only). */
+    /** Text that isn't a plain decimal number (e.g. "A1", "1e3", "NaN"). */
+    NotANumber,
+
+    /** Parsed value is not `> 0`. */
     BelowMinimum,
 
     /** Parsed value is `> MAX_WEIGHT_KG`. */
@@ -70,6 +73,9 @@ object SpeciesWeightValidator {
     const val MAX_INPUT_DECIMAL_PLACES = 1
     private const val PRECISION_TOLERANCE = 1e-6
     private const val DECIMAL_PLACES_ALLOWED = 10.0
+
+    // Rejects forms toDoubleOrNull() accepts but users shouldn't enter, e.g. "1e3", "NaN", "Infinity".
+    private val PLAIN_NUMBER = Regex("[+-]?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)")
 
     /**
      * @param rawValuesByField the raw text of every *active* (shown/relevant) field for this species entry
@@ -130,9 +136,10 @@ object SpeciesWeightValidator {
             }
             return
         }
-        val parsed = trimmed.toDoubleOrNull()
+        val parsed = trimmed.takeIf { PLAIN_NUMBER.matches(it) }?.toDoubleOrNull()
         when {
-            parsed == null || parsed <= MIN_WEIGHT_KG -> errors[fieldKind] = SpeciesWeightFieldError.BelowMinimum
+            parsed == null -> errors[fieldKind] = SpeciesWeightFieldError.NotANumber
+            parsed <= MIN_WEIGHT_KG -> errors[fieldKind] = SpeciesWeightFieldError.BelowMinimum
             parsed > MAX_WEIGHT_KG -> errors[fieldKind] = SpeciesWeightFieldError.AboveMaximum
             !matchesPrecision(parsed, species.weightPrecision) -> errors[fieldKind] = SpeciesWeightFieldError.Precision
             else -> values[fieldKind] = parsed

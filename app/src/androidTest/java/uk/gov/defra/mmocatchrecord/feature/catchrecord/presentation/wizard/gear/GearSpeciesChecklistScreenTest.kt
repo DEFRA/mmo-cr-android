@@ -318,8 +318,7 @@ class GearSpeciesChecklistScreenTest {
             .assertIsDisplayed()
     }
 
-    @Test
-    fun weightFieldBlocksASecondDecimalDigitAndASecondDecimalPoint() {
+    private fun enterCodWeightAndSave(weight: String) {
         val gearUse = gearUseWithAddedSpecies(listOf(cod.id))
         composeTestRule.setContent {
             MmoTheme {
@@ -337,10 +336,39 @@ class GearSpeciesChecklistScreenTest {
         composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
         val field =
             composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.ABOVE_MIN_FIELD_PREFIX}_${cod.id}")
-        field.performTextInput("5.5")
-        field.performTextInput("5")
-        field.performTextInput(".")
-        field.assertTextEquals("5.5")
+        field.performTextInput(weight)
+        field.assertTextEquals(weight)
+        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performClick()
+    }
+
+    @Test
+    fun twoDecimalPlaceWeightIsAcceptedWhileTypingAndRejectedOnSaveWithAPrecisionError() {
+        enterCodWeightAndSave("10.55")
+
+        composeTestRule
+            .onAllNodesWithText("Weight for Atlantic cod must be a number with up to 1 decimal place")
+            .onFirst()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun negativeWeightIsAcceptedWhileTypingAndRejectedOnSaveWithABelowMinimumError() {
+        enterCodWeightAndSave("-8")
+
+        composeTestRule
+            .onAllNodesWithText("Weight for Atlantic cod must be more than 0kg")
+            .onFirst()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun nonNumericWeightIsAcceptedWhileTypingAndRejectedOnSaveWithANotANumberError() {
+        enterCodWeightAndSave("A1")
+
+        composeTestRule
+            .onAllNodesWithText("Weight for Atlantic cod must be a number")
+            .onFirst()
+            .assertIsDisplayed()
     }
 
     @Test

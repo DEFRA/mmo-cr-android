@@ -220,6 +220,8 @@
     <string name="delete_action">Dileu</string>
     <string name="species_weight_error_required_above_min">Nodwch y pwysau uwchlaw\'r maint lleiaf a gedwir</string>
     <string name="species_weight_error_required_kept_onboard">Nodwch y pwysau uwchlaw\'r maint lleiaf a gedwir ar y cwch neu mewn cewyll cadw mewn cilogramau</string>
+    <!-- Known limitation: machine-translated placeholder pending professional Welsh translation review. -->
+    <string name="species_weight_error_not_a_number">Rhaid i\'r pwysau ar gyfer %1$s fod yn rif</string>
     <string name="species_weight_error_below_minimum">Rhaid i\'r pwysau ar gyfer %1$s fod yn fwy na 0kg</string>
     <string name="species_weight_error_above_maximum">Rhaid i\'r pwysau ar gyfer %1$s fod yn 10,000kg neu lai</string>
     <string name="species_weight_error_whole_number">Rhaid i\'r pwysau ar gyfer %1$s fod yn rif cyfan</string>
