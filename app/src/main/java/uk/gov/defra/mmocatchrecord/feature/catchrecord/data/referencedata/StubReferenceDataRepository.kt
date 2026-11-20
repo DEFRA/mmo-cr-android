@@ -218,11 +218,8 @@ class StubReferenceDataRepository : ReferenceDataRepository {
             GearType(id = "gear-trawls-not-specified", name = "Trawls (not specified) (TBC)"),
         )
 
-    // "Atlantic cod (COD)" is the one confirmed-real species (Phase 5 screenshot); Plaice/Brown crab
-    // remain TBC placeholders so the autocomplete/checklist isn't trivially single-item. The three
-    // deliberately mix weightPrecision/weightAboveMinimumSizeMandatory/quota values so every validator
-    // branch (whole-number vs one-decimal-place precision, mandatory vs optional above-minimum weight,
-    // with vs without a quota limit) is exercised — see SpeciesWeightValidator and its tests.
+    // Cod is the confirmed-real species; Plaice/Brown crab are TBC placeholders.
+    // The three mix weightPrecision/quota values so every validator branch is exercised.
     private val species =
         listOf(
             Species(
@@ -230,7 +227,6 @@ class StubReferenceDataRepository : ReferenceDataRepository {
                 name = "Atlantic cod (COD)",
                 faoCode = "COD",
                 weightPrecision = SpeciesWeightPrecision.OneDecimalPlace,
-                weightAboveMinimumSizeMandatory = true,
                 monthlyQuotaKg = 50.0,
                 annualQuotaKg = 500.0,
             ),
@@ -239,7 +235,6 @@ class StubReferenceDataRepository : ReferenceDataRepository {
                 name = "Plaice (TBC)",
                 faoCode = "PLE",
                 weightPrecision = SpeciesWeightPrecision.WholeNumber,
-                weightAboveMinimumSizeMandatory = false,
                 monthlyQuotaKg = null,
                 annualQuotaKg = null,
             ),
@@ -248,7 +243,6 @@ class StubReferenceDataRepository : ReferenceDataRepository {
                 name = "Brown crab (TBC)",
                 faoCode = "CRE",
                 weightPrecision = SpeciesWeightPrecision.WholeNumber,
-                weightAboveMinimumSizeMandatory = true,
                 monthlyQuotaKg = 20.0,
                 annualQuotaKg = 200.0,
             ),

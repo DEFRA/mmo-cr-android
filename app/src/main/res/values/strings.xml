@@ -209,6 +209,7 @@
     <string name="delete_action">Delete</string>
     <string name="species_weight_error_required_above_min">Enter the weight above minimum size retained</string>
     <string name="species_weight_error_required_kept_onboard">Enter the weight above minimum size kept onboard or in keep pots in kilograms</string>
+    <string name="species_weight_error_not_a_number">Weight for %1$s must be a number</string>
     <string name="species_weight_error_below_minimum">Weight for %1$s must be more than 0kg</string>
     <string name="species_weight_error_above_maximum">Weight for %1$s must be 10,000kg or less</string>
     <string name="species_weight_error_whole_number">Weight for %1$s must be a whole number</string>
