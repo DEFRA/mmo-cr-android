@@ -158,6 +158,7 @@ private fun dateErrorMessage(error: DateInputError): String =
         DateInputError.DepartureInFuture -> stringResource(R.string.date_error_departure_in_future)
         DateInputError.ReturnInFuture -> stringResource(R.string.date_error_return_in_future)
         DateInputError.ReturnBeforeDeparture -> stringResource(R.string.date_error_return_before_departure)
+        DateInputError.TripTooLong -> stringResource(R.string.date_error_trip_too_long)
     }
 
 @Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)

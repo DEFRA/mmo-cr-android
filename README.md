@@ -6,7 +6,7 @@ why this is a native app (a governed exception to the DEFRA mobile standard's de
 
 ## Quick start
 
-Prerequisites: JDK 21, Android Studio (latest stable), an Android device/emulator running API 26+.
+Prerequisites: JDK 25 (Temurin 25.0.5 or later), Android Studio (latest stable), an Android device/emulator running API 26+.
 Fastlane (optional locally, used by CI) additionally needs Ruby 3.3+ and Bundler.
 
 ```powershell
