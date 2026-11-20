@@ -161,6 +161,24 @@ class AppConfigurationTests {
         assertFalse(MsalNativeAuthConfig.isProvisioned(unavailable.msalNativeAuthConfigJson()))
     }
 
+    @Test
+    fun `the MSAL API scope is read and trimmed, and is blank when absent or unavailable`() {
+        val configured =
+            configurationFor(
+                """{"API_BASE_URL":"https://example.test/","USE_STUB_AUTH":false,""" +
+                    """"MSAL_API_SCOPE":"  api://app-1/access_as_user "}""",
+            ).first
+        val absent = configurationFor("""{"API_BASE_URL":"https://example.test/","USE_STUB_AUTH":false}""").first
+        val wrongType =
+            configurationFor("""{"API_BASE_URL":"https://example.test/","USE_STUB_AUTH":false,"MSAL_API_SCOPE":1}""")
+                .first
+
+        assertEquals("api://app-1/access_as_user", configured.msalApiScope)
+        assertEquals("", absent.msalApiScope)
+        assertEquals("", wrongType.msalApiScope)
+        assertEquals("", configurationFor("[]").first.msalApiScope)
+    }
+
     private fun configurationFor(contents: String): Pair<AppConfiguration, AssetManager> {
         val assets = mock<AssetManager>()
         whenever(assets.open(CONFIG_ASSET)).thenReturn(ByteArrayInputStream(contents.toByteArray()))

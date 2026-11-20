@@ -26,7 +26,8 @@ ADR 0016 chose the backend with `local`/`dev`/`prod` product flavors, each compi
 2. **Allow-list.** [`config/app-config.schema.json`](../../config/app-config.schema.json) is the only
    configuration file anyone maintains. Keys: `API_BASE_URL` (url, the API gateway base shared by all services; reference data is `<base>reference-data-service/`),
    `USE_STUB_AUTH` (bool), and the Entra sign-in keys (ADR 0019): `USE_FAKE_SIGN_IN` (bool),
-   `MSAL_CLIENT_ID` (string), `MSAL_AUTHORITY_URL` (url) and optional `MSAL_REDIRECT_URI` (string). Entra
+   `MSAL_CLIENT_ID` (string), `MSAL_AUTHORITY_URL` (url), optional `MSAL_REDIRECT_URI` (string) and
+   `MSAL_API_SCOPE` (string, the Entra API scope; blank fails sign-in fast). Entra
    values are public-client identifiers, not secrets. Same field rules as iOS: `type` (url/string/bool), `required`, `log`,
    `tracking` (must not be true), `description`; names containing SECRET/PASSWORD/TOKEN/PRIVATE/CREDENTIAL
    are rejected.

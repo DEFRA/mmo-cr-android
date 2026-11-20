@@ -52,10 +52,12 @@ class AppConfigTest < Minitest::Test
       "CR_APP_CFG_API_BASE_URL" => "https://a.example", "CR_APP_CFG_USE_STUB_AUTH" => "false",
       "CR_APP_CFG_USE_FAKE_SIGN_IN" => "false", "CR_APP_CFG_MSAL_CLIENT_ID" => "client-1",
       "CR_APP_CFG_MSAL_AUTHORITY_URL" => "https://tenant.ciamlogin.com/tenant.onmicrosoft.com/",
-      "CR_APP_CFG_MSAL_REDIRECT_URI" => "msauth://mmo.catchrecording.dev.android/abc%3D"
+      "CR_APP_CFG_MSAL_REDIRECT_URI" => "msauth://mmo.catchrecording.dev.android/abc%3D",
+      "CR_APP_CFG_MSAL_API_SCOPE" => "api://app-1/access_as_user"
     ))
     assert_equal "client-1", config.values["MSAL_CLIENT_ID"]
     assert_equal "msauth://mmo.catchrecording.dev.android/abc%3D", config.values["MSAL_REDIRECT_URI"]
+    assert_equal "api://app-1/access_as_user", config.values["MSAL_API_SCOPE"]
     error = assert_raises(FastlaneCore::Interface::FastlaneError) do
       AppConfig.from_env!('{"CR_APP_CFG_API_BASE_URL":"https://a.example","CR_APP_CFG_USE_STUB_AUTH":"true",' \
                           '"CR_APP_CFG_USE_FAKE_SIGN_IN":"false","CR_APP_CFG_MSAL_AUTHORITY_URL":"http://insecure"}')
@@ -67,11 +69,12 @@ class AppConfigTest < Minitest::Test
     config = AppConfig.from_env!(JSON.generate(
       "CR_APP_CFG_API_BASE_URL" => "https://a.example", "CR_APP_CFG_USE_STUB_AUTH" => "true",
       "CR_APP_CFG_USE_FAKE_SIGN_IN" => "true", "CR_APP_CFG_MSAL_CLIENT_ID" => "not-set",
-      "CR_APP_CFG_MSAL_AUTHORITY_URL" => "not-set"
+      "CR_APP_CFG_MSAL_AUTHORITY_URL" => "not-set", "CR_APP_CFG_MSAL_API_SCOPE" => "not-set"
     ))
     assert_equal({ "API_BASE_URL" => "https://a.example", "USE_STUB_AUTH" => true, "USE_FAKE_SIGN_IN" => true },
                  config.values)
-    assert_equal %w[CR_APP_CFG_MSAL_AUTHORITY_URL CR_APP_CFG_MSAL_CLIENT_ID], config.unused.keys.sort
+    assert_equal %w[CR_APP_CFG_MSAL_API_SCOPE CR_APP_CFG_MSAL_AUTHORITY_URL CR_APP_CFG_MSAL_CLIENT_ID],
+                 config.unused.keys.sort
   end
 
   def test_schema_rejects_bad_unused_when

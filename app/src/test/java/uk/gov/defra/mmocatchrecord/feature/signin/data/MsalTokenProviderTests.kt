@@ -17,10 +17,10 @@ class MsalTokenProviderTests {
         runTest {
             val client = FakeNativeAuthClient(accessTokenResult = "fixture-token")
 
-            val token = MsalTokenProvider(client, signedInSessionStore()).currentToken()
+            val token = MsalTokenProvider(client, signedInSessionStore()) { FIXTURE_SCOPE }.currentToken()
 
             assertEquals("fixture-token", token)
-            assertEquals(listOf(API_SCOPE), client.lastAccessTokenScopes)
+            assertEquals(listOf(FIXTURE_SCOPE), client.lastAccessTokenScopes)
             assertEquals(false, client.lastForceRefresh)
         }
 
@@ -29,7 +29,7 @@ class MsalTokenProviderTests {
         runTest {
             val client = FakeNativeAuthClient(accessTokenResult = null)
 
-            assertNull(MsalTokenProvider(client, signedInSessionStore()).currentToken())
+            assertNull(MsalTokenProvider(client, signedInSessionStore()) { FIXTURE_SCOPE }.currentToken())
         }
 
     @Test
@@ -37,7 +37,7 @@ class MsalTokenProviderTests {
         runTest {
             val client = FakeNativeAuthClient(accessTokenResult = "   ")
 
-            assertNull(MsalTokenProvider(client, signedInSessionStore()).currentToken())
+            assertNull(MsalTokenProvider(client, signedInSessionStore()) { FIXTURE_SCOPE }.currentToken())
         }
 
     @Test
@@ -45,7 +45,7 @@ class MsalTokenProviderTests {
         runTest {
             val client = FakeNativeAuthClient(accessTokenThrown = IllegalStateException("boom"))
 
-            assertNull(MsalTokenProvider(client, signedInSessionStore()).currentToken())
+            assertNull(MsalTokenProvider(client, signedInSessionStore()) { FIXTURE_SCOPE }.currentToken())
         }
 
     @Test(expected = CancellationException::class)
@@ -53,7 +53,7 @@ class MsalTokenProviderTests {
         runTest {
             val client = FakeNativeAuthClient(accessTokenThrown = CancellationException("unwind"))
 
-            MsalTokenProvider(client, signedInSessionStore()).currentToken()
+            MsalTokenProvider(client, signedInSessionStore()) { FIXTURE_SCOPE }.currentToken()
         }
 
     @Test
@@ -61,7 +61,7 @@ class MsalTokenProviderTests {
         runTest {
             val client = FakeNativeAuthClient(accessTokenResult = "fixture-token")
 
-            MsalTokenProvider(client, signedInSessionStore()).currentToken()
+            MsalTokenProvider(client, signedInSessionStore()) { FIXTURE_SCOPE }.currentToken()
 
             assertTrue(client.lastForceRefresh == false)
         }
@@ -71,7 +71,7 @@ class MsalTokenProviderTests {
         runTest {
             val client = FakeNativeAuthClient(accessTokenResult = "fixture-token")
 
-            val token = MsalTokenProvider(client, InMemorySessionStore()).currentToken()
+            val token = MsalTokenProvider(client, InMemorySessionStore()) { FIXTURE_SCOPE }.currentToken()
 
             assertNull(token)
             assertNull(client.lastAccessTokenScopes)
@@ -85,9 +85,34 @@ class MsalTokenProviderTests {
             val sessionStore = signedInSessionStore()
             sessionStore.clear()
 
-            val token = MsalTokenProvider(client, sessionStore).currentToken()
+            val token = MsalTokenProvider(client, sessionStore) { FIXTURE_SCOPE }.currentToken()
 
             assertNull(token)
             assertNull(client.lastAccessTokenScopes)
         }
+
+    @Test
+    fun `a blank API scope returns null without touching MSAL`() =
+        runTest {
+            val client = FakeNativeAuthClient(accessTokenResult = "fixture-token")
+
+            val token = MsalTokenProvider(client, signedInSessionStore()) { "  " }.currentToken()
+
+            assertNull(token)
+            assertNull(client.lastAccessTokenScopes)
+        }
+
+    @Test
+    fun `the configured API scope is trimmed before it is requested`() =
+        runTest {
+            val client = FakeNativeAuthClient(accessTokenResult = "fixture-token")
+
+            MsalTokenProvider(client, signedInSessionStore()) { " $FIXTURE_SCOPE " }.currentToken()
+
+            assertEquals(listOf(FIXTURE_SCOPE), client.lastAccessTokenScopes)
+        }
+
+    private companion object {
+        const val FIXTURE_SCOPE = "api://fixture-app/access_as_user"
+    }
 }

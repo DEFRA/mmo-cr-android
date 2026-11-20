@@ -38,14 +38,17 @@ object SignInModule {
     internal fun signInRepositoryFor(
         useFakeSignIn: Boolean,
         nativeAuthClient: NativeAuthClient,
-    ): SignInRepository = if (useFakeSignIn) FakeSignInRepository() else MsalSignInRepository(nativeAuthClient)
+        apiScope: () -> String,
+    ): SignInRepository =
+        if (useFakeSignIn) FakeSignInRepository() else MsalSignInRepository(nativeAuthClient, apiScope)
 
     @Provides
     @Singleton
     internal fun provideSignInRepository(
         appConfiguration: AppConfiguration,
         nativeAuthClient: NativeAuthClient,
-    ): SignInRepository = signInRepositoryFor(appConfiguration.useFakeSignIn ?: false, nativeAuthClient)
+    ): SignInRepository =
+        signInRepositoryFor(appConfiguration.useFakeSignIn ?: false, nativeAuthClient, appConfiguration::msalApiScope)
 
     /** Reuses the same [SignInRepository] singleton so its [SignInStageObserver.stage] is meaningful. */
     @Provides

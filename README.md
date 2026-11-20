@@ -247,6 +247,7 @@ prevent self-review). Allow deployments only from `v*` tags in every one.
 | `CR_APP_CFG_USE_FAKE_SIGN_IN` | Variable | the same five | `false` for real Entra sign-in (required) |
 | `CR_APP_CFG_MSAL_CLIENT_ID`, `CR_APP_CFG_MSAL_AUTHORITY_URL` | Variable | the same five | That stage's Entra External ID app registration and tenant authority (ADR 0019) |
 | `CR_APP_CFG_MSAL_REDIRECT_URI` | Variable | optional | `msauth://<that app's package>/<app-signing SHA-1, base64, URL-encoded>` for the browser fallback |
+| `CR_APP_CFG_MSAL_API_SCOPE` | Variable | the same five | Entra API scope requested at sign-in and for API tokens (e.g. `api://<app-id>/access_as_user`); real sign-in fails fast if unset |
 
 `production` needs only `PLAY_SERVICE_ACCOUNT_JSON`. Configuration values are variables, never secrets:
 anything in the app package can be read. To **add a config value**, set `CR_APP_CFG_<KEY>` on each

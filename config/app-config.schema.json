@@ -46,6 +46,14 @@
       "tracking": false,
       "description": "msauth:// redirect for the browser fallback; must match this app's package and signing key.",
       "unusedWhen": "USE_FAKE_SIGN_IN"
+    },
+    "MSAL_API_SCOPE": {
+      "type": "string",
+      "required": false,
+      "log": true,
+      "tracking": false,
+      "description": "Entra API scope requested at sign-in and for API access tokens, e.g. api://<app-id>/access_as_user.",
+      "unusedWhen": "USE_FAKE_SIGN_IN"
     }
   }
 }

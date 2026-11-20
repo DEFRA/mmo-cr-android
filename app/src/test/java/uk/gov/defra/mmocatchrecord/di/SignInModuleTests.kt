@@ -3,6 +3,8 @@ package uk.gov.defra.mmocatchrecord.di
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -12,10 +14,12 @@ import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import uk.gov.defra.mmocatchrecord.core.android.CurrentActivityProvider
 import uk.gov.defra.mmocatchrecord.core.config.AppConfiguration
+import uk.gov.defra.mmocatchrecord.feature.signin.data.FakeNativeAuthClient
 import uk.gov.defra.mmocatchrecord.feature.signin.data.FakeSignInRepository
 import uk.gov.defra.mmocatchrecord.feature.signin.data.MsalNativeAuthClient
 import uk.gov.defra.mmocatchrecord.feature.signin.data.MsalSignInRepository
 import uk.gov.defra.mmocatchrecord.feature.signin.data.NativeAuthClient
+import uk.gov.defra.mmocatchrecord.feature.signin.data.NativeAuthOutcome
 import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInStage
 
 /**
@@ -36,14 +40,14 @@ class SignInModuleTests {
 
     @Test
     fun `signInRepositoryFor binds the Stage-1 fake for local`() {
-        val repository = SignInModule.signInRepositoryFor(useFakeSignIn = true, mock<NativeAuthClient>())
+        val repository = SignInModule.signInRepositoryFor(useFakeSignIn = true, mock<NativeAuthClient>()) { "" }
 
         assertTrue(repository is FakeSignInRepository)
     }
 
     @Test
     fun `signInRepositoryFor binds the MSAL-backed repository for dev and prod`() {
-        val repository = SignInModule.signInRepositoryFor(useFakeSignIn = false, mock<NativeAuthClient>())
+        val repository = SignInModule.signInRepositoryFor(useFakeSignIn = false, mock<NativeAuthClient>()) { "scope" }
 
         assertTrue(repository is MsalSignInRepository)
     }
@@ -67,8 +71,21 @@ class SignInModuleTests {
     }
 
     @Test
+    fun `provideSignInRepository requests the packaged config's API scope`() =
+        runTest {
+            val appConfiguration = mock<AppConfiguration>()
+            whenever(appConfiguration.useFakeSignIn).thenReturn(false)
+            whenever(appConfiguration.msalApiScope).thenReturn("api://app-1/access_as_user")
+            val client = FakeNativeAuthClient(outcome = NativeAuthOutcome.Succeeded(userId = "u"))
+
+            SignInModule.provideSignInRepository(appConfiguration, client).signIn("a@example.com", "x")
+
+            assertEquals(listOf("api://app-1/access_as_user"), client.lastScopes)
+        }
+
+    @Test
     fun `provideSignInStageObserver reuses the MSAL repository as its own stage observer`() {
-        val repository = MsalSignInRepository(mock<NativeAuthClient>())
+        val repository = MsalSignInRepository(mock<NativeAuthClient>(), { "scope" })
 
         val observer = SignInModule.provideSignInStageObserver(repository)
 
@@ -84,7 +101,7 @@ class SignInModuleTests {
 
     @Test
     fun `provideSignOutRepository reuses the MSAL repository as its own sign-out`() {
-        val repository = MsalSignInRepository(mock<NativeAuthClient>())
+        val repository = MsalSignInRepository(mock<NativeAuthClient>(), { "scope" })
 
         val signOutRepository = SignInModule.provideSignOutRepository(repository)
 

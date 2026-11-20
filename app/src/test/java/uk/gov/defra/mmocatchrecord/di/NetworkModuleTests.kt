@@ -2,6 +2,7 @@ package uk.gov.defra.mmocatchrecord.di
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.decodeFromString
 import mockwebserver3.MockResponse
 import mockwebserver3.junit4.MockWebServerRule
@@ -23,6 +24,7 @@ import uk.gov.defra.mmocatchrecord.core.network.MissingTokenProvider
 import uk.gov.defra.mmocatchrecord.core.network.StubTokenProvider
 import uk.gov.defra.mmocatchrecord.core.network.TokenProvider
 import uk.gov.defra.mmocatchrecord.core.security.InMemorySessionStore
+import uk.gov.defra.mmocatchrecord.feature.signin.data.FakeNativeAuthClient
 import uk.gov.defra.mmocatchrecord.feature.signin.data.MsalTokenProvider
 import uk.gov.defra.mmocatchrecord.feature.signin.data.NativeAuthClient
 
@@ -44,6 +46,7 @@ class NetworkModuleTests {
                 referenceDataServiceUrl = "https://example.com/",
                 nativeAuthClient = mock<NativeAuthClient>(),
                 sessionStore = InMemorySessionStore(),
+                apiScope = { "scope" },
             )
 
         assertTrue(provider is StubTokenProvider)
@@ -58,6 +61,7 @@ class NetworkModuleTests {
                 referenceDataServiceUrl = "https://mmo-cr-catch-recording-service.api.dev.cdp-int.defra.cloud/",
                 nativeAuthClient = mock<NativeAuthClient>(),
                 sessionStore = InMemorySessionStore(),
+                apiScope = { "scope" },
             )
 
         assertTrue(provider is MsalTokenProvider)
@@ -72,6 +76,7 @@ class NetworkModuleTests {
                 referenceDataServiceUrl = "",
                 nativeAuthClient = mock<NativeAuthClient>(),
                 sessionStore = InMemorySessionStore(),
+                apiScope = { "scope" },
             )
 
         assertTrue(provider is MissingTokenProvider)
@@ -86,6 +91,7 @@ class NetworkModuleTests {
                 referenceDataServiceUrl = "https://example.com/",
                 nativeAuthClient = mock<NativeAuthClient>(),
                 sessionStore = InMemorySessionStore(),
+                apiScope = { "scope" },
             )
 
         assertTrue(provider is MissingTokenProvider)
@@ -126,6 +132,22 @@ class NetworkModuleTests {
 
         assertTrue(provider is MsalTokenProvider)
     }
+
+    @Test
+    fun `provideTokenProvider requests the packaged config's API scope`() =
+        runTest {
+            val appConfiguration = mock<AppConfiguration>()
+            whenever(appConfiguration.useStubAuth).thenReturn(false)
+            whenever(appConfiguration.useFakeSignIn).thenReturn(false)
+            whenever(appConfiguration.referenceDataServiceRootUrlOrNull()).thenReturn("https://example.test/")
+            whenever(appConfiguration.msalApiScope).thenReturn("api://app-1/access_as_user")
+            val client = FakeNativeAuthClient(accessTokenResult = "fixture-token")
+            val sessionStore = InMemorySessionStore().apply { recordSignedInNow(1_000L) }
+
+            NetworkModule.provideTokenProvider(appConfiguration, client, sessionStore).currentToken()
+
+            assertEquals(listOf("api://app-1/access_as_user"), client.lastAccessTokenScopes)
+        }
 
     @Test
     fun `provideTokenProvider falls back to the missing provider when config is unavailable`() {

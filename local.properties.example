@@ -20,6 +20,8 @@ crAppCfg.MSAL_CLIENT_ID=<entra-app-client-id>
 crAppCfg.MSAL_AUTHORITY_URL=https://<tenant>.ciamlogin.com/<tenant>.onmicrosoft.com/
 # Optional browser fallback; must be registered in Entra for the .debug package and the debug signing key.
 crAppCfg.MSAL_REDIRECT_URI=msauth://mmo.catchrecording.android.debug/<url-encoded-signature-hash>
+# Entra API scope requested at sign-in and for API tokens; sign-in fails fast if blank.
+crAppCfg.MSAL_API_SCOPE=api://<api-app-id>/access_as_user
 
 # --- Offline / UI work without Entra: use these instead of the auth and Entra values above ---
 # crAppCfg.USE_STUB_AUTH=true

@@ -31,6 +31,7 @@ private data class PackagedAppConfig(
     val msalClientId: String,
     val msalAuthorityUrl: String,
     val msalRedirectUri: String,
+    val msalApiScope: String,
 )
 
 /** Reads the packaged runtime configuration once and exposes validated reference-data settings. */
@@ -49,6 +50,10 @@ class AppConfiguration
 
         val useFakeSignIn: Boolean?
             get() = config?.useFakeSignIn
+
+        /** Entra API scope for this stage; blank means unprovisioned, so sign-in and tokens fail fast. */
+        val msalApiScope: String
+            get() = config?.msalApiScope.orEmpty()
 
         /** Base URL shared by every backend service; reference data hangs off it (see ReferenceDataServiceConfig). */
         fun requireApiBaseUrl(): String = ReferenceDataServiceConfig.requireApiBaseUrl(config?.apiBaseUrl.orEmpty())
@@ -112,6 +117,7 @@ class AppConfiguration
                 msalClientId = root.optionalString("MSAL_CLIENT_ID"),
                 msalAuthorityUrl = root.optionalString("MSAL_AUTHORITY_URL"),
                 msalRedirectUri = root.optionalString("MSAL_REDIRECT_URI"),
+                msalApiScope = root.optionalString("MSAL_API_SCOPE"),
             )
         }
 

@@ -25,6 +25,7 @@ import kotlin.coroutines.cancellation.CancellationException
  */
 internal class MsalSignInRepository(
     private val nativeAuthClient: NativeAuthClient,
+    private val apiScope: () -> String,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : SignInRepository,
     SignInStageObserver,
@@ -48,9 +49,13 @@ internal class MsalSignInRepository(
     ): Result<SignInSession> =
         withContext(ioDispatcher) {
             try {
+                val scope = apiScope().trim()
+                if (scope.isEmpty()) {
+                    return@withContext Result.failure(SignInException(SignInFailure.Unknown(API_SCOPE_NOT_PROVISIONED)))
+                }
                 clearStaleAccountIfPresent()?.let { return@withContext it }
-                when (val outcome = nativeSignIn(username, password)) {
-                    NativeAuthOutcome.BrowserRequired -> handoffToBrowser()
+                when (val outcome = nativeSignIn(username, password, scope)) {
+                    NativeAuthOutcome.BrowserRequired -> handoffToBrowser(scope)
                     else -> outcome.toResult()
                 }
             } catch (cancellation: CancellationException) {
@@ -75,10 +80,11 @@ internal class MsalSignInRepository(
     private suspend fun nativeSignIn(
         username: String,
         password: String,
+        scope: String,
     ): NativeAuthOutcome {
         val passwordChars = password.toCharArray()
         return try {
-            nativeAuthClient.signIn(username, passwordChars, listOf(API_SCOPE))
+            nativeAuthClient.signIn(username, passwordChars, listOf(scope))
         } finally {
             Arrays.fill(passwordChars, '\u0000')
         }
@@ -88,7 +94,7 @@ internal class MsalSignInRepository(
      * Announces the hand-off via [stage], then waits for the UI's acknowledgement (or [ACK_TIMEOUT_MILLIS])
      * plus a short pause, so TalkBack has a guaranteed chance to speak it before the browser takes focus.
      */
-    private suspend fun handoffToBrowser(): Result<SignInSession> {
+    private suspend fun handoffToBrowser(scope: String): Result<SignInSession> {
         mutableStage.value = SignInStage.RedirectingToBrowser
         val acknowledgement = CompletableDeferred<Unit>()
         pendingBrowserNoticeAck = acknowledgement
@@ -96,7 +102,7 @@ internal class MsalSignInRepository(
             withTimeoutOrNull(ACK_TIMEOUT_MILLIS) { acknowledgement.await() }
             // ~1.2s: comfortably inside the requested 1-1.5s range for a TalkBack announcement to start.
             delay(POST_ACK_PAUSE_MILLIS)
-            nativeAuthClient.signInInteractively(listOf(API_SCOPE)).toInteractiveResult()
+            nativeAuthClient.signInInteractively(listOf(scope)).toInteractiveResult()
         } finally {
             pendingBrowserNoticeAck = null
             mutableStage.value = SignInStage.Idle
@@ -136,6 +142,7 @@ internal class MsalSignInRepository(
         const val UNEXPECTED_SIGN_IN_FAILURE = "native-auth client threw an unexpected exception"
         const val BROWSER_REQUIRED_LOOP = "native-auth required the browser leg again after the browser leg"
         const val STALE_ACCOUNT_SIGN_OUT_FAILED = "could not clear a stale native-auth account before sign-in"
+        const val API_SCOPE_NOT_PROVISIONED = "MSAL API scope is not configured for this stage"
         const val ACK_TIMEOUT_MILLIS = 3_000L
         const val POST_ACK_PAUSE_MILLIS = 1_200L
     }

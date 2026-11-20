@@ -23,11 +23,46 @@ import kotlin.coroutines.cancellation.CancellationException
 class MsalSignInRepositoryTests {
     private val fixtureEmail = "alice@example.com"
     private val fixtureSecret = "unit-test-placeholder-value"
+    private val fixtureScope = "api://fixture-app/access_as_user"
 
     private fun repository(
         client: NativeAuthClient,
         dispatcher: CoroutineDispatcher,
-    ) = MsalSignInRepository(client, dispatcher)
+        apiScope: String = fixtureScope,
+    ) = MsalSignInRepository(client, { apiScope }, dispatcher)
+
+    @Test
+    fun `the configured API scope is requested on the native and browser legs`() =
+        runTest {
+            val client =
+                FakeNativeAuthClient(
+                    outcome = NativeAuthOutcome.BrowserRequired,
+                    interactiveOutcome = NativeAuthOutcome.Succeeded(userId = "u"),
+                )
+            val repo = repository(client, StandardTestDispatcher(testScheduler), apiScope = "  $fixtureScope ")
+
+            val job = launch { repo.signIn(fixtureEmail, fixtureSecret) }
+            advanceUntilIdle()
+            job.join()
+
+            assertEquals(listOf(fixtureScope), client.lastScopes)
+            assertEquals(listOf(fixtureScope), client.lastInteractiveScopes)
+        }
+
+    @Test
+    fun `a blank API scope fails fast as unprovisioned without touching MSAL`() =
+        runTest {
+            val client = FakeNativeAuthClient(currentAccountUserIdResult = "fixture-stale-user-id")
+            val repo = repository(client, StandardTestDispatcher(testScheduler), apiScope = " ")
+
+            val result = repo.signIn(fixtureEmail, fixtureSecret)
+
+            val failure = failureOf(result)
+            assertTrue(failure is SignInFailure.Unknown)
+            assertEquals("MSAL API scope is not configured for this stage", (failure as SignInFailure.Unknown).message)
+            assertNull(client.lastUsername)
+            assertEquals(0, client.signOutCallCount)
+        }
 
     @Test
     fun `Succeeded maps to a successful session carrying the native-auth user id`() =

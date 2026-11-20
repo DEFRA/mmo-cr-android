@@ -40,11 +40,13 @@ object NetworkModule {
         referenceDataServiceUrl: String,
         nativeAuthClient: NativeAuthClient,
         sessionStore: SessionStore,
+        apiScope: () -> String,
     ): TokenProvider =
         when {
             useStubAuth -> StubTokenProvider()
             // A missing service URL is the fail-fast placeholder (ADR 0016): never bind MSAL to it.
-            !useFakeSignIn && referenceDataServiceUrl.isNotBlank() -> MsalTokenProvider(nativeAuthClient, sessionStore)
+            !useFakeSignIn && referenceDataServiceUrl.isNotBlank() ->
+                MsalTokenProvider(nativeAuthClient, sessionStore, apiScope)
             else -> MissingTokenProvider()
         }
 
@@ -61,6 +63,7 @@ object NetworkModule {
             referenceDataServiceUrl = appConfiguration.referenceDataServiceRootUrlOrNull().orEmpty(),
             nativeAuthClient = nativeAuthClient,
             sessionStore = sessionStore,
+            apiScope = appConfiguration::msalApiScope,
         )
 
     @Provides
