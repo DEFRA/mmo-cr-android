@@ -6,9 +6,8 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
 /** Maps a persisted [DraftStatus] to its Home-screen display tag; `Discarded` drafts are list-filtered. */
 fun DraftStatus.toRecordStatusTag(): RecordStatusTag? =
     when (this) {
-        DraftStatus.Draft -> RecordStatusTag.Draft
-        DraftStatus.ReadyToSubmit -> RecordStatusTag.ReadyToSubmit
-        DraftStatus.PendingSync -> RecordStatusTag.AwaitingSync
+        DraftStatus.Draft, DraftStatus.ReadyToSubmit -> RecordStatusTag.Draft
+        DraftStatus.PendingSync -> RecordStatusTag.CompletePending
         DraftStatus.Submitted -> RecordStatusTag.Submitted
         DraftStatus.Discarded -> null
     }

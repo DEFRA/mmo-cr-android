@@ -29,9 +29,9 @@ import uk.gov.defra.mmocatchrecord.feature.home.domain.ObserveHomeSummaryUseCase
 private fun recordWithEveryStatus() =
     listOf(
         CatchRecordSummary("1", "MMO-REF-001", "vessel-1", DmyDate(1, 1, 2026), RecordStatusTag.Submitted),
-        CatchRecordSummary("2", "MMO-REF-002", "vessel-1", DmyDate(2, 1, 2026), RecordStatusTag.ReadyToSubmit),
+        CatchRecordSummary("2", "MMO-REF-002", "vessel-1", DmyDate(2, 1, 2026), RecordStatusTag.Amended),
         CatchRecordSummary("3", null, "vessel-1", null, RecordStatusTag.Draft),
-        CatchRecordSummary("4", "MMO-REF-004", "vessel-1", DmyDate(4, 1, 2026), RecordStatusTag.AwaitingSync),
+        CatchRecordSummary("4", "MMO-REF-004", "vessel-1", DmyDate(4, 1, 2026), RecordStatusTag.CompletePending),
     )
 
 /** Stubs [Context.getResources] with a mock, since Mockito does not deep-stub a plain `mock<Context>()`. */
@@ -101,9 +101,9 @@ class HomeViewModelTests {
                 assertEquals(
                     setOf(
                         RecordStatusTag.Submitted,
-                        RecordStatusTag.ReadyToSubmit,
+                        RecordStatusTag.Amended,
                         RecordStatusTag.Draft,
-                        RecordStatusTag.AwaitingSync,
+                        RecordStatusTag.CompletePending,
                     ),
                     statuses,
                 )
@@ -175,7 +175,7 @@ class HomeViewModelTests {
         }
 
     @Test
-    fun `FR9 an AwaitingSync to Submitted transition surfaces a singular confirmation message`() =
+    fun `FR9 a CompletePending to Submitted transition surfaces a singular confirmation message`() =
         runTest {
             val context =
                 contextWithQuantityString(1, "MMO-REF-004", result = "Catch record MMO-REF-004 has been submitted")
@@ -209,7 +209,7 @@ class HomeViewModelTests {
 
             val repository = FakeHomeRepository()
             val awaitingOne =
-                listOf(CatchRecordSummary("4", null, "vessel-1", DmyDate(4, 1, 2026), RecordStatusTag.AwaitingSync))
+                listOf(CatchRecordSummary("4", null, "vessel-1", DmyDate(4, 1, 2026), RecordStatusTag.CompletePending))
             repository.emit(HomeSummary(signedInUserId = "alice", catchRecords = awaitingOne))
             val viewModel = buildViewModel(repository, context = context)
 
@@ -238,14 +238,14 @@ class HomeViewModelTests {
                         "MMO-REF-004",
                         "vessel-1",
                         DmyDate(4, 1, 2026),
-                        RecordStatusTag.AwaitingSync,
+                        RecordStatusTag.CompletePending,
                     ),
                     CatchRecordSummary(
                         "5",
                         "MMO-REF-005",
                         "vessel-1",
                         DmyDate(5, 1, 2026),
-                        RecordStatusTag.AwaitingSync,
+                        RecordStatusTag.CompletePending,
                     ),
                 )
             repository.emit(HomeSummary(signedInUserId = "alice", catchRecords = awaitingTwo))

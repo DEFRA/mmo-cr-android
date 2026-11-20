@@ -11,7 +11,7 @@ data class HomeSummary(
     val catchRecords: List<CatchRecordSummary> = emptyList(),
 ) {
     val pendingCatchRecordCount: Int
-        get() = catchRecords.count { it.status == RecordStatusTag.AwaitingSync }
+        get() = catchRecords.count { it.status == RecordStatusTag.CompletePending }
 }
 
 /**
