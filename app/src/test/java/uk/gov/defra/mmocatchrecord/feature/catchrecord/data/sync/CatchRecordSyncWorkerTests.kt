@@ -66,6 +66,7 @@ class CatchRecordSyncWorkerTests {
                                             id = "species-1",
                                             speciesId = "species-cod",
                                             confirmedCaught = true,
+                                            weightAboveMinimumSizeKg = 1.0,
                                         ),
                                     ),
                             ),

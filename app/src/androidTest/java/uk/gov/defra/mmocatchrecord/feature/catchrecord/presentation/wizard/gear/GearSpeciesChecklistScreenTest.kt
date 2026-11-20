@@ -34,24 +34,22 @@ class GearSpeciesChecklistScreenTest {
 
     private val seineNets = GearType(id = "gear-seine-nets", name = "Seine nets (not specified)")
 
-    // Mandatory above-min field, one decimal place allowed, no quota configured.
+    // One decimal place allowed, no quota configured.
     private val cod =
         Species(
             id = "species-cod",
             name = "Atlantic cod (COD)",
             faoCode = "COD",
             weightPrecision = SpeciesWeightPrecision.OneDecimalPlace,
-            weightAboveMinimumSizeMandatory = true,
         )
 
-    // Optional above-min field, whole numbers only, small monthly quota so the quota path is exercisable.
+    // Whole numbers only, small monthly quota so the quota path is exercisable.
     private val plaice =
         Species(
             id = "species-plaice",
             name = "Plaice (PLE)",
             faoCode = "PLE",
             weightPrecision = SpeciesWeightPrecision.WholeNumber,
-            weightAboveMinimumSizeMandatory = false,
             monthlyQuotaKg = 10.0,
         )
 
@@ -232,7 +230,7 @@ class GearSpeciesChecklistScreenTest {
     }
 
     @Test
-    fun optionalAboveMinimumFieldLeftBlankIsNotAnErrorForANonMandatorySpecies() {
+    fun blankAboveMinimumFieldBlocksSaveForEveryTickedSpecies() {
         var submitted: CatchRecordDraft? = null
         val gearUse = gearUseWithAddedSpecies(listOf(plaice.id))
         composeTestRule.setContent {
@@ -251,15 +249,9 @@ class GearSpeciesChecklistScreenTest {
         composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
         composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performClick()
 
-        assertTrue(submitted != null)
-        val savedEntry =
-            submitted
-                ?.gearUses
-                ?.single()
-                ?.speciesWeights
-                ?.single { it.speciesId == plaice.id }
-        assertEquals(true, savedEntry?.confirmedCaught)
-        assertNull(savedEntry?.weightAboveMinimumSizeKg)
+        assertNull(submitted)
+        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.ERROR_SUMMARY).assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("Enter the weight above minimum size retained").onFirst().assertIsDisplayed()
     }
 
     @Test

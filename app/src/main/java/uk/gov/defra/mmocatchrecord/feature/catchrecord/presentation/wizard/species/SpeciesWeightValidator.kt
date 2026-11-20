@@ -76,9 +76,8 @@ object SpeciesWeightValidator {
      *   — only keys present here are validated/returned; a field the caller doesn't consider active (e.g.
      *   an un-revealed "below minimum size" field) should simply be omitted.
      * @param mandatoryFields which of [rawValuesByField]'s keys are required to be non-blank — typically
-     *   just [SpeciesWeightFieldKind.AboveMinimumSize] when [Species.weightAboveMinimumSizeMandatory] is
-     *   true (Phase 5A), or [SpeciesWeightFieldKind.KeptOnboard] always (Phase 5B; assumption — see the
-     *   change summary).
+     *   [SpeciesWeightFieldKind.AboveMinimumSize] for every ticked species (Phase 5A), or
+     *   [SpeciesWeightFieldKind.KeptOnboard] always (Phase 5B; assumption — see the change summary).
      * @param cumulativeOtherEntriesKg the sum of this species' three 5A weight fields already saved
      *   elsewhere in the draft (every *other* gear use) — see [SpeciesWeightSupport]. Deliberately excludes
      *   this same field's own prior persisted value (the candidate value being validated here replaces it).

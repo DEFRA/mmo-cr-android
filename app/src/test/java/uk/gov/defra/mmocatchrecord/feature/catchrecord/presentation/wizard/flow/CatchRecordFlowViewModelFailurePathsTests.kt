@@ -83,7 +83,12 @@ class CatchRecordFlowViewModelFailurePathsTests {
                     confirmedGearUse(
                         speciesWeights =
                             listOf(
-                                SpeciesWeightEntry(id = "species-1", speciesId = "species-cod", confirmedCaught = true),
+                                SpeciesWeightEntry(
+                                    id = "species-1",
+                                    speciesId = "species-cod",
+                                    confirmedCaught = true,
+                                    weightAboveMinimumSizeKg = 1.0,
+                                ),
                             ),
                     ),
                 ),
@@ -226,7 +231,15 @@ class CatchRecordFlowViewModelFailurePathsTests {
             viewModel.dispatch(CatchRecordFlowEvent.ResumeDraft)
             testScheduler.advanceUntilIdle()
 
-            val newWeights = listOf(SpeciesWeightEntry(id = "sw-1", speciesId = "species-cod", confirmedCaught = true))
+            val newWeights =
+                listOf(
+                    SpeciesWeightEntry(
+                        id = "sw-1",
+                        speciesId = "species-cod",
+                        confirmedCaught = true,
+                        weightAboveMinimumSizeKg = 1.0,
+                    ),
+                )
             viewModel.dispatch(CatchRecordFlowEvent.EditGearSpeciesWeights("gear-use-1", newWeights))
             testScheduler.advanceUntilIdle()
 
@@ -266,7 +279,13 @@ class CatchRecordFlowViewModelFailurePathsTests {
             val dispatcher = StandardTestDispatcher(testScheduler)
             val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
             val started = repository.startDraft("vessel-achilles").getOrThrow()
-            val existingSpecies = SpeciesWeightEntry(id = "sw-1", speciesId = "species-cod", confirmedCaught = true)
+            val existingSpecies =
+                SpeciesWeightEntry(
+                    id = "sw-1",
+                    speciesId = "species-cod",
+                    confirmedCaught = true,
+                    weightAboveMinimumSizeKg = 1.0,
+                )
             repository
                 .saveDraft(started.copy(gearUses = listOf(confirmedGearUse(speciesWeights = listOf(existingSpecies)))))
                 .getOrThrow()
@@ -608,9 +627,20 @@ class CatchRecordFlowViewModelFailurePathsTests {
         runTest {
             val dispatcher = StandardTestDispatcher(testScheduler)
             val repository = FakeCatchRecordDraftRepository(idFactory = { "draft-1" })
-            val keptSpecies = SpeciesWeightEntry(id = "sw-keep", speciesId = "species-cod", confirmedCaught = true)
+            val keptSpecies =
+                SpeciesWeightEntry(
+                    id = "sw-keep",
+                    speciesId = "species-cod",
+                    confirmedCaught = true,
+                    weightAboveMinimumSizeKg = 1.0,
+                )
             val removedSpecies =
-                SpeciesWeightEntry(id = "sw-remove", speciesId = "species-plaice", confirmedCaught = true)
+                SpeciesWeightEntry(
+                    id = "sw-remove",
+                    speciesId = "species-plaice",
+                    confirmedCaught = true,
+                    weightAboveMinimumSizeKg = 1.0,
+                )
             val started = repository.startDraft("vessel-achilles").getOrThrow()
             repository
                 .saveDraft(

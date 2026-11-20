@@ -14,7 +14,6 @@ class SpeciesWeightValidatorTests {
             name = "Plaice (PLE)",
             faoCode = "PLE",
             weightPrecision = SpeciesWeightPrecision.WholeNumber,
-            weightAboveMinimumSizeMandatory = false,
         )
 
     private val oneDecimalPlaceSpecies =
@@ -23,7 +22,6 @@ class SpeciesWeightValidatorTests {
             name = "Atlantic cod (COD)",
             faoCode = "COD",
             weightPrecision = SpeciesWeightPrecision.OneDecimalPlace,
-            weightAboveMinimumSizeMandatory = true,
         )
 
     // --- Required -----------------------------------------------------------------------------

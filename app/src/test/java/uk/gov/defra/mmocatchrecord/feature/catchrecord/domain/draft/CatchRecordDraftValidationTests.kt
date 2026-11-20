@@ -33,7 +33,14 @@ class CatchRecordDraftValidationTests {
     private fun confirmedCompleteGearUse(
         statisticalSubRectangleCode: String? = "38E95",
         speciesWeights: List<SpeciesWeightEntry> =
-            listOf(SpeciesWeightEntry(id = "sw-1", speciesId = "cod", confirmedCaught = true)),
+            listOf(
+                SpeciesWeightEntry(
+                    id = "sw-1",
+                    speciesId = "cod",
+                    confirmedCaught = true,
+                    weightAboveMinimumSizeKg = 5.0,
+                ),
+            ),
     ) = GearUse(
         id = "gear-use-1",
         gearTypeId = "gear-seine-nets",
@@ -125,6 +132,22 @@ class CatchRecordDraftValidationTests {
             )
 
         assertTrue(issuesOf(draft).contains(DraftSubmissionIssue.GearMissingConfirmedSpecies))
+    }
+
+    @Test
+    fun aConfirmedSpeciesWithNoAboveMinimumWeightIsReported() {
+        val draft =
+            completeDraft(
+                gearUses =
+                    listOf(
+                        confirmedCompleteGearUse(
+                            speciesWeights =
+                                listOf(SpeciesWeightEntry(id = "sw-1", speciesId = "cod", confirmedCaught = true)),
+                        ),
+                    ),
+            )
+
+        assertTrue(issuesOf(draft).contains(DraftSubmissionIssue.SpeciesMissingAboveMinimumWeight))
     }
 
     @Test

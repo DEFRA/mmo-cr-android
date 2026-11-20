@@ -58,7 +58,31 @@ class WizardStepTests {
      * [SpeciesWeightEntry.confirmedCaught].
      */
     private fun confirmedSpecies(speciesId: String) =
-        SpeciesWeightEntry(id = "sw-$speciesId", speciesId = speciesId, confirmedCaught = true)
+        SpeciesWeightEntry(
+            id = "sw-$speciesId",
+            speciesId = speciesId,
+            confirmedCaught = true,
+            weightAboveMinimumSizeKg = 1.0,
+        )
+
+    @Test
+    fun `a confirmed species missing its above-min weight routes back to the species checklist`() {
+        val missingWeight = SpeciesWeightEntry(id = "sw-cod", speciesId = "cod", confirmedCaught = true)
+        val theDraft =
+            draft(
+                gearUses =
+                    listOf(
+                        gearUse(
+                            "gear-use-1",
+                            confirmedUsedOnTrip = true,
+                            statisticalSubRectangleCode = "38E95",
+                            speciesWeights = listOf(missingWeight),
+                        ),
+                    ),
+            )
+
+        assertEquals("gear-use-1", nextGearUsePendingSpecies(theDraft)?.id)
+    }
 
     @Test
     fun `no gear uses routes to gear search`() {

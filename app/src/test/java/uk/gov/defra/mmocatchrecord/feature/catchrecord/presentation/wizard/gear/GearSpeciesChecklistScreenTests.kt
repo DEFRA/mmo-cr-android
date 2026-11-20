@@ -90,7 +90,6 @@ class GearSpeciesChecklistScreenTests {
             name = "Atlantic cod (COD)",
             faoCode = "COD",
             weightPrecision = SpeciesWeightPrecision.OneDecimalPlace,
-            weightAboveMinimumSizeMandatory = true,
         )
 
     private val plaice =
@@ -99,7 +98,6 @@ class GearSpeciesChecklistScreenTests {
             name = "Plaice (PLE)",
             faoCode = "PLE",
             weightPrecision = SpeciesWeightPrecision.WholeNumber,
-            weightAboveMinimumSizeMandatory = false,
             monthlyQuotaKg = 10.0,
         )
 
@@ -333,7 +331,7 @@ class GearSpeciesChecklistScreenTests {
     }
 
     @Test
-    fun optionalAboveMinimumFieldLeftBlankIsNotAnErrorForANonMandatorySpecies() {
+    fun blankAboveMinimumFieldBlocksSaveForEveryTickedSpecies() {
         var submitted: CatchRecordDraft? = null
         val gearUse = gearUseWithAddedSpecies(listOf(plaice.id))
         composeTestRule.setContent {
@@ -353,15 +351,9 @@ class GearSpeciesChecklistScreenTests {
         composeTestRule.onNodeWithTag("${GearSpeciesChecklistScreenTestTags.CHECKBOX_PREFIX}_0").performClick()
         composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.SAVE_ACTION).performScrollTo().performClick()
 
-        assertTrue(submitted != null)
-        val savedEntry =
-            submitted
-                ?.gearUses
-                ?.single()
-                ?.speciesWeights
-                ?.single { it.speciesId == plaice.id }
-        assertEquals(true, savedEntry?.confirmedCaught)
-        assertNull(savedEntry?.weightAboveMinimumSizeKg)
+        assertNull(submitted)
+        composeTestRule.onNodeWithTag(GearSpeciesChecklistScreenTestTags.ERROR_SUMMARY).assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("Enter the weight above minimum size retained").onFirst().assertIsDisplayed()
     }
 
     @Test
@@ -915,7 +907,6 @@ class GearSpeciesChecklistScreenTests {
                 name = "Sole (SOL)",
                 faoCode = "SOL",
                 weightPrecision = SpeciesWeightPrecision.OneDecimalPlace,
-                weightAboveMinimumSizeMandatory = false,
                 monthlyQuotaKg = null,
                 annualQuotaKg = 20.0,
             )

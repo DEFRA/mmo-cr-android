@@ -516,7 +516,6 @@ fun GearSpeciesChecklistScreenPreview() {
                 name = "Atlantic cod (COD)",
                 faoCode = "COD",
                 weightPrecision = SpeciesWeightPrecision.OneDecimalPlace,
-                weightAboveMinimumSizeMandatory = true,
                 monthlyQuotaKg = 50.0,
                 annualQuotaKg = 500.0,
             ),

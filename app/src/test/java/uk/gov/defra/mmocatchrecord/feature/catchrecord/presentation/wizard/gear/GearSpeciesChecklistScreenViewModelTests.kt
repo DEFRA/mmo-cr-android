@@ -79,7 +79,6 @@ class GearSpeciesChecklistScreenViewModelTests {
             name = "Atlantic cod (COD)",
             faoCode = "COD",
             weightPrecision = SpeciesWeightPrecision.OneDecimalPlace,
-            weightAboveMinimumSizeMandatory = true,
         )
 
     private fun gearUseWithAddedSpecies(speciesIds: List<String>) =
