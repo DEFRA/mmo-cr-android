@@ -77,13 +77,13 @@ class HomeScreenRobolectricTests {
     private val everyStatusRecords =
         listOf(
             CatchRecordSummary("1", "MMO-REF-001", "ACHILLES", DmyDate(1, 1, 2026), RecordStatusTag.Submitted),
-            CatchRecordSummary("2", "MMO-REF-002", "ACHILLES", DmyDate(2, 1, 2026), RecordStatusTag.ReadyToSubmit),
+            CatchRecordSummary("2", "MMO-REF-002", "ACHILLES", DmyDate(2, 1, 2026), RecordStatusTag.Amended),
             CatchRecordSummary("3", null, "ACHILLES", null, RecordStatusTag.Draft),
-            CatchRecordSummary("4", "MMO-REF-004", "ACHILLES", DmyDate(4, 1, 2026), RecordStatusTag.AwaitingSync),
+            CatchRecordSummary("4", "MMO-REF-004", "ACHILLES", DmyDate(4, 1, 2026), RecordStatusTag.CompletePending),
         )
 
     private val statusLabelById =
-        mapOf("1" to "Submitted", "2" to "Amended", "3" to "Draft", "4" to "Unsent")
+        mapOf("1" to "Submitted", "2" to "Amended", "3" to "Draft", "4" to "Complete/Pending")
 
     private fun setContent(
         records: List<CatchRecordSummary> = everyStatusRecords,
@@ -330,7 +330,9 @@ class HomeScreenRobolectricTests {
 
         composeTestRule.onNodeWithText("Catch record statuses").performClick()
         composeTestRule.onNodeWithText("Draft:").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Unsent:").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Complete/Pending:").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Submitted:").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Amended:").assertIsDisplayed()
     }
 
     /** Covers the 4-column table's header/rows/pagination and [formatDmyDate] via the real preview data,

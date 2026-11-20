@@ -2,8 +2,9 @@
 
 ## Status
 
-Accepted (Phase A, Phase B, Phase C, Phase D, Phase E, Phase F, Phase G and Phase H). **Phase A's "Draft
+Accepted (Phase A, Phase B, Phase C, Phase D, Phase E, Phase F, Phase G, Phase H and Phase J). **Phase A's "Draft
 materialisation moved to the first Save and continue (BR-XX)" decision below is superseded by Phase I.**
+**The status model and labels in Phases A, F and H are superseded by Phase J.**
 
 ## Context
 
@@ -602,3 +603,29 @@ still exercised by `EnterFlowForDraft`/`ResumeDraft` resuming an existing draft.
   draft exists yet" directly rather than via `VesselSelected`, since that state is no longer reachable that way.
 
 
+
+## Decision (Phase J — status management rules)
+
+The ticket's Status Management Rules define four user-facing statuses, superseding Phases A, F and H:
+
+| Status | UI managed | Backend persisted | Source `DraftStatus` |
+|---|---|---|---|
+| Draft | Yes | Yes | `Draft`, `ReadyToSubmit` |
+| Submitted | Yes | Yes | `Submitted` |
+| Complete/Pending | Yes | No (mobile only) | `PendingSync` |
+| Amended | Yes | No | none yet (no amend/re-submit flow) |
+
+`RecordStatusTag` is now `{ Draft, CompletePending, Submitted, Amended }`. `ReadyToSubmit` displays as
+Draft because the record has not been successfully submitted; only Draft rows are resumable.
+Persisted `DraftStatus` values are unchanged, so no Room migration is needed.
+
+## Consequences (Phase J)
+
+- `Amended` is added before anything can produce it, reversing Phase A's "no dead constants" rule at the
+  product owner's direction; a follow-up ticket must deliver the amend/re-submit flow that derives it.
+- Strings `status_ready_to_submit*` and `status_awaiting_sync*` are removed; `status_complete_pending*`
+  and `status_amended*` are added. Welsh copy is machine-translated pending professional review.
+- The Complete/Pending description says "while offline" per the ticket, although `PendingSync` is also
+  set when an online submission attempt fails; raise with content design.
+- Flagged governance exception to the Phase A/F/H decisions; raise with Delivery Architecture
+  (`delivery.architecture@defra.gov.uk`) per DEFRA process.
