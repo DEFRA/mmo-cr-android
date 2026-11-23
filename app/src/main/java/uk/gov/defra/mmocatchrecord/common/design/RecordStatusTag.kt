@@ -3,15 +3,14 @@ package uk.gov.defra.mmocatchrecord.common.design
 import androidx.annotation.StringRes
 import uk.gov.defra.mmocatchrecord.R
 
-/**
- * The four user-facing statuses a catch record can display (CRAR-152 Phase A) — see ADR 0014 for why this
- * replaces the old `CatchRecordStatus` and lives in `common.design`, not `feature.home.domain`.
- */
+/** User-facing catch record statuses per the status management rules; see ADR 0014 for placement. */
 enum class RecordStatusTag(
     @param:StringRes val labelRes: Int,
 ) {
     Draft(R.string.status_draft),
-    ReadyToSubmit(R.string.status_ready_to_submit),
-    AwaitingSync(R.string.status_awaiting_sync),
+    CompletePending(R.string.status_complete_pending),
     Submitted(R.string.status_submitted),
+
+    // UI-managed only (not persisted by the backend); not yet reachable until an amend flow exists.
+    Amended(R.string.status_amended),
 }

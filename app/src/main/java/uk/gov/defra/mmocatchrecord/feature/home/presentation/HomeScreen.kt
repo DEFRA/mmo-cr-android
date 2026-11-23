@@ -246,7 +246,7 @@ fun HomeScreenPreview() {
                         "MMO-REF-002",
                         "ACHILLES",
                         DmyDate(18, 11, 2020),
-                        RecordStatusTag.ReadyToSubmit,
+                        RecordStatusTag.Amended,
                     ),
                     CatchRecordSummary("3", null, "ACHILLES", null, RecordStatusTag.Draft),
                     CatchRecordSummary(
@@ -254,7 +254,7 @@ fun HomeScreenPreview() {
                         "MMO-REF-004",
                         "ACHILLES",
                         DmyDate(15, 11, 2020),
-                        RecordStatusTag.AwaitingSync,
+                        RecordStatusTag.CompletePending,
                     ),
                 ),
         )

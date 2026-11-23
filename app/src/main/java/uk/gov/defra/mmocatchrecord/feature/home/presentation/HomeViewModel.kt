@@ -46,13 +46,13 @@ class HomeViewModel
             }
         }
 
-        /** Detects a draft transitioning from `AwaitingSync` to `Submitted` (automatic background sync). */
+        /** Detects a draft transitioning from `CompletePending` to `Submitted` (automatic background sync). */
         private fun applySummary(summary: HomeSummary) {
             val newStatusByDraftId = summary.catchRecords.associate { it.id to it.status }
             val newlySynced =
                 summary.catchRecords.filter { record ->
                     record.status == RecordStatusTag.Submitted &&
-                        lastKnownStatusByDraftId[record.id] == RecordStatusTag.AwaitingSync
+                        lastKnownStatusByDraftId[record.id] == RecordStatusTag.CompletePending
                 }
             lastKnownStatusByDraftId = newStatusByDraftId
             updateState {
@@ -63,11 +63,8 @@ class HomeViewModel
             }
         }
 
-        /**
-         * FR9: confirms a draft that was "Unsent" has now been submitted automatically (FR7);
-         * `null` on an emission with no new transition (including the first, since
-         * [lastKnownStatusByDraftId] starts empty so nothing can match `AwaitingSync`).
-         */
+        /** FR9: confirms a "Complete/Pending" draft was auto-submitted (FR7); `null` when there is no new
+         * transition, including the first emission, as [lastKnownStatusByDraftId] starts empty. */
         private fun syncConfirmationMessage(newlySynced: List<CatchRecordSummary>): String? {
             if (newlySynced.isEmpty()) return null
             return if (newlySynced.size == 1) {
