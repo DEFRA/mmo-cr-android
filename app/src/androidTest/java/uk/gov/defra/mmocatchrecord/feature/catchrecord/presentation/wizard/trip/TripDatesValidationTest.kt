@@ -19,7 +19,8 @@ import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DmyDate
 import java.time.LocalDate
 
-// Acceptance tests for the trip departure/return date story (AC1–AC5, EC1); "today" is fixed for determinism.
+// Trip start date and duration story (AC1–AC9, EC1); "today" is fixed for determinism.
+// Future dates are blocked by the wheel itself, so AC5/AC9 assert the clamp to today.
 class TripDatesValidationTest {
     @get:Rule
     val composeTestRule = createComposeRule()
@@ -33,61 +34,114 @@ class TripDatesValidationTest {
     fun departureDateDefaultsToToday() {
         showDepartureStep()
 
-        assertWheelState(departureTags.dayWheel, "16")
-        assertWheelState(departureTags.monthWheel, "October")
-        assertWheelState(departureTags.yearWheel, "2026")
+        assertWheelShows(departureTags, day = "16", month = "October", year = "2026")
     }
 
     @Test
     fun returnDateDefaultsToToday() {
-        showReturnStep(departureDate = DmyDate(10, 10, 2026))
+        showReturnStep(departureDate = daysAgo(6))
 
-        assertWheelState(returnTags.dayWheel, "16")
-        assertWheelState(returnTags.monthWheel, "October")
-        assertWheelState(returnTags.yearWheel, "2026")
+        assertWheelShows(returnTags, day = "16", month = "October", year = "2026")
     }
 
+    // --- AC1: accept a valid trip ---
+
     @Test
-    fun ac1_validDepartureDateIsSaved() {
+    fun ac1_validStartDateIsAccepted() {
         showDepartureStep()
 
-        spinTo(departureTags, DmyDate(11, 9, 2026))
+        spinTo(departureTags, daysAgo(2))
         saveAndContinue(departureTags)
 
-        assertEquals(DmyDate(11, 9, 2026), submittedDate)
+        assertSavedWithoutError(departureTags, daysAgo(2))
     }
 
     @Test
-    fun ac1_departureDateOfTodayIsSaved() {
+    fun ac1_startDateOfTodayIsAccepted() {
         showDepartureStep()
 
         saveAndContinue(departureTags)
 
-        assertEquals(DmyDate(16, 10, 2026), submittedDate)
+        assertSavedWithoutError(departureTags, daysAgo(0))
     }
 
     @Test
-    fun ac2_departureDateOnEarliestAllowedDateIsSaved() {
+    fun ac1_validEndDateIsAccepted() {
+        showReturnStep(departureDate = daysAgo(2))
+
+        saveAndContinue(returnTags)
+
+        assertSavedWithoutError(returnTags, daysAgo(0))
+    }
+
+    // --- AC2 / AC6: 365-day backdating rule ---
+
+    @Test
+    fun ac2_startDateMoreThan365DaysAgoIsRejected() {
         showDepartureStep()
 
-        spinTo(departureTags, DmyDate(24, 7, 2025))
+        spinTo(departureTags, daysAgo(366))
         saveAndContinue(departureTags)
 
-        assertEquals(DmyDate(24, 7, 2025), submittedDate)
+        assertBlockedWithError(departureTags, START_MORE_THAN_365_DAYS)
     }
 
     @Test
-    fun ac2_departureDateBefore24July2025IsRejected() {
+    fun ac6_startDateExactly365DaysAgoIsAccepted() {
         showDepartureStep()
 
-        spinTo(departureTags, DmyDate(23, 7, 2025))
+        spinTo(departureTags, daysAgo(365))
         saveAndContinue(departureTags)
 
-        assertBlockedWithError(departureTags, DEPARTURE_BEFORE_ALLOWED)
+        assertSavedWithoutError(departureTags, daysAgo(365))
     }
 
     @Test
-    fun ac3_departureWheelCannotSelectFutureDay() {
+    fun ac6_endDateOnStartDate365DaysAgoIsAccepted() {
+        showReturnStep(departureDate = daysAgo(365))
+
+        spinTo(returnTags, daysAgo(365))
+        saveAndContinue(returnTags)
+
+        assertSavedWithoutError(returnTags, daysAgo(365))
+    }
+
+    // --- AC3 / AC7: 30-day maximum trip length (separate from the 365-day rule) ---
+
+    @Test
+    fun ac3_tripLongerThan30DaysIsRejected() {
+        showReturnStep(departureDate = daysAgo(31))
+
+        saveAndContinue(returnTags)
+
+        assertBlockedWithError(returnTags, TRIP_EXCEEDS_30_DAYS, substring = true)
+    }
+
+    @Test
+    fun ac7_tripOfExactly30DaysIsAccepted() {
+        showReturnStep(departureDate = daysAgo(30))
+
+        saveAndContinue(returnTags)
+
+        assertSavedWithoutError(returnTags, daysAgo(0))
+    }
+
+    // --- AC4: end date before start date ---
+
+    @Test
+    fun ac4_endDateBeforeStartDateIsRejected() {
+        showReturnStep(departureDate = daysAgo(2))
+
+        spinTo(returnTags, daysAgo(3))
+        saveAndContinue(returnTags)
+
+        assertBlockedWithError(returnTags, END_BEFORE_START)
+    }
+
+    // --- AC5 / AC9: future dates are restricted by the wheel ---
+
+    @Test
+    fun ac5_startWheelCannotSelectFutureDay() {
         showDepartureStep()
 
         spinTo(departureTags, DmyDate(17, 10, 2026))
@@ -98,7 +152,7 @@ class TripDatesValidationTest {
     }
 
     @Test
-    fun ac3_departureWheelCannotSelectFutureMonth() {
+    fun ac5_startWheelCannotSelectFutureMonth() {
         showDepartureStep()
 
         spinTo(departureTags, DmyDate(1, 12, 2026))
@@ -109,7 +163,7 @@ class TripDatesValidationTest {
     }
 
     @Test
-    fun ac3_departureWheelCannotSelectFutureYear() {
+    fun ac5_startWheelCannotSelectFutureYear() {
         showDepartureStep()
 
         spinTo(departureTags, DmyDate(16, 10, 2027))
@@ -120,8 +174,8 @@ class TripDatesValidationTest {
     }
 
     @Test
-    fun ac4_returnWheelCannotSelectFutureDay() {
-        showReturnStep(departureDate = DmyDate(10, 10, 2026))
+    fun ac9_endWheelCannotSelectFutureDay() {
+        showReturnStep(departureDate = daysAgo(6))
 
         spinTo(returnTags, DmyDate(17, 10, 2026))
         assertWheelShows(returnTags, day = "16", month = "October", year = "2026")
@@ -131,8 +185,8 @@ class TripDatesValidationTest {
     }
 
     @Test
-    fun ac4_returnWheelCannotSelectFutureMonth() {
-        showReturnStep(departureDate = DmyDate(10, 10, 2026))
+    fun ac9_endWheelCannotSelectFutureMonth() {
+        showReturnStep(departureDate = daysAgo(6))
 
         spinTo(returnTags, DmyDate(10, 11, 2026))
         assertWheelShows(returnTags, day = "10", month = "October", year = "2026")
@@ -141,34 +195,19 @@ class TripDatesValidationTest {
         assertSavedWithoutError(returnTags, DmyDate(10, 10, 2026))
     }
 
-    @Test
-    fun ac4_returnDateOfTodayIsSaved() {
-        showReturnStep(departureDate = DmyDate(10, 10, 2026))
-
-        saveAndContinue(returnTags)
-
-        assertEquals(DmyDate(16, 10, 2026), submittedDate)
-    }
+    // --- AC8: same-day trip ---
 
     @Test
-    fun ac5_returnDateBeforeDepartureIsRejected() {
-        showReturnStep(departureDate = DmyDate(11, 9, 2026))
+    fun ac8_sameDayTripIsAccepted() {
+        showReturnStep(departureDate = daysAgo(5))
 
-        spinTo(returnTags, DmyDate(10, 9, 2026))
+        spinTo(returnTags, daysAgo(5))
         saveAndContinue(returnTags)
 
-        assertBlockedWithError(returnTags, RETURN_BEFORE_DEPARTURE)
+        assertSavedWithoutError(returnTags, daysAgo(5))
     }
 
-    @Test
-    fun ac5_returnDateSameAsDepartureIsSaved() {
-        showReturnStep(departureDate = DmyDate(11, 9, 2026))
-
-        spinTo(returnTags, DmyDate(11, 9, 2026))
-        saveAndContinue(returnTags)
-
-        assertEquals(DmyDate(11, 9, 2026), submittedDate)
-    }
+    // --- EC1: leap years ---
 
     @Test
     fun ec1_leapDay29February2028IsAccepted() {
@@ -182,16 +221,18 @@ class TripDatesValidationTest {
     }
 
     @Test
-    fun ec1_nonLeapDay29February2027IsRejected() {
+    fun ec1_nonLeapDay29February2027ClampsTo28() {
         showDepartureStep(today = LocalDate.of(2027, 3, 1))
 
         spinTo(departureTags, DmyDate(29, 2, 2027))
-        // The wheel only offers real dates, so 29 Feb 2027 cannot be selected and clamps to 28.
         assertWheelState(departureTags.dayWheel, "28")
         saveAndContinue(departureTags)
 
         assertEquals(DmyDate(28, 2, 2027), submittedDate)
     }
+
+    private fun daysAgo(days: Long): DmyDate =
+        today.minusDays(days).let { DmyDate(it.dayOfMonth, it.monthValue, it.year) }
 
     private fun showDepartureStep(today: LocalDate = this.today) {
         composeTestRule.setContent {
@@ -229,12 +270,15 @@ class TripDatesValidationTest {
     private fun assertBlockedWithError(
         tags: WizardDateStepTestTags,
         message: String,
+        substring: Boolean = false,
     ) {
         assertNull("User must not be able to continue", submittedDate)
         composeTestRule.onNodeWithTag(tags.summary).assertIsDisplayed()
         composeTestRule
-            .onNode(hasText(message) and hasAnyAncestor(hasTestTag(tags.summary)), useUnmergedTree = true)
-            .assertIsDisplayed()
+            .onNode(
+                hasText(message, substring = substring) and hasAnyAncestor(hasTestTag(tags.summary)),
+                useUnmergedTree = true,
+            ).assertIsDisplayed()
     }
 
     private fun assertSavedWithoutError(
@@ -282,8 +326,9 @@ class TripDatesValidationTest {
     }
 
     private companion object {
-        const val DEPARTURE_BEFORE_ALLOWED = "Date you left for your trip must be on or after 24 July 2025"
-        const val RETURN_BEFORE_DEPARTURE =
-            "Date you returned from your trip must be the same as or after the date you left"
+        const val START_MORE_THAN_365_DAYS = "The trip start date cannot be more than 365 days in the past"
+        const val TRIP_EXCEEDS_30_DAYS = "30 days"
+        const val END_BEFORE_START = "The trip end date cannot be before the trip start date"
     }
 }
+
