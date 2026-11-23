@@ -17,6 +17,9 @@ enum class DraftSubmissionIssue {
     /** A confirmed gear use has no [SpeciesWeightEntry] with [SpeciesWeightEntry.confirmedCaught] `true`. */
     GearMissingConfirmedSpecies,
 
+    /** A confirmed-caught species has no [SpeciesWeightEntry.weightAboveMinimumSizeKg] recorded. */
+    SpeciesMissingAboveMinimumWeight,
+
     /** [CatchRecordDraft.notLandedStraightAway] has not been answered. */
     NotLandedDecisionUnanswered,
 
@@ -85,6 +88,9 @@ object CatchRecordDraftValidation {
         if (confirmedGearUses.any { gearUse -> gearUse.speciesWeights.none { it.confirmedCaught } }) {
             issues += DraftSubmissionIssue.GearMissingConfirmedSpecies
         }
+        if (confirmedGearUses.any { it.hasConfirmedSpeciesMissingAboveMinimumWeight() }) {
+            issues += DraftSubmissionIssue.SpeciesMissingAboveMinimumWeight
+        }
         if (draft.notLandedStraightAway == null) {
             issues += DraftSubmissionIssue.NotLandedDecisionUnanswered
         }
@@ -94,3 +100,7 @@ object CatchRecordDraftValidation {
         return issues
     }
 }
+
+/** True when a ticked species on this gear use has no "weight above minimum size retained". */
+fun GearUse.hasConfirmedSpeciesMissingAboveMinimumWeight(): Boolean =
+    speciesWeights.any { it.confirmedCaught && it.weightAboveMinimumSizeKg == null }

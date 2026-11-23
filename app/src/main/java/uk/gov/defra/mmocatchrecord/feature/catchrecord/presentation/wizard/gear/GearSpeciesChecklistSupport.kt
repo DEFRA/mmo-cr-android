@@ -106,12 +106,7 @@ internal object GearSpeciesChecklistSupport {
         return SpeciesWeightValidator.validateEntry(
             species = species,
             rawValuesByField = rawValuesByField,
-            mandatoryFields =
-                if (species.weightAboveMinimumSizeMandatory) {
-                    setOf(SpeciesWeightFieldKind.AboveMinimumSize)
-                } else {
-                    emptySet()
-                },
+            mandatoryFields = setOf(SpeciesWeightFieldKind.AboveMinimumSize),
             cumulativeOtherEntriesKg =
                 SpeciesWeightSupport.cumulativeWeightForSpeciesInOtherGearUses(draft, species.id, gearUse.id),
         )

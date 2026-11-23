@@ -315,7 +315,14 @@ class GearSummaryScreenTests {
                         gearTypeId = "gear-seine-nets",
                         statisticalSubRectangleCode = "38E95",
                         speciesWeights =
-                            listOf(SpeciesWeightEntry(id = "sw-0", speciesId = "species-cod", confirmedCaught = true)),
+                            listOf(
+                                SpeciesWeightEntry(
+                                    id = "sw-0",
+                                    speciesId = "species-cod",
+                                    confirmedCaught = true,
+                                    weightAboveMinimumSizeKg = 1.0,
+                                ),
+                            ),
                         confirmedUsedOnTrip = false,
                     ),
                 ),
