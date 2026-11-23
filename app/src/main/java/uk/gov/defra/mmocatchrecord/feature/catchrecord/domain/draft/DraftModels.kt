@@ -66,8 +66,7 @@ sealed interface MeasurementValue {
  * A species catch entry captured against a [GearUse] (Phase 5). Added via the gear-species search screen
  * (initially with every weight `null` and [confirmedCaught] `false`), then confirmed/edited on the
  * gear-species checklist screen: ticking the checklist checkbox sets [confirmedCaught] true and requires
- * [weightAboveMinimumSizeKg] (mandatory-ness varies per species — see
- * [uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.referencedata.Species.weightAboveMinimumSizeMandatory]);
+ * [weightAboveMinimumSizeKg] (mandatory for every ticked species);
  * [weightBelowMinimumSizeKg]/[weightLegallyDiscardedKg] are always optional, progressively-disclosed
  * fields. Mirrors [GearUse.confirmedUsedOnTrip]'s "added but not yet confirmed" pattern: an
  * added-but-unchecked species stays in the list (its captured measurements are not lost) but is excluded

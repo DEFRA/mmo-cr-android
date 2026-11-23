@@ -31,7 +31,8 @@ enum class GdsNumericFieldKind {
     Decimal,
 }
 
-/** A single full-width GDS-style outlined numeric text input (e.g. gear mesh size, number of trawl nets, shot counts). */
+/** A full-width GDS-style outlined numeric input (e.g. gear mesh size, number of trawl nets, shot counts).
+ *  [filterInput] = false accepts any text, leaving invalid entries to save-time validation. */
 @Suppress("FunctionNaming", "LongParameterList")
 @Composable
 fun GdsNumericField(
@@ -45,6 +46,7 @@ fun GdsNumericField(
     imeAction: ImeAction = ImeAction.Done,
     maxDecimalPlaces: Int? = null,
     invalidInputMessage: String? = null,
+    filterInput: Boolean = true,
 ) {
     var inputRejected by rememberSaveable { mutableStateOf(false) }
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
@@ -52,7 +54,8 @@ fun GdsNumericField(
         OutlinedTextField(
             value = value,
             onValueChange = { candidate ->
-                val accepted = filterNumericInput(value, candidate, kind, maxDecimalPlaces)
+                val accepted =
+                    if (filterInput) filterNumericInput(value, candidate, kind, maxDecimalPlaces) else candidate
                 inputRejected = accepted != candidate
                 onValueChange(accepted)
             },

@@ -34,7 +34,6 @@ class RemoveSpeciesScreenTest {
             name = "Atlantic cod (COD)",
             faoCode = "COD",
             weightPrecision = SpeciesWeightPrecision.OneDecimalPlace,
-            weightAboveMinimumSizeMandatory = true,
         )
 
     private val plaice =
@@ -43,7 +42,6 @@ class RemoveSpeciesScreenTest {
             name = "Plaice (PLE)",
             faoCode = "PLE",
             weightPrecision = SpeciesWeightPrecision.WholeNumber,
-            weightAboveMinimumSizeMandatory = false,
         )
 
     private val speciesList = listOf(cod, plaice)

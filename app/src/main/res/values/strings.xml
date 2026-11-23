@@ -110,11 +110,11 @@
     <string name="date_year_label">Year</string>
     <string name="error_summary_title">There is a problem</string>
     <string name="date_error_invalid_date">Enter a real date</string>
-    <string name="date_error_departure_before_earliest">Date you left for your trip must be no more than 365 days ago</string>
+    <string name="date_error_departure_before_earliest">The trip start date cannot be more than 365 days in the past</string>
     <string name="date_error_departure_in_future">Date you left for your trip must be today or in the past</string>
     <string name="date_error_return_in_future">Date you returned from your trip must be today or in the past</string>
     <string name="date_error_trip_too_long">Your trip must not be longer than 30 days</string>
-    <string name="date_error_return_before_departure">Date you returned from your trip must be the same as or after the date you left</string>
+    <string name="date_error_return_before_departure">The trip end date cannot be before the trip start date</string>
     <string name="departure_port_title">Enter the port or closest port you set off from</string>
     <string name="second_entry_departure_port_title">Select the port you set off from</string>
     <string name="first_entry_return_port_title">Enter the port or closest port you returned to</string>
@@ -209,6 +209,7 @@
     <string name="delete_action">Delete</string>
     <string name="species_weight_error_required_above_min">Enter the weight above minimum size retained</string>
     <string name="species_weight_error_required_kept_onboard">Enter the weight above minimum size kept onboard or in keep pots in kilograms</string>
+    <string name="species_weight_error_not_a_number">Weight for %1$s must be a number</string>
     <string name="species_weight_error_below_minimum">Weight for %1$s must be more than 0kg</string>
     <string name="species_weight_error_above_maximum">Weight for %1$s must be 10,000kg or less</string>
     <string name="species_weight_error_whole_number">Weight for %1$s must be a whole number</string>

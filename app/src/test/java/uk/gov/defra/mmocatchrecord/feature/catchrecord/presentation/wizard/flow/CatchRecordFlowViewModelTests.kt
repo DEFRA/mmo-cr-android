@@ -94,7 +94,12 @@ class CatchRecordFlowViewModelTests {
                         confirmedUsedOnTrip = true,
                         speciesWeights =
                             listOf(
-                                SpeciesWeightEntry(id = "species-1", speciesId = "species-cod", confirmedCaught = true),
+                                SpeciesWeightEntry(
+                                    id = "species-1",
+                                    speciesId = "species-cod",
+                                    confirmedCaught = true,
+                                    weightAboveMinimumSizeKg = 1.0,
+                                ),
                             ),
                     ),
                 ),
@@ -382,7 +387,14 @@ class CatchRecordFlowViewModelTests {
                     statisticalSubRectangleCode = "38E95",
                     confirmedUsedOnTrip = true,
                     speciesWeights =
-                        listOf(SpeciesWeightEntry(id = "sw-1", speciesId = "species-cod", confirmedCaught = true)),
+                        listOf(
+                            SpeciesWeightEntry(
+                                id = "sw-1",
+                                speciesId = "species-cod",
+                                confirmedCaught = true,
+                                weightAboveMinimumSizeKg = 1.0,
+                            ),
+                        ),
                 )
             repository.saveDraft(started.copy(gearUses = listOf(stubEraGearUse))).getOrThrow()
             val liveOnlyReferenceData =
@@ -906,7 +918,14 @@ class CatchRecordFlowViewModelTests {
                     statisticalSubRectangleCode = "38E95",
                     confirmedUsedOnTrip = true,
                     speciesWeights =
-                        listOf(SpeciesWeightEntry(id = "species-1", speciesId = "species-cod", confirmedCaught = true)),
+                        listOf(
+                            SpeciesWeightEntry(
+                                id = "species-1",
+                                speciesId = "species-cod",
+                                confirmedCaught = true,
+                                weightAboveMinimumSizeKg = 1.0,
+                            ),
+                        ),
                 )
             repository
                 .saveDraft(
@@ -1035,6 +1054,7 @@ class CatchRecordFlowViewModelTests {
                                                     id = "sw-1",
                                                     speciesId = "species-cod",
                                                     confirmedCaught = true,
+                                                    weightAboveMinimumSizeKg = 1.0,
                                                 ),
                                             ),
                                     )
@@ -1090,6 +1110,7 @@ class CatchRecordFlowViewModelTests {
                                                     id = "sw-2",
                                                     speciesId = "species-plaice",
                                                     confirmedCaught = true,
+                                                    weightAboveMinimumSizeKg = 1.0,
                                                 ),
                                             ),
                                     )
