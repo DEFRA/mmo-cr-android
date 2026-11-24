@@ -217,7 +217,7 @@ private fun CatchRecordTableRow(
     horizontalScrollState: ScrollState,
     onClick: (String) -> Unit,
 ) {
-    val isResumable = record.status == RecordStatusTag.Draft || record.status == RecordStatusTag.ReadyToSubmit
+    val isResumable = record.status == RecordStatusTag.Draft
     val minTouchTarget = LocalMinimumInteractiveComponentSize.current
     val tripEndDateText =
         record.tripEndDate?.let(::formatDmyDate) ?: stringResource(R.string.records_trip_end_date_not_set)
@@ -483,14 +483,11 @@ private fun CatchStatusesAccordion() {
     ) {
         StatusHelpRow(stringResource(R.string.status_draft_title), stringResource(R.string.status_draft_desc))
         StatusHelpRow(
-            stringResource(R.string.status_ready_to_submit_title),
-            stringResource(R.string.status_ready_to_submit_desc),
-        )
-        StatusHelpRow(
-            stringResource(R.string.status_awaiting_sync_title),
-            stringResource(R.string.status_awaiting_sync_desc),
+            stringResource(R.string.status_complete_pending_title),
+            stringResource(R.string.status_complete_pending_desc),
         )
         StatusHelpRow(stringResource(R.string.status_submitted_title), stringResource(R.string.status_submitted_desc))
+        StatusHelpRow(stringResource(R.string.status_amended_title), stringResource(R.string.status_amended_desc))
         Text(
             stringResource(R.string.status_check_tab),
             style = MaterialTheme.typography.bodyMedium,
@@ -514,9 +511,15 @@ fun StatusHelpRow(
 private val previewCatchRecords =
     listOf(
         CatchRecordSummary("1", "MMO-REF-001", "ACHILLES", DmyDate(20, 11, 2020), RecordStatusTag.Submitted),
-        CatchRecordSummary("2", "MMO-REF-002", "ACHILLES", DmyDate(18, 11, 2020), RecordStatusTag.ReadyToSubmit),
+        CatchRecordSummary("2", "MMO-REF-002", "ACHILLES", DmyDate(18, 11, 2020), RecordStatusTag.Amended),
         CatchRecordSummary("3", null, "ACHILLES", null, RecordStatusTag.Draft),
-        CatchRecordSummary("4", "MMO-REF-004", "ACHILLES", DmyDate(15, 11, 2020), RecordStatusTag.AwaitingSync),
+        CatchRecordSummary(
+            "4",
+            "MMO-REF-004",
+            "ACHILLES",
+            DmyDate(15, 11, 2020),
+            RecordStatusTag.CompletePending,
+        ),
     )
 
 @Preview(name = "Important banner section", showBackground = true, backgroundColor = 0xFFFFFFFF)

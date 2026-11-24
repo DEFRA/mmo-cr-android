@@ -32,11 +32,11 @@ class DraftSummaryMappersTests {
     fun `maps every non-discarded status to its record status tag`() {
         assertEquals(RecordStatusTag.Draft, DraftSummaryMappers.toDomain(rowWith(DraftStatus.Draft.name))?.status)
         assertEquals(
-            RecordStatusTag.ReadyToSubmit,
+            RecordStatusTag.Draft,
             DraftSummaryMappers.toDomain(rowWith(DraftStatus.ReadyToSubmit.name))?.status,
         )
         assertEquals(
-            RecordStatusTag.AwaitingSync,
+            RecordStatusTag.CompletePending,
             DraftSummaryMappers.toDomain(rowWith(DraftStatus.PendingSync.name))?.status,
         )
         assertEquals(

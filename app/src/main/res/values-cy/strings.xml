@@ -37,18 +37,20 @@
     <string name="home_summary_load_error">Ni allem lwytho eich cofnodion dalfa. Rhowch gynnig arall arni.</string>
     <string name="status_submitted">Wedi cyflwyno</string>
     <string name="status_draft">Drafft</string>
-    <string name="status_ready_to_submit">Wedi\'i diwygio</string>
-    <string name="status_awaiting_sync">Heb ei anfon</string>
+    <!-- Known limitation: machine-translated placeholders pending professional Welsh translation review. -->
+    <string name="status_complete_pending">Wedi\'i gwblhau/Yn aros</string>
+    <string name="status_amended">Wedi\'i ddiwygio</string>
     <string name="help_with_catch_recording">Cymorth gyda chofnodi dalfeydd</string>
     <string name="catch_record_statuses">Statysau cofnodion dalfa</string>
+    <!-- Known limitation: machine-translated placeholders pending professional Welsh translation review. -->
     <string name="status_draft_title">Drafft:</string>
-    <string name="status_draft_desc">Dechreuwyd cofnodi\'r cofnod ond heb ei gwblhau.</string>
-    <string name="status_ready_to_submit_title">Wedi\'i diwygio:</string>
-    <string name="status_ready_to_submit_desc">Wedi\'i gwblhau ond heb ei gyflwyno eto.</string>
-    <string name="status_awaiting_sync_title">Heb ei anfon:</string>
-    <string name="status_awaiting_sync_desc">Ceisiwyd cyflwyno ond heb ei anfon.</string>
+    <string name="status_draft_desc">Mae\'r cofnod dalfa wedi\'i ddechrau ond nid yw wedi\'i gyflwyno\'n llwyddiannus.</string>
+    <string name="status_complete_pending_title">Wedi\'i gwblhau/Yn aros:</string>
+    <string name="status_complete_pending_desc">Mae\'r cofnod dalfa wedi\'i gwblhau ar y ddyfais hon tra all-lein ac mae\'n aros i gael ei gyflwyno.</string>
     <string name="status_submitted_title">Wedi cyflwyno:</string>
-    <string name="status_submitted_desc">Cyflwynwyd yn llwyddiannus.</string>
+    <string name="status_submitted_desc">Mae\'r cofnod dalfa wedi\'i gyflwyno a\'i dderbyn yn llwyddiannus.</string>
+    <string name="status_amended_title">Wedi\'i ddiwygio:</string>
+    <string name="status_amended_desc">Mae cofnod dalfa a gyflwynwyd yn flaenorol wedi\'i ddiweddaru a\'i ailgyflwyno\'n llwyddiannus.</string>
     <string name="status_check_tab">Gwiriwch y tab Sut i gofnodi dalfa i wneud yn siŵr eich bod yn cofnodi eich dalfeydd ar yr amser cywir.</string>
     <string name="offline_banner_label">All-lein</string>
     <string name="offline_banner_message">Gallwch barhau i gofnodi eich dalfa. Bydd eich cofnod yn cael ei gadw a\'i anfon pan fyddwch ar-lein eto.</string>
@@ -220,6 +222,8 @@
     <string name="delete_action">Dileu</string>
     <string name="species_weight_error_required_above_min">Nodwch y pwysau uwchlaw\'r maint lleiaf a gedwir</string>
     <string name="species_weight_error_required_kept_onboard">Nodwch y pwysau uwchlaw\'r maint lleiaf a gedwir ar y cwch neu mewn cewyll cadw mewn cilogramau</string>
+    <!-- Known limitation: machine-translated placeholder pending professional Welsh translation review. -->
+    <string name="species_weight_error_not_a_number">Rhaid i\'r pwysau ar gyfer %1$s fod yn rif</string>
     <string name="species_weight_error_below_minimum">Rhaid i\'r pwysau ar gyfer %1$s fod yn fwy na 0kg</string>
     <string name="species_weight_error_above_maximum">Rhaid i\'r pwysau ar gyfer %1$s fod yn 10,000kg neu lai</string>
     <string name="species_weight_error_whole_number">Rhaid i\'r pwysau ar gyfer %1$s fod yn rif cyfan</string>

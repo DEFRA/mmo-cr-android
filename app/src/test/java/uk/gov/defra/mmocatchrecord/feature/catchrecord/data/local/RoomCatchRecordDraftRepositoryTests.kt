@@ -730,7 +730,7 @@ class RoomCatchRecordDraftRepositoryTests {
 
                 clockMillis = 4_000L
                 repository.markReadyToSubmit(started.id).getOrThrow()
-                assertEquals(RecordStatusTag.ReadyToSubmit, awaitItem().single().status)
+                assertEquals(RecordStatusTag.Draft, awaitItem().single().status)
             }
         }
 

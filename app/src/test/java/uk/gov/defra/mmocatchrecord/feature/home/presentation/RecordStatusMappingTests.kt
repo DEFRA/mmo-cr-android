@@ -10,8 +10,8 @@ class RecordStatusMappingTests {
     @Test
     fun `every DraftStatus maps to its expected RecordStatusTag or null`() {
         assertEquals(RecordStatusTag.Draft, DraftStatus.Draft.toRecordStatusTag())
-        assertEquals(RecordStatusTag.ReadyToSubmit, DraftStatus.ReadyToSubmit.toRecordStatusTag())
-        assertEquals(RecordStatusTag.AwaitingSync, DraftStatus.PendingSync.toRecordStatusTag())
+        assertEquals(RecordStatusTag.Draft, DraftStatus.ReadyToSubmit.toRecordStatusTag())
+        assertEquals(RecordStatusTag.CompletePending, DraftStatus.PendingSync.toRecordStatusTag())
         assertEquals(RecordStatusTag.Submitted, DraftStatus.Submitted.toRecordStatusTag())
         assertNull(DraftStatus.Discarded.toRecordStatusTag())
     }

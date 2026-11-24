@@ -29,8 +29,10 @@ class WizardDateStepContentValidationTests {
     private val returnTags = ReturnDateScreenTestTags.stepTags
     private val today = LocalDate.of(2026, 10, 16)
     private val returnBeforeDepartureMessage =
-        "Date you returned from your trip must be the same as or after the date you left"
+        "The trip end date cannot be before the trip start date"
     private val tripTooLongMessage = "Your trip must not be longer than 30 days"
+    private val departureTooEarlyMessage =
+        "The trip start date cannot be more than 365 days in the past"
 
     private fun setDepartureContent(
         initialDate: DmyDate? = null,
@@ -116,6 +118,20 @@ class WizardDateStepContentValidationTests {
         composeTestRule.onNodeWithTag(returnTags.summary).assertIsDisplayed()
         composeTestRule.onAllNodesWithText(returnBeforeDepartureMessage).onFirst().performClick()
         composeTestRule.onNodeWithTag(returnTags.monthWheel).assertIsFocused()
+        assertNull(submitted)
+    }
+
+    @Test
+    fun aDepartureDateMoreThan365DaysAgoShowsTheEarliestDateError() {
+        var submitted: DmyDate? = null
+        setDepartureContent(onSubmit = { submitted = it })
+
+        composeTestRule.spinTo(departureTags, DmyDate(15, 10, 2025))
+        composeTestRule.onNodeWithTag(departureTags.saveAction).performClick()
+
+        composeTestRule.onNodeWithTag(departureTags.summary).assertIsDisplayed()
+        composeTestRule.onAllNodesWithText(departureTooEarlyMessage).onFirst().performClick()
+        composeTestRule.onNodeWithTag(departureTags.monthWheel).assertIsFocused()
         assertNull(submitted)
     }
 

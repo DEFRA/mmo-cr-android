@@ -11,6 +11,7 @@ import uk.gov.defra.mmocatchrecord.common.navigation.CatchRecordGraphRoute
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.GearUse
+import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.hasConfirmedSpeciesMissingAboveMinimumWeight
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear.GearSummaryScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.submission.CheckYourAnswersSupport
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.submission.LateSubmissionSupport
@@ -74,7 +75,7 @@ sealed interface WizardStep {
 
     /**
      * Per-confirmed-gear species checklist + progressive-disclosure weight capture (Phase 5A, screen 2):
-     * "Weight above minimum size retained (kg)" (mandatory-ness varies per species), plus optional
+     * "Weight above minimum size retained (kg)" (mandatory for every ticked species), plus optional
      * "below minimum size"/"legally discarded" weight fields revealed via add/remove links.
      */
     data object GearSpeciesChecklist : WizardStep
@@ -189,7 +190,8 @@ fun NavOptionsBuilder.applySubmissionResultNavOptions(step: WizardStep) {
 
 private fun isStatRectanglePending(gearUse: GearUse): Boolean = gearUse.statisticalSubRectangleCode == null
 
-private fun isSpeciesPending(gearUse: GearUse): Boolean = gearUse.speciesWeights.none { it.confirmedCaught }
+private fun isSpeciesPending(gearUse: GearUse): Boolean =
+    gearUse.speciesWeights.none { it.confirmedCaught } || gearUse.hasConfirmedSpeciesMissingAboveMinimumWeight()
 
 /**
  * The first confirmed gear use (in `draft.gearUses` order) that still has *either* its stat-rectangle *or*

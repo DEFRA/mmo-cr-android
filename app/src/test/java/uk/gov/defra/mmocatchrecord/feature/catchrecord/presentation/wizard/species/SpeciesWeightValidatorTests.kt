@@ -14,7 +14,6 @@ class SpeciesWeightValidatorTests {
             name = "Plaice (PLE)",
             faoCode = "PLE",
             weightPrecision = SpeciesWeightPrecision.WholeNumber,
-            weightAboveMinimumSizeMandatory = false,
         )
 
     private val oneDecimalPlaceSpecies =
@@ -23,7 +22,6 @@ class SpeciesWeightValidatorTests {
             name = "Atlantic cod (COD)",
             faoCode = "COD",
             weightPrecision = SpeciesWeightPrecision.OneDecimalPlace,
-            weightAboveMinimumSizeMandatory = true,
         )
 
     // --- Required -----------------------------------------------------------------------------
@@ -113,14 +111,62 @@ class SpeciesWeightValidatorTests {
     }
 
     @Test
-    fun `non numeric value fails the range check as below minimum`() {
+    fun `non numeric value fails with a not-a-number error`() {
         val result =
             SpeciesWeightValidator.validateEntry(
                 species = wholeNumberSpecies,
-                rawValuesByField = mapOf(SpeciesWeightFieldKind.AboveMinimumSize to "abc"),
+                rawValuesByField = mapOf(SpeciesWeightFieldKind.AboveMinimumSize to "A1"),
             )
 
-        assertEquals(SpeciesWeightFieldError.BelowMinimum, result.errors[SpeciesWeightFieldKind.AboveMinimumSize])
+        assertEquals(SpeciesWeightFieldError.NotANumber, result.errors[SpeciesWeightFieldKind.AboveMinimumSize])
+    }
+
+    @Test
+    fun `forms accepted by toDouble but not plain numbers fail with a not-a-number error`() {
+        listOf("1e3", "NaN", "Infinity", "-Infinity", "0x1A", "1.2.3", "1,5", ".", "-").forEach { raw ->
+            val result =
+                SpeciesWeightValidator.validateEntry(
+                    species = oneDecimalPlaceSpecies,
+                    rawValuesByField = mapOf(SpeciesWeightFieldKind.AboveMinimumSize to raw),
+                )
+
+            assertEquals(
+                raw,
+                SpeciesWeightFieldError.NotANumber,
+                result.errors[SpeciesWeightFieldKind.AboveMinimumSize],
+            )
+        }
+    }
+
+    @Test
+    fun `plain numeric forms with a leading or trailing point are parsed as numbers`() {
+        listOf(".5" to 0.5, "5." to 5.0, " 5.5 " to 5.5, "+5" to 5.0).forEach { (raw, expected) ->
+            val result =
+                SpeciesWeightValidator.validateEntry(
+                    species = oneDecimalPlaceSpecies,
+                    rawValuesByField = mapOf(SpeciesWeightFieldKind.AboveMinimumSize to raw),
+                )
+
+            assertEquals(raw, expected, result.values[SpeciesWeightFieldKind.AboveMinimumSize])
+        }
+    }
+
+    @Test
+    fun `ticket examples map to precision, below-minimum and not-a-number errors`() {
+        mapOf(
+            "10.55" to SpeciesWeightFieldError.Precision,
+            "-8" to SpeciesWeightFieldError.BelowMinimum,
+            "A1" to SpeciesWeightFieldError.NotANumber,
+        ).forEach { (raw, expected) ->
+            val result =
+                SpeciesWeightValidator.validateEntry(
+                    species = oneDecimalPlaceSpecies,
+                    rawValuesByField = mapOf(SpeciesWeightFieldKind.AboveMinimumSize to raw),
+                    mandatoryFields = setOf(SpeciesWeightFieldKind.AboveMinimumSize),
+                )
+
+            assertEquals(raw, expected, result.errors[SpeciesWeightFieldKind.AboveMinimumSize])
+        }
     }
 
     // --- Precision --------------------------------------------------------------------------------
@@ -299,7 +345,7 @@ class SpeciesWeightValidatorTests {
                 rawValuesByField = mapOf(SpeciesWeightFieldKind.AboveMinimumSize to "abc"),
             )
 
-        assertEquals(SpeciesWeightFieldError.BelowMinimum, result.errors[SpeciesWeightFieldKind.AboveMinimumSize])
+        assertEquals(SpeciesWeightFieldError.NotANumber, result.errors[SpeciesWeightFieldKind.AboveMinimumSize])
     }
 
     // --- Cross-field: discarded must not exceed retained (AC7) ----------------------------------
