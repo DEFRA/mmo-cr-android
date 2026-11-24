@@ -224,7 +224,8 @@ class OfflineSubmissionAndSyncTest {
             navController = rememberNavController()
             FlowHost(viewModel, navController, isOffline = !connected)
         }
-        viewModel.dispatch(CatchRecordFlowEvent.EnterFlow)
+        // EnterFlow always starts a fresh record (ADR 0018), so resume the seeded draft explicitly.
+        viewModel.dispatch(CatchRecordFlowEvent.EnterFlowForDraft(seedDraft.id))
         composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.state.value.status is UiStatus.Content<*> }
         composeTestRule.waitForIdle()
         return Harness(draftRepository, submissionRepository, syncScheduler, navController)
