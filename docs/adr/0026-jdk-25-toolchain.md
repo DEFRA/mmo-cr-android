@@ -25,3 +25,15 @@ auto-provisioned JDK 21 (21.0.7) and the Android Studio JBR 21.0.9 are older tha
 - detekt 2.0 is an alpha release: revisit when a stable 2.x ships.
 - Android Studio must use a patched JDK 25 as its Gradle JDK.
 - minSdk and the Android runtime are unaffected; bytecode is dexed by AGP.
+
+## Amendment (2026-11-24) - Java 21 bytecode target
+
+Android Studio Compose Preview (layoutlib's ASM) cannot read class file major version 69 (Java 25)
+and fails with `Unsupported class file major version 69`.
+
+- The **toolchain stays JDK 25** (the CVE reason above still applies).
+- Anything on the **app runtime classpath** emits **Java 21 bytecode**: `:app`
+  (`JavaVersion.VERSION_21` + Kotlin `jvmTarget = JVM_21`) and the included-build `map-data-core`
+  (Kotlin `jvmTarget = JVM_21` + `-Xjdk-release=21`, Java `options.release = 21`).
+- Gradle-only modules (`map-data-plugin`, `release-tools`, `app-config-plugin`) stay on Java 25.
+- Revisit: return to a Java 25 target once Android Studio/layoutlib supports class file version 69.
