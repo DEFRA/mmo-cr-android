@@ -1,5 +1,6 @@
 package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear
 
+import android.content.Context
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -10,13 +11,14 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
@@ -86,7 +88,6 @@ class RemoveSpeciesScreenTests {
                     gearUse = gearUse,
                     speciesList = speciesList,
                     onDelete = {},
-                    onCancel = {},
                 )
             }
         }
@@ -105,7 +106,6 @@ class RemoveSpeciesScreenTests {
                     gearUse = gearUse,
                     speciesList = speciesList,
                     onDelete = {},
-                    onCancel = {},
                 )
             }
         }
@@ -127,7 +127,6 @@ class RemoveSpeciesScreenTests {
                     gearUse = gearUse,
                     speciesList = speciesList,
                     onDelete = { deleted = it },
-                    onCancel = {},
                 )
             }
         }
@@ -152,7 +151,6 @@ class RemoveSpeciesScreenTests {
                     gearUse = gearUse,
                     speciesList = speciesList,
                     onDelete = { deleted = it },
-                    onCancel = {},
                 )
             }
         }
@@ -180,7 +178,6 @@ class RemoveSpeciesScreenTests {
                     gearUse = gearUse,
                     speciesList = speciesList,
                     onDelete = { deleted = it },
-                    onCancel = {},
                 )
             }
         }
@@ -194,9 +191,7 @@ class RemoveSpeciesScreenTests {
     }
 
     @Test
-    fun cancelInvokesOnCancelWithoutDeleting() {
-        var cancelled = false
-        var deleted: CatchRecordDraft? = null
+    fun doesNotShowACancelLink() {
         val gearUse = gearUseWithAddedSpecies(listOf(cod.id))
         composeTestRule.setContent {
             MmoTheme {
@@ -204,15 +199,13 @@ class RemoveSpeciesScreenTests {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onDelete = { deleted = it },
-                    onCancel = { cancelled = true },
+                    onDelete = {},
                 )
             }
         }
 
-        composeTestRule.onNodeWithTag(RemoveSpeciesScreenTestTags.CANCEL_ACTION).performClick()
-
-        assertTrue(cancelled)
-        assertNull(deleted)
+        composeTestRule.onNodeWithTag("remove_species_cancel_action").assertDoesNotExist()
+        val cancelLabel = ApplicationProvider.getApplicationContext<Context>().getString(R.string.cancel)
+        composeTestRule.onNodeWithText(cancelLabel).assertDoesNotExist()
     }
 }

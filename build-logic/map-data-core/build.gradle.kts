@@ -12,6 +12,15 @@ repositories {
 
 kotlin {
     jvmToolchain(25)
+    compilerOptions {
+        // Shipped inside :app, so emit Java 21 bytecode Studio Preview can read — see ADR 0026.
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+        freeCompilerArgs.add("-Xjdk-release=21")
+    }
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    options.release.set(21)
 }
 
 dependencies {
