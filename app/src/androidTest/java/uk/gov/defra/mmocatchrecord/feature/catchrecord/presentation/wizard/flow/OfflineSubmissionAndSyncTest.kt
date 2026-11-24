@@ -328,7 +328,7 @@ class OfflineSubmissionAndSyncTest {
     @Test
     fun ac13_recordRowChangesFromUnsentToSubmittedWhenSyncSucceeds() {
         val unsent =
-            CatchRecordSummary("rec-1", "REF-001", "ACHILLES", DmyDate(1, 1, 2026), RecordStatusTag.AwaitingSync)
+            CatchRecordSummary("rec-1", "REF-001", "ACHILLES", DmyDate(1, 1, 2026), RecordStatusTag.CompletePending)
         var record by mutableStateOf(unsent)
         var confirmation by mutableStateOf<String?>(null)
         var isOffline by mutableStateOf(true)
@@ -353,7 +353,7 @@ class OfflineSubmissionAndSyncTest {
             }
         }
         scrollToRow(unsent.id)
-        rowText(unsent.id, string(R.string.status_awaiting_sync)).assertIsDisplayed()
+        rowText(unsent.id, string(R.string.status_complete_pending)).assertIsDisplayed()
 
         composeTestRule.mainClock.autoAdvance = false
         isOffline = false
@@ -553,14 +553,20 @@ class OfflineSubmissionAndSyncTest {
     fun edge_multipleUnsentRecordsAreAllListedOfflineInTheGivenOrder() {
         val unsent =
             (1..3).map {
-                CatchRecordSummary("u$it", "REF-00$it", "ACHILLES", DmyDate(it, 1, 2026), RecordStatusTag.AwaitingSync)
+                CatchRecordSummary(
+                    "u$it",
+                    "REF-00$it",
+                    "ACHILLES",
+                    DmyDate(it, 1, 2026),
+                    RecordStatusTag.CompletePending,
+                )
             }
         setHomeOffline(unsent)
 
         composeTestRule.onNodeWithTag(OFFLINE_BANNER).assertIsDisplayed()
         unsent.forEach { record ->
             scrollToRow(record.id)
-            rowText(record.id, string(R.string.status_awaiting_sync)).assertIsDisplayed()
+            rowText(record.id, string(R.string.status_complete_pending)).assertIsDisplayed()
         }
         scrollToRow(unsent.first().id)
         val tops =
@@ -580,7 +586,7 @@ class OfflineSubmissionAndSyncTest {
         composeTestRule.onNodeWithTag(OFFLINE_BANNER).assertIsDisplayed()
         assertFalse(
             composeTestRule
-                .onAllNodesWithText(string(R.string.status_awaiting_sync))
+                .onAllNodesWithText(string(R.string.status_complete_pending))
                 .fetchSemanticsNodes()
                 .isNotEmpty(),
         )

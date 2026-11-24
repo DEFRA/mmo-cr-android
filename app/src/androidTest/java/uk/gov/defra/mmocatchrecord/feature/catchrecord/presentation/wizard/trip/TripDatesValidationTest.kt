@@ -331,4 +331,3 @@ class TripDatesValidationTest {
         const val END_BEFORE_START = "The trip end date cannot be before the trip start date"
     }
 }
-

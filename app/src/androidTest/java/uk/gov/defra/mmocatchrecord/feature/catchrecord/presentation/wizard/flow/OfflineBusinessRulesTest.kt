@@ -420,8 +420,14 @@ class OfflineBusinessRulesTest {
         val records =
             listOf(
                 CatchRecordSummary("draft-1", null, "ACHILLES", null, RecordStatusTag.Draft),
-                CatchRecordSummary("ready-1", "REF-2", "ACHILLES", DmyDate(2, 1, 2026), RecordStatusTag.ReadyToSubmit),
-                CatchRecordSummary("unsent-1", "REF-3", "ACHILLES", DmyDate(3, 1, 2026), RecordStatusTag.AwaitingSync),
+                CatchRecordSummary("ready-1", "REF-2", "ACHILLES", DmyDate(2, 1, 2026), RecordStatusTag.Draft),
+                CatchRecordSummary(
+                    "unsent-1",
+                    "REF-3",
+                    "ACHILLES",
+                    DmyDate(3, 1, 2026),
+                    RecordStatusTag.CompletePending,
+                ),
                 CatchRecordSummary("sub-1", "REF-4", "ACHILLES", DmyDate(4, 1, 2026), RecordStatusTag.Submitted),
             )
         composeTestRule.setContent {
@@ -445,8 +451,8 @@ class OfflineBusinessRulesTest {
         val expected =
             mapOf(
                 "draft-1" to R.string.status_draft,
-                "ready-1" to R.string.status_ready_to_submit,
-                "unsent-1" to R.string.status_awaiting_sync,
+                "ready-1" to R.string.status_draft,
+                "unsent-1" to R.string.status_complete_pending,
                 "sub-1" to R.string.status_submitted,
             )
         expected.forEach { (id, label) ->

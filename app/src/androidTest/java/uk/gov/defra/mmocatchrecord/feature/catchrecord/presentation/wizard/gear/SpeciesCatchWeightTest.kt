@@ -42,7 +42,6 @@ class SpeciesCatchWeightTest {
             name = "Atlantic cod (COD)",
             faoCode = "COD",
             weightPrecision = SpeciesWeightPrecision.OneDecimalPlace,
-            weightAboveMinimumSizeMandatory = true,
         )
 
     private val plaice =
@@ -51,7 +50,6 @@ class SpeciesCatchWeightTest {
             name = "Plaice (PLE)",
             faoCode = "PLE",
             weightPrecision = SpeciesWeightPrecision.WholeNumber,
-            weightAboveMinimumSizeMandatory = true,
         )
 
     private val speciesList = listOf(cod, plaice)

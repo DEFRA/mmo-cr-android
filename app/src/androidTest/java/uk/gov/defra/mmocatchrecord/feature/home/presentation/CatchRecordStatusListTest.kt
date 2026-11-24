@@ -43,9 +43,9 @@ class CatchRecordStatusListTest {
 
     private val draft = CatchRecordSummary("draft-1", null, "ACHILLES", null, RecordStatusTag.Draft)
     private val readyToSubmit =
-        CatchRecordSummary("ready-1", "REF-002", "ACHILLES", DmyDate(18, 11, 2020), RecordStatusTag.ReadyToSubmit)
+        CatchRecordSummary("ready-1", "REF-002", "ACHILLES", DmyDate(18, 11, 2020), RecordStatusTag.Draft)
     private val awaitingSync =
-        CatchRecordSummary("unsent-1", "REF-003", "ACHILLES", DmyDate(15, 11, 2020), RecordStatusTag.AwaitingSync)
+        CatchRecordSummary("unsent-1", "REF-003", "ACHILLES", DmyDate(15, 11, 2020), RecordStatusTag.CompletePending)
     private val submitted =
         CatchRecordSummary("submitted-1", "REF-004", "ACHILLES", DmyDate(10, 11, 2020), RecordStatusTag.Submitted)
 
@@ -102,8 +102,8 @@ class CatchRecordStatusListTest {
 
         mapOf(
             draft to R.string.status_draft,
-            readyToSubmit to R.string.status_ready_to_submit,
-            awaitingSync to R.string.status_awaiting_sync,
+            readyToSubmit to R.string.status_draft,
+            awaitingSync to R.string.status_complete_pending,
             submitted to R.string.status_submitted,
         ).forEach { (record, statusLabel) ->
             scrollToRow(record)
@@ -113,15 +113,9 @@ class CatchRecordStatusListTest {
 
     @Test
     fun eachStatusUsesADistinctTextLabelNotColourAlone() {
-        val labels =
-            listOf(
-                R.string.status_draft,
-                R.string.status_ready_to_submit,
-                R.string.status_awaiting_sync,
-                R.string.status_submitted,
-            ).map(::string)
+        val labels = RecordStatusTag.entries.map { string(it.labelRes) }
 
-        assertEquals("Status labels must be unique so records are distinguishable", 4, labels.toSet().size)
+        assertEquals("Status labels must be unique so records are distinguishable", labels.size, labels.toSet().size)
         assertTrue(labels.none { it.isBlank() })
     }
 
@@ -190,7 +184,7 @@ class CatchRecordStatusListTest {
         setHome(isOffline = { true })
 
         scrollToRow(awaitingSync)
-        textInRow(awaitingSync, string(R.string.status_awaiting_sync)).assertIsDisplayed()
+        textInRow(awaitingSync, string(R.string.status_complete_pending)).assertIsDisplayed()
     }
 
     // --- FR9: confirmation once a waiting record has been sent ------------------------------------------
@@ -242,9 +236,9 @@ class CatchRecordStatusListTest {
 
         listOf(
             R.string.status_draft_desc,
-            R.string.status_ready_to_submit_desc,
-            R.string.status_awaiting_sync_desc,
+            R.string.status_complete_pending_desc,
             R.string.status_submitted_desc,
+            R.string.status_amended_desc,
         ).forEach { descRes ->
             composeTestRule
                 .onNodeWithTag(HomeScreenTestTags.TAB_LIST)
