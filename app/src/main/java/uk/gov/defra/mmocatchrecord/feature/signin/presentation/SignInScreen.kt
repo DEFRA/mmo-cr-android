@@ -50,11 +50,13 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.AppLanguageProvider
 import uk.gov.defra.mmocatchrecord.common.design.CrownLogo
+import uk.gov.defra.mmocatchrecord.common.design.GdsOfflineNotice
 import uk.gov.defra.mmocatchrecord.common.design.MmoColors
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
+import uk.gov.defra.mmocatchrecord.core.connectivity.ConnectivityViewModel
 import uk.gov.defra.mmocatchrecord.core.language.AppLanguageViewModel
 
 /** Compose test tags for [SignInScreen], kept in one place so tests don't hard-code strings. */
@@ -80,9 +82,12 @@ fun SignInScreen(
     modifier: Modifier = Modifier,
     viewModel: SignInViewModel = hiltViewModel(),
     languageViewModel: AppLanguageViewModel = hiltViewModel(),
+    connectivityViewModel: ConnectivityViewModel = hiltViewModel(),
+    onForgottenPassword: () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsState()
     val currentLanguage by languageViewModel.language.collectAsState()
+    val isOffline by connectivityViewModel.isOffline.collectAsState()
 
     if (state.status is UiStatus.Content) {
         onSignedIn()
@@ -102,6 +107,9 @@ fun SignInScreen(
             onPasswordChanged = { viewModel.dispatch(SignInEvent.PasswordChanged(it)) },
             onSubmit = { viewModel.dispatch(SignInEvent.SubmitRequested) },
             onBrowserNoticeShown = { viewModel.dispatch(SignInEvent.BrowserNoticeShown) },
+            isOffline = isOffline,
+            onRecheckConnection = connectivityViewModel::recheck,
+            onForgottenPassword = onForgottenPassword,
             modifier = Modifier.padding(innerPadding),
         )
     }
@@ -118,6 +126,9 @@ fun SignInContent(
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
     onBrowserNoticeShown: () -> Unit = {},
+    isOffline: Boolean = false,
+    onRecheckConnection: () -> Unit = {},
+    onForgottenPassword: () -> Unit = {},
 ) {
     val scrollState = rememberScrollState()
     Column(
@@ -129,6 +140,14 @@ fun SignInContent(
                 .padding(horizontal = Spacing.m, vertical = Spacing.s),
         horizontalAlignment = Alignment.Start,
     ) {
+        if (isOffline) {
+            GdsOfflineNotice(
+                actionLabel = stringResource(R.string.reset_password_offline_action),
+                onAction = onRecheckConnection,
+                modifier = Modifier.padding(bottom = Spacing.s),
+            )
+        }
+
         SignInHeaderSection(
             currentLanguage = currentLanguage,
             onLanguageToggle = onLanguageToggle,
@@ -144,9 +163,13 @@ fun SignInContent(
             state = state,
             onSubmit = onSubmit,
             onBrowserNoticeShown = onBrowserNoticeShown,
+            submitEnabled = !isOffline,
         )
 
-        SignInTroubleSection()
+        SignInTroubleSection(
+            onForgottenPassword = onForgottenPassword,
+            forgottenPasswordEnabled = state.status !is UiStatus.Loading,
+        )
     }
 }
 
@@ -337,6 +360,7 @@ private fun SignInActionsSection(
     state: SignInViewState,
     onSubmit: () -> Unit,
     onBrowserNoticeShown: () -> Unit = {},
+    submitEnabled: Boolean = true,
 ) {
     val errorPrefix = stringResource(R.string.signin_error_prefix)
     Column(
@@ -393,6 +417,7 @@ private fun SignInActionsSection(
         PrimaryActionButton(
             text = stringResource(R.string.signin_title),
             onClick = onSubmit,
+            enabled = submitEnabled,
             modifier =
                 Modifier
                     .fillMaxWidth()
