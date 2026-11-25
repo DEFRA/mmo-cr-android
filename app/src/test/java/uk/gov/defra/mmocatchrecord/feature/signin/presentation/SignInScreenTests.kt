@@ -5,6 +5,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -30,6 +32,8 @@ import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.AppLanguageProvider
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
+import uk.gov.defra.mmocatchrecord.core.connectivity.ConnectivityViewModel
+import uk.gov.defra.mmocatchrecord.core.connectivity.FakeConnectivityObserver
 import uk.gov.defra.mmocatchrecord.core.language.AppLanguage
 import uk.gov.defra.mmocatchrecord.core.language.AppLanguageViewModel
 import uk.gov.defra.mmocatchrecord.core.language.FakeAppLanguageRepository
@@ -209,6 +213,7 @@ class SignInScreenTests {
                     defaultDispatcher = dispatcher,
                 )
             val languageViewModel = AppLanguageViewModel(FakeAppLanguageRepository())
+            val connectivityViewModel = ConnectivityViewModel(FakeConnectivityObserver()) { true }
             var signedIn = false
 
             composeTestRule.setContent {
@@ -217,6 +222,7 @@ class SignInScreenTests {
                         onSignedIn = { signedIn = true },
                         viewModel = viewModel,
                         languageViewModel = languageViewModel,
+                        connectivityViewModel = connectivityViewModel,
                     )
                 }
             }
@@ -242,4 +248,86 @@ class SignInScreenTests {
         }
         composeTestRule.onNodeWithTag(SignInScreenTestTags.USERNAME_FIELD).performScrollTo().assertIsDisplayed()
     }
+
+    @Test
+    fun `forgotten password opens the reset journey and is disabled while signing in`() {
+        var opened = 0
+        var state by mutableStateOf(SignInViewState())
+        composeTestRule.setContent {
+            MmoTheme {
+                SignInContent(
+                    state = state,
+                    currentLanguage = "en",
+                    onLanguageToggle = {},
+                    onUsernameChanged = {},
+                    onPasswordChanged = {},
+                    onSubmit = {},
+                    onForgottenPassword = { opened++ },
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag(SignInScreenTestTags.FORGOTTEN_PASSWORD).performScrollTo().performClick()
+        assertEquals(1, opened)
+
+        state = SignInViewState(status = UiStatus.Loading)
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag(SignInScreenTestTags.FORGOTTEN_PASSWORD).performScrollTo().assertIsNotEnabled()
+        composeTestRule.onNodeWithTag(SignInScreenTestTags.FORGOTTEN_PASSWORD).performClick()
+        assertEquals(1, opened)
+    }
+
+    @Test
+    fun `offline shows the notice, blocks sign in and the notice action re-checks`() {
+        var rechecks = 0
+        var offline by mutableStateOf(true)
+        composeTestRule.setContent {
+            MmoTheme {
+                SignInContent(
+                    state = SignInViewState(),
+                    currentLanguage = "en",
+                    onLanguageToggle = {},
+                    onUsernameChanged = {},
+                    onPasswordChanged = {},
+                    onSubmit = {},
+                    isOffline = offline,
+                    onRecheckConnection = { rechecks++ },
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("gds_offline_notice").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("gds_offline_notice_action").performClick()
+        assertEquals(1, rechecks)
+        composeTestRule.onNodeWithTag(SignInScreenTestTags.SUBMIT_ACTION).performScrollTo().assertIsNotEnabled()
+
+        offline = false
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("gds_offline_notice").assertDoesNotExist()
+        composeTestRule.onNodeWithTag(SignInScreenTestTags.SUBMIT_ACTION).performScrollTo().assertIsEnabled()
+    }
+
+    @Test
+    fun `the stateful wrapper shows the offline notice from the connectivity view model`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val connectivity = ConnectivityViewModel(FakeConnectivityObserver(initiallyOnline = false)) { false }
+            val viewModel = SignInViewModel(SignInUseCase(FakeSignInRepository()), defaultDispatcher = dispatcher)
+            val languageViewModel = AppLanguageViewModel(FakeAppLanguageRepository())
+            composeTestRule.setContent {
+                MmoTheme {
+                    SignInScreen(
+                        onSignedIn = {},
+                        viewModel = viewModel,
+                        languageViewModel = languageViewModel,
+                        connectivityViewModel = connectivity,
+                    )
+                }
+            }
+
+            composeTestRule.onNodeWithTag("gds_offline_notice").assertIsDisplayed()
+            composeTestRule.onNodeWithTag("gds_offline_notice_action").performClick()
+            composeTestRule.waitForIdle()
+            composeTestRule.onNodeWithTag("gds_offline_notice").assertIsDisplayed()
+        }
 }

@@ -4,6 +4,7 @@ import app.cash.turbine.test
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -28,7 +29,7 @@ class ConnectivityViewModelTests {
     @Test
     fun `isOffline is false when the observer reports online`() =
         runTest {
-            val viewModel = ConnectivityViewModel(FakeConnectivityObserver(initiallyOnline = true))
+            val viewModel = ConnectivityViewModel(FakeConnectivityObserver(initiallyOnline = true)) { true }
 
             viewModel.isOffline.test {
                 assertFalse(awaitItem())
@@ -38,7 +39,7 @@ class ConnectivityViewModelTests {
     @Test
     fun `isOffline is true immediately when the app starts with no connectivity`() =
         runTest {
-            val viewModel = ConnectivityViewModel(FakeConnectivityObserver(initiallyOnline = false))
+            val viewModel = ConnectivityViewModel(FakeConnectivityObserver(initiallyOnline = false)) { true }
 
             assertTrue(viewModel.isOffline.value)
             viewModel.isOffline.test {
@@ -50,7 +51,7 @@ class ConnectivityViewModelTests {
     fun `isOffline reacts to connectivity changing after start`() =
         runTest {
             val observer = FakeConnectivityObserver(initiallyOnline = true)
-            val viewModel = ConnectivityViewModel(observer)
+            val viewModel = ConnectivityViewModel(observer) { true }
 
             viewModel.isOffline.test {
                 assertFalse(awaitItem())
@@ -61,5 +62,34 @@ class ConnectivityViewModelTests {
                 observer.setOnline(true)
                 assertFalse(awaitItem())
             }
+        }
+
+    @Test
+    fun `recheck re-tests the connection on demand`() =
+        runTest {
+            val observer = FakeConnectivityObserver(initiallyOnline = false)
+            var connected = true
+            val viewModel = ConnectivityViewModel(observer) { connected }
+
+            viewModel.recheck()
+            assertFalse(viewModel.isOffline.value)
+
+            connected = false
+            viewModel.recheck()
+            assertTrue(viewModel.isOffline.value)
+        }
+
+    @Test
+    fun `the next observer change overrides a recheck result`() =
+        runTest {
+            val observer = FakeConnectivityObserver(initiallyOnline = false)
+            val viewModel = ConnectivityViewModel(observer) { false }
+
+            advanceUntilIdle()
+            viewModel.recheck()
+            observer.setOnline(true)
+            advanceUntilIdle()
+
+            assertFalse(viewModel.isOffline.value)
         }
 }

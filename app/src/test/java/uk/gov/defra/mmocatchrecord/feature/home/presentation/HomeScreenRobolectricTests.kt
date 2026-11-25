@@ -612,7 +612,7 @@ class HomeScreenRobolectricTests {
             repository.emit(HomeSummary(signedInUserId = "alice", catchRecords = everyStatusRecords))
             val homeViewModel = buildHomeViewModel(repository, dispatcher = StandardTestDispatcher(testScheduler))
             val languageViewModel = AppLanguageViewModel(FakeAppLanguageRepository())
-            val connectivityViewModel = ConnectivityViewModel(FakeConnectivityObserver(initiallyOnline = true))
+            val connectivityViewModel = ConnectivityViewModel(FakeConnectivityObserver(initiallyOnline = true)) { true }
             var signedOut = false
 
             composeTestRule.setContent {
@@ -650,7 +650,7 @@ class HomeScreenRobolectricTests {
             repository.emit(HomeSummary(signedInUserId = "alice", catchRecords = everyStatusRecords))
             val homeViewModel = buildHomeViewModel(repository, dispatcher = StandardTestDispatcher(testScheduler))
             val languageViewModel = AppLanguageViewModel(FakeAppLanguageRepository())
-            val connectivityViewModel = ConnectivityViewModel(FakeConnectivityObserver(initiallyOnline = true))
+            val connectivityViewModel = ConnectivityViewModel(FakeConnectivityObserver(initiallyOnline = true)) { true }
             var signedOut = false
 
             composeTestRule.setContent {
@@ -688,7 +688,7 @@ class HomeScreenRobolectricTests {
             repository.emit(HomeSummary(signedInUserId = "alice", catchRecords = everyStatusRecords))
             val homeViewModel = buildHomeViewModel(repository, dispatcher = StandardTestDispatcher(testScheduler))
             val languageViewModel = AppLanguageViewModel(FakeAppLanguageRepository())
-            val connectivityViewModel = ConnectivityViewModel(FakeConnectivityObserver(initiallyOnline = true))
+            val connectivityViewModel = ConnectivityViewModel(FakeConnectivityObserver(initiallyOnline = true)) { true }
 
             composeTestRule.setContent {
                 MmoTheme {
