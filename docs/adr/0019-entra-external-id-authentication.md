@@ -166,7 +166,7 @@ device ever going online. The PoC defaulted to 7 days; the value for this app is
 | #  | Topic | Status |
 | -- | ----- | ------ |
 | Q1 | Is MFA required for the catch-record user flow? | **Open** — product decision only. The SDK supports email/SMS OTP natively, so the remaining cost is UI, not SDK work. |
-| Q2 | Is self-service forgot-password in scope? | **Open** — product decision only. Natively supported by the SDK; the PoC's "comparable to the whole sign-up flow" sizing is outdated. |
+| Q2 | Is self-service forgot-password in scope? | **Closed 2026-11-24** — in scope; built on the SDK's native reset (V1) per [ADR 0027](0027-self-service-password-reset-native-auth.md). |
 | Q3 | Is the token audienced to the gateway / central Authentication Service, and what is its app registration, Application ID URI, scope name(s) and user-ID/role/scope claim contract? | **Open — critical path.** Blocks the Phase 1 token spike and all real-token work. *Catch Recording Service Design* §23 still lists the gateway user ID/role/scope claim contract as an unresolved **backend** decision. |
 | Q3b | Do reference-data and catch-record share **one** audience, or are **two** access tokens needed? | **Open** — MSAL supports acquiring multiple access tokens, so two audiences are implementable, but it changes `TokenProvider` from one token to a per-service lookup. |
 | Q4 | Offline authorisation grace period | **Open** — PoC used 7 days; needs a product/security decision for field use. Evaluated against `lastVerifiedOnlineAtMillis` only. **Dependency: "surface and handle session-write failure" must close first** — see below. |
@@ -228,6 +228,7 @@ a diff.
 | Q10 | **Added.** Native auth over browser-delegated is a conscious deviation from vendor security guidance — no DEFRA/GDS breach, but must be owned and raised with Delivery Architecture. |
 | Encryption | **Tink removed.** `SessionStore` persistence uses ADR 0006's non-auth-bound `AndroidKeyStore` AES-GCM pattern behind a DataStore `Serializer`. ADR 0006 wins: it is existing repo precedent and adds no dependency. `SessionStore`'s own KDoc, which mandated Tink, was corrected in the same change. |
 | Status | Moved **Proposed → Accepted**; ADR 0016 Q2 moves to resolved-in-principle. |
+| Q2 (2026-11-24) | **Closed** by [ADR 0027](0027-self-service-password-reset-native-auth.md): self-service password reset is in scope via MSAL native auth V1. The rule that only `MsalNativeAuthClient` imports MSAL is unchanged; the client gains a second narrow port, `NativePasswordResetClient`. |
 
 ## Out of scope
 

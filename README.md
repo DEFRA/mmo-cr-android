@@ -93,6 +93,13 @@ split per feature package, per
 - **Reference-data API integration** — Retrofit/OkHttp-backed, cache-first (Room) with a bundled offline
   fallback; the backend comes from the packaged app config — see ADR 0015/0016/0024 and
   [`docs/development/reference-data.md`](docs/development/reference-data.md) for the developer runbook.
+- **Authentication** — Microsoft Entra External ID native auth (ADR 0019). **Forgotten password** (ADR 0027,
+  design spec [`docs/design-specs/reset-password.md`](docs/design-specs/reset-password.md)): Sign in →
+  Forgotten password → email → reset code → new password → "Your password has been reset" → Sign in. It uses
+  MSAL native auth V1; an unknown email looks identical to "code sent", nothing typed is saved or logged, and the
+  reset restarts from Sign in if the app is killed. With `USE_FAKE_SIGN_IN` the local `FakePasswordResetRepository`
+  is used; its test values are: code `11111111` valid, `00000000` expired, any other code incorrect, and a
+  new password containing `fail` is rejected (any email "sends" a code).
 - Full list of ADRs: [`docs/adr/`](docs/adr/).
 
 ## Developer guidelines
@@ -143,6 +150,7 @@ split per feature package, per
 | [0023](docs/adr/0023-android-compile-once-package-per-environment.md) | Android: compile once, package per environment |
 | [0024](docs/adr/0024-packaged-app-configuration.md) | Packaged app configuration (replaces build flavors) |
 | [0025](docs/adr/0025-android-release-poc.md) | Android release pipeline — POC (superseded by 0022/0023) |
+| [0027](docs/adr/0027-self-service-password-reset-native-auth.md) | Self-service password reset via MSAL native authentication (V1) |
 | [0000](docs/adr/0000-ios-adr-references-TBC.md) | iOS ADR references — TBC |
 
 ## CI
@@ -246,6 +254,7 @@ prevent self-review). Allow deployments only from `v*` tags in every one.
 | `CR_APP_CFG_USE_FAKE_SIGN_IN` | Variable | the same five | `false` for real Entra sign-in (required) |
 | `CR_APP_CFG_MSAL_CLIENT_ID`, `CR_APP_CFG_MSAL_AUTHORITY_URL` | Variable | the same five | That stage's Entra External ID app registration and tenant authority (ADR 0019) |
 | `CR_APP_CFG_MSAL_REDIRECT_URI` | Variable | optional | `msauth://<that app's package>/<app-signing SHA-1, base64, URL-encoded>` for the browser fallback |
+| `CR_APP_CFG_PASSWORD_RESET_CODE_LIFETIME_MINUTES` | Variable | optional | Minutes a password reset code stays valid (1-60, default 5); shown on the code screen and used to tell an expired code from a wrong one (ADR 0027) |
 
 `production` needs only `PLAY_SERVICE_ACCOUNT_JSON`. Configuration values are variables, never secrets:
 anything in the app package can be read. To **add a config value**, set `CR_APP_CFG_<KEY>` on each
