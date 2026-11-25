@@ -46,6 +46,13 @@
       "tracking": false,
       "description": "msauth:// redirect for the browser fallback; must match this app's package and signing key.",
       "unusedWhen": "USE_FAKE_SIGN_IN"
+    },
+    "PASSWORD_RESET_CODE_LIFETIME_MINUTES": {
+      "type": "string",
+      "required": false,
+      "log": true,
+      "tracking": false,
+      "description": "Minutes a password reset code stays valid (1-60, default 5); shown to the user and used to tell an expired code from a wrong one (ADR 0027)."
     }
   }
 }

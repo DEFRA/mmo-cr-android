@@ -22,6 +22,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val APP_CONFIG_ASSET = "mmocr_app_config.json"
+private const val DEFAULT_RESET_CODE_LIFETIME_MINUTES = 5
+private const val MAX_RESET_CODE_LIFETIME_MINUTES = 60
 
 private data class PackagedAppConfig(
     val apiBaseUrl: String,
@@ -30,10 +32,12 @@ private data class PackagedAppConfig(
     val msalClientId: String,
     val msalAuthorityUrl: String,
     val msalRedirectUri: String,
+    val passwordResetCodeLifetimeMinutes: Int = DEFAULT_RESET_CODE_LIFETIME_MINUTES,
 )
 
 /** Reads the packaged runtime configuration once and exposes validated reference-data settings. */
 @Singleton
+@Suppress("TooManyFunctions")
 class AppConfiguration
     @Inject
     constructor(
@@ -48,6 +52,10 @@ class AppConfiguration
 
         val useFakeSignIn: Boolean?
             get() = config?.useFakeSignIn
+
+        /** Reset-code lifetime shown in the hint and used to tell an expired code from a wrong one (ADR 0027). */
+        fun passwordResetCodeLifetimeMinutes(): Int =
+            config?.passwordResetCodeLifetimeMinutes ?: DEFAULT_RESET_CODE_LIFETIME_MINUTES
 
         /** Base URL shared by every backend service; reference data hangs off it (see ReferenceDataServiceConfig). */
         fun requireApiBaseUrl(): String = ReferenceDataServiceConfig.requireApiBaseUrl(config?.apiBaseUrl.orEmpty())
@@ -107,6 +115,7 @@ class AppConfiguration
                 msalClientId = root.optionalString("MSAL_CLIENT_ID"),
                 msalAuthorityUrl = root.optionalString("MSAL_AUTHORITY_URL"),
                 msalRedirectUri = root.optionalString("MSAL_REDIRECT_URI"),
+                passwordResetCodeLifetimeMinutes = root.resetCodeLifetimeMinutes(),
             )
         }
 
@@ -116,6 +125,13 @@ class AppConfiguration
                 ?.content
                 ?.trim()
                 .orEmpty()
+
+        /** An absent, malformed or out-of-range value falls back to the default rather than failing the config. */
+        private fun JsonObject.resetCodeLifetimeMinutes(): Int =
+            optionalString("PASSWORD_RESET_CODE_LIFETIME_MINUTES")
+                .toIntOrNull()
+                ?.takeIf { it in 1..MAX_RESET_CODE_LIFETIME_MINUTES }
+                ?: DEFAULT_RESET_CODE_LIFETIME_MINUTES
 
         private fun JsonObject.booleanOrFalse(key: String): Boolean =
             (this[key] as? JsonPrimitive)?.takeUnless(JsonPrimitive::isString)?.content == "true"
