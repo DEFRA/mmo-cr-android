@@ -5,6 +5,7 @@ import org.junit.Test
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.feature.passwordreset.domain.ConfirmPasswordError
 import uk.gov.defra.mmocatchrecord.feature.passwordreset.domain.EmailAddressError
+import uk.gov.defra.mmocatchrecord.feature.passwordreset.domain.PasswordPolicy
 import uk.gov.defra.mmocatchrecord.feature.passwordreset.domain.PasswordResetFailure
 import uk.gov.defra.mmocatchrecord.feature.passwordreset.domain.PasswordRuleFailure
 import uk.gov.defra.mmocatchrecord.feature.passwordreset.domain.ResetCodeError
@@ -22,13 +23,16 @@ class ResetPasswordMessagesTests {
     }
 
     @Test
-    fun `password rule failures share the requirements message except blank`() {
+    fun `each password rule failure names its own rule with the policy limit`() {
+        val policy = PasswordPolicy()
         assertEquals(R.string.reset_password_new_error_blank, PasswordRuleFailure.Blank.messageRes())
-        listOf(
-            PasswordRuleFailure.TooShort,
-            PasswordRuleFailure.TooLong,
-            PasswordRuleFailure.TooFewCategories,
-        ).forEach { assertEquals(R.string.reset_password_new_error_requirements, it.messageRes()) }
+        assertEquals(emptyList<Int>(), PasswordRuleFailure.Blank.formatArgs(policy))
+        assertEquals(R.string.reset_password_new_error_too_short, PasswordRuleFailure.TooShort.messageRes())
+        assertEquals(listOf(8), PasswordRuleFailure.TooShort.formatArgs(policy))
+        assertEquals(R.string.reset_password_new_error_too_long, PasswordRuleFailure.TooLong.messageRes())
+        assertEquals(listOf(256), PasswordRuleFailure.TooLong.formatArgs(policy))
+        assertEquals(R.string.reset_password_new_error_categories, PasswordRuleFailure.TooFewCategories.messageRes())
+        assertEquals(listOf(3), PasswordRuleFailure.TooFewCategories.formatArgs(policy))
     }
 
     @Test

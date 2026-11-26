@@ -17,10 +17,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import uk.gov.defra.mmocatchrecord.R
 
-/** English, Welsh and 200% font-scale previews, applied together to each form-component preview. */
-@Preview(name = "English", showBackground = true, backgroundColor = 0xFFFFFFFF)
-@Preview(name = "Welsh", showBackground = true, backgroundColor = 0xFFFFFFFF, locale = "cy")
-@Preview(name = "200% font", showBackground = true, backgroundColor = 0xFFFFFFFF, fontScale = 2f)
+/** English, Welsh and 200% font-scale previews; API 36 because Studio cannot render SecureTextField at 37. */
+@Preview(name = "English", showBackground = true, backgroundColor = 0xFFFFFFFF, apiLevel = 36)
+@Preview(name = "Welsh", showBackground = true, backgroundColor = 0xFFFFFFFF, locale = "cy", apiLevel = 36)
+@Preview(name = "200% font", showBackground = true, backgroundColor = 0xFFFFFFFF, fontScale = 2f, apiLevel = 36)
 annotation class GdsFormPreviews
 
 @GdsFormPreviews

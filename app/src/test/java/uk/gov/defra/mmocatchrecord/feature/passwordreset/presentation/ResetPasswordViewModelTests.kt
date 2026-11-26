@@ -376,22 +376,14 @@ class ResetPasswordViewModelTests {
     }
 
     @Test
-    fun `a password that breaks the rules shows the requirements error`() {
+    fun `a password that breaks the rules shows the error for the rule it broke`() {
         val viewModel = viewModel().atNewPasswordStep()
 
         viewModel.sendPasswords("short1A")
 
         assertEquals(
-            R.string.reset_password_new_error_requirements,
-            viewModel.current.fieldErrors
-                .single()
-                .messageRes,
-        )
-        assertEquals(
-            ResetField.NewPassword,
-            viewModel.current.fieldErrors
-                .single()
-                .field,
+            listOf(ResetFieldError(ResetField.NewPassword, R.string.reset_password_new_error_too_short, listOf(8))),
+            viewModel.current.fieldErrors,
         )
     }
 

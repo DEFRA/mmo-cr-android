@@ -4,10 +4,15 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -56,6 +61,73 @@ class SignInScreenTests {
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+    }
+
+    @Test
+    fun `blank field errors show inline with the Error prefix announced on each field`() {
+        composeTestRule.setContent {
+            MmoTheme {
+                SignInContent(
+                    state =
+                        SignInViewState(
+                            usernameError = R.string.signin_error_email_blank,
+                            passwordError = R.string.signin_error_password_blank,
+                        ),
+                    currentLanguage = "en",
+                    onLanguageToggle = {},
+                    onUsernameChanged = {},
+                    onPasswordChanged = {},
+                    onSubmit = {},
+                )
+            }
+        }
+
+        listOf(SignInScreenTestTags.USERNAME_FIELD, SignInScreenTestTags.PASSWORD_FIELD).forEach { tag ->
+            composeTestRule
+                .onNodeWithTag("${tag}_${SignInScreenTestTags.INLINE_ERROR_SUFFIX}", useUnmergedTree = true)
+                .performScrollTo()
+                .assertIsDisplayed()
+        }
+        composeTestRule
+            .onNodeWithContentDescription("Error: Enter your email address.")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
+        composeTestRule
+            .onNodeWithTag(SignInScreenTestTags.USERNAME_FIELD)
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, "Error: Enter your email address."))
+        composeTestRule
+            .onNodeWithTag(SignInScreenTestTags.PASSWORD_FIELD)
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, "Error: Enter your password."))
+        composeTestRule.onNodeWithTag(SignInScreenTestTags.ERROR_MESSAGE).assertDoesNotExist()
+    }
+
+    @Test
+    fun `incorrect credentials flag both fields with the same message and no inline field error`() {
+        composeTestRule.setContent {
+            MmoTheme {
+                SignInContent(
+                    state =
+                        SignInViewState(
+                            error = SignInError(R.string.signin_error_invalid_credentials, isRetryable = false),
+                        ),
+                    currentLanguage = "en",
+                    onLanguageToggle = {},
+                    onUsernameChanged = {},
+                    onPasswordChanged = {},
+                    onSubmit = {},
+                )
+            }
+        }
+
+        val expected = "Error: The email address or password you entered is incorrect."
+        listOf(SignInScreenTestTags.USERNAME_FIELD, SignInScreenTestTags.PASSWORD_FIELD).forEach { tag ->
+            composeTestRule
+                .onNodeWithTag(tag)
+                .assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, expected))
+            composeTestRule
+                .onNodeWithTag("${tag}_${SignInScreenTestTags.INLINE_ERROR_SUFFIX}", useUnmergedTree = true)
+                .assertDoesNotExist()
+        }
+        composeTestRule.onNodeWithTag(SignInScreenTestTags.ERROR_MESSAGE).performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -191,6 +263,7 @@ class SignInScreenTests {
                     SignInScreenTestTags.USERNAME_FIELD,
                 ).performScrollTo()
                 .performTextInput("alice")
+            composeTestRule.onNodeWithTag(SignInScreenTestTags.PASSWORD_FIELD).performScrollTo().performTextInput("x")
             composeTestRule.onNodeWithTag(SignInScreenTestTags.SUBMIT_ACTION).performScrollTo().performClick()
             composeTestRule.waitForIdle()
             assertTrue(viewModel.state.value.status is UiStatus.Loading)
@@ -233,6 +306,7 @@ class SignInScreenTests {
                     SignInScreenTestTags.USERNAME_FIELD,
                 ).performScrollTo()
                 .performTextInput("alice")
+            composeTestRule.onNodeWithTag(SignInScreenTestTags.PASSWORD_FIELD).performScrollTo().performTextInput("x")
             composeTestRule.onNodeWithTag(SignInScreenTestTags.SUBMIT_ACTION).performScrollTo().performClick()
             testScheduler.advanceUntilIdle()
             composeTestRule.waitForIdle()

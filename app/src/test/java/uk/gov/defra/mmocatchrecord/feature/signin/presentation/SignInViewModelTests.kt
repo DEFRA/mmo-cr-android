@@ -99,6 +99,7 @@ class SignInViewModelTests {
         runTest {
             val dispatcher = StandardTestDispatcher(testScheduler)
             val viewModel = buildViewModel(FakeSignInRepository(), dispatcher)
+            viewModel.dispatch(SignInEvent.UsernameChanged("anyone@example.com"))
             viewModel.dispatch(SignInEvent.PasswordChanged("password"))
 
             viewModel.state.test {
@@ -109,8 +110,47 @@ class SignInViewModelTests {
                 assertEquals(UiStatus.Loading, awaitItem().status)
                 val content = awaitItem().status
                 assertTrue(content is UiStatus.Content)
-                assertEquals("", (content as UiStatus.Content<SignInSession>).value.userId)
+                assertEquals("anyone@example.com", (content as UiStatus.Content<SignInSession>).value.userId)
             }
+        }
+
+    @Test
+    fun `submitting blank fields shows an inline error on each and never calls the use case`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val repository = FakeSignInRepository()
+            val viewModel = buildViewModel(repository, dispatcher)
+            viewModel.dispatch(SignInEvent.UsernameChanged("   "))
+
+            viewModel.dispatch(SignInEvent.SubmitRequested)
+            testScheduler.advanceUntilIdle()
+
+            val state = viewModel.state.value
+            assertEquals(R.string.signin_error_email_blank, state.usernameError)
+            assertEquals(R.string.signin_error_password_blank, state.passwordError)
+            assertEquals(UiStatus.Idle, state.status)
+            assertNull(state.error)
+        }
+
+    @Test
+    fun `only the blank field is flagged, and editing a field clears its error`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val viewModel = buildViewModel(FakeSignInRepository(), dispatcher)
+            viewModel.dispatch(SignInEvent.UsernameChanged("alice@example.com"))
+
+            viewModel.dispatch(SignInEvent.SubmitRequested)
+            assertNull(viewModel.state.value.usernameError)
+            assertEquals(R.string.signin_error_password_blank, viewModel.state.value.passwordError)
+
+            viewModel.dispatch(SignInEvent.PasswordChanged("x"))
+            assertNull(viewModel.state.value.passwordError)
+
+            viewModel.dispatch(SignInEvent.UsernameChanged(""))
+            viewModel.dispatch(SignInEvent.SubmitRequested)
+            assertEquals(R.string.signin_error_email_blank, viewModel.state.value.usernameError)
+            viewModel.dispatch(SignInEvent.UsernameChanged("a"))
+            assertNull(viewModel.state.value.usernameError)
         }
 
     @Test
@@ -254,6 +294,8 @@ class SignInViewModelTests {
             val repository =
                 FakeSignInRepository(forcedResult = Result.failure(SignInException(SignInFailure.Network)))
             val viewModel = buildViewModel(repository, dispatcher)
+            viewModel.dispatch(SignInEvent.UsernameChanged("alice@example.com"))
+            viewModel.dispatch(SignInEvent.PasswordChanged("valid-fixture-input"))
 
             viewModel.state.test {
                 assertNull(awaitItem().error)

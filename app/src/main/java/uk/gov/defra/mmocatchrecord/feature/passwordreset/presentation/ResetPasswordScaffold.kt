@@ -210,7 +210,7 @@ private fun ResetErrorSummary(
 ) {
     val fieldItems =
         state.fieldErrors.map { error ->
-            GdsErrorSummaryItem(stringResource(error.messageRes)) { focus.of(error.field).requestFocus() }
+            GdsErrorSummaryItem(error.resolve()) { focus.of(error.field).requestFocus() }
         }
     val pageItems =
         listOfNotNull(

@@ -7,13 +7,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.KeyboardActionHandler
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -21,16 +20,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.contentType
 import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import uk.gov.defra.mmocatchrecord.R
 
 /**
  * GOV.UK text input with label, hint and inline error (icon + bold text + border, never colour alone).
@@ -51,7 +47,7 @@ fun GdsTextInput(
     focusRequester: FocusRequester? = null,
     enabled: Boolean = true,
 ) {
-    val errorPrefix = stringResource(R.string.gds_error_prefix)
+    val errorAnnouncement = gdsErrorAnnouncement(errorMessage)
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
@@ -62,15 +58,22 @@ fun GdsTextInput(
             errorMessage = errorMessage,
             testTag = testTag,
         )
-        OutlinedTextField(
+        BasicTextField(
             state = state,
             enabled = enabled,
-            isError = errorMessage != null,
             lineLimits = TextFieldLineLimits.SingleLine,
             keyboardOptions = keyboardOptions,
             onKeyboardAction = onKeyboardAction,
-            shape = RectangleShape,
-            colors = gdsFieldColors(),
+            textStyle = gdsFieldTextStyle(enabled),
+            cursorBrush = GdsFieldCursorBrush,
+            decorator = { innerTextField ->
+                GdsFieldDecorationBox(
+                    innerTextField = innerTextField,
+                    isEmpty = state.text.isEmpty(),
+                    enabled = enabled,
+                    isError = errorMessage != null,
+                )
+            },
             modifier =
                 Modifier
                     .fillMaxWidth()
@@ -79,7 +82,7 @@ fun GdsTextInput(
                     .semantics {
                         // Compose has no labelFor: the visible label is spoken here, not announced twice.
                         contentDescription = fieldDescription(label, hint)
-                        if (errorMessage != null) error("$errorPrefix $errorMessage")
+                        if (errorAnnouncement != null) error(errorAnnouncement)
                         if (contentType != null) this.contentType = contentType
                     },
         )
@@ -95,23 +98,6 @@ internal fun fieldDescription(
     hint: String?,
 ): String = if (hint.isNullOrBlank()) label else "$label. $hint"
 
-@Composable
-internal fun gdsFieldColors() =
-    OutlinedTextFieldDefaults.colors(
-        focusedBorderColor = MmoColors.Text,
-        unfocusedBorderColor = MmoColors.Text,
-        errorBorderColor = MmoColors.ErrorRed,
-        focusedContainerColor = MmoColors.White,
-        unfocusedContainerColor = MmoColors.White,
-        errorContainerColor = MmoColors.White,
-        disabledContainerColor = MmoColors.Background,
-        cursorColor = MmoColors.Text,
-        errorCursorColor = MmoColors.Text,
-        focusedTextColor = MmoColors.Text,
-        unfocusedTextColor = MmoColors.Text,
-        errorTextColor = MmoColors.Text,
-    )
-
 /** Label, hint and error above a field; its texts are cleared from semantics because the field voices them. */
 @Composable
 internal fun GdsFieldHeader(
@@ -119,10 +105,11 @@ internal fun GdsFieldHeader(
     hint: String?,
     errorMessage: String?,
     testTag: String,
+    labelWeight: FontWeight = FontWeight.Bold,
 ) {
     Text(
         text = label,
-        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold, color = MmoColors.Text),
+        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = labelWeight, color = MmoColors.Text),
         modifier = Modifier.testTag("${testTag}_label").clearAndSetSemantics { },
     )
     if (!hint.isNullOrBlank()) {

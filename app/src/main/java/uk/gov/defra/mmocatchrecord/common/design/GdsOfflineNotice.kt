@@ -8,20 +8,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -76,27 +70,21 @@ fun GdsOfflineNotice(
                 modifier = Modifier.fillMaxWidth(),
             )
         }
-        Button(
+        GdsButtonFrame(
             onClick = onAction,
-            shape = RoundedCornerShape(0.dp),
             colors =
-                ButtonDefaults.buttonColors(
-                    containerColor = MmoColors.White,
-                    contentColor = MmoColors.GovBlue,
+                GdsButtonColors(
+                    fill = MmoColors.White,
+                    pressedFill = MmoColors.Background,
+                    content = MmoColors.GovBlue,
+                    edge = MmoColors.Text,
                 ),
-            contentPadding = PaddingValues(horizontal = Spacing.m, vertical = Spacing.s),
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .heightIn(min = Spacing.minTouchTarget)
-                    .testTag("${testTag}_action")
-                    .drawBehind {
-                        val h = 2.dp.toPx()
-                        val y = size.height - h / 2
-                        drawLine(MmoColors.Text, Offset(0f, y), Offset(size.width, y), h)
-                    },
-        ) {
-            Text(text = actionLabel, style = MaterialTheme.typography.bodyLarge)
+                    .testTag("${testTag}_action"),
+        ) { contentColor ->
+            Text(text = actionLabel, style = MaterialTheme.typography.bodyLarge.copy(color = contentColor))
         }
     }
 }

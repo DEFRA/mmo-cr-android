@@ -75,7 +75,9 @@
     <string name="having_trouble_signing_in">Having trouble signing in?</string>
     <string name="forgotten_your_password">Forgotten your password?</string>
     <string name="signin_error_prefix">Error:</string>
-    <string name="signin_error_invalid_credentials">Your email address or password is incorrect. Check them and try again.</string>
+    <string name="signin_error_invalid_credentials">The email address or password you entered is incorrect.</string>
+    <string name="signin_error_email_blank">Enter your email address.</string>
+    <string name="signin_error_password_blank">Enter your password.</string>
     <string name="signin_error_network">We could not reach the sign-in service. Check your connection and try again.</string>
     <string name="signin_error_generic">Something went wrong. Try signing in again.</string>
     <string name="signin_error_verification_not_supported">This account needs a verification step the app does not support yet. Contact support for help signing in.</string>
@@ -310,7 +312,7 @@
     <string name="reset_password_code_error_invalid">Enter the correct reset code</string>
     <string name="reset_password_code_error_expired">Your reset code has expired. Send a new code.</string>
     <string name="reset_password_new_title">Create a new password</string>
-    <string name="reset_password_new_hint">Your password must be %1$d to %2$d characters and include at least %3$d of: lower case letters, upper case letters, numbers, symbols.</string>
+    <string name="reset_password_new_hint">Your password must be at least %1$d characters</string>
     <string name="reset_password_new_label">New password</string>
     <string name="reset_password_confirm_label">Confirm new password</string>
     <string name="reset_password_new_show_description">Show new password</string>
@@ -325,6 +327,9 @@
     <string name="reset_password_new_error_blank">Enter a new password</string>
     <string name="reset_password_confirm_error_blank">Confirm your new password</string>
     <string name="reset_password_new_error_requirements">Your password does not meet the password requirements</string>
+    <string name="reset_password_new_error_too_short">Your password must be at least %1$d characters</string>
+    <string name="reset_password_new_error_too_long">Your password must be %1$d characters or fewer</string>
+    <string name="reset_password_new_error_categories">Your password must include at least %1$d of: lower case letters, capital letters, numbers and symbols</string>
     <string name="reset_password_confirm_error_mismatch">The passwords do not match</string>
     <string name="reset_password_cancel_dialog_title">Cancel resetting your password?</string>
     <string name="reset_password_cancel_dialog_body">You will lose your progress and return to the sign in screen.</string>

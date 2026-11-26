@@ -209,7 +209,9 @@ class ResetPasswordViewModel
 
         private fun rejectedFieldErrors(outcome: SubmitNewPasswordOutcome.Rejected): List<ResetFieldError> =
             listOfNotNull(
-                outcome.newPassword?.let { ResetFieldError(ResetField.NewPassword, it.messageRes()) },
+                outcome.newPassword?.let {
+                    ResetFieldError(ResetField.NewPassword, it.messageRes(), it.formatArgs(useCases.passwordPolicy))
+                },
                 outcome.confirmation?.let { ResetFieldError(ResetField.ConfirmPassword, it.messageRes()) },
             )
 

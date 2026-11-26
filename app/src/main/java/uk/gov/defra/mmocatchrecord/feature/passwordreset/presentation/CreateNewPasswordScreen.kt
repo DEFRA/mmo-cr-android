@@ -2,6 +2,8 @@
 
 package uk.gov.defra.mmocatchrecord.feature.passwordreset.presentation
 
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.KeyboardActionHandler
@@ -18,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
@@ -67,9 +70,11 @@ fun CreateNewPasswordContent(
         focus = focus,
         firstField = ResetField.NewPassword,
         onBack = { confirmCancel = true },
+        showLogo = true,
     ) {
         NewPasswordInput(state, fields, focus)
         ConfirmPasswordInput(state, fields, focus, onSubmit)
+        Spacer(Modifier.height(Spacing.s))
         PrimaryActionButton(
             text = stringResource(R.string.reset_password_save),
             onClick = onSubmit,
@@ -97,13 +102,8 @@ private fun NewPasswordInput(
     GdsPasswordInput(
         state = fields.newPassword,
         label = stringResource(R.string.reset_password_new_label),
-        hint =
-            stringResource(
-                R.string.reset_password_new_hint,
-                fields.policy.minLength,
-                fields.policy.maxLength,
-                fields.policy.minCategories,
-            ),
+        hint = stringResource(R.string.reset_password_new_hint, fields.policy.minLength),
+        labelWeight = FontWeight.Normal,
         testTag = ResetPasswordTestTags.NEW_PASSWORD_FIELD,
         passwordVisible = state.newPasswordVisible,
         onVisibilityChange = fields.onNewPasswordVisibilityChange,
@@ -147,6 +147,7 @@ private fun ConfirmPasswordInput(
                 hiddenAnnouncement = stringResource(R.string.reset_password_confirm_hidden_announcement),
             ),
         errorMessage = state.errorFor(ResetField.ConfirmPassword),
+        labelWeight = FontWeight.Normal,
         onKeyboardAction = KeyboardActionHandler { onSubmit() },
         focusRequester = focus.of(ResetField.ConfirmPassword),
         enabled = !state.isLoading,
@@ -186,15 +187,16 @@ private fun CancelResetDialog(
     )
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF, widthDp = 390, heightDp = 844)
+// Studio's renderer supports API <= 36; at 37 SecureTextField needs android.text.ShowSecretsSetting.
+@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF, widthDp = 390, heightDp = 844, apiLevel = 36)
 @Composable
 fun CreateNewPasswordPreview() {
     MmoTheme {
         CreateNewPasswordContent(
-            state = ResetPasswordViewState(step = ResetStep.NewPassword),
+            state = ResetPasswordViewState(step = ResetStep.NewPassword, newPasswordVisible = true),
             fields =
                 NewPasswordFields(
-                    newPassword = remember { TextFieldState() },
+                    newPassword = remember { TextFieldState("Example-Pass-1") },
                     confirmPassword = remember { TextFieldState() },
                     onNewPasswordVisibilityChange = {},
                     onConfirmPasswordVisibilityChange = {},

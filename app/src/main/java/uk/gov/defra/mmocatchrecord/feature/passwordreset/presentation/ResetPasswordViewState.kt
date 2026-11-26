@@ -17,10 +17,11 @@ sealed interface ResetStep {
 /** Fields that can show an inline error; also the focus targets of the error summary links. */
 enum class ResetField { Email, Code, NewPassword, ConfirmPassword }
 
-/** One inline error: the field it belongs to and its unresolved copy. */
+/** One inline error: the field it belongs to, its unresolved copy and any numeric format arguments. */
 data class ResetFieldError(
     val field: ResetField,
     @StringRes val messageRes: Int,
+    val formatArgs: List<Int> = emptyList(),
 )
 
 /**

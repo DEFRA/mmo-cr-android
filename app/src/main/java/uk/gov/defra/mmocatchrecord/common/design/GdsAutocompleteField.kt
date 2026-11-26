@@ -10,11 +10,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
@@ -25,13 +24,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -100,8 +99,9 @@ fun GdsAutocompleteField(
         )
 
     // No spacing: the suggestion list must sit flush against the bottom edge of the field.
+    val errorAnnouncement = gdsErrorAnnouncement(errorText)
     Column(modifier = modifier) {
-        OutlinedTextField(
+        BasicTextField(
             value = textFieldValue,
             onValueChange = onValueChange@{ newValue ->
                 // An IME echo of the stale pre-selection buffer would otherwise revert the pick.
@@ -114,26 +114,28 @@ fun GdsAutocompleteField(
                 }
             },
             singleLine = true,
-            isError = errorText != null,
-            shape = RectangleShape,
+            textStyle = gdsFieldTextStyle(),
+            cursorBrush = GdsFieldCursorBrush,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            placeholder =
-                placeholder?.let {
-                    {
-                        Text(text = it, style = MaterialTheme.typography.bodyLarge, color = MmoColors.Grey1)
-                    }
-                },
-            colors =
-                OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = if (errorText == null) MmoColors.Text else MmoColors.ErrorRed,
-                    unfocusedBorderColor = if (errorText == null) MmoColors.Text else MmoColors.ErrorRed,
-                    focusedContainerColor = MmoColors.White,
-                    unfocusedContainerColor = MmoColors.White,
-                    cursorColor = MmoColors.Text,
-                    focusedTextColor = MmoColors.Text,
-                    unfocusedTextColor = MmoColors.Text,
-                ),
-            modifier = Modifier.fillMaxWidth().heightIn(min = Spacing.minTouchTarget).testTag(fieldTestTag),
+            decorationBox = { innerTextField ->
+                GdsFieldDecorationBox(
+                    innerTextField = innerTextField,
+                    isEmpty = textFieldValue.text.isEmpty(),
+                    enabled = true,
+                    isError = errorText != null,
+                    placeholder = placeholder,
+                    insets = FlushBottomInsets,
+                )
+            },
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .testTag(fieldTestTag)
+                    .semantics {
+                        // The in-box prompt is the field's only visible name, so it is spoken even once typed over.
+                        placeholder?.let { contentDescription = it }
+                        if (errorAnnouncement != null) error(errorAnnouncement)
+                    },
         )
         if (showSuggestions) {
             AutocompleteSuggestions(
@@ -253,6 +255,9 @@ private fun AutocompleteSuggestions(
 }
 
 private fun String.withCursorAtEnd(): TextFieldValue = TextFieldValue(text = this, selection = TextRange(length))
+
+// All 8dp of touch-target slack goes above the box so the suggestions sit flush beneath it.
+private val FlushBottomInsets = GdsFieldDefaults.Insets(top = 8.dp, bottom = 0.dp)
 
 /** Keeps the user's cursor/selection while the text is unchanged; otherwise places the cursor at the end of [text]. */
 private fun TextFieldValue.syncedWith(text: String): TextFieldValue =

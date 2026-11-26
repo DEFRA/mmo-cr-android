@@ -368,11 +368,11 @@ class ResetPasswordScreenTests {
         assertTrue(
             fieldName(
                 ResetPasswordTestTags.NEW_PASSWORD_FIELD,
-            ).contains(string(R.string.reset_password_new_hint, 8, 256, 3)),
+            ).contains(string(R.string.reset_password_new_hint, 8)),
         )
         composeTestRule.onNodeWithTag(ResetPasswordTestTags.NEW_PASSWORD_FIELD).assertIsDisplayed()
         composeTestRule.onNodeWithTag(ResetPasswordTestTags.CONFIRM_PASSWORD_FIELD).assertIsDisplayed()
-        composeTestRule.onNodeWithText("Save new password").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Save new password").performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -445,16 +445,24 @@ class ResetPasswordScreenTests {
             ResetPasswordViewState(
                 fieldErrors =
                     listOf(
-                        ResetFieldError(ResetField.NewPassword, R.string.reset_password_new_error_requirements),
+                        ResetFieldError(
+                            ResetField.NewPassword,
+                            R.string.reset_password_new_error_categories,
+                            listOf(3),
+                        ),
                         ResetFieldError(ResetField.ConfirmPassword, R.string.reset_password_confirm_error_mismatch),
                     ),
                 errorSequence = 1,
             )
         render { CreateNewPasswordContent(state, newPasswordFields(), chrome, onSubmit = {}) }
 
-        listOf(R.string.reset_password_new_error_requirements, R.string.reset_password_confirm_error_mismatch).forEach {
-            assertEquals(2, count(string(it)))
-        }
+        assertEquals(
+            2,
+            count(
+                "Your password must include at least 3 of: lower case letters, capital letters, numbers and symbols",
+            ),
+        )
+        assertEquals(2, count(string(R.string.reset_password_confirm_error_mismatch)))
     }
 
     @Test

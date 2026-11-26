@@ -6,6 +6,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertContentDescriptionEquals
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextEquals
@@ -387,6 +389,24 @@ class HomeScreenRobolectricTests {
         assertTrue(page == 1)
         composeTestRule.onNodeWithTag(CatchRecordsListSectionTestTags.PAGINATION_PREVIOUS).performClick()
         assertTrue(page == 0)
+    }
+
+    @Test
+    fun `previous is an arrow named for TalkBack and next keeps its visible label`() {
+        composeTestRule.setContent {
+            MmoTheme {
+                LazyColumn { catchRecordsListSection(records = everyStatusRecords, onRecordClick = {}) }
+            }
+        }
+        val context = ApplicationProvider.getApplicationContext<Context>()
+
+        composeTestRule
+            .onNodeWithTag(CatchRecordsListSectionTestTags.PAGINATION_PREVIOUS)
+            .assertContentDescriptionEquals(context.getString(R.string.pagination_previous))
+        composeTestRule.onAllNodesWithText(context.getString(R.string.pagination_previous)).assertCountEquals(0)
+        composeTestRule
+            .onNodeWithTag(CatchRecordsListSectionTestTags.PAGINATION_NEXT)
+            .assertTextEquals(context.getString(R.string.pagination_next))
     }
 
     /** Exercises the remaining content-section `@Preview` functions directly for coverage — they are

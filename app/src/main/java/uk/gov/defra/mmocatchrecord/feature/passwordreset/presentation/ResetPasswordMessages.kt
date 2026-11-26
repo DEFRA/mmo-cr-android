@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.feature.passwordreset.domain.ConfirmPasswordError
 import uk.gov.defra.mmocatchrecord.feature.passwordreset.domain.EmailAddressError
+import uk.gov.defra.mmocatchrecord.feature.passwordreset.domain.PasswordPolicy
 import uk.gov.defra.mmocatchrecord.feature.passwordreset.domain.PasswordResetFailure
 import uk.gov.defra.mmocatchrecord.feature.passwordreset.domain.PasswordRuleFailure
 import uk.gov.defra.mmocatchrecord.feature.passwordreset.domain.ResetCodeError
@@ -22,15 +23,22 @@ internal fun ResetCodeError.messageRes(): Int =
         ResetCodeError.Blank -> R.string.reset_password_code_error_blank
     }
 
-/** Every rule failure shows the same requirements message; the hint above the field explains the rules. */
+/** Each rule failure names the rule it broke (GOV.UK), with the policy limit as its format argument. */
 @StringRes
 internal fun PasswordRuleFailure.messageRes(): Int =
     when (this) {
         PasswordRuleFailure.Blank -> R.string.reset_password_new_error_blank
-        PasswordRuleFailure.TooShort,
-        PasswordRuleFailure.TooLong,
-        PasswordRuleFailure.TooFewCategories,
-        -> R.string.reset_password_new_error_requirements
+        PasswordRuleFailure.TooShort -> R.string.reset_password_new_error_too_short
+        PasswordRuleFailure.TooLong -> R.string.reset_password_new_error_too_long
+        PasswordRuleFailure.TooFewCategories -> R.string.reset_password_new_error_categories
+    }
+
+internal fun PasswordRuleFailure.formatArgs(policy: PasswordPolicy): List<Int> =
+    when (this) {
+        PasswordRuleFailure.Blank -> emptyList()
+        PasswordRuleFailure.TooShort -> listOf(policy.minLength)
+        PasswordRuleFailure.TooLong -> listOf(policy.maxLength)
+        PasswordRuleFailure.TooFewCategories -> listOf(policy.minCategories)
     }
 
 @StringRes

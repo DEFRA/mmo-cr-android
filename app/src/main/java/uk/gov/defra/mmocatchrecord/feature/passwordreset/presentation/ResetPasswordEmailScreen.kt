@@ -81,7 +81,10 @@ fun ResetPasswordEmailContent(
 /** The resolved message for [field], if it has one; resolved here so the language toggle re-translates it. */
 @Composable
 internal fun ResetPasswordViewState.errorFor(field: ResetField): String? =
-    fieldErrors.firstOrNull { it.field == field }?.let { stringResource(it.messageRes) }
+    fieldErrors.firstOrNull { it.field == field }?.let { it.resolve() }
+
+@Composable
+internal fun ResetFieldError.resolve(): String = stringResource(messageRes, *formatArgs.toTypedArray())
 
 /** Submit is blocked while a request is in flight or the device is offline (AC18). */
 internal val ResetPasswordViewState.canSubmit: Boolean

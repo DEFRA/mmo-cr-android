@@ -40,6 +40,11 @@ object MmoColors {
     /** Alternate-row tint for autocomplete suggestion lists (GOV.UK accessible-autocomplete). */
     val AutocompleteOddRow = Color(0xFFFAFAFA)
 
+    /** GOV.UK secondary button fill, pressed fill and darker bottom edge. */
+    val SecondaryButton = Grey4
+    val SecondaryButtonPressed = Color(0xFFDBDAD9)
+    val SecondaryButtonShadow = Color(0xFF929191)
+
     // Selection (statistical sub-rectangle schematic grid — see MapScreen)
 
     /** Pale tint of [GovBlue] used as a selected grid cell's fill, per the confirmed screenshot. */

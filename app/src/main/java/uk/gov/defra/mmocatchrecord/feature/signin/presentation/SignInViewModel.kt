@@ -47,8 +47,8 @@ class SignInViewModel
 
         override fun dispatch(event: SignInEvent) {
             when (event) {
-                is SignInEvent.UsernameChanged -> updateState { it.copy(username = event.value) }
-                is SignInEvent.PasswordChanged -> updateState { it.copy(password = event.value) }
+                is SignInEvent.UsernameChanged -> updateState { it.copy(username = event.value, usernameError = null) }
+                is SignInEvent.PasswordChanged -> updateState { it.copy(password = event.value, passwordError = null) }
                 SignInEvent.SubmitRequested -> submit()
                 SignInEvent.BrowserNoticeShown -> signInStageObserver.acknowledgeBrowserNoticeShown()
             }
@@ -57,6 +57,12 @@ class SignInViewModel
         private fun submit() {
             val username = currentState.username
             val password = currentState.password
+            val usernameError = if (username.isBlank()) R.string.signin_error_email_blank else null
+            val passwordError = if (password.isEmpty()) R.string.signin_error_password_blank else null
+            if (usernameError != null || passwordError != null) {
+                updateState { it.copy(error = null, usernameError = usernameError, passwordError = passwordError) }
+                return
+            }
             updateState { it.copy(status = UiStatus.Loading, error = null) }
 
             launchInViewModelScope {
