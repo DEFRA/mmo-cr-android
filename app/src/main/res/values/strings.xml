@@ -93,7 +93,7 @@
     <string name="gov_uk" translatable="false">GOV.UK</string>
     <string name="gov_uk_royal_crest">GOV.UK Royal Crest</string>
     <string name="save_and_continue">Save and continue</string>
-    <string name="cancel">Continue</string>
+    <string name="cancel">Cancel</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
     <string name="draft_resume_title">What do you want to do with your draft record?</string>

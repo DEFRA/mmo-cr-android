@@ -23,10 +23,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.AppLanguageProvider
 import uk.gov.defra.mmocatchrecord.common.design.GdsCheckboxGroup
-import uk.gov.defra.mmocatchrecord.common.design.GdsLinkAction
 import uk.gov.defra.mmocatchrecord.common.design.MmoColors
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
-import uk.gov.defra.mmocatchrecord.common.design.SecondaryActionButton
+import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
 import uk.gov.defra.mmocatchrecord.common.design.Spacing
 import uk.gov.defra.mmocatchrecord.core.architecture.UiStatus
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
@@ -52,7 +51,6 @@ object RemoveSpeciesScreenTestTags {
     const val ERROR_MESSAGE = "remove_species_error_message"
     const val CHECKBOX_PREFIX = "remove_species_checkbox"
     const val DELETE_ACTION = "remove_species_delete_action"
-    const val CANCEL_ACTION = "remove_species_cancel_action"
 }
 
 /** Dedicated "Remove a species caught with {gear}" page, reached from [GearSpeciesChecklistScreen]'s link. */
@@ -72,7 +70,6 @@ fun RemoveSpeciesScreen(
             viewModel.dispatch(CatchRecordFlowEvent.SpeciesRemoved(updatedDraft))
             onBack()
         },
-        onCancel = onBack,
         onRetry = { viewModel.dispatch(CatchRecordFlowEvent.Retry) },
         onBack = onBack,
         modifier = modifier,
@@ -85,7 +82,6 @@ private fun RemoveSpeciesScreen(
     state: CatchRecordFlowViewState,
     gearUseId: String,
     onDelete: (CatchRecordDraft) -> Unit,
-    onCancel: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     onRetry: () -> Unit = {},
@@ -126,7 +122,6 @@ private fun RemoveSpeciesScreen(
                         gearUse = gearUse,
                         speciesList = state.species,
                         onDelete = onDelete,
-                        onCancel = onCancel,
                     )
                 }
         }
@@ -140,7 +135,6 @@ fun RemoveSpeciesScreenContent(
     gearUse: GearUse,
     speciesList: List<Species>,
     onDelete: (CatchRecordDraft) -> Unit,
-    onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var checkedIds by rememberSaveable(gearUse.id) { mutableStateOf(emptySet<String>()) }
@@ -173,7 +167,7 @@ fun RemoveSpeciesScreenContent(
             },
             optionTestTagPrefix = RemoveSpeciesScreenTestTags.CHECKBOX_PREFIX,
         )
-        SecondaryActionButton(
+        PrimaryActionButton(
             text = stringResource(R.string.delete_action),
             onClick = {
                 if (checkedIds.isEmpty()) {
@@ -185,11 +179,6 @@ fun RemoveSpeciesScreenContent(
                 }
             },
             modifier = Modifier.testTag(RemoveSpeciesScreenTestTags.DELETE_ACTION),
-        )
-        GdsLinkAction(
-            text = stringResource(R.string.cancel),
-            onClick = onCancel,
-            testTag = RemoveSpeciesScreenTestTags.CANCEL_ACTION,
         )
     }
 }
@@ -237,7 +226,6 @@ fun RemoveSpeciesScreen_Preview() {
                 state = state,
                 gearUseId = gearUse.id,
                 onDelete = {},
-                onCancel = {},
                 onBack = {},
             )
         }

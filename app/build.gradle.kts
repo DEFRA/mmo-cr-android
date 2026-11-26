@@ -65,8 +65,9 @@ android {
         getByName("androidTest").assets.directories.add("$projectDir/schemas")
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_25
-        targetCompatibility = JavaVersion.VERSION_25
+        // Java 21 bytecode: Studio Preview (layoutlib) can't read class file v69 — see ADR 0026.
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
     buildFeatures {
         compose = true
@@ -90,6 +91,10 @@ android {
 
 kotlin {
     jvmToolchain(25)
+    compilerOptions {
+        // Java 21 bytecode for Studio Preview — see ADR 0026.
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+    }
 }
 
 room {

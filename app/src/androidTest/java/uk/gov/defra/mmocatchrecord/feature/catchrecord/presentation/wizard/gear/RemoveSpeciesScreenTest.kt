@@ -3,12 +3,14 @@ package uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.gear
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.CatchRecordDraft
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.domain.draft.DraftStatus
@@ -77,7 +79,6 @@ class RemoveSpeciesScreenTest {
                     gearUse = gearUse,
                     speciesList = speciesList,
                     onDelete = {},
-                    onCancel = {},
                 )
             }
         }
@@ -97,7 +98,6 @@ class RemoveSpeciesScreenTest {
                     gearUse = gearUse,
                     speciesList = speciesList,
                     onDelete = { deleted = it },
-                    onCancel = {},
                 )
             }
         }
@@ -119,7 +119,6 @@ class RemoveSpeciesScreenTest {
                     gearUse = gearUse,
                     speciesList = speciesList,
                     onDelete = { deleted = it },
-                    onCancel = {},
                 )
             }
         }
@@ -137,9 +136,7 @@ class RemoveSpeciesScreenTest {
     }
 
     @Test
-    fun cancelInvokesOnCancelWithoutDeleting() {
-        var cancelled = false
-        var deleted: CatchRecordDraft? = null
+    fun doesNotShowACancelLink() {
         val gearUse = gearUseWithAddedSpecies(listOf(cod.id))
         composeTestRule.setContent {
             MmoTheme {
@@ -147,15 +144,13 @@ class RemoveSpeciesScreenTest {
                     draft = draftWith(gearUse),
                     gearUse = gearUse,
                     speciesList = speciesList,
-                    onDelete = { deleted = it },
-                    onCancel = { cancelled = true },
+                    onDelete = {},
                 )
             }
         }
 
-        composeTestRule.onNodeWithTag(RemoveSpeciesScreenTestTags.CANCEL_ACTION).performClick()
-
-        assertTrue(cancelled)
-        assertNull(deleted)
+        composeTestRule.onNodeWithTag("remove_species_cancel_action").assertDoesNotExist()
+        val cancelLabel = InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.cancel)
+        composeTestRule.onNodeWithText(cancelLabel).assertDoesNotExist()
     }
 }
