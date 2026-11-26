@@ -17,6 +17,8 @@ data class SignInViewState(
     val password: String = "",
     val status: UiStatus<SignInSession> = UiStatus.Idle,
     val error: SignInError? = null,
+    @param:StringRes val usernameError: Int? = null,
+    @param:StringRes val passwordError: Int? = null,
     // True only while the browser web-fallback leg (ADR 0019 Phase 2.1c) is being launched.
     val isRedirectingToBrowser: Boolean = false,
 ) : ViewState

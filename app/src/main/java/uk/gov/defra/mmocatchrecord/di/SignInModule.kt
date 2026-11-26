@@ -12,6 +12,7 @@ import uk.gov.defra.mmocatchrecord.feature.signin.data.FakeSignInRepository
 import uk.gov.defra.mmocatchrecord.feature.signin.data.MsalNativeAuthClient
 import uk.gov.defra.mmocatchrecord.feature.signin.data.MsalSignInRepository
 import uk.gov.defra.mmocatchrecord.feature.signin.data.NativeAuthClient
+import uk.gov.defra.mmocatchrecord.feature.signin.data.NativePasswordResetClient
 import uk.gov.defra.mmocatchrecord.feature.signin.data.NoOpSignInStageObserver
 import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInRepository
 import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInStageObserver
@@ -25,14 +26,23 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object SignInModule {
+    /** The one MSAL client; both narrow ports below are views of this single instance. */
     @Provides
     @Singleton
-    internal fun provideNativeAuthClient(
+    internal fun provideMsalNativeAuthClient(
         @ApplicationContext context: Context,
         appConfiguration: AppConfiguration,
         currentActivityProvider: CurrentActivityProvider,
-    ): NativeAuthClient =
+    ): MsalNativeAuthClient =
         MsalNativeAuthClient(context, appConfiguration::msalNativeAuthConfigJson, currentActivityProvider)
+
+    @Provides
+    @Singleton
+    internal fun provideNativeAuthClient(client: MsalNativeAuthClient): NativeAuthClient = client
+
+    @Provides
+    @Singleton
+    internal fun provideNativePasswordResetClient(client: MsalNativeAuthClient): NativePasswordResetClient = client
 
     /** Visible for testing both branches without compiling three build variants. */
     internal fun signInRepositoryFor(

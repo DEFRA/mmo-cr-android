@@ -12,6 +12,25 @@ data object SplashRoute
 @Serializable
 data object SignInRoute
 
+/**
+ * Nested graph for resetting a forgotten password (ADR 0027), opened from Sign in. None of these routes
+ * carries an argument, so no email address, code or token can appear in a route or its saved state.
+ */
+@Serializable
+data object ResetPasswordGraphRoute
+
+@Serializable
+data object ResetPasswordEmailRoute
+
+@Serializable
+data object ResetPasswordCodeRoute
+
+@Serializable
+data object ResetPasswordNewPasswordRoute
+
+@Serializable
+data object ResetPasswordSuccessRoute
+
 /** Type-safe route for the biometric app-lock re-entry screen. */
 @Serializable
 data object AppLockRoute

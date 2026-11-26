@@ -18,6 +18,9 @@ object MmoColors {
     val White = Color(0xFFFFFFFF)
     val Background = Color(0xFFF3F2F1)
 
+    /** GOV.UK secondary text (hints): 7.6:1 on white, 6.7:1 on [Background]. */
+    val SecondaryText = Color(0xFF505A5F)
+
     // Feedback
     val ErrorRed = Color(0xFFD4351C)
     val SuccessGreen = Color(0xFF00703C)
@@ -36,6 +39,11 @@ object MmoColors {
 
     /** Alternate-row tint for autocomplete suggestion lists (GOV.UK accessible-autocomplete). */
     val AutocompleteOddRow = Color(0xFFFAFAFA)
+
+    /** GOV.UK secondary button fill, pressed fill and darker bottom edge. */
+    val SecondaryButton = Grey4
+    val SecondaryButtonPressed = Color(0xFFDBDAD9)
+    val SecondaryButtonShadow = Color(0xFF929191)
 
     // Selection (statistical sub-rectangle schematic grid — see MapScreen)
 

@@ -75,7 +75,9 @@
     <string name="having_trouble_signing_in">Having trouble signing in?</string>
     <string name="forgotten_your_password">Forgotten your password?</string>
     <string name="signin_error_prefix">Error:</string>
-    <string name="signin_error_invalid_credentials">Your email address or password is incorrect. Check them and try again.</string>
+    <string name="signin_error_invalid_credentials">The email address or password you entered is incorrect.</string>
+    <string name="signin_error_email_blank">Enter your email address.</string>
+    <string name="signin_error_password_blank">Enter your password.</string>
     <string name="signin_error_network">We could not reach the sign-in service. Check your connection and try again.</string>
     <string name="signin_error_generic">Something went wrong. Try signing in again.</string>
     <string name="signin_error_verification_not_supported">This account needs a verification step the app does not support yet. Contact support for help signing in.</string>
@@ -285,6 +287,59 @@
     <string name="unsaved_changes_leave_action">Leave without saving</string>
     <string name="unsaved_changes_stay_action">Stay on this page</string>
     <string name="check_your_answers_offline_notice">You\'re offline. If you submit now, your catch record will be saved on this device and sent automatically when you next have a mobile signal or Wi-Fi connection.</string>
+    <string name="gds_error_prefix">Error:</string>
+    <string name="gds_password_show">Show</string>
+    <string name="gds_password_hide">Hide</string>
+    <string name="gds_offline_notice_title">You are offline</string>
+    <string name="gds_offline_notice_message">Connect to the internet and try again.</string>
+    <!-- Reset a forgotten password (ADR 0027) -->
+    <string name="reset_password_email_title">Reset your\npassword</string>
+    <string name="reset_password_email_guidance">Enter the email address you use to sign in.</string>
+    <string name="reset_password_email_hint">If account exists for this email address, we\'ll send a reset code.</string>
+    <string name="reset_password_send_code">Send reset code</string>
+    <string name="reset_password_email_error_blank">Enter your email address</string>
+    <string name="reset_password_email_error_format">Enter an email address in the correct format, like name@example.com</string>
+    <string name="reset_password_code_title">Enter your \nreset code</string>
+    <string name="reset_password_code_sent_message">Enter the code we sent to your email address.</string>
+    <plurals name="reset_password_code_hint">
+        <item quantity="one">This code will expire after %1$d minute.</item>
+        <item quantity="other">This code will expire after %1$d minutes.</item>
+    </plurals>
+    <string name="reset_password_code_label">Reset code</string>
+    <string name="reset_password_continue">Continue</string>
+    <string name="reset_password_send_new_code">Send a new code</string>
+    <string name="reset_password_code_error_blank">Enter the reset code</string>
+    <string name="reset_password_code_error_invalid">Enter the correct reset code</string>
+    <string name="reset_password_code_error_expired">Your reset code has expired. Send a new code.</string>
+    <string name="reset_password_new_title">Create a new password</string>
+    <string name="reset_password_new_hint">Your password must be at least %1$d characters</string>
+    <string name="reset_password_new_label">New password</string>
+    <string name="reset_password_confirm_label">Confirm new password</string>
+    <string name="reset_password_new_show_description">Show new password</string>
+    <string name="reset_password_new_hide_description">Hide new password</string>
+    <string name="reset_password_new_visible_announcement">Your new password is visible</string>
+    <string name="reset_password_new_hidden_announcement">Your new password is hidden</string>
+    <string name="reset_password_confirm_show_description">Show confirmation of new password</string>
+    <string name="reset_password_confirm_hide_description">Hide confirmation of new password</string>
+    <string name="reset_password_confirm_visible_announcement">Your password confirmation is visible</string>
+    <string name="reset_password_confirm_hidden_announcement">Your password confirmation is hidden</string>
+    <string name="reset_password_save">Save new password</string>
+    <string name="reset_password_new_error_blank">Enter a new password</string>
+    <string name="reset_password_confirm_error_blank">Confirm your new password</string>
+    <string name="reset_password_new_error_requirements">Your password does not meet the password requirements</string>
+    <string name="reset_password_new_error_too_short">Your password must be at least %1$d characters</string>
+    <string name="reset_password_new_error_too_long">Your password must be %1$d characters or fewer</string>
+    <string name="reset_password_new_error_categories">Your password must include at least %1$d of: lower case letters, capital letters, numbers and symbols</string>
+    <string name="reset_password_confirm_error_mismatch">The passwords do not match</string>
+    <string name="reset_password_cancel_dialog_title">Cancel resetting your password?</string>
+    <string name="reset_password_cancel_dialog_body">You will lose your progress and return to the sign in screen.</string>
+    <string name="reset_password_cancel_dialog_confirm">Cancel reset</string>
+    <string name="reset_password_cancel_dialog_dismiss">Continue resetting</string>
+    <string name="reset_password_success_title">Your password has been reset    </string>    <string name="reset_password_error_network">We could not reach the service. Check your connection and try again.</string>
+    <string name="reset_password_error_throttled">Wait a few minutes and try again.</string>
+    <string name="reset_password_error_generic">Something went wrong. Try again.</string>
+    <string name="reset_password_error_session_expired">Your reset has expired. Enter your email address to start again.</string>
+    <string name="reset_password_redirecting_to_browser">Taking you to your browser to continue. If you need to reset your password, choose \'Forgot password?\' on the page that opens.</string>
+    <string name="reset_password_loading">Please wait</string>
+    <string name="reset_password_offline_action">Try again</string>
 </resources>
-
-

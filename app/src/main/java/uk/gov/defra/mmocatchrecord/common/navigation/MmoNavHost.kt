@@ -65,6 +65,7 @@ import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip.
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip.TripTodayScreen
 import uk.gov.defra.mmocatchrecord.feature.catchrecord.presentation.wizard.trip.VesselSelectionScreen
 import uk.gov.defra.mmocatchrecord.feature.home.presentation.HomeScreen
+import uk.gov.defra.mmocatchrecord.feature.passwordreset.presentation.resetPasswordGraph
 import uk.gov.defra.mmocatchrecord.feature.signin.presentation.SignInScreen
 
 /**
@@ -89,8 +90,12 @@ fun MmoNavHost(
             SplashScreen()
         }
         composable<SignInRoute> {
-            SignInScreen(onSignedIn = { onRootEvent(RootEvent.SignedIn) })
+            SignInScreen(
+                onSignedIn = { onRootEvent(RootEvent.SignedIn) },
+                onForgottenPassword = { navController.navigate(ResetPasswordGraphRoute) { launchSingleTop = true } },
+            )
         }
+        resetPasswordGraph(navController = navController, onSignedIn = { onRootEvent(RootEvent.SignedIn) })
         composable<AppLockRoute> {
             AppLockScreen(onUnlock = { onRootEvent(RootEvent.BiometricUnlockRequested) })
         }

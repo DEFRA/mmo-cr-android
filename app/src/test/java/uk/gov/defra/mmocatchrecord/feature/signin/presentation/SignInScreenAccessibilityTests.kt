@@ -118,7 +118,7 @@ class SignInScreenAccessibilityTests {
     }
 
     @Test
-    fun `the error is identified in text with a recovery suggestion and never names the wrong field`() {
+    fun `the error is identified in text and never names the wrong field`() {
         val message = resources.getString(R.string.signin_error_invalid_credentials)
         renderSignIn(R.string.signin_error_invalid_credentials)
 
@@ -130,7 +130,7 @@ class SignInScreenAccessibilityTests {
         val announced = config[SemanticsProperties.ContentDescription].single()
 
         assertTrue(announced.startsWith("Error:"))
-        assertTrue(announced.contains("try again"))
+        assertTrue(announced.contains("email address or password"))
         // Account-enumeration control: the copy must never reveal which of the two values was wrong.
         assertFalse(announced.contains("not found"))
         assertFalse(announced.contains("does not exist"))

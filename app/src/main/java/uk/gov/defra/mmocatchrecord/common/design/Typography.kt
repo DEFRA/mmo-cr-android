@@ -33,8 +33,8 @@ val MmoTypography =
             TextStyle(
                 fontFamily = MmoFontFamily,
                 fontWeight = FontWeight.Bold,
-                fontSize = 32.sp,
-                lineHeight = 40.sp,
+                fontSize = 38.sp,
+                lineHeight = 44.sp,
             ),
         headlineMedium =
             TextStyle(
@@ -62,7 +62,7 @@ val MmoTypography =
                 fontFamily = MmoFontFamily,
                 fontWeight = FontWeight.Normal,
                 fontSize = 16.sp,
-                lineHeight = 28.sp,
+                lineHeight = 20.sp,
                 letterSpacing = 0.15.sp,
             ),
         bodyMedium =

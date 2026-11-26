@@ -153,6 +153,40 @@ class AppConfigurationTests {
         assertFalse(MsalNativeAuthConfig.isProvisioned(unavailable.msalNativeAuthConfigJson()))
     }
 
+    @Test
+    fun `reset code lifetime defaults to five minutes when the key is absent or the config is unavailable`() {
+        val absent = configurationFor("""{"API_BASE_URL":"https://example.test","USE_STUB_AUTH":true}""").first
+        val unavailable = configurationFor("{ invalid json").first
+
+        assertEquals(5, absent.passwordResetCodeLifetimeMinutes())
+        assertEquals(5, unavailable.passwordResetCodeLifetimeMinutes())
+    }
+
+    @Test
+    fun `reset code lifetime reads a valid packaged value`() {
+        val configuration =
+            configurationFor(
+                lifetimeJson("15"),
+            ).first
+
+        assertEquals(15, configuration.passwordResetCodeLifetimeMinutes())
+    }
+
+    @Test
+    fun `reset code lifetime falls back to the default for blank, non-numeric or out-of-range values`() {
+        listOf("", "abc", "0", "-3", "61").forEach { value ->
+            val configuration =
+                configurationFor(
+                    lifetimeJson(value),
+                ).first
+
+            assertEquals(value, 5, configuration.passwordResetCodeLifetimeMinutes())
+        }
+    }
+
+    private fun lifetimeJson(value: String) =
+        """{"API_BASE_URL":"https://example.test","USE_STUB_AUTH":true,"RESET_CODE_LIFETIME_MINUTES":"$value"}"""
+
     private fun configurationFor(contents: String): Pair<AppConfiguration, AssetManager> {
         val assets = mock<AssetManager>()
         whenever(assets.open(CONFIG_ASSET)).thenReturn(ByteArrayInputStream(contents.toByteArray()))

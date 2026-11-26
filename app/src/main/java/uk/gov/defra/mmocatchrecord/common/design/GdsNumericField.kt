@@ -5,11 +5,9 @@ package uk.gov.defra.mmocatchrecord.common.design
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -17,9 +15,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
@@ -49,9 +49,11 @@ fun GdsNumericField(
     filterInput: Boolean = true,
 ) {
     var inputRejected by rememberSaveable { mutableStateOf(false) }
+    val errorAnnouncement = gdsErrorAnnouncement(errorText)
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
-        Text(text = label, style = MaterialTheme.typography.bodyLarge)
-        OutlinedTextField(
+        // The field speaks the label itself, so the visible label is not announced twice.
+        Text(text = label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.clearAndSetSemantics { })
+        BasicTextField(
             value = value,
             onValueChange = { candidate ->
                 val accepted =
@@ -60,8 +62,8 @@ fun GdsNumericField(
                 onValueChange(accepted)
             },
             singleLine = true,
-            isError = errorText != null,
-            shape = RectangleShape,
+            textStyle = gdsFieldTextStyle(),
+            cursorBrush = GdsFieldCursorBrush,
             // Decimal must use KeyboardType.Decimal, not Number, or most on-screen keyboards omit the "." key.
             keyboardOptions =
                 KeyboardOptions(
@@ -69,21 +71,22 @@ fun GdsNumericField(
                         if (kind == GdsNumericFieldKind.Decimal) KeyboardType.Decimal else KeyboardType.Number,
                     imeAction = imeAction,
                 ),
-            colors =
-                OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = if (errorText == null) MmoColors.Text else MmoColors.ErrorRed,
-                    unfocusedBorderColor = if (errorText == null) MmoColors.Text else MmoColors.ErrorRed,
-                    focusedContainerColor = MmoColors.White,
-                    unfocusedContainerColor = MmoColors.White,
-                    cursorColor = MmoColors.Text,
-                    focusedTextColor = MmoColors.Text,
-                    unfocusedTextColor = MmoColors.Text,
-                ),
+            decorationBox = { innerTextField ->
+                GdsFieldDecorationBox(
+                    innerTextField = innerTextField,
+                    isEmpty = value.isEmpty(),
+                    enabled = true,
+                    isError = errorText != null,
+                )
+            },
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .heightIn(min = Spacing.minTouchTarget)
-                    .testTag(testTag),
+                    .testTag(testTag)
+                    .semantics {
+                        contentDescription = label
+                        if (errorAnnouncement != null) error(errorAnnouncement)
+                    },
         )
         if (errorText != null) {
             Text(text = errorText, color = MmoColors.ErrorRed, style = MaterialTheme.typography.bodyMedium)

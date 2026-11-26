@@ -25,7 +25,10 @@ import uk.gov.defra.mmocatchrecord.common.design.Spacing
 
 /** Below-the-fold help on the sign-in screen: the password-recovery link and account-creation guidance. */
 @Composable
-internal fun SignInTroubleSection() {
+internal fun SignInTroubleSection(
+    onForgottenPassword: () -> Unit = {},
+    forgottenPasswordEnabled: Boolean = true,
+) {
     Text(
         text = stringResource(R.string.having_trouble_signing_in),
         style =
@@ -36,7 +39,7 @@ internal fun SignInTroubleSection() {
         modifier = Modifier.padding(bottom = Spacing.s),
     )
 
-    ForgottenPasswordLink()
+    ForgottenPasswordLink(onClick = onForgottenPassword, enabled = forgottenPasswordEnabled)
 
     ExpandableDetails(
         title = stringResource(R.string.create_an_account),
@@ -75,19 +78,22 @@ internal fun SignInTroubleSection() {
 }
 
 @Composable
-private fun ForgottenPasswordLink() {
+private fun ForgottenPasswordLink(
+    onClick: () -> Unit,
+    enabled: Boolean,
+) {
     Text(
         text = stringResource(R.string.forgotten_your_password),
         style =
             MaterialTheme.typography.bodyLarge.copy(
-                color = MmoColors.Link,
-                textDecoration = TextDecoration.Underline,
+                color = if (enabled) MmoColors.Link else MmoColors.SecondaryText,
+                textDecoration = if (enabled) TextDecoration.Underline else TextDecoration.None,
             ),
         modifier =
             Modifier
                 .padding(bottom = Spacing.l)
                 .testTag(SignInScreenTestTags.FORGOTTEN_PASSWORD)
-                .clickable(role = Role.Button) { /* Web workflow in later stages */ }
+                .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
                 .sizeIn(minHeight = Spacing.minTouchTarget)
                 .wrapContentSize(Alignment.CenterStart),
     )

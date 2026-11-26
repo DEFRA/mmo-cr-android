@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -25,6 +26,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -39,6 +42,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import uk.gov.defra.mmocatchrecord.R
+import uk.gov.defra.mmocatchrecord.common.design.CustomArrowForwardIcon
 import uk.gov.defra.mmocatchrecord.common.design.ExpandableDetails
 import uk.gov.defra.mmocatchrecord.common.design.ImportantNotificationBanner
 import uk.gov.defra.mmocatchrecord.common.design.MmoColors
@@ -112,8 +116,8 @@ private const val CATCH_RECORDS_PAGE_SIZE = 10
 /** Column widths/gap sized to fit a ~412dp-wide phone without scrolling (the reference design's implied
  * viewport); narrower/zoomed viewports fall back to [horizontalScrollState] per WCAG 1.4.10 — see ADR-0014
  * Phase F. */
-private val TripEndDateColumnWidth: Dp = 95.dp
-private val VesselColumnWidth: Dp = 85.dp
+private val TripEndDateColumnWidth: Dp = 75.dp
+private val VesselColumnWidth: Dp = 105.dp
 private val StatusColumnWidth: Dp = 100.dp
 private val CreatedByColumnWidth: Dp = 62.dp
 private val TableColumnGap: Dp = Spacing.xs
@@ -238,8 +242,7 @@ private fun CatchRecordTableRow(
             Modifier
                 .horizontalScroll(horizontalScrollState)
                 .sizeIn(minHeight = minTouchTarget)
-                .testTag(CatchRecordsListSectionTestTags.row(record.id))
-                .padding(vertical = Spacing.s),
+                .testTag(CatchRecordsListSectionTestTags.row(record.id)),
     ) {
         TripEndDateCell(
             text = tripEndDateText,
@@ -336,7 +339,9 @@ private fun CatchRecordsPaginationBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         PaginationLink(
-            text = stringResource(R.string.pagination_previous),
+            label = stringResource(R.string.pagination_previous),
+            showLabel = false,
+            arrowFirst = true,
             enabled = page > 0,
             onClick = { onPageChange(page - 1) },
             testTag = CatchRecordsListSectionTestTags.PAGINATION_PREVIOUS,
@@ -366,7 +371,9 @@ private fun CatchRecordsPaginationBar(
             )
         }
         PaginationLink(
-            text = stringResource(R.string.pagination_next),
+            label = stringResource(R.string.pagination_next),
+            showLabel = true,
+            arrowFirst = false,
             enabled = page < totalPages - 1,
             onClick = { onPageChange(page + 1) },
             testTag = CatchRecordsListSectionTestTags.PAGINATION_NEXT,
@@ -375,37 +382,68 @@ private fun CatchRecordsPaginationBar(
     }
 }
 
-@Suppress("FunctionNaming")
+@Suppress("FunctionNaming", "LongParameterList")
 @Composable
 private fun PaginationLink(
-    text: String,
+    label: String,
+    showLabel: Boolean,
+    arrowFirst: Boolean,
     enabled: Boolean,
     onClick: () -> Unit,
     testTag: String,
     modifier: Modifier = Modifier,
 ) {
     val color = if (enabled) MmoColors.Link else MmoColors.Grey2
+    val arrowTint = if (enabled) MmoColors.Text else MmoColors.Grey2
     val baseModifier =
         modifier
             .sizeIn(minWidth = Spacing.minTouchTarget, minHeight = Spacing.minTouchTarget)
             .testTag(testTag)
-    val finalModifier =
+    val interactionModifier =
         if (enabled) {
             baseModifier.clickable(role = Role.Button, onClick = onClick)
         } else {
-            baseModifier.semantics { disabled() }
+            baseModifier.semantics(mergeDescendants = true) { disabled() }
         }
-    Text(
-        text = text,
-        style =
-            MaterialTheme.typography.bodyLarge.copy(
-                color = color,
-                textDecoration = if (enabled) TextDecoration.Underline else TextDecoration.None,
-                fontWeight = FontWeight.Bold,
-            ),
+    val finalModifier =
+        if (showLabel) interactionModifier else interactionModifier.semantics { contentDescription = label }
+    Row(
         modifier = finalModifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xxs, Alignment.CenterHorizontally),
+    ) {
+        if (arrowFirst) PaginationArrow(tint = arrowTint, pointsLeft = true)
+        if (showLabel) {
+            Text(
+                text = label,
+                style =
+                    MaterialTheme.typography.bodyLarge.copy(
+                        color = color,
+                        textDecoration = if (enabled) TextDecoration.Underline else TextDecoration.None,
+                        fontWeight = FontWeight.Bold,
+                    ),
+            )
+        }
+        if (!arrowFirst) PaginationArrow(tint = arrowTint, pointsLeft = false)
+    }
+}
+
+@Suppress("FunctionNaming")
+@Composable
+private fun PaginationArrow(
+    tint: Color,
+    pointsLeft: Boolean,
+) {
+    CustomArrowForwardIcon(
+        tint = tint,
+        modifier =
+            Modifier
+                .size(PaginationArrowSize)
+                .graphicsLayer { scaleX = if (pointsLeft) -1f else 1f },
     )
 }
+
+private val PaginationArrowSize: Dp = 16.dp
 
 @Suppress("FunctionNaming")
 @Composable

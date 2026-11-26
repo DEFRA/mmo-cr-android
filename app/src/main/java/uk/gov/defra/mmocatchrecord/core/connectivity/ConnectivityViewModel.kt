@@ -3,34 +3,30 @@ package uk.gov.defra.mmocatchrecord.core.connectivity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * Thin ViewModel wrapper exposing [ConnectivityObserver] as Compose-observable `isOffline` state — used by
- * every catch-record wizard screen (via `CatchRecordWizardScaffold`) to show/hide the persistent "Offline"
- * banner. Mirrors `AppLanguageViewModel`'s pattern: each screen obtains its own instance via
- * `hiltViewModel()`, all backed by the same singleton [ConnectivityObserver].
+ * Exposes [ConnectivityObserver] as Compose-observable `isOffline` state; [recheck] re-tests on demand (AC18).
  */
 @HiltViewModel
 class ConnectivityViewModel
     @Inject
     constructor(
         observer: ConnectivityObserver,
+        private val connectivityChecker: NetworkConnectivityChecker,
     ) : ViewModel() {
-        val isOffline: StateFlow<Boolean> =
-            observer.isOnline
-                .map { online -> !online }
-                .stateIn(
-                    scope = viewModelScope,
-                    started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
-                    initialValue = !observer.isOnline.value,
-                )
+        private val offline = MutableStateFlow(!observer.isOnline.value)
+        val isOffline: StateFlow<Boolean> = offline.asStateFlow()
 
-        private companion object {
-            const val STOP_TIMEOUT_MILLIS = 5_000L
+        init {
+            viewModelScope.launch { observer.isOnline.collect { online -> offline.value = !online } }
+        }
+
+        fun recheck() {
+            offline.value = !connectivityChecker.isConnected()
         }
     }

@@ -1,14 +1,9 @@
 package uk.gov.defra.mmocatchrecord.feature.signin.data
 
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInException
 import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInFailure
 import uk.gov.defra.mmocatchrecord.feature.signin.domain.SignInRepository
@@ -29,14 +24,11 @@ internal class MsalSignInRepository(
 ) : SignInRepository,
     SignInStageObserver,
     SignOutRepository {
-    private val mutableStage = MutableStateFlow(SignInStage.Idle)
-    override val stage: StateFlow<SignInStage> = mutableStage.asStateFlow()
-
-    @Volatile
-    private var pendingBrowserNoticeAck: CompletableDeferred<Unit>? = null
+    private val browserHandoff = BrowserHandoff(nativeAuthClient)
+    override val stage: StateFlow<SignInStage> = browserHandoff.stage
 
     override fun acknowledgeBrowserNoticeShown() {
-        pendingBrowserNoticeAck?.complete(Unit)
+        browserHandoff.acknowledgeBrowserNoticeShown()
     }
 
     override suspend fun signOut(): Boolean = nativeAuthClient.signOut()
@@ -84,24 +76,8 @@ internal class MsalSignInRepository(
         }
     }
 
-    /**
-     * Announces the hand-off via [stage], then waits for the UI's acknowledgement (or [ACK_TIMEOUT_MILLIS])
-     * plus a short pause, so TalkBack has a guaranteed chance to speak it before the browser takes focus.
-     */
-    private suspend fun handoffToBrowser(): Result<SignInSession> {
-        mutableStage.value = SignInStage.RedirectingToBrowser
-        val acknowledgement = CompletableDeferred<Unit>()
-        pendingBrowserNoticeAck = acknowledgement
-        return try {
-            withTimeoutOrNull(ACK_TIMEOUT_MILLIS) { acknowledgement.await() }
-            // ~1.2s: comfortably inside the requested 1-1.5s range for a TalkBack announcement to start.
-            delay(POST_ACK_PAUSE_MILLIS)
-            nativeAuthClient.signInInteractively(listOf(API_SCOPE)).toInteractiveResult()
-        } finally {
-            pendingBrowserNoticeAck = null
-            mutableStage.value = SignInStage.Idle
-        }
-    }
+    /** Announces the hand-off (see [BrowserHandoff]), then runs the interactive browser sign-in. */
+    private suspend fun handoffToBrowser(): Result<SignInSession> = browserHandoff.run().toInteractiveResult()
 
     private fun NativeAuthOutcome.toInteractiveResult(): Result<SignInSession> =
         when (this) {
@@ -136,7 +112,5 @@ internal class MsalSignInRepository(
         const val UNEXPECTED_SIGN_IN_FAILURE = "native-auth client threw an unexpected exception"
         const val BROWSER_REQUIRED_LOOP = "native-auth required the browser leg again after the browser leg"
         const val STALE_ACCOUNT_SIGN_OUT_FAILED = "could not clear a stale native-auth account before sign-in"
-        const val ACK_TIMEOUT_MILLIS = 3_000L
-        const val POST_ACK_PAUSE_MILLIS = 1_200L
     }
 }

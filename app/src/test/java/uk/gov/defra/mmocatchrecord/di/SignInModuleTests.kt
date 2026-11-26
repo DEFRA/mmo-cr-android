@@ -27,11 +27,20 @@ class SignInModuleTests {
     private val context: Context get() = ApplicationProvider.getApplicationContext()
 
     @Test
-    fun `provideNativeAuthClient wires up the MSAL-backed implementation`() {
+    fun `provideMsalNativeAuthClient wires up the MSAL-backed implementation`() {
         val client =
-            SignInModule.provideNativeAuthClient(context, mock<AppConfiguration>(), mock<CurrentActivityProvider>())
+            SignInModule.provideMsalNativeAuthClient(context, mock<AppConfiguration>(), mock<CurrentActivityProvider>())
 
         assertTrue(client is MsalNativeAuthClient)
+    }
+
+    @Test
+    fun `the sign-in and password-reset ports are views of the one MSAL client`() {
+        val client =
+            SignInModule.provideMsalNativeAuthClient(context, mock<AppConfiguration>(), mock<CurrentActivityProvider>())
+
+        assertTrue(SignInModule.provideNativeAuthClient(client) === client)
+        assertTrue(SignInModule.provideNativePasswordResetClient(client) === client)
     }
 
     @Test

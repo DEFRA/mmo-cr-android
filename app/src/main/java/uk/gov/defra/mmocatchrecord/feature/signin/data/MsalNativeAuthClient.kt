@@ -9,11 +9,20 @@ import com.microsoft.identity.client.PublicClientApplication
 import com.microsoft.identity.client.exception.MsalException
 import com.microsoft.identity.nativeauth.INativeAuthPublicClientApplication
 import com.microsoft.identity.nativeauth.parameters.NativeAuthGetAccessTokenParameters
+import com.microsoft.identity.nativeauth.parameters.NativeAuthResetPasswordParameters
 import com.microsoft.identity.nativeauth.parameters.NativeAuthSignInParameters
+import com.microsoft.identity.nativeauth.statemachine.errors.ResetPasswordError
+import com.microsoft.identity.nativeauth.statemachine.errors.ResetPasswordSubmitPasswordError
 import com.microsoft.identity.nativeauth.statemachine.errors.SignInError
+import com.microsoft.identity.nativeauth.statemachine.errors.SubmitCodeError
 import com.microsoft.identity.nativeauth.statemachine.results.GetAccessTokenResult
 import com.microsoft.identity.nativeauth.statemachine.results.GetAccountResult
+import com.microsoft.identity.nativeauth.statemachine.results.ResetPasswordResult
+import com.microsoft.identity.nativeauth.statemachine.results.ResetPasswordStartResult
+import com.microsoft.identity.nativeauth.statemachine.results.ResetPasswordSubmitCodeResult
 import com.microsoft.identity.nativeauth.statemachine.results.SignInResult
+import com.microsoft.identity.nativeauth.statemachine.states.ResetPasswordCodeRequiredState
+import com.microsoft.identity.nativeauth.statemachine.states.ResetPasswordPasswordRequiredState
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -22,15 +31,16 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import uk.gov.defra.mmocatchrecord.core.android.CurrentActivityProvider
+import uk.gov.defra.mmocatchrecord.feature.passwordreset.domain.PasswordResetToken
 import java.io.File
-import java.io.IOException
+import java.util.Arrays
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 /**
- * The only file permitted to import `com.microsoft.identity.*` (ADR 0019); maps every MSAL
- * result/error onto [NativeAuthOutcome] via public predicates only — never an SDK message.
+ * The only file permitted to import `com.microsoft.identity.*` (ADR 0019); maps every MSAL result/error onto
+ * [NativeAuthOutcome] / [NativeResetOutcome] via public predicates only — never an SDK message.
  */
 @Suppress("TooGenericExceptionCaught", "TooManyFunctions")
 internal class MsalNativeAuthClient(
@@ -39,7 +49,8 @@ internal class MsalNativeAuthClient(
     private val currentActivityProvider: CurrentActivityProvider,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
-) : NativeAuthClient {
+) : NativeAuthClient,
+    NativePasswordResetClient {
     private val initMutex = Mutex()
 
     @Volatile
@@ -222,13 +233,112 @@ internal class MsalNativeAuthClient(
     private fun Exception.diagnosticTag(): String =
         if (this is MsalConfigNotProvisionedException) MSAL_CONFIG_NOT_PROVISIONED else this::class.simpleName.orEmpty()
 
-    private fun hasNetworkCause(thrown: Throwable?): Boolean {
-        var cause = thrown
-        while (cause != null) {
-            if (cause is IOException) return true
-            cause = cause.cause
+    override suspend fun startPasswordReset(email: String): NativeResetOutcome =
+        resetCall(RESET_START_THREW) {
+            when (val result = client().resetPassword(NativeAuthResetPasswordParameters(username = email))) {
+                is ResetPasswordStartResult.CodeRequired ->
+                    NativeResetOutcome.CodeRequired(CodeStepToken(result.nextState))
+                is ResetPasswordError -> result.toFacts().toStartOutcome()
+                else -> NativeResetOutcome.Failed(UNMAPPED_RESET_RESULT)
+            }
         }
-        return false
+
+    override suspend fun submitResetCode(
+        token: PasswordResetToken,
+        code: String,
+    ): NativeResetOutcome =
+        when (token) {
+            // An unknown account never had a real session: any code is simply incorrect (AC3).
+            DeadEndResetToken -> NativeResetOutcome.InvalidCode
+            is CodeStepToken ->
+                resetCall(RESET_CODE_THREW) {
+                    when (val result = token.state.submitCode(code)) {
+                        is ResetPasswordSubmitCodeResult.PasswordRequired ->
+                            NativeResetOutcome.PasswordRequired(PasswordStepToken(result.nextState))
+                        is SubmitCodeError -> result.toFacts().toSubmitCodeOutcome()
+                        else -> NativeResetOutcome.Failed(UNMAPPED_RESET_RESULT)
+                    }
+                }
+            else -> NativeResetOutcome.Failed(UNEXPECTED_RESET_TOKEN)
+        }
+
+    override suspend fun submitNewPassword(
+        token: PasswordResetToken,
+        password: CharArray,
+    ): NativeResetOutcome =
+        try {
+            when (token) {
+                is PasswordStepToken ->
+                    resetCall(RESET_PASSWORD_THREW) {
+                        when (val result = token.state.submitPassword(password)) {
+                            is ResetPasswordResult.Complete -> NativeResetOutcome.Completed
+                            is ResetPasswordSubmitPasswordError -> result.toFacts().toSubmitPasswordOutcome()
+                            else -> NativeResetOutcome.Failed(UNMAPPED_RESET_RESULT)
+                        }
+                    }
+                else -> NativeResetOutcome.Failed(UNEXPECTED_RESET_TOKEN)
+            }
+        } finally {
+            Arrays.fill(password, '\u0000')
+        }
+
+    /** Runs one reset call off the main thread; a thrown exception is mapped without reading its message. */
+    private suspend fun resetCall(
+        threwDiagnostic: String,
+        block: suspend () -> NativeResetOutcome,
+    ): NativeResetOutcome =
+        withContext(ioDispatcher) {
+            try {
+                block()
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: MsalConfigNotProvisionedException) {
+                NativeResetOutcome.Failed(MSAL_CONFIG_NOT_PROVISIONED)
+            } catch (thrown: Exception) {
+                thrownResetOutcome(hasNetworkCause(thrown), threwDiagnostic)
+            }
+        }
+
+    private fun ResetPasswordError.toFacts() =
+        ResetErrorFacts(
+            isBrowserRequired = isBrowserRequired(),
+            hasNetworkCause = hasNetworkCause(exception),
+            isUserNotFound = isUserNotFound(),
+            isInvalidUsername = isInvalidUsername(),
+            serverError = error,
+        )
+
+    private fun SubmitCodeError.toFacts() =
+        ResetErrorFacts(
+            isBrowserRequired = isBrowserRequired(),
+            hasNetworkCause = hasNetworkCause(exception),
+            isInvalidCode = isInvalidCode(),
+            serverError = error,
+            subError = subError,
+        )
+
+    private fun ResetPasswordSubmitPasswordError.toFacts() =
+        ResetErrorFacts(
+            isBrowserRequired = isBrowserRequired(),
+            hasNetworkCause = hasNetworkCause(exception),
+            isInvalidUsername = isInvalidUsername(),
+            isInvalidPassword = isInvalidPassword(),
+            isPasswordResetFailed = isPasswordResetFailed(),
+            serverError = error,
+            subError = subError,
+        )
+
+    /** Opaque wrappers so no SDK step object (which holds a continuation token) can leak via `toString()`. */
+    private class CodeStepToken(
+        val state: ResetPasswordCodeRequiredState,
+    ) : PasswordResetToken {
+        override fun toString(): String = "PasswordResetToken"
+    }
+
+    private class PasswordStepToken(
+        val state: ResetPasswordPasswordRequiredState,
+    ) : PasswordResetToken {
+        override fun toString(): String = "PasswordResetToken"
     }
 
     /** Internal marker for [AuthenticationCallback.onCancel] — never a [CancellationException] (see onCancel). */
@@ -241,6 +351,11 @@ internal class MsalNativeAuthClient(
         const val INTERACTIVE_SIGN_IN_THREW = "native-auth client threw during interactive sign-in"
         const val NO_FOREGROUND_ACTIVITY = "no foreground activity for the interactive browser leg"
         const val MSAL_CONFIG_NOT_PROVISIONED = "MSAL config has no client_id/authorities for this stage"
+        const val UNMAPPED_RESET_RESULT = "unmapped native-auth password reset result"
+        const val UNEXPECTED_RESET_TOKEN = "password reset token did not belong to this step"
+        const val RESET_START_THREW = "native-auth client threw starting password reset"
+        const val RESET_CODE_THREW = "native-auth client threw submitting a reset code"
+        const val RESET_PASSWORD_THREW = "native-auth client threw submitting a new password"
         const val CONFIG_FILE_NAME = "msal_native_auth_config.json"
     }
 }

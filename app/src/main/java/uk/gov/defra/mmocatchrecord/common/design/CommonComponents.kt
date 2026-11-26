@@ -3,14 +3,12 @@
 package uk.gov.defra.mmocatchrecord.common.design
 
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -23,11 +21,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,7 +35,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -166,43 +160,30 @@ fun PrimaryActionButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    Button(
+    GdsButtonFrame(
         onClick = onClick,
         enabled = enabled,
-        shape = RoundedCornerShape(0.dp), // sharp square corners per GDS
         colors =
-            ButtonDefaults.buttonColors(
-                containerColor = MmoColors.SuccessGreen,
-                contentColor = MmoColors.White,
-                disabledContainerColor = MmoColors.Grey2,
-                disabledContentColor = MmoColors.Grey1,
-            ),
-        contentPadding = PaddingValues(horizontal = Spacing.m, vertical = Spacing.s),
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .heightIn(min = Spacing.minTouchTarget)
-                .drawBehind {
-                    // Subtle 3dp solid dark shadow/border on bottom to match GDS button style
-                    if (enabled) {
-                        drawRect(
-                            color = Color(0xFF005A30),
-                            topLeft = Offset(0f, size.height - 4.dp.toPx()),
-                            size = Size(size.width, 4.dp.toPx()),
-                        )
-                    }
-                },
-    ) {
+            if (enabled) {
+                GdsButtonColors(
+                    fill = MmoColors.SuccessGreen,
+                    pressedFill = PRIMARY_BUTTON_SHADOW,
+                    content = MmoColors.White,
+                    edge = PRIMARY_BUTTON_SHADOW,
+                )
+            } else {
+                GdsButtonColors(fill = MmoColors.Grey2, pressedFill = MmoColors.Grey2, content = MmoColors.Grey1)
+            },
+        modifier = modifier.fillMaxWidth(),
+    ) { contentColor ->
         Text(
             text = text,
-            style =
-                MaterialTheme.typography.bodyLarge.copy(
-                    fontWeight = Normal,
-                    color = MmoColors.White,
-                ),
+            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = Normal, color = contentColor),
         )
     }
 }
+
+private val PRIMARY_BUTTON_SHADOW = Color(0xFF005A30)
 
 /** Reusable GOV.UK outline secondary action button */
 @Suppress("FunctionNaming")
@@ -213,31 +194,21 @@ fun SecondaryActionButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    OutlinedButton(
+    GdsButtonFrame(
         onClick = onClick,
         enabled = enabled,
-        shape = RoundedCornerShape(0.dp),
-        border =
-            BorderStroke(
-                width = 1.dp,
-                color = if (enabled) MmoColors.Text else MmoColors.Grey1,
-            ),
         colors =
-            ButtonDefaults.outlinedButtonColors(
-                containerColor = MmoColors.White,
-                contentColor = MmoColors.Text,
-                disabledContainerColor = MmoColors.White,
-                disabledContentColor = MmoColors.Grey1,
+            GdsButtonColors(
+                fill = MmoColors.White,
+                pressedFill = MmoColors.Background,
+                content = if (enabled) MmoColors.Text else MmoColors.Grey1,
+                border = if (enabled) MmoColors.Text else MmoColors.Grey1,
             ),
-        contentPadding = PaddingValues(horizontal = Spacing.m, vertical = Spacing.s),
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .heightIn(min = Spacing.minTouchTarget),
-    ) {
+        modifier = modifier.fillMaxWidth(),
+    ) { contentColor ->
         Text(
             text = text,
-            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold, color = contentColor),
         )
     }
 }
