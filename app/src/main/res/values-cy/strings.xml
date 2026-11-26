@@ -313,26 +313,25 @@
     <string name="gds_offline_notice_title">Rydych all-lein</string>
     <string name="gds_offline_notice_message">Cysylltwch â\'r rhyngrwyd a rhowch gynnig arall arni.</string>
     <!-- Reset a forgotten password (ADR 0027). Draft Welsh: needs the translation service's review. -->
-    <string name="reset_password_email_title">Ailosod eich cyfrinair</string>
-    <string name="reset_password_email_guidance">Rhowch y cyfeiriad e-bost sy\'n gysylltiedig â\'ch cyfrif. Os gallwn ei ddefnyddio, byddwn yn anfon cod ailosod atoch drwy e-bost.</string>
+    <string name="reset_password_email_title">Ailosod eich\ncyfrinair</string>
+    <string name="reset_password_email_guidance">Rhowch y cyfeiriad e-bost rydych yn ei ddefnyddio i fewngofnodi.</string>
+    <string name="reset_password_email_hint">Os oes cyfrif yn bodoli ar gyfer y cyfeiriad e-bost hwn, byddwn yn anfon cod ailosod.</string>
     <string name="reset_password_send_code">Anfon cod ailosod</string>
     <string name="reset_password_email_error_blank">Rhowch eich cyfeiriad e-bost</string>
     <string name="reset_password_email_error_format">Rhowch gyfeiriad e-bost yn y fformat cywir, fel enw@enghraifft.com</string>
     <string name="reset_password_code_title">Rhowch eich cod ailosod</string>
-    <string name="reset_password_code_sent_message">Os gellir defnyddio\'r cyfeiriad e-bost a roesoch i ailosod cyfrinair, rydym wedi anfon cod ato. Gwiriwch eich bod wedi\'i deipio\'n gywir.</string>
+    <string name="reset_password_code_sent_message">Rhowch y cod a anfonwyd gennym i\'ch cyfeiriad e-bost.</string>
     <plurals name="reset_password_code_hint">
-        <item quantity="zero">Mae\'r cod yn ddilys am %1$d munud.</item>
-        <item quantity="one">Mae\'r cod yn ddilys am %1$d munud.</item>
-        <item quantity="two">Mae\'r cod yn ddilys am %1$d funud.</item>
-        <item quantity="few">Mae\'r cod yn ddilys am %1$d munud.</item>
-        <item quantity="many">Mae\'r cod yn ddilys am %1$d munud.</item>
-        <item quantity="other">Mae\'r cod yn ddilys am %1$d munud.</item>
+        <item quantity="zero">Bydd y cod hwn yn dod i ben ar ôl %1$d munud.</item>
+        <item quantity="one">Bydd y cod hwn yn dod i ben ar ôl %1$d munud.</item>
+        <item quantity="two">Bydd y cod hwn yn dod i ben ar ôl %1$d funud.</item>
+        <item quantity="few">Bydd y cod hwn yn dod i ben ar ôl %1$d munud.</item>
+        <item quantity="many">Bydd y cod hwn yn dod i ben ar ôl %1$d munud.</item>
+        <item quantity="other">Bydd y cod hwn yn dod i ben ar ôl %1$d munud.</item>
     </plurals>
     <string name="reset_password_code_label">Cod ailosod</string>
     <string name="reset_password_continue">Parhau</string>
     <string name="reset_password_send_new_code">Anfon cod newydd</string>
-    <string name="reset_password_open_email_app">Agor eich ap e-bost</string>
-    <string name="reset_password_no_email_app">Nid oeddem yn gallu dod o hyd i ap e-bost ar y ddyfais hon. Agorwch eich ap e-bost eich hun i ddod o hyd i\'r cod.</string>
     <string name="reset_password_code_error_blank">Rhowch y cod ailosod</string>
     <string name="reset_password_code_error_invalid">Rhowch y cod ailosod cywir</string>
     <string name="reset_password_code_error_expired">Mae eich cod ailosod wedi dod i ben. Anfonwch god newydd.</string>
@@ -358,7 +357,6 @@
     <string name="reset_password_cancel_dialog_confirm">Canslo\'r ailosod</string>
     <string name="reset_password_cancel_dialog_dismiss">Parhau i ailosod</string>
     <string name="reset_password_success_title">Mae eich cyfrinair wedi\'i ailosod</string>
-    <string name="reset_password_success_body">Gallwch nawr fewngofnodi gyda\'ch cyfrinair newydd.</string>
     <string name="reset_password_error_network">Nid oeddem yn gallu cysylltu â\'r gwasanaeth. Gwiriwch eich cysylltiad a rhowch gynnig arall arni.</string>
     <string name="reset_password_error_throttled">Arhoswch ychydig funudau a rhowch gynnig arall arni.</string>
     <string name="reset_password_error_generic">Aeth rhywbeth o\'i le. Rhowch gynnig arall arni.</string>

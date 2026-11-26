@@ -5,11 +5,7 @@ package uk.gov.defra.mmocatchrecord.feature.passwordreset.presentation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
@@ -112,8 +108,6 @@ private fun ResetStepHost(
 
 @Composable
 private fun CodeStep(host: ResetStepHostScope) {
-    val context = LocalContext.current
-    var emailAppUnavailable by rememberSaveable { mutableStateOf(false) }
     val sendNewCode = { host.viewModel.dispatch(ResetPasswordEvent.SendNewCodeRequested) }
     ResetPasswordCodeContent(
         state = host.state,
@@ -121,8 +115,6 @@ private fun CodeStep(host: ResetStepHostScope) {
         chrome = host.chrome,
         onSubmit = { host.viewModel.dispatch(ResetPasswordEvent.CodeSubmitted) },
         onSendNewCode = sendNewCode,
-        emailAppUnavailable = emailAppUnavailable,
-        onOpenEmailApp = { emailAppUnavailable = !launchEmailApp { intent -> context.startActivity(intent) } },
         actions = host.actions(sendNewCode),
     )
 }

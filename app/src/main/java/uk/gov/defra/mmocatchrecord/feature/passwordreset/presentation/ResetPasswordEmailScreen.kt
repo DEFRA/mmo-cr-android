@@ -2,6 +2,7 @@
 
 package uk.gov.defra.mmocatchrecord.feature.passwordreset.presentation
 
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.KeyboardActionHandler
 import androidx.compose.foundation.text.input.TextFieldState
@@ -21,6 +22,7 @@ import uk.gov.defra.mmocatchrecord.common.design.GdsTextInput
 import uk.gov.defra.mmocatchrecord.common.design.MmoColors
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
+import uk.gov.defra.mmocatchrecord.common.design.Spacing
 
 /** Step 1: ask for the email address and send a reset code (AC1 to AC3). */
 @Composable
@@ -43,6 +45,7 @@ fun ResetPasswordEmailContent(
         modifier = modifier,
         focus = focus,
         firstField = ResetField.Email,
+        showLogo = true,
     ) {
         Text(
             text = stringResource(R.string.reset_password_email_guidance),
@@ -52,6 +55,7 @@ fun ResetPasswordEmailContent(
         GdsTextInput(
             state = emailState,
             label = stringResource(R.string.email_address),
+            hint = stringResource(R.string.reset_password_email_hint),
             testTag = ResetPasswordTestTags.EMAIL_FIELD,
             errorMessage = state.errorFor(ResetField.Email),
             keyboardOptions =
@@ -69,7 +73,7 @@ fun ResetPasswordEmailContent(
             text = stringResource(R.string.reset_password_send_code),
             onClick = onSubmit,
             enabled = state.canSubmit,
-            modifier = Modifier.testTag(ResetPasswordTestTags.SUBMIT_ACTION),
+            modifier = Modifier.padding(top = Spacing.l).testTag(ResetPasswordTestTags.SUBMIT_ACTION),
         )
     }
 }
@@ -83,9 +87,9 @@ internal fun ResetPasswordViewState.errorFor(field: ResetField): String? =
 internal val ResetPasswordViewState.canSubmit: Boolean
     get() = !isLoading && !isOffline
 
-@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF, widthDp = 390, heightDp = 844)
 @Composable
-private fun ResetPasswordEmailPreview() {
+fun ResetPasswordEmailPreview() {
     MmoTheme {
         ResetPasswordEmailContent(
             state = ResetPasswordViewState(),

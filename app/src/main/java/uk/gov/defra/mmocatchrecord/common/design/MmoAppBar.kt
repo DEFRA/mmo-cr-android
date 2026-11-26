@@ -73,6 +73,25 @@ fun GdsTopAppBar(
     }
 }
 
+/** Plain white bar showing only the language toggle, right-aligned (auth/reset flows). */
+@Composable
+fun GdsLanguageToggleBar(
+    currentLanguage: String,
+    onLanguageToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(color = MmoColors.White, modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.statusBarsPadding().padding(horizontal = Spacing.s),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.End,
+        ) {
+            Spacer(modifier = Modifier.weight(1f))
+            GdsAppBarLangToggle(currentLanguage, onLanguageToggle, contentColor = MmoColors.Text, underlined = false)
+        }
+    }
+}
+
 @Composable
 private fun GdsAppBarBackButton(onBackClick: () -> Unit) {
     Row(
@@ -120,13 +139,15 @@ private fun GdsAppBarTitle() {
 private fun GdsAppBarLangToggle(
     currentLanguage: String,
     onLanguageToggle: () -> Unit,
+    contentColor: Color = Color.White,
+    underlined: Boolean = true,
 ) {
     Button(
         onClick = onLanguageToggle,
         colors =
             ButtonDefaults.buttonColors(
                 containerColor = Color.Transparent,
-                contentColor = Color.White,
+                contentColor = contentColor,
             ),
         contentPadding = PaddingValues(0.dp),
         modifier =
@@ -140,7 +161,7 @@ private fun GdsAppBarLangToggle(
             style =
                 MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = FontWeight.Bold,
-                    textDecoration = TextDecoration.Underline,
+                    textDecoration = if (underlined) TextDecoration.Underline else TextDecoration.None,
                 ),
         )
     }

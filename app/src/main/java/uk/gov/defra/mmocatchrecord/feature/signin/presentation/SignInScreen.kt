@@ -1,10 +1,12 @@
 package uk.gov.defra.mmocatchrecord.feature.signin.presentation
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -50,7 +52,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import uk.gov.defra.mmocatchrecord.R
 import uk.gov.defra.mmocatchrecord.common.design.AppLanguageProvider
 import uk.gov.defra.mmocatchrecord.common.design.CrownLogo
-import uk.gov.defra.mmocatchrecord.common.design.GdsOfflineNotice
+import uk.gov.defra.mmocatchrecord.common.design.GdsOfflineOverlay
 import uk.gov.defra.mmocatchrecord.common.design.MmoColors
 import uk.gov.defra.mmocatchrecord.common.design.MmoTheme
 import uk.gov.defra.mmocatchrecord.common.design.PrimaryActionButton
@@ -110,7 +112,7 @@ fun SignInScreen(
             isOffline = isOffline,
             onRecheckConnection = connectivityViewModel::recheck,
             onForgottenPassword = onForgottenPassword,
-            modifier = Modifier.padding(innerPadding),
+            contentPadding = innerPadding,
         )
     }
 }
@@ -129,8 +131,47 @@ fun SignInContent(
     isOffline: Boolean = false,
     onRecheckConnection: () -> Unit = {},
     onForgottenPassword: () -> Unit = {},
+    contentPadding: PaddingValues = PaddingValues(),
 ) {
     val scrollState = rememberScrollState()
+    Box(modifier = modifier.fillMaxSize()) {
+        SignInFormContent(
+            state = state,
+            currentLanguage = currentLanguage,
+            onLanguageToggle = onLanguageToggle,
+            onUsernameChanged = onUsernameChanged,
+            onPasswordChanged = onPasswordChanged,
+            onSubmit = onSubmit,
+            onBrowserNoticeShown = onBrowserNoticeShown,
+            submitEnabled = !isOffline,
+            onForgottenPassword = onForgottenPassword,
+            scrollState = scrollState,
+            modifier = Modifier.padding(contentPadding),
+        )
+        if (isOffline) {
+            GdsOfflineOverlay(
+                actionLabel = stringResource(R.string.signin_title),
+                onAction = onRecheckConnection,
+            )
+        }
+    }
+}
+
+@Composable
+@Suppress("LongParameterList")
+private fun SignInFormContent(
+    state: SignInViewState,
+    currentLanguage: String,
+    onLanguageToggle: () -> Unit,
+    onUsernameChanged: (String) -> Unit,
+    onPasswordChanged: (String) -> Unit,
+    onSubmit: () -> Unit,
+    onBrowserNoticeShown: () -> Unit,
+    submitEnabled: Boolean,
+    onForgottenPassword: () -> Unit,
+    scrollState: ScrollState,
+    modifier: Modifier = Modifier,
+) {
     Column(
         modifier =
             modifier
@@ -140,14 +181,6 @@ fun SignInContent(
                 .padding(horizontal = Spacing.m, vertical = Spacing.s),
         horizontalAlignment = Alignment.Start,
     ) {
-        if (isOffline) {
-            GdsOfflineNotice(
-                actionLabel = stringResource(R.string.reset_password_offline_action),
-                onAction = onRecheckConnection,
-                modifier = Modifier.padding(bottom = Spacing.s),
-            )
-        }
-
         SignInHeaderSection(
             currentLanguage = currentLanguage,
             onLanguageToggle = onLanguageToggle,
@@ -163,7 +196,7 @@ fun SignInContent(
             state = state,
             onSubmit = onSubmit,
             onBrowserNoticeShown = onBrowserNoticeShown,
-            submitEnabled = !isOffline,
+            submitEnabled = submitEnabled,
         )
 
         SignInTroubleSection(

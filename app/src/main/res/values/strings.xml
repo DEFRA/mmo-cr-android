@@ -291,22 +291,21 @@
     <string name="gds_offline_notice_title">You are offline</string>
     <string name="gds_offline_notice_message">Connect to the internet and try again.</string>
     <!-- Reset a forgotten password (ADR 0027) -->
-    <string name="reset_password_email_title">Reset your password</string>
-    <string name="reset_password_email_guidance">Enter the email address linked to your account. If we can use it, we\'ll email you a reset code.</string>
+    <string name="reset_password_email_title">Reset your\npassword</string>
+    <string name="reset_password_email_guidance">Enter the email address you use to sign in.</string>
+    <string name="reset_password_email_hint">If account exists for this email address, we\'ll send a reset code.</string>
     <string name="reset_password_send_code">Send reset code</string>
     <string name="reset_password_email_error_blank">Enter your email address</string>
     <string name="reset_password_email_error_format">Enter an email address in the correct format, like name@example.com</string>
-    <string name="reset_password_code_title">Enter your reset code</string>
-    <string name="reset_password_code_sent_message">If the email address you entered can be used to reset a password, we\'ve sent a code to it. Check you typed it correctly.</string>
+    <string name="reset_password_code_title">Enter your \nreset code</string>
+    <string name="reset_password_code_sent_message">Enter the code we sent to your email address.</string>
     <plurals name="reset_password_code_hint">
-        <item quantity="one">The code is valid for %1$d minute.</item>
-        <item quantity="other">The code is valid for %1$d minutes.</item>
+        <item quantity="one">This code will expire after %1$d minute.</item>
+        <item quantity="other">This code will expire after %1$d minutes.</item>
     </plurals>
     <string name="reset_password_code_label">Reset code</string>
     <string name="reset_password_continue">Continue</string>
     <string name="reset_password_send_new_code">Send a new code</string>
-    <string name="reset_password_open_email_app">Open your email app</string>
-    <string name="reset_password_no_email_app">We could not find an email app on this device. Open your email app yourself to find the code.</string>
     <string name="reset_password_code_error_blank">Enter the reset code</string>
     <string name="reset_password_code_error_invalid">Enter the correct reset code</string>
     <string name="reset_password_code_error_expired">Your reset code has expired. Send a new code.</string>
@@ -331,9 +330,7 @@
     <string name="reset_password_cancel_dialog_body">You will lose your progress and return to the sign in screen.</string>
     <string name="reset_password_cancel_dialog_confirm">Cancel reset</string>
     <string name="reset_password_cancel_dialog_dismiss">Continue resetting</string>
-    <string name="reset_password_success_title">Your password has been reset</string>
-    <string name="reset_password_success_body">You can now sign in with your new password.</string>
-    <string name="reset_password_error_network">We could not reach the service. Check your connection and try again.</string>
+    <string name="reset_password_success_title">Your password has been reset    </string>    <string name="reset_password_error_network">We could not reach the service. Check your connection and try again.</string>
     <string name="reset_password_error_throttled">Wait a few minutes and try again.</string>
     <string name="reset_password_error_generic">Something went wrong. Try again.</string>
     <string name="reset_password_error_session_expired">Your reset has expired. Enter your email address to start again.</string>

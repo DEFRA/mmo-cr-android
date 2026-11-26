@@ -10,12 +10,14 @@ import android.view.WindowManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 
 /**
  * Sets `FLAG_SECURE` while composed to block screenshots and recents thumbnails; clears it only if set here.
  */
 @Composable
 fun SecureScreen() {
+    if (LocalInspectionMode.current) return
     val window = LocalContext.current.findActivity()?.window
     DisposableEffect(window) {
         val setHere = window?.let { enableSecureFlag(it) } ?: false

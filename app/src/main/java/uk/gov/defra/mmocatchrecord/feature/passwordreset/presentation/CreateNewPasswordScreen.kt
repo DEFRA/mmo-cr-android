@@ -186,9 +186,9 @@ private fun CancelResetDialog(
     )
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF, widthDp = 390, heightDp = 844)
 @Composable
-private fun CreateNewPasswordPreview() {
+fun CreateNewPasswordPreview() {
     MmoTheme {
         CreateNewPasswordContent(
             state = ResetPasswordViewState(step = ResetStep.NewPassword),

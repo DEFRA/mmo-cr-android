@@ -1,7 +1,5 @@
 package uk.gov.defra.mmocatchrecord.feature.passwordreset.presentation
 
-import android.content.ActivityNotFoundException
-import android.content.Intent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.text.input.TextFieldState
@@ -22,6 +20,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -36,7 +35,6 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -90,9 +88,9 @@ class ResetPasswordScreenTests {
 
         composeTestRule.onNodeWithTag(ResetPasswordTestTags.EMAIL_SCREEN).assertIsDisplayed()
         composeTestRule.onNodeWithTag(ResetPasswordTestTags.HEADING).assertIsDisplayed()
-        composeTestRule.onNodeWithText("Reset your password").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Reset your\npassword").assertIsDisplayed()
         composeTestRule.onNodeWithTag(ResetPasswordTestTags.EMAIL_FIELD).assertIsDisplayed()
-        composeTestRule.onNodeWithText("Send reset code").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Send reset code").performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -106,7 +104,7 @@ class ResetPasswordScreenTests {
                 .onNode(
                     SemanticsMatcher.keyIsDefined(SemanticsProperties.PaneTitle),
                 ).fetchSemanticsNode()
-        assertEquals("Reset your password", pane.config[SemanticsProperties.PaneTitle])
+        assertEquals("Reset your\npassword", pane.config[SemanticsProperties.PaneTitle])
     }
 
     @Test
@@ -135,7 +133,7 @@ class ResetPasswordScreenTests {
             )
         }
 
-        composeTestRule.onNodeWithTag(ResetPasswordTestTags.SUBMIT_ACTION).performClick()
+        composeTestRule.onNodeWithTag(ResetPasswordTestTags.SUBMIT_ACTION).performScrollTo().performClick()
         composeTestRule.onNodeWithTag(ResetPasswordTestTags.EMAIL_FIELD).performImeAction()
 
         assertEquals(2, submits)
@@ -218,9 +216,8 @@ class ResetPasswordScreenTests {
         }
 
         pressBack()
-        composeTestRule.onNodeWithText("Back").performClick()
 
-        assertEquals(2, backs)
+        assertEquals(1, backs)
     }
 
     @Test
@@ -259,8 +256,8 @@ class ResetPasswordScreenTests {
             ResetPasswordEmailContent(ResetPasswordViewState(), typed(), ResetChrome("cy") {}, onSubmit = {})
         }
 
-        composeTestRule.onNodeWithText("Ailosod eich cyfrinair").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Anfon cod ailosod").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Ailosod eich\ncyfrinair").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Anfon cod ailosod").performScrollTo().assertIsDisplayed()
     }
 
     // ---- Code screen ----
@@ -278,11 +275,12 @@ class ResetPasswordScreenTests {
         }
 
         composeTestRule.onNodeWithTag(ResetPasswordTestTags.CODE_SCREEN).assertIsDisplayed()
-        composeTestRule.onNodeWithText("Enter your reset code").assertIsDisplayed()
-        assertTrue(fieldName(ResetPasswordTestTags.CODE_FIELD).contains("The code is valid for 5 minutes."))
-        composeTestRule.onNodeWithText("Continue").assertIsDisplayed()
+        composeTestRule.onNodeWithText(string(R.string.reset_password_code_title)).performScrollTo().assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(ResetPasswordTestTags.CODE_EXPIRY)
+            .assertTextEquals("This code will expire after 5 minutes.")
+        composeTestRule.onNodeWithText("Continue").performScrollTo().assertIsDisplayed()
         composeTestRule.onNodeWithTag(ResetPasswordTestTags.SEND_NEW_CODE_ACTION).performScrollTo().assertIsDisplayed()
-        composeTestRule.onNodeWithTag(ResetPasswordTestTags.OPEN_EMAIL_APP_ACTION).performScrollTo().assertIsDisplayed()
         composeTestRule.onNodeWithTag(ResetPasswordTestTags.GUIDANCE).assert(!hasText("@", substring = true))
     }
 
@@ -297,14 +295,16 @@ class ResetPasswordScreenTests {
                 {},
             )
         }
-        assertTrue(fieldName(ResetPasswordTestTags.CODE_FIELD).contains("The code is valid for 1 minute."))
+        composeTestRule
+            .onNodeWithTag(ResetPasswordTestTags.CODE_EXPIRY)
+            .assertTextEquals("This code will expire after 1 minute.")
     }
 
     @Test
     fun `no hint is shown when the lifetime is unknown`() {
         render { ResetPasswordCodeContent(ResetPasswordViewState(codeLifetimeMinutes = 0), typed(), chrome, {}, {}) }
 
-        assertEquals(0, count("The code is valid for", substring = true))
+        assertEquals(0, count("This code will expire", substring = true))
     }
 
     @Test
@@ -314,9 +314,8 @@ class ResetPasswordScreenTests {
 
         composeTestRule.onNodeWithTag(ResetPasswordTestTags.SEND_NEW_CODE_ACTION).performScrollTo().performClick()
         pressBack()
-        composeTestRule.onNodeWithText("Back").performClick()
 
-        assertEquals(3, sends)
+        assertEquals(2, sends)
     }
 
     @Test
@@ -326,7 +325,7 @@ class ResetPasswordScreenTests {
             ResetPasswordCodeContent(ResetPasswordViewState(), typed("123456"), chrome, onSubmit = { submits++ }, {})
         }
 
-        composeTestRule.onNodeWithTag(ResetPasswordTestTags.SUBMIT_ACTION).performClick()
+        composeTestRule.onNodeWithTag(ResetPasswordTestTags.SUBMIT_ACTION).performScrollTo().performClick()
         composeTestRule.onNodeWithTag(ResetPasswordTestTags.CODE_FIELD).performImeAction()
 
         assertEquals(2, submits)
@@ -342,41 +341,6 @@ class ResetPasswordScreenTests {
         render { ResetPasswordCodeContent(state, typed(), chrome, {}, {}) }
 
         assertEquals(2, count(string(R.string.reset_password_code_error_expired)))
-    }
-
-    @Test
-    fun `the email app button calls back and the unavailable message is shown when no app exists`() {
-        var opened = 0
-        var unavailable by mutableStateOf(false)
-        render {
-            ResetPasswordCodeContent(
-                ResetPasswordViewState(),
-                typed(),
-                chrome,
-                {},
-                {},
-                emailAppUnavailable = unavailable,
-                onOpenEmailApp = { opened++ },
-            )
-        }
-
-        composeTestRule.onNodeWithTag(ResetPasswordTestTags.OPEN_EMAIL_APP_ACTION).performScrollTo().performClick()
-        assertEquals(1, opened)
-        composeTestRule.onNodeWithTag(ResetPasswordTestTags.EMAIL_APP_UNAVAILABLE).assertDoesNotExist()
-
-        unavailable = true
-        composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithTag(ResetPasswordTestTags.EMAIL_APP_UNAVAILABLE).performScrollTo().assertIsDisplayed()
-    }
-
-    @Test
-    fun `launchEmailApp starts the email category intent and reports a missing email app`() {
-        var started: Intent? = null
-
-        assertTrue(launchEmailApp { started = it })
-        assertEquals(Intent.ACTION_MAIN, started?.selector?.action ?: started?.action)
-        assertTrue(started?.selector?.categories?.contains(Intent.CATEGORY_APP_EMAIL) == true)
-        assertFalse(launchEmailApp { throw ActivityNotFoundException() })
     }
 
     // ---- New password screen ----
@@ -555,7 +519,7 @@ class ResetPasswordScreenTests {
             )
         }
 
-        composeTestRule.onNodeWithText("Back").performClick()
+        pressBack()
         composeTestRule.onNodeWithTag(ResetPasswordTestTags.CANCEL_DIALOG_CONFIRM).performClick()
 
         assertEquals(1, backs)
@@ -587,9 +551,8 @@ class ResetPasswordScreenTests {
         }
 
         composeTestRule.onNodeWithTag(ResetPasswordTestTags.SUCCESS_SCREEN).assertIsDisplayed()
-        composeTestRule.onNodeWithTag(ResetPasswordTestTags.SUCCESS_BANNER).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(ResetPasswordTestTags.HEADING).assertIsDisplayed()
         composeTestRule.onNodeWithText("Your password has been reset").assertIsDisplayed()
-        composeTestRule.onNodeWithText("You can now sign in with your new password.").assertIsDisplayed()
 
         composeTestRule.onNodeWithTag(ResetPasswordTestTags.SIGN_IN_ACTION).performClick()
         assertEquals(1, signIns)
