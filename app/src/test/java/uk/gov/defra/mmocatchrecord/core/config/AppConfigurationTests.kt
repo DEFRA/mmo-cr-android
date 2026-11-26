@@ -185,7 +185,7 @@ class AppConfigurationTests {
     }
 
     private fun lifetimeJson(value: String) =
-        """{"API_BASE_URL":"https://example.test","USE_STUB_AUTH":true,"PASSWORD_RESET_CODE_LIFETIME_MINUTES":"$value"}"""
+        """{"API_BASE_URL":"https://example.test","USE_STUB_AUTH":true,"RESET_CODE_LIFETIME_MINUTES":"$value"}"""
 
     private fun configurationFor(contents: String): Pair<AppConfiguration, AssetManager> {
         val assets = mock<AssetManager>()

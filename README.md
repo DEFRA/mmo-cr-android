@@ -254,7 +254,7 @@ prevent self-review). Allow deployments only from `v*` tags in every one.
 | `CR_APP_CFG_USE_FAKE_SIGN_IN` | Variable | the same five | `false` for real Entra sign-in (required) |
 | `CR_APP_CFG_MSAL_CLIENT_ID`, `CR_APP_CFG_MSAL_AUTHORITY_URL` | Variable | the same five | That stage's Entra External ID app registration and tenant authority (ADR 0019) |
 | `CR_APP_CFG_MSAL_REDIRECT_URI` | Variable | optional | `msauth://<that app's package>/<app-signing SHA-1, base64, URL-encoded>` for the browser fallback |
-| `CR_APP_CFG_PASSWORD_RESET_CODE_LIFETIME_MINUTES` | Variable | optional | Minutes a password reset code stays valid (1-60, default 5); shown on the code screen and used to tell an expired code from a wrong one (ADR 0027) |
+| `CR_APP_CFG_RESET_CODE_LIFETIME_MINUTES` | Variable | optional | Minutes a password reset code stays valid (1-60, default 5); shown on the code screen and used to tell an expired code from a wrong one (ADR 0027) |
 
 `production` needs only `PLAY_SERVICE_ACCOUNT_JSON`. Configuration values are variables, never secrets:
 anything in the app package can be read. To **add a config value**, set `CR_APP_CFG_<KEY>` on each

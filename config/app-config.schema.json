@@ -47,7 +47,7 @@
       "description": "msauth:// redirect for the browser fallback; must match this app's package and signing key.",
       "unusedWhen": "USE_FAKE_SIGN_IN"
     },
-    "PASSWORD_RESET_CODE_LIFETIME_MINUTES": {
+    "RESET_CODE_LIFETIME_MINUTES": {
       "type": "string",
       "required": false,
       "log": true,

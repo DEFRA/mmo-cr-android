@@ -128,7 +128,7 @@ class AppConfiguration
 
         /** An absent, malformed or out-of-range value falls back to the default rather than failing the config. */
         private fun JsonObject.resetCodeLifetimeMinutes(): Int =
-            optionalString("PASSWORD_RESET_CODE_LIFETIME_MINUTES")
+            optionalString("RESET_CODE_LIFETIME_MINUTES")
                 .toIntOrNull()
                 ?.takeIf { it in 1..MAX_RESET_CODE_LIFETIME_MINUTES }
                 ?: DEFAULT_RESET_CODE_LIFETIME_MINUTES
