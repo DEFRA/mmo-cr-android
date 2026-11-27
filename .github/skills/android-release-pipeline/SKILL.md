@@ -87,7 +87,7 @@ it as a required check on `main`.
 
 ### 4. Release workflow — `.github/workflows/android-release.yml`
 - Trigger: `workflow_dispatch` on a `v*` tag with boolean inputs `dev`, `test`, `prod` (default true) and
-  `distribution` (`manual` | `play`, default `manual`). `permissions: contents: read`; `concurrency` with
+  `distribution` (`manual` | `play`, default `play`). `permissions: contents: read`; `concurrency` with
   `cancel-in-progress: false`.
 - Jobs: `compile` (no Environment) → `dev` → `test` → `perf-test` → `uat` → `prep-prod` → `production`.
   Each Environment job runs only if `compile` succeeded, its input is true and the previous job succeeded or
