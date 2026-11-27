@@ -175,11 +175,11 @@ Define **six** GitHub Environments, one per environment job. A GitHub Environmen
 
 ### Distribution
 
-- **`manual` (default):** the job produces the signed, verified AAB as a 7-day workflow artifact and prints
+- **`play` (default):** the job uploads through the Play Developer API (`CrRelease::PlayPublisher`);
+  `production` promotes the code already on `prep-prod`.
+- **`manual`:** the job produces the signed, verified AAB as a 7-day workflow artifact and prints
   the Play Console steps (upload to which app and track). Required for the **first upload of each new Play
   app** (the API cannot create it) and a fallback whenever API access is unavailable.
-- **`play`:** the job uploads through the Play Developer API (`CrRelease::PlayPublisher`); `production`
-  promotes the code already on `prep-prod`.
 - **Review safety:** non-internal commits use `changesInReviewBehavior: ERROR_IF_IN_REVIEW` so a commit never
   restarts a review already in progress; internal uploads never enter review. Re-runs are idempotent: a stage
   already on its track is skipped, an uploaded-but-unreleased bundle is released without re-upload, and a

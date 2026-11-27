@@ -200,8 +200,8 @@ Actions → **Android Release** → Run workflow → *Use workflow from* → **T
 | Input | Meaning |
 |---|---|
 | `dev`, `test`, `prod` | Which apps to release (default all). `dev` runs `dev`; `test` runs `test` and `perf-test`; `prod` runs `uat`, `prep-prod` and `production` |
-| `distribution` = `manual` (default) | Each job leaves a signed, verified AAB as a 7-day artifact `aab-<env>-<tag>` and prints the Play Console steps; upload it by hand |
-| `distribution` = `play` | Each job uploads through the Play Developer API; `production` promotes |
+| `distribution` = `play` (default) | Each job uploads through the Play Developer API; `production` promotes |
+| `distribution` = `manual` | Each job leaves a signed, verified AAB as a 7-day artifact `aab-<env>-<tag>` and prints the Play Console steps; upload it by hand |
 
 Jobs run `compile` → `dev` → `test` → `perf-test` → `uat` → `prep-prod` → `production`; each waits for its
 Environment's reviewers (none for `dev`). `perf-test` needs `test`, `prep-prod` needs `uat` and
@@ -281,7 +281,9 @@ the named app and track; promote the `prep-prod` release to Production).
 
 ### One-off setup (manual)
 
-These cannot be done by the pipeline and are pending:
+These cannot be done by the pipeline. They are done for the Dev and Test apps (`dev`, `test`, `perf-test`);
+the `uat`, `prep-prod` and `production` Environments are still to be created, so untick `prod` until they
+exist (a job that references a missing Environment makes GitHub create it without protection rules).
 
 1. Create a **non-prod upload key** for the Dev and Test apps; keep the Prod upload key out of `dev`
    (remove it if present). Never commit keystores.

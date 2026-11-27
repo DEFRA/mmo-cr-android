@@ -74,10 +74,11 @@ same tag recompiles, so a re-run is preferred; re-runs are possible for 30 days.
 
 The release workflow takes `distribution`:
 
-- **`manual`** (default) — the job builds, signs and verifies the AAB and publishes it as a 7-day workflow
-  artifact, then prints the Play Console steps. Used for the first upload of each new app, and whenever
-  Play API access is unavailable.
-- **`play`** — the job also uploads (or, for `production`, promotes) through the Play Developer API.
+- **`play`** (default since `v2.0.0-BUILD_22`) — the job also uploads (or, for `production`, promotes)
+  through the Play Developer API.
+- **`manual`** — the job builds, signs and verifies the AAB and publishes it as a 7-day workflow artifact,
+  then prints the Play Console steps. Used for the first upload of each new app, and whenever Play API
+  access is unavailable.
 
 ### Switching tracks on one device (prerequisite)
 
